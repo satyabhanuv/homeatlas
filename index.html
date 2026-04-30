@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HomeAtlas — Everything about your home, in one place</title>
+<meta name="description" content="Enter your California address and instantly see your electric utility, internet/TV/security providers, school district, and the educational facilities around your home.">
+<meta name="theme-color" content="#2d6a4f">
+
+<!-- Inline SVG favicon — green house, no extra file needed -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232d6a4f'/><path d='M14 33 L32 16 L50 33 L44 33 L44 48 L36 48 L36 38 L28 38 L28 48 L20 48 L20 33 Z' fill='%23ffffff'/></svg>">
+
+<!-- Open Graph / social-share preview -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="HomeAtlas — Everything about your home, in one place">
+<meta property="og:description" content="Enter your California address and instantly see your electric utility, internet/TV/security providers, and schools near your home.">
+<meta property="og:site_name" content="HomeAtlas">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="HomeAtlas">
+<meta name="twitter:description" content="Everything about your home, in one place — by address.">
+<style>
+  /* ---------- Theme ---------- */
+  :root {
+    --bg:        #f7f5f0;
+    --surface:   #ffffff;
+    --ink:       #1a1f1a;
+    --ink-soft:  #4a544a;
+    --ink-faint: #8a948a;
+    --primary:   #2d6a4f;
+    --primary-2: #1b4332;
+    --accent:    #d4a373;
+    --line:      #e6e2d6;
+    --warn:      #b08900;
+    --error:     #b3261e;
+    --radius:    14px;
+    --shadow:    0 1px 2px rgba(20,30,20,0.04), 0 8px 28px rgba(20,30,20,0.06);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); }
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+  header { padding: 28px 0 12px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.2px; font-size: 18px; }
+  .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--primary), var(--accent)); }
+  .brand-tag { margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--line); color: var(--ink-soft); font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; font-weight: 600; }
+
+  .hero { padding: 36px 0 24px; }
+  .hero h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.5px; }
+  .hero h1 em { color: var(--primary); font-style: normal; }
+  .hero p.lead { margin: 0 0 24px; max-width: 640px; font-size: clamp(16px, 2.2vw, 18px); color: var(--ink-soft); }
+
+  .search-wrap { position: relative; max-width: 720px; }
+  .searchbar {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 8px;
+    display: flex; gap: 8px; align-items: stretch;
+    box-shadow: var(--shadow); position: relative; z-index: 2;
+  }
+  .searchbar.open { border-radius: var(--radius) var(--radius) 0 0; }
+  .searchbar input { flex: 1; border: none; outline: none; background: transparent; padding: 14px 12px; font-size: 16px; color: var(--ink); font-family: inherit; }
+  .searchbar button { border: none; background: var(--primary); color: #fff; border-radius: 10px; padding: 0 22px; cursor: pointer; font-weight: 600; font-size: 15px; letter-spacing: 0.2px; transition: background 0.15s ease; }
+  .searchbar button:hover { background: var(--primary-2); }
+  .searchbar button:disabled { opacity: 0.6; cursor: progress; }
+
+  .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow); max-height: 360px; overflow-y: auto; z-index: 5; margin-top: -1px; }
+  .suggestion { padding: 12px 18px; cursor: pointer; font-size: 14px; border-bottom: 1px solid var(--line); }
+  .suggestion:last-child { border-bottom: none; }
+  .suggestion:hover, .suggestion.active { background: rgba(45,106,79,0.08); }
+  .suggestion .top { font-weight: 600; color: var(--ink); }
+  .suggestion .sub { color: var(--ink-faint); font-size: 12.5px; margin-top: 2px; }
+
+  .hint { margin: 12px 4px 0; font-size: 13px; color: var(--ink-faint); }
+  .hint b { color: var(--ink-soft); font-weight: 600; }
+
+  /* Resolved address */
+  .results { margin-top: 28px; }
+  .resolved {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 18px 22px; box-shadow: var(--shadow);
+  }
+  .resolved-body {
+    display: grid;
+    grid-template-columns: minmax(240px, 320px) 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+  .resolved-map {
+    border-radius: 10px; overflow: hidden;
+    border: 1px solid var(--line);
+    background: #eceadf;
+    aspect-ratio: 4 / 3; min-height: 220px;
+    position: relative;
+  }
+  .resolved-map iframe { width: 100%; height: 100%; border: 0; display: block; }
+  .resolved-map .map-loading {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    color: var(--ink-faint); font-size: 13px; font-style: italic;
+  }
+  .ra-map-link { margin-top: 10px; font-size: 12px; color: var(--ink-faint); }
+  .ra-map-link a { color: var(--ink-soft); text-decoration: none; }
+  .ra-map-link a:hover { text-decoration: underline; color: var(--primary); }
+  @media (max-width: 700px) {
+    .resolved-body { grid-template-columns: 1fr; }
+    .resolved-map { aspect-ratio: 16 / 10; min-height: 200px; }
+  }
+  .resolved-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
+  .resolved-head .pin { width: 28px; height: 28px; flex: 0 0 28px; border-radius: 50%; background: var(--primary); display: grid; place-items: center; color: #fff; font-size: 14px; }
+  .resolved-head .pin-label { font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .resolved-head .reset-btn { margin-left: auto; font-size: 12px; padding: 5px 10px; background: var(--line); color: var(--ink-soft); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
+  .resolved-head .reset-btn:hover { background: #d6cfc0; }
+  .resolved-grid { display: grid; gap: 14px 28px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .resolved-cell { display: flex; flex-direction: column; gap: 3px; }
+  .resolved-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-faint); font-weight: 700; }
+  .resolved-value { font-size: 15px; color: var(--ink); font-weight: 500; word-break: break-word; }
+  .resolved-value .inferred { color: var(--ink-faint); font-size: 11px; font-weight: 600; margin-left: 4px; }
+
+  /* Cards */
+  .grid { margin-top: 16px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px 18px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
+  .card .icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 18px; margin-bottom: 6px; }
+  .card h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .card .value { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px;}
+  .card .meta { font-size: 13px; color: var(--ink-soft); margin-top: 4px; margin-bottom: 8px; }
+  .card .source { font-size: 12px; color: var(--ink-faint); margin-top: 12px; }
+  .card .source a { color: var(--primary); text-decoration: underline; }
+
+  /* Empty/help-state callout */
+  .help-callout {
+    margin-top: 8px; padding: 12px 14px;
+    background: #fff7e0; border: 1px solid #f1dc99;
+    border-radius: 10px; font-size: 13px; color: #6b5400;
+  }
+  .help-callout p { margin: 0 0 6px; }
+  .help-callout p:last-child { margin: 0; }
+  .help-callout a { color: var(--primary-2); font-weight: 600; }
+  .help-callout .visit-btn {
+    display: inline-block; margin-top: 6px; padding: 4px 10px;
+    background: rgba(45,106,79,0.08); border: 1px solid rgba(45,106,79,0.2);
+    border-radius: 6px; color: var(--primary); text-decoration: none;
+    font-size: 12px; font-weight: 600;
+  }
+  .help-callout .visit-btn:hover { background: rgba(45,106,79,0.16); }
+
+  /* Provider tables */
+  .tbl-wrap { overflow-x: auto; }
+  .ptable { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 100%; }
+  .ptable thead th { text-align: left; padding: 9px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-faint); font-weight: 700; border-bottom: 1px solid var(--line); background: rgba(45,106,79,0.04); white-space: nowrap; }
+  .ptable thead th.num-h { text-align: right; }
+  .ptable tbody td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .ptable tbody tr:last-child td { border-bottom: none; }
+  .ptable td.numeric { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
+  .ptable td.tech    { color: var(--ink-soft); white-space: nowrap; }
+  .ptable td.role    { color: var(--ink-soft); }
+  .ptable .provider-link { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .ptable .provider-link:hover { text-decoration: underline; }
+  .ptable .visit-btn { display: inline-block; padding: 4px 10px; background: rgba(45,106,79,0.08); border: 1px solid rgba(45,106,79,0.2); border-radius: 6px; color: var(--primary); text-decoration: none; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .ptable .visit-btn:hover { background: rgba(45,106,79,0.16); }
+
+  /* Provider sub-groups (cable / fiber / 5G / satellite, etc.) */
+  .pgroup { margin-top: 14px; }
+  .pgroup:first-child { margin-top: 8px; }
+  .pgroup-head {
+    display: flex; align-items: baseline; gap: 8px;
+    margin: 0 0 6px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--primary); font-weight: 700;
+    border-bottom: 1px solid var(--line); padding-bottom: 6px;
+  }
+  .pgroup-count { color: var(--ink-faint); font-weight: 600; }
+
+  .card.coming-soon { opacity: 0.78; border-style: dashed; }
+  .card .badge { position: absolute; top: 14px; right: 14px; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
+
+  /* Schools full-width card */
+  .schools-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  .schools-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .schools-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
+  .schools-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .schools-head .value { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .schools-head .text-block { display: flex; flex-direction: column; }
+  .schools-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 13px; font-weight: 600; }
+  .schools-meta { color: var(--ink-soft); font-size: 14px; margin: 6px 0 16px; }
+  .school-section { margin-top: 18px; }
+  .school-section h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .schools-loading { margin-top: 16px; padding: 20px; text-align: center; color: var(--ink-soft); background: rgba(45,106,79,0.03); border: 1px dashed var(--line); border-radius: 10px; font-size: 14px; }
+  .schools-loading::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 10px; vertical-align: middle; border: 2px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  .schools-loading.error::before { display: none; }
+  .schools-loading.error { color: var(--error); background: #fdecea; border-color: #f8c9c5; }
+  .schools-empty { padding: 16px; color: var(--ink-faint); font-size: 14px; font-style: italic; }
+  .retry-btn { display: inline-block; margin-left: 10px; padding: 5px 12px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
+  .retry-btn:hover { background: var(--primary-2); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  section.block { padding: 40px 0; }
+  section.block h2 { font-size: clamp(20px, 3vw, 26px); margin: 0 0 6px; }
+  section.block .subtitle { color: var(--ink-soft); margin: 0 0 18px; max-width: 640px; }
+
+  .status-line { margin-top: 14px; padding: 12px 16px; border-radius: 10px; font-size: 14px; }
+  .status-line.error { background: #fdecea; color: var(--error); border: 1px solid #f8c9c5; }
+  .status-line.info  { background: #fff7e0; color: #6b5400; border: 1px solid #f1dc99; }
+
+  .skeleton { background: linear-gradient(90deg, #eee 25%, #f5f5f5 37%, #eee 63%); background-size: 400% 100%; animation: shimmer 1.4s ease infinite; height: 14px; border-radius: 6px; }
+  @keyframes shimmer { 0%{background-position:100% 0;} 100%{background-position:-100% 0;} }
+
+  footer { margin-top: 60px; padding: 28px 0 40px; border-top: 1px solid var(--line); color: var(--ink-faint); font-size: 13px; }
+  footer p { margin: 4px 0; }
+  footer a { color: var(--ink-soft); }
+
+  .privacy { background: rgba(45,106,79,0.06); border: 1px solid rgba(45,106,79,0.18); padding: 14px 16px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; margin-top: 16px; }
+  .privacy b { color: var(--primary-2); }
+
+  @media (max-width: 540px) {
+    .searchbar { flex-direction: column; }
+    .searchbar button { padding: 14px; }
+    .schools-head .summary-pill { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span class="brand-dot"></span>
+      HomeAtlas
+      <span class="brand-tag">Preview · California</span>
+    </div>
+  </header>
+
+  <section class="hero">
+    <h1>Everything about <em>your home</em>, in one place.</h1>
+    <p class="lead">
+      Enter your address. We&rsquo;ll show you your electric utility (and your CCA), internet, TV and security options, and the schools and educational facilities around your home &mdash; grouped by type so you can scan fast.
+    </p>
+
+    <div class="search-wrap">
+      <form class="searchbar" id="searchForm" autocomplete="off">
+        <input id="addr" type="text" required
+          placeholder="Start typing your address…  e.g. 123 Main St, Berkeley"
+          aria-label="Home address" aria-autocomplete="list" aria-controls="suggestions" />
+        <button type="submit" id="searchBtn">Find my zones</button>
+      </form>
+      <div id="suggestions" class="suggestions" hidden role="listbox"></div>
+    </div>
+    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. California addresses only for now.</p>
+    <div id="status"></div>
+  </section>
+
+  <!-- Results -->
+  <section class="results" id="results" hidden>
+
+    <div class="resolved">
+      <div class="resolved-head">
+        <div class="pin">📍</div>
+        <span class="pin-label">Address resolved</span>
+        <button class="reset-btn" id="resetBtn" type="button">Search a different address</button>
+      </div>
+      <div class="resolved-body">
+        <div class="resolved-map">
+          <div class="map-loading" id="ra-map-loading">Loading map…</div>
+          <iframe id="ra-map" src="" loading="lazy" title="Map of your address" referrerpolicy="no-referrer-when-downgrade"></iframe>
+        </div>
+        <div class="resolved-grid">
+          <div class="resolved-cell"><span class="resolved-label">Street</span><span class="resolved-value" id="ra-street">—</span></div>
+          <div class="resolved-cell"><span class="resolved-label">City</span><span class="resolved-value" id="ra-city">—</span></div>
+          <div class="resolved-cell"><span class="resolved-label">County</span><span class="resolved-value" id="ra-county">—</span></div>
+          <div class="resolved-cell"><span class="resolved-label">ZIP</span><span class="resolved-value" id="ra-zip">—</span></div>
+          <div class="resolved-cell"><span class="resolved-label">State</span><span class="resolved-value" id="ra-state">—</span></div>
+          <div class="resolved-cell"><span class="resolved-label">Coordinates</span><span class="resolved-value" id="ra-coords">—</span></div>
+        </div>
+      </div>
+      <div class="ra-map-link" id="ra-map-link"></div>
+    </div>
+
+    <div class="grid">
+      <div class="card" id="card-electric">
+        <div class="icon">⚡</div>
+        <h3>Electric service</h3>
+        <div class="value" id="electric-value">—</div>
+        <div class="meta" id="electric-meta"></div>
+        <div id="electric-body"></div>
+        <div class="source" id="electric-source"></div>
+      </div>
+
+      <div class="card" id="card-internet">
+        <div class="icon">🌐</div>
+        <h3>Internet providers</h3>
+        <div class="value" id="internet-value">—</div>
+        <div id="internet-body"></div>
+        <div class="source" id="internet-source"></div>
+      </div>
+
+      <div class="card" id="card-tv">
+        <div class="icon">📺</div>
+        <h3>TV providers</h3>
+        <div class="value" id="tv-value">—</div>
+        <div id="tv-body"></div>
+        <div class="source">Channel lineups vary by plan — visit each provider for current packages.</div>
+      </div>
+
+      <div class="card" id="card-security">
+        <div class="icon">🛡️</div>
+        <h3>Home security</h3>
+        <div class="value" id="security-value">—</div>
+        <div id="security-body"></div>
+        <div class="source">Most major brands serve all of California. DIY is no-contract; pro-install often requires a multi-year agreement.</div>
+      </div>
+    </div>
+
+    <!-- Schools — full width below grid -->
+    <div class="schools-card" id="card-school">
+      <div class="schools-head">
+        <div class="icon">🎓</div>
+        <div class="text-block">
+          <h3>Schools &amp; nearby education</h3>
+          <div class="value" id="school-value">—</div>
+        </div>
+        <div class="summary-pill" id="school-summary" hidden></div>
+      </div>
+      <div class="schools-meta" id="school-meta"></div>
+
+      <div class="schools-loading" id="school-loading" hidden>
+        Finding schools, libraries, and nearby educational facilities…
+      </div>
+
+      <div id="school-sections" hidden>
+        <div class="school-section" id="public-section" hidden>
+          <h4>Public K-12 schools</h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>School</th><th>Level</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="public-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="private-section" hidden>
+          <h4>Private schools, preschools &amp; parochial</h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>School</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="private-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="higher-section" hidden>
+          <h4>Colleges &amp; universities</h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Institution</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="higher-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="enrichment-section" hidden>
+          <h4>Libraries, pools, sports &amp; community centers</h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Place</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="enrichment-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+
+      <div class="source" style="margin-top:16px;">
+        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>; distances are straight-line ("as the crow flies") from your address. Public-school assignment varies block by block — verify exact attendance with the district. Public/private classification uses tags + name patterns and may occasionally be wrong.
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Coming Soon -->
+  <section class="block">
+    <h2>Coming next</h2>
+    <p class="subtitle">The same address you just typed will unlock all of the below. Each is a separate data layer; we&rsquo;ll ship them one at a time.</p>
+    <div class="grid">
+      <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🏠</div><h3>House anatomy</h3><div class="value">By year built</div><div class="meta">Likely framing, wiring, plumbing, insulation, roofing era.</div></div>
+      <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🔧</div><h3>HVAC &amp; ducts</h3><div class="value">Sizing &amp; standards</div><div class="meta">Dryer vent (4″), supply &amp; return trunks per ACCA Manual D.</div></div>
+      <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🧰</div><h3>Materials &amp; upgrades</h3><div class="value">What works with what you have</div><div class="meta">Compatible connectors and modern retrofits.</div></div>
+      <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🌱</div><h3>Yard &amp; garden</h3><div class="value">Soil + plants</div><div class="meta">USDA hardiness zone, soil type, native plants.</div></div>
+      <div class="card coming-soon"><span class="badge">Phase 3</span><div class="icon">🔥</div><h3>Risk profile</h3><div class="value">Fire · Flood · Quake</div><div class="meta">Cal Fire FHSZ, FEMA flood, USGS shaking hazard.</div></div>
+      <div class="card coming-soon"><span class="badge">Phase 3</span><div class="icon">🗳️</div><h3>Civic</h3><div class="value">Voting · Tax · Water · Gas</div><div class="meta">Voting precinct, sales tax, water + gas utilities.</div></div>
+    </div>
+  </section>
+
+  <section class="block">
+    <h2>Privacy &amp; data</h2>
+    <div class="privacy">
+      <p style="margin:0 0 6px;"><b>We don&rsquo;t store your address.</b> Search runs entirely in your browser. The address text is sent to OpenStreetMap-based services to convert it to coordinates and look up nearby schools &mdash; nothing is saved on our side.</p>
+      <p style="margin:0;">When we add user accounts, saving an address will be opt-in and used to power personalized recommendations.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>
+      <b>HomeAtlas</b> &mdash; v0.7 · April 2026 · CA service-provider + nearby-schools preview
+      &nbsp;·&nbsp;
+      <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
+    </p>
+    <p>Sources: <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC GIS</a> · <a href="https://broadbandmap.fcc.gov/" target="_blank" rel="noopener">FCC Broadband Map</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap (ODbL)</a> · <a href="https://overpass-api.de/" target="_blank" rel="noopener">Overpass API</a></p>
+    <p>Internet speeds shown are typical max residential plans — actual speeds at your address may differ. Always verify exact availability with the provider or via the FCC report link.</p>
+  </footer>
+</div>
+
+<script>
+/* =====================================================================
+   HomeAtlas — preview prototype (v5)
+   What changed from v4:
+     • Internet / TV / Security results now grouped into sub-sections
+       (Cable / Fiber / 5G / Satellite, etc.) — one little table per group
+     • CA city → county fallback map (~120 cities) so addresses where
+       Nominatim omits the county field (e.g. San Francisco) still
+       resolve electric/internet correctly
+     • Help-callout when we can't determine utility — points users to
+       the CEC GIS map + a feedback path
+     • Schools fetch: switched to GET method + 3 Overpass mirror fallback
+       chain to fix CORS issues on file:// origins; added Retry button
+   ===================================================================== */
+
+/* -------- Lookup tables ---------------------------------------------- */
+const CA_COUNTY_UTILITY = {
+  "Alameda":"PG&E","Alpine":"PG&E","Amador":"PG&E","Butte":"PG&E","Calaveras":"PG&E",
+  "Colusa":"PG&E","Contra Costa":"PG&E","Del Norte":"PG&E","El Dorado":"PG&E",
+  "Fresno":"PG&E","Glenn":"PG&E","Humboldt":"PG&E","Kings":"PG&E","Lake":"PG&E",
+  "Lassen":"PG&E","Madera":"PG&E","Marin":"PG&E","Mariposa":"PG&E","Mendocino":"PG&E",
+  "Merced":"PG&E","Modoc":"PG&E","Mono":"PG&E","Monterey":"PG&E","Napa":"PG&E",
+  "Nevada":"PG&E","Placer":"PG&E","Plumas":"PG&E","Sacramento":"SMUD",
+  "San Benito":"PG&E","San Francisco":"PG&E","San Joaquin":"PG&E","San Luis Obispo":"PG&E",
+  "San Mateo":"PG&E","Santa Barbara":"PG&E","Santa Clara":"PG&E","Santa Cruz":"PG&E",
+  "Shasta":"PG&E","Sierra":"PG&E","Siskiyou":"PG&E","Solano":"PG&E","Sonoma":"PG&E",
+  "Stanislaus":"PG&E","Sutter":"PG&E","Tehama":"PG&E","Trinity":"PG&E","Tulare":"SCE",
+  "Tuolumne":"PG&E","Yolo":"PG&E","Yuba":"PG&E","Inyo":"SCE","Kern":"SCE",
+  "Los Angeles":"SCE","Orange":"SCE","Riverside":"SCE","San Bernardino":"SCE",
+  "Ventura":"SCE","Imperial":"IID","San Diego":"SDG&E"
+};
+const CA_CITY_UTILITY = {
+  "Los Angeles":"LADWP","Burbank":"Burbank Water & Power",
+  "Glendale":"Glendale Water & Power","Pasadena":"Pasadena Water & Power",
+  "Anaheim":"Anaheim Public Utilities","Riverside":"Riverside Public Utilities",
+  "Roseville":"Roseville Electric","Palo Alto":"City of Palo Alto Utilities",
+  "Santa Clara":"Silicon Valley Power","Alameda":"Alameda Municipal Power",
+  "Lodi":"Lodi Electric Utility","Modesto":"Modesto Irrigation District",
+  "Turlock":"Turlock Irrigation District","Redding":"Redding Electric Utility",
+  "Healdsburg":"Healdsburg Electric","Lompoc":"City of Lompoc",
+  "Vernon":"Vernon Public Utilities","Azusa":"Azusa Light & Water",
+  "Banning":"Banning Electric","Cerritos":"Cerritos Electric Utility",
+  "Colton":"Colton Electric","Hercules":"Hercules Municipal Utility",
+  "Truckee":"Truckee Donner PUD"
+};
+const IOU_SET = new Set(["PG&E","SCE","SDG&E"]);
+
+/* CA city → county fallback. Used when Nominatim doesn't return the
+   county field (San Francisco, etc.) or returns it inconsistently. */
+const CA_CITY_TO_COUNTY = {
+  "Los Angeles":"Los Angeles","San Diego":"San Diego","San Jose":"Santa Clara",
+  "San Francisco":"San Francisco","Fresno":"Fresno","Sacramento":"Sacramento",
+  "Long Beach":"Los Angeles","Oakland":"Alameda","Bakersfield":"Kern",
+  "Anaheim":"Orange","Santa Ana":"Orange","Riverside":"Riverside",
+  "Stockton":"San Joaquin","Chula Vista":"San Diego","Irvine":"Orange",
+  "Fremont":"Alameda","San Bernardino":"San Bernardino","Modesto":"Stanislaus",
+  "Fontana":"San Bernardino","Oxnard":"Ventura","Moreno Valley":"Riverside",
+  "Huntington Beach":"Orange","Glendale":"Los Angeles","Santa Clarita":"Los Angeles",
+  "Garden Grove":"Orange","Oceanside":"San Diego","Rancho Cucamonga":"San Bernardino",
+  "Santa Rosa":"Sonoma","Ontario":"San Bernardino","Lancaster":"Los Angeles",
+  "Elk Grove":"Sacramento","Corona":"Riverside","Palmdale":"Los Angeles",
+  "Salinas":"Monterey","Pomona":"Los Angeles","Hayward":"Alameda",
+  "Escondido":"San Diego","Torrance":"Los Angeles","Sunnyvale":"Santa Clara",
+  "Orange":"Orange","Pasadena":"Los Angeles","Fullerton":"Orange",
+  "Thousand Oaks":"Ventura","Visalia":"Tulare","Roseville":"Placer",
+  "Concord":"Contra Costa","Simi Valley":"Ventura","Santa Clara":"Santa Clara",
+  "Victorville":"San Bernardino","Vallejo":"Solano","Berkeley":"Alameda",
+  "El Monte":"Los Angeles","Downey":"Los Angeles","Costa Mesa":"Orange",
+  "Inglewood":"Los Angeles","Carlsbad":"San Diego","Fairfield":"Solano",
+  "Ventura":"Ventura","Temecula":"Riverside","Antioch":"Contra Costa",
+  "Richmond":"Contra Costa","West Covina":"Los Angeles","Murrieta":"Riverside",
+  "Norwalk":"Los Angeles","Daly City":"San Mateo","Burbank":"Los Angeles",
+  "Santa Maria":"Santa Barbara","El Cajon":"San Diego","San Mateo":"San Mateo",
+  "Rialto":"San Bernardino","Clovis":"Fresno","Compton":"Los Angeles",
+  "Vista":"San Diego","South Gate":"Los Angeles","Mission Viejo":"Orange",
+  "Vacaville":"Solano","Carson":"Los Angeles","Hesperia":"San Bernardino",
+  "Santa Monica":"Los Angeles","Westminster":"Orange","Redding":"Shasta",
+  "Santa Barbara":"Santa Barbara","Chico":"Butte","Newport Beach":"Orange",
+  "San Leandro":"Alameda","San Marcos":"San Diego","Whittier":"Los Angeles",
+  "Hawthorne":"Los Angeles","Citrus Heights":"Sacramento","Tracy":"San Joaquin",
+  "Alhambra":"Los Angeles","Indio":"Riverside","Livermore":"Alameda",
+  "Buena Park":"Orange","Menifee":"Riverside","Lakewood":"Los Angeles",
+  "Merced":"Merced","Hemet":"Riverside","Chino":"San Bernardino",
+  "Mountain View":"Santa Clara","Palo Alto":"Santa Clara","Cupertino":"Santa Clara",
+  "Folsom":"Sacramento","Davis":"Yolo","Walnut Creek":"Contra Costa",
+  "Pleasanton":"Alameda","Manteca":"San Joaquin","Rancho Cordova":"Sacramento",
+  "Pico Rivera":"Los Angeles","Rancho Mirage":"Riverside","Apple Valley":"San Bernardino",
+  "Truckee":"Nevada","Sebastopol":"Sonoma","Healdsburg":"Sonoma",
+  "Lompoc":"Santa Barbara","Vernon":"Los Angeles","Azusa":"Los Angeles",
+  "Banning":"Riverside","Cerritos":"Los Angeles","Colton":"San Bernardino",
+  "Hercules":"Contra Costa","Lodi":"San Joaquin","Turlock":"Stanislaus",
+  "El Centro":"Imperial","Brawley":"Imperial","Calexico":"Imperial",
+  "Beverly Hills":"Los Angeles","Eureka":"Humboldt","Arcata":"Humboldt",
+  "Monterey":"Monterey","Capistrano":"Orange","Norco":"Riverside",
+  "Tustin":"Orange","Mission Beach":"San Diego","La Mesa":"San Diego",
+  "Encinitas":"San Diego","Santa Cruz":"Santa Cruz","Watsonville":"Santa Cruz"
+};
+
+const CCA_BY_COUNTY = {
+  "Marin":"Marin Clean Energy (MCE)","Napa":"Marin Clean Energy (MCE)",
+  "Solano":"Marin Clean Energy (MCE)","Contra Costa":"Marin Clean Energy (MCE)",
+  "Sonoma":"Sonoma Clean Power","Mendocino":"Sonoma Clean Power",
+  "San Mateo":"Peninsula Clean Energy","Santa Clara":"Silicon Valley Clean Energy",
+  "San Francisco":"CleanPowerSF","Alameda":"Ava Community Energy",
+  "Yolo":"Valley Clean Energy","Placer":"Pioneer Community Energy",
+  "El Dorado":"Pioneer Community Energy","Nevada":"Pioneer Community Energy",
+  "Humboldt":"Redwood Coast Energy Authority",
+  "Monterey":"Central Coast Community Energy (3CE)","San Benito":"Central Coast Community Energy (3CE)",
+  "Santa Cruz":"Central Coast Community Energy (3CE)","San Luis Obispo":"Central Coast Community Energy (3CE)",
+  "Santa Barbara":"Central Coast Community Energy (3CE)",
+  "Ventura":"Clean Power Alliance","Los Angeles":"Clean Power Alliance",
+  "San Diego":"San Diego Community Power"
+};
+const CCA_BY_CITY = {
+  "San Jose":"San Jose Clean Energy","Lancaster":"Lancaster Choice Energy",
+  "Apple Valley":"Apple Valley Choice Energy",
+  "Pico Rivera":"Pico Rivera Innovative Municipal Energy",
+  "Rancho Mirage":"Rancho Mirage Energy Authority"
+};
+
+const ISP_CABLE_BY_COUNTY = {
+  "Alameda":"Xfinity (Comcast)","Contra Costa":"Xfinity (Comcast)","Marin":"Xfinity (Comcast)",
+  "Napa":"Xfinity (Comcast)","San Francisco":"Xfinity (Comcast)","San Mateo":"Xfinity (Comcast)",
+  "Santa Clara":"Xfinity (Comcast)","Solano":"Xfinity (Comcast)","Sonoma":"Xfinity (Comcast)",
+  "Santa Cruz":"Xfinity (Comcast)","Sacramento":"Xfinity (Comcast)","Placer":"Xfinity (Comcast)",
+  "Yolo":"Xfinity (Comcast)","El Dorado":"Xfinity (Comcast)","Sutter":"Xfinity (Comcast)",
+  "Yuba":"Xfinity (Comcast)","San Joaquin":"Xfinity (Comcast)","Stanislaus":"Xfinity (Comcast)",
+  "Merced":"Xfinity (Comcast)","Madera":"Xfinity (Comcast)","Fresno":"Xfinity (Comcast)",
+  "Tulare":"Xfinity (Comcast)","Kings":"Xfinity (Comcast)","Kern":"Spectrum (Charter)",
+  "Monterey":"Xfinity (Comcast)","San Benito":"Xfinity (Comcast)",
+  "San Luis Obispo":"Spectrum (Charter)","Santa Barbara":"Cox Communications",
+  "Ventura":"Spectrum (Charter)","Los Angeles":"Spectrum (Charter)",
+  "Orange":"Cox / Spectrum","Riverside":"Spectrum (Charter)",
+  "San Bernardino":"Spectrum (Charter)","Imperial":"Spectrum (Charter)",
+  "San Diego":"Cox Communications","Humboldt":"Suddenlink (Optimum)",
+  "Mendocino":"Xfinity (Comcast)","Lake":"Mediacom","Del Norte":"Spectrum (Charter)",
+  "Shasta":"Spectrum (Charter)","Tehama":"Xfinity (Comcast)","Butte":"Xfinity (Comcast)",
+  "Glenn":"Xfinity (Comcast)","Colusa":"Xfinity (Comcast)","Lassen":"Frontier",
+  "Modoc":"Frontier","Plumas":"Frontier","Sierra":"Frontier",
+  "Siskiyou":"Spectrum (Charter)","Trinity":"Frontier","Inyo":"Suddenlink (Optimum)",
+  "Mono":"Suddenlink (Optimum)","Tuolumne":"Xfinity (Comcast)",
+  "Calaveras":"Xfinity (Comcast)","Amador":"Xfinity (Comcast)",
+  "Mariposa":"Frontier","Alpine":"Frontier"
+};
+const ISP_FIBER_BY_CITY = {
+  "San Francisco":["AT&T Fiber","Sonic Fiber","Webpass","MonkeyBrains"],
+  "Berkeley":["AT&T Fiber","Sonic Fiber","MonkeyBrains"],
+  "Oakland":["AT&T Fiber","Sonic Fiber"],"San Jose":["AT&T Fiber","Sonic Fiber"],
+  "Sunnyvale":["AT&T Fiber","Sonic Fiber"],"Mountain View":["AT&T Fiber","Sonic Fiber","Webpass"],
+  "Palo Alto":["AT&T Fiber","Sonic Fiber"],"Fremont":["AT&T Fiber","Sonic Fiber"],
+  "Santa Clara":["AT&T Fiber","Sonic Fiber"],"Cupertino":["AT&T Fiber","Sonic Fiber"],
+  "Hayward":["AT&T Fiber","Sonic Fiber"],"San Mateo":["AT&T Fiber","Sonic Fiber"],
+  "Daly City":["AT&T Fiber","Sonic Fiber"],"Sebastopol":["Sonic Fiber"],
+  "Santa Rosa":["AT&T Fiber","Sonic Fiber"],"Sacramento":["AT&T Fiber"],
+  "Roseville":["AT&T Fiber"],"Folsom":["AT&T Fiber"],"Elk Grove":["AT&T Fiber"],
+  "Stockton":["AT&T Fiber"],"Modesto":["AT&T Fiber"],"Fresno":["AT&T Fiber"],
+  "Bakersfield":["AT&T Fiber"],"Los Angeles":["AT&T Fiber","Frontier FiberOptic"],
+  "Long Beach":["AT&T Fiber","Frontier FiberOptic"],"Glendale":["AT&T Fiber","Frontier FiberOptic"],
+  "Burbank":["AT&T Fiber","Frontier FiberOptic"],"Pasadena":["AT&T Fiber","Frontier FiberOptic"],
+  "Santa Monica":["AT&T Fiber","Frontier FiberOptic"],"Torrance":["AT&T Fiber","Frontier FiberOptic"],
+  "Anaheim":["AT&T Fiber","Frontier FiberOptic"],"Santa Ana":["AT&T Fiber","Frontier FiberOptic"],
+  "Irvine":["AT&T Fiber","Frontier FiberOptic"],"Huntington Beach":["AT&T Fiber","Frontier FiberOptic"],
+  "Garden Grove":["AT&T Fiber","Frontier FiberOptic"],"Costa Mesa":["AT&T Fiber","Frontier FiberOptic"],
+  "Newport Beach":["AT&T Fiber","Frontier FiberOptic"],"Riverside":["AT&T Fiber","Frontier FiberOptic"],
+  "San Bernardino":["AT&T Fiber","Frontier FiberOptic"],"Fontana":["AT&T Fiber","Frontier FiberOptic"],
+  "Ontario":["AT&T Fiber","Frontier FiberOptic"],"Rancho Cucamonga":["AT&T Fiber","Frontier FiberOptic"],
+  "Moreno Valley":["AT&T Fiber"],"Corona":["AT&T Fiber","Frontier FiberOptic"],
+  "San Diego":["AT&T Fiber","Cox Fiber"],"Chula Vista":["AT&T Fiber"],
+  "Oceanside":["AT&T Fiber"],"Escondido":["AT&T Fiber"],"Carlsbad":["AT&T Fiber"]
+};
+
+const PROVIDER_URL = {
+  "PG&E":"https://www.pge.com","SCE":"https://www.sce.com","SDG&E":"https://www.sdge.com",
+  "LADWP":"https://www.ladwp.com","SMUD":"https://www.smud.org","IID":"https://www.iid.com",
+  "Burbank Water & Power":"https://www.burbankwaterandpower.com",
+  "Glendale Water & Power":"https://www.glendaleca.gov/government/departments/glendale-water-and-power",
+  "Pasadena Water & Power":"https://ww5.cityofpasadena.net/water-and-power/",
+  "Anaheim Public Utilities":"https://www.anaheim.net/4956/Public-Utilities",
+  "Riverside Public Utilities":"https://riversideca.gov/utilities/",
+  "Roseville Electric":"https://www.roseville.ca.us/government/departments/electric",
+  "City of Palo Alto Utilities":"https://www.cityofpaloalto.org/Departments/Utilities",
+  "Silicon Valley Power":"https://www.siliconvalleypower.com",
+  "Alameda Municipal Power":"https://www.alamedamp.com",
+  "Lodi Electric Utility":"https://www.lodi.gov/202/Electric-Utility",
+  "Modesto Irrigation District":"https://www.mid.org",
+  "Turlock Irrigation District":"https://www.tid.org",
+  "Redding Electric Utility":"https://www.cityofredding.org/departments/redding-electric-utility",
+  "Healdsburg Electric":"https://www.healdsburg.gov/162/Electric",
+  "City of Lompoc":"https://www.cityoflompoc.com/government/departments/utilities",
+  "Vernon Public Utilities":"https://www.cityofvernon.org/government/departments/public-utilities",
+  "Azusa Light & Water":"https://www.azusalw.com",
+  "Banning Electric":"https://www.banningca.gov/154/Electric-Utility",
+  "Cerritos Electric Utility":"https://www.cerritos.us/RESIDENTS/electric_utility/",
+  "Colton Electric":"https://www.coltonca.gov/electric",
+  "Hercules Municipal Utility":"https://www.ci.hercules.ca.us/government/electrical-utility",
+  "Truckee Donner PUD":"https://www.tdpud.org",
+  "Marin Clean Energy (MCE)":"https://www.mcecleanenergy.org",
+  "Sonoma Clean Power":"https://sonomacleanpower.org",
+  "Peninsula Clean Energy":"https://www.peninsulacleanenergy.com",
+  "Silicon Valley Clean Energy":"https://www.svcleanenergy.org",
+  "San Jose Clean Energy":"https://www.sanjosecleanenergy.org",
+  "CleanPowerSF":"https://www.cleanpowersf.org","Ava Community Energy":"https://avaenergy.org",
+  "Valley Clean Energy":"https://valleycleanenergy.org",
+  "Pioneer Community Energy":"https://pioneercommunityenergy.ca.gov",
+  "Redwood Coast Energy Authority":"https://redwoodenergy.org",
+  "Central Coast Community Energy (3CE)":"https://3cenergy.org",
+  "Clean Power Alliance":"https://cleanpoweralliance.org",
+  "San Diego Community Power":"https://sdcommunitypower.org",
+  "Lancaster Choice Energy":"https://lancasterchoiceenergy.com",
+  "Apple Valley Choice Energy":"https://www.applevalley.org/services/choice-energy",
+  "Pico Rivera Innovative Municipal Energy":"https://www.pico-rivera.org/depts/cs/picorivera_energy.asp",
+  "Rancho Mirage Energy Authority":"https://www.ranchomirageca.gov",
+  "Xfinity (Comcast)":"https://www.xfinity.com","Spectrum (Charter)":"https://www.spectrum.com",
+  "Cox Communications":"https://www.cox.com","Cox / Spectrum":"https://www.cox.com",
+  "Cox Fiber":"https://www.cox.com","Suddenlink (Optimum)":"https://www.optimum.com",
+  "Mediacom":"https://mediacomcable.com","Frontier":"https://frontier.com",
+  "Frontier FiberOptic":"https://frontier.com/fiber","AT&T Fiber":"https://www.att.com/fiber/",
+  "Sonic Fiber":"https://www.sonic.com","Webpass":"https://webpass.net",
+  "MonkeyBrains":"https://www.monkeybrains.net",
+  "T-Mobile 5G Home Internet":"https://www.t-mobile.com/home-internet",
+  "Verizon 5G Home Internet":"https://www.verizon.com/home/5g-home-internet/",
+  "AT&T Internet Air":"https://www.att.com/internet/internet-air/",
+  "Starlink":"https://www.starlink.com","HughesNet":"https://www.hughesnet.com",
+  "Viasat":"https://www.viasat.com","YouTube TV":"https://tv.youtube.com",
+  "Hulu + Live TV":"https://www.hulu.com/live-tv","Sling TV":"https://www.sling.com",
+  "fuboTV":"https://www.fubo.tv","DirecTV Stream":"https://www.directv.com/stream",
+  "Philo":"https://www.philo.com","DirecTV":"https://www.directv.com",
+  "Dish Network":"https://www.dish.com","Ring Alarm":"https://ring.com/security-system",
+  "SimpliSafe":"https://simplisafe.com","Wyze":"https://www.wyze.com/products/security-system",
+  "Abode":"https://goabode.com","Eufy":"https://www.eufy.com","Arlo":"https://www.arlo.com",
+  "ADT":"https://www.adt.com","Vivint":"https://www.vivint.com",
+  "Brinks":"https://www.brinkshome.com","Frontpoint":"https://www.frontpointsecurity.com",
+  "Cove":"https://www.covesmart.com",
+  "Google Nest Aware":"https://store.google.com/category/nest_subscriptions",
+  "Apple Home (HomeKit)":"https://www.apple.com/home-app/"
+};
+const ISP_TECH = {
+  "Xfinity (Comcast)":      { tech:"Cable",          group:"Cable",          down:1200,  up:35   },
+  "Spectrum (Charter)":     { tech:"Cable",          group:"Cable",          down:1000,  up:35   },
+  "Cox Communications":     { tech:"Cable",          group:"Cable",          down:1000,  up:100  },
+  "Cox / Spectrum":         { tech:"Cable",          group:"Cable",          down:1000,  up:50   },
+  "Cox Fiber":              { tech:"Fiber",          group:"Fiber",          down:5000,  up:5000 },
+  "Suddenlink (Optimum)":   { tech:"Cable",          group:"Cable",          down:1000,  up:50   },
+  "Mediacom":               { tech:"Cable",          group:"Cable",          down:1000,  up:50   },
+  "Frontier":               { tech:"DSL",            group:"DSL",            down:100,   up:20   },
+  "Frontier FiberOptic":    { tech:"Fiber",          group:"Fiber",          down:5000,  up:5000 },
+  "AT&T Fiber":             { tech:"Fiber",          group:"Fiber",          down:5000,  up:5000 },
+  "Sonic Fiber":            { tech:"Fiber",          group:"Fiber",          down:10000, up:10000},
+  "Webpass":                { tech:"Fixed Wireless", group:"Fixed wireless", down:1000,  up:1000 },
+  "MonkeyBrains":           { tech:"Fixed Wireless", group:"Fixed wireless", down:250,   up:250  },
+  "T-Mobile 5G Home Internet": { tech:"5G Wireless", group:"5G Home",        down:245,   up:31   },
+  "Verizon 5G Home Internet":  { tech:"5G Wireless", group:"5G Home",        down:1000,  up:75   },
+  "AT&T Internet Air":      { tech:"5G Wireless",    group:"5G Home",        down:225,   up:25   },
+  "Starlink":               { tech:"LEO Satellite",  group:"Satellite",      down:250,   up:30   },
+  "HughesNet":              { tech:"GEO Satellite",  group:"Satellite",      down:100,   up:5    },
+  "Viasat":                 { tech:"GEO Satellite",  group:"Satellite",      down:150,   up:3    }
+};
+const ISP_GROUP_ORDER = ["Cable","Fiber","Fixed wireless","DSL","5G Home","Satellite"];
+
+const TV_PROVIDERS_NATIONAL = [
+  { name:"YouTube TV",      type:"Live TV streaming",         group:"Streaming live TV" },
+  { name:"Hulu + Live TV",  type:"Live TV streaming",         group:"Streaming live TV" },
+  { name:"Sling TV",        type:"Live TV streaming",         group:"Streaming live TV" },
+  { name:"fuboTV",          type:"Sports-heavy streaming",    group:"Streaming live TV" },
+  { name:"DirecTV Stream",  type:"Live TV streaming",         group:"Streaming live TV" },
+  { name:"Philo",           type:"Entertainment streaming",   group:"Streaming live TV" },
+  { name:"DirecTV",         type:"Satellite TV",              group:"Satellite" },
+  { name:"Dish Network",    type:"Satellite TV",              group:"Satellite" }
+];
+const TV_GROUP_ORDER = ["Cable","Satellite","Streaming live TV","Antenna"];
+
+const SECURITY_PROVIDERS = [
+  { name:"Ring Alarm",        type:"Self-monitor or pro",     group:"DIY systems" },
+  { name:"SimpliSafe",        type:"Optional pro monitor",    group:"DIY systems" },
+  { name:"Wyze",              type:"Low-cost",                group:"DIY systems" },
+  { name:"Abode",             type:"Works with HomeKit",      group:"DIY systems" },
+  { name:"Eufy",              type:"Local storage",           group:"DIY systems" },
+  { name:"Arlo",              type:"Cameras + alarm",         group:"DIY systems" },
+  { name:"ADT",               type:"Pro install · contract",  group:"Pro install" },
+  { name:"Vivint",            type:"Pro install · smart",     group:"Pro install" },
+  { name:"Brinks",            type:"Pro install",             group:"Pro install" },
+  { name:"Frontpoint",        type:"DIY install · pro mon.",  group:"Pro install" },
+  { name:"Cove",              type:"DIY install · no contract", group:"Pro install" },
+  { name:"Google Nest Aware", type:"Google Nest cameras",     group:"Smart home" },
+  { name:"Apple Home (HomeKit)", type:"HomeKit Secure Video", group:"Smart home" }
+];
+const SECURITY_GROUP_ORDER = ["DIY systems","Pro install","Smart home"];
+
+const CA_CITY_DISTRICT = {
+  "Los Angeles":"Los Angeles Unified School District","San Diego":"San Diego Unified School District",
+  "Long Beach":"Long Beach Unified School District","Fresno":"Fresno Unified School District",
+  "Elk Grove":"Elk Grove Unified School District","Sacramento":"Sacramento City Unified School District",
+  "Oakland":"Oakland Unified School District","San Francisco":"San Francisco Unified School District",
+  "San Jose":"San Jose Unified School District","Santa Ana":"Santa Ana Unified School District",
+  "San Bernardino":"San Bernardino City Unified School District",
+  "Garden Grove":"Garden Grove Unified School District","Riverside":"Riverside Unified School District",
+  "Bakersfield":"Bakersfield City School District","Stockton":"Stockton Unified School District",
+  "Capistrano":"Capistrano Unified School District","Corona":"Corona-Norco Unified School District",
+  "Norco":"Corona-Norco Unified School District","Moreno Valley":"Moreno Valley Unified School District",
+  "Chula Vista":"Sweetwater Union High School District","Fontana":"Fontana Unified School District",
+  "Visalia":"Visalia Unified School District","Berkeley":"Berkeley Unified School District",
+  "Palo Alto":"Palo Alto Unified School District","Mountain View":"Mountain View Whisman School District",
+  "Sunnyvale":"Sunnyvale School District","Cupertino":"Cupertino Union School District",
+  "Fremont":"Fremont Unified School District","Hayward":"Hayward Unified School District",
+  "Anaheim":"Anaheim Union High School District","Irvine":"Irvine Unified School District",
+  "Huntington Beach":"Huntington Beach Union High School District",
+  "Costa Mesa":"Newport-Mesa Unified School District","Newport Beach":"Newport-Mesa Unified School District",
+  "Santa Monica":"Santa Monica-Malibu Unified School District","Pasadena":"Pasadena Unified School District",
+  "Glendale":"Glendale Unified School District","Burbank":"Burbank Unified School District",
+  "Torrance":"Torrance Unified School District","Beverly Hills":"Beverly Hills Unified School District",
+  "Davis":"Davis Joint Unified School District","Modesto":"Modesto City Schools",
+  "Ventura":"Ventura Unified School District","Oxnard":"Oxnard School District",
+  "Salinas":"Salinas Union High School District","Monterey":"Monterey Peninsula Unified School District",
+  "Vallejo":"Vallejo City Unified School District","Santa Rosa":"Santa Rosa City Schools",
+  "Concord":"Mt. Diablo Unified School District","Walnut Creek":"Walnut Creek School District",
+  "Pleasanton":"Pleasanton Unified School District","Livermore":"Livermore Valley Joint Unified School District",
+  "Tracy":"Tracy Unified School District","Manteca":"Manteca Unified School District",
+  "Roseville":"Roseville City School District","Folsom":"Folsom Cordova Unified School District",
+  "Rancho Cordova":"Folsom Cordova Unified School District"
+};
+
+/* -------- DOM helpers ------------------------------------------------ */
+const $ = id => document.getElementById(id);
+const setText = (id, t) => { const el = $(id); if (el) el.textContent = t ?? "—"; };
+const setHTML = (id, h) => { const el = $(id); if (el) el.innerHTML = h; };
+function escapeHtml(s) {
+  return String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+}
+function showStatus(message, kind = "info") {
+  $("status").innerHTML = `<div class="status-line ${kind}">${message}</div>`;
+}
+function clearStatus() { $("status").innerHTML = ""; }
+function urlFor(name) { return PROVIDER_URL[name] || `https://www.google.com/search?q=${encodeURIComponent(name)}`; }
+function providerCell(name) { return `<a class="provider-link" href="${urlFor(name)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`; }
+function visitBtn(name, label = "Visit →") { return `<a class="visit-btn" href="${urlFor(name)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`; }
+
+/* -------- Photon autocomplete ---------------------------------------- */
+let suggestState = { items: [], activeIdx: -1, lastQuery: "" };
+async function searchSuggestions(rawQuery) {
+  const q = /\bCA\b|California/i.test(rawQuery) ? rawQuery : `${rawQuery}, California`;
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en`;
+  const res = await fetch(url);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const features = (data.features || []).filter(f => {
+    const p = f.properties || {};
+    return (p.state === "California" || p.state === "CA") && (p.country === "United States" || p.country === "USA");
+  });
+  return features.slice(0, 6);
+}
+function suggestionLabel(feature) {
+  const p = feature.properties || {};
+  const top = [p.housenumber, p.street].filter(Boolean).join(" ") || p.name || "";
+  const sub = [p.city || p.locality || p.town, p.state, p.postcode].filter(Boolean).join(", ");
+  return { top: top || sub, sub: top ? sub : "California" };
+}
+function renderSuggestions() {
+  const box = $("suggestions"); const bar = $("searchForm");
+  if (!suggestState.items.length) { box.hidden = true; bar.classList.remove("open"); return; }
+  box.innerHTML = suggestState.items.map((f, i) => {
+    const lbl = suggestionLabel(f);
+    return `<div class="suggestion ${i === suggestState.activeIdx ? "active" : ""}" data-idx="${i}" role="option">
+      <div class="top">${escapeHtml(lbl.top)}</div>
+      <div class="sub">${escapeHtml(lbl.sub)}</div>
+    </div>`;
+  }).join("");
+  box.hidden = false; bar.classList.add("open");
+}
+function hideSuggestions() {
+  $("suggestions").hidden = true; $("searchForm").classList.remove("open");
+  suggestState.activeIdx = -1;
+}
+const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+const onTypeDebounced = debounce(async () => {
+  const q = $("addr").value.trim();
+  if (q.length < 3) { suggestState.items = []; renderSuggestions(); return; }
+  if (q === suggestState.lastQuery) return;
+  suggestState.lastQuery = q;
+  try {
+    const items = await searchSuggestions(q);
+    suggestState.items = items; suggestState.activeIdx = -1; renderSuggestions();
+  } catch (e) { suggestState.items = []; renderSuggestions(); }
+}, 280);
+
+/* -------- Reverse geocode -------------------------------------------- */
+async function reverseGeocode(lat, lon) {
+  const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&addressdetails=1`;
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error("Reverse geocode failed: " + res.status);
+  return await res.json();
+}
+
+/* -------- Address helpers (with city→county fallback) ---------------- */
+function getCityKey(addr) {
+  const c = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.municipality || "";
+  return c.replace(/^City of\s+/i, "").trim();
+}
+function getCountyKey(addr) {
+  const direct = (addr.county || "").replace(/\s+County$/i, "").trim();
+  if (direct) return direct;
+  // Fallback: derive from city for consolidated city-counties + major cities
+  const city = getCityKey(addr);
+  return CA_CITY_TO_COUNTY[city] || "";
+}
+function getCountyMeta(addr) {
+  const direct = (addr.county || "").replace(/\s+County$/i, "").trim();
+  if (direct) return { name: direct, inferred: false };
+  const city = getCityKey(addr);
+  if (CA_CITY_TO_COUNTY[city]) return { name: CA_CITY_TO_COUNTY[city], inferred: true };
+  return { name: "", inferred: false };
+}
+function getStreet(addr) {
+  return [addr.house_number, addr.road].filter(Boolean).join(" ") || addr.neighbourhood || "—";
+}
+
+/* -------- Resolvers -------------------------------------------------- */
+function resolveElectric(addr) {
+  const cityKey = getCityKey(addr);
+  const county  = getCountyKey(addr);
+  let utility = null, summaryNote = "";
+  if (CA_CITY_UTILITY[cityKey]) {
+    utility = CA_CITY_UTILITY[cityKey];
+    summaryNote = `Publicly-owned utility serving ${cityKey}.`;
+  } else if (CA_COUNTY_UTILITY[county]) {
+    utility = CA_COUNTY_UTILITY[county];
+    summaryNote = `Primary electric utility for most of ${county} County.`;
+  }
+  let cca = null;
+  if (utility && IOU_SET.has(utility)) {
+    cca = CCA_BY_CITY[cityKey] || CCA_BY_COUNTY[county] || null;
+  }
+  const rows = [];
+  if (utility && IOU_SET.has(utility)) {
+    if (cca) {
+      rows.push({ name: utility, role: "Wires + billing (delivery)" });
+      rows.push({ name: cca, role: "Generation supplier (your CCA)" });
+    } else {
+      rows.push({ name: utility, role: "Full bundled service (no CCA in this area)" });
+    }
+  } else if (utility) {
+    rows.push({ name: utility, role: "Full service (POU — wires, generation, billing)" });
+  }
+  return { utility: utility || "Unknown", note: summaryNote, rows, county, cityKey };
+}
+
+function resolveInternet(addr) {
+  const cityKey = getCityKey(addr);
+  const county  = getCountyKey(addr);
+  const cable   = ISP_CABLE_BY_COUNTY[county] || null;
+  const fiberCity = ISP_FIBER_BY_CITY[cityKey] || [];
+  const rows = [];
+  if (cable && ISP_TECH[cable]) rows.push({ name: cable, ...ISP_TECH[cable] });
+  for (const f of fiberCity) {
+    if (ISP_TECH[f]) rows.push({ name: f, ...ISP_TECH[f] });
+  }
+  ["T-Mobile 5G Home Internet","Verizon 5G Home Internet","AT&T Internet Air"].forEach(p => {
+    if (ISP_TECH[p]) rows.push({ name: p, ...ISP_TECH[p] });
+  });
+  ["Starlink","HughesNet","Viasat"].forEach(p => {
+    if (ISP_TECH[p]) rows.push({ name: p, ...ISP_TECH[p] });
+  });
+  return { rows };
+}
+
+function resolveTV(cableProvider) {
+  const rows = [];
+  if (cableProvider) rows.push({ name: cableProvider, type: "Bundled with internet", group: "Cable" });
+  rows.push(...TV_PROVIDERS_NATIONAL);
+  rows.push({ name: "OTA Antenna (free broadcast)", type: "ABC, CBS, NBC, FOX, PBS — depends on terrain", group: "Antenna" });
+  return { rows };
+}
+function resolveSecurity() { return { rows: SECURITY_PROVIDERS.slice() }; }
+function resolveDistrict(addr) {
+  const cityKey = getCityKey(addr);
+  const district = CA_CITY_DISTRICT[cityKey];
+  if (district) return { name: district, note: `Likely district for addresses in ${cityKey}.` };
+  return { name: cityKey ? "Multiple possible districts" : "—",
+           note: cityKey ? `We don't have a single district mapping for ${cityKey}.` : "City could not be determined." };
+}
+
+/* =====================================================================
+   Nearby education lookup (Overpass API) — v5: GET + multi-mirror
+   ===================================================================== */
+const OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter"
+];
+
+function haversineMiles(lat1, lon1, lat2, lon2) {
+  const R = 3958.8;
+  const toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// Run a single Overpass QL query, falling through mirrors until one works.
+async function overpassQuery(qlBody, onProgress) {
+  let lastErr = null;
+  for (let i = 0; i < OVERPASS_MIRRORS.length; i++) {
+    const baseUrl = OVERPASS_MIRRORS[i];
+    const host = new URL(baseUrl).host;
+    if (onProgress) onProgress(i + 1, OVERPASS_MIRRORS.length, host);
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(new Error(`Timed out on ${host}`)), 20000);
+      const res = await fetch(baseUrl + "?data=" + encodeURIComponent(qlBody),
+                              { method: "GET", signal: ctrl.signal });
+      clearTimeout(t);
+      if (!res.ok) { lastErr = new Error(`${host}: HTTP ${res.status}`); continue; }
+      const data = await res.json();
+      return data.elements || [];
+    } catch (e) {
+      if (e && e.name === "AbortError") lastErr = new Error(`${host}: server too slow`);
+      else lastErr = new Error(`${host}: ${e.message || e}`);
+    }
+  }
+  throw lastErr || new Error("All Overpass mirrors failed");
+}
+
+async function fetchNearbyEducation(lat, lon, radiusMeters = 4000, onProgress) {
+  // Split the original heavy query into TWO smaller parallel queries.
+  // Each is roughly half the load, so each finishes in ~half the time
+  // and is far less likely to 504. Promise.allSettled means partial
+  // success is OK — if schools succeed but amenities fail (or vice
+  // versa), we still show the user what we have.
+  const schoolsQ = `[out:json][timeout:18];(nwr["amenity"="school"](around:${radiusMeters},${lat},${lon});nwr["amenity"="kindergarten"](around:${radiusMeters},${lat},${lon});nwr["amenity"~"^(college|university)$"](around:${radiusMeters},${lat},${lon}););out center tags;`;
+  const amenQ    = `[out:json][timeout:18];(nwr["amenity"="library"](around:${radiusMeters},${lat},${lon});nwr["leisure"~"^(swimming_pool|sports_centre)$"](around:${radiusMeters},${lat},${lon});nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon}););out center tags;`;
+
+  // Only one of the two queries reports progress, otherwise the loading
+  // message would jitter as both update at once.
+  const results = await Promise.allSettled([
+    overpassQuery(schoolsQ, onProgress),
+    overpassQuery(amenQ, null)
+  ]);
+
+  const elements = [];
+  const errors = [];
+  if (results[0].status === "fulfilled") elements.push(...results[0].value);
+  else errors.push("schools (" + results[0].reason.message + ")");
+  if (results[1].status === "fulfilled") elements.push(...results[1].value);
+  else errors.push("amenities (" + results[1].reason.message + ")");
+
+  if (elements.length === 0 && errors.length > 0) {
+    throw new Error(errors.join(" · "));
+  }
+  // Note: errors array may still have entries if 1 of 2 queries failed;
+  // we accept partial results here.
+  return elements;
+}
+
+const PRIVATE_NAME_PATTERNS = /\b(catholic|christian|episcopal|hebrew|jewish|islamic|muslim|lutheran|montessori|parochial|preparatory|prep|academy|day school|country day|saint |st\. |our lady|seventh-day|adventist|baptist|presbyterian|orthodox|waldorf)\b/i;
+
+function classifyEducationItem(el) {
+  const t = el.tags || {};
+  const name = t.name || t["name:en"];
+  if (!name) return null;
+  const lat = el.lat ?? (el.center && el.center.lat);
+  const lon = el.lon ?? (el.center && el.center.lon);
+  if (lat == null || lon == null) return null;
+
+  let category = null, subtype = null;
+  if (t.amenity === "school") {
+    const isPrivateTag = t["school:type"] === "private" || t["operator:type"] === "private" || t["operator:type"] === "religious";
+    const looksPrivate = PRIVATE_NAME_PATTERNS.test(name);
+    category = (isPrivateTag || looksPrivate) ? "private" : "public";
+    const lvl = (t["school:level"] || t.school || "").toLowerCase();
+    const isced = String(t["isced:level"] || "");
+    const lname = name.toLowerCase();
+    if (lvl.includes("elementary") || lvl.includes("primary") || isced === "1" ||
+        /\belementary\b|primary school/.test(lname)) subtype = "Elementary";
+    else if (lvl.includes("middle") || lvl.includes("intermediate") || isced === "2" ||
+             /\bmiddle\b|\bjunior high\b|\bintermediate\b/.test(lname)) subtype = "Middle";
+    else if (lvl.includes("high") || lvl.includes("secondary") || isced === "3" ||
+             /\bhigh school\b|\bsecondary\b/.test(lname)) subtype = "High";
+    else if (/\bk[\s-]?(8|12)\b/i.test(name)) subtype = "K-8 / K-12";
+    else if (PRIVATE_NAME_PATTERNS.test(name)) subtype = "Private school";
+    else subtype = "School";
+  }
+  else if (t.amenity === "kindergarten") { category = "private"; subtype = "Preschool / Kindergarten"; }
+  else if (t.amenity === "college")    { category = "higher"; subtype = "College"; }
+  else if (t.amenity === "university") { category = "higher"; subtype = "University"; }
+  else if (t.amenity === "library")    { category = "enrichment"; subtype = "Public library"; }
+  else if (t.leisure === "swimming_pool") {
+    if (t.access === "private" || t.access === "no") return null;
+    category = "enrichment";
+    subtype = (t.access === "customers") ? "Pool (members)" : "Public pool";
+  }
+  else if (t.leisure === "sports_centre")    { category = "enrichment"; subtype = "Sports / rec center"; }
+  else if (t.amenity === "community_centre") { category = "enrichment"; subtype = "Community center"; }
+  if (!category) return null;
+  return { name, category, subtype, lat, lon };
+}
+
+/* -------- Generic grouped-table renderer ----------------------------- */
+function renderGroupedSections(containerId, rows, opts) {
+  const root = $(containerId); if (!root) return;
+  if (!rows || rows.length === 0) { root.innerHTML = ""; return; }
+  // Group rows by their `group` field, preserving the supplied order
+  const groups = [];
+  for (const groupName of opts.order) {
+    const groupRows = rows.filter(r => r.group === groupName);
+    if (groupRows.length > 0) groups.push({ label: groupName, rows: groupRows });
+  }
+  // Append any rows whose group isn't in the supplied order (shouldn't happen, defensive)
+  const known = new Set(opts.order);
+  const stragglers = rows.filter(r => !known.has(r.group));
+  if (stragglers.length) groups.push({ label: "Other", rows: stragglers });
+
+  root.innerHTML = groups.map(g => `
+    <div class="pgroup">
+      <div class="pgroup-head">
+        ${escapeHtml(g.label)}
+        <span class="pgroup-count">(${g.rows.length})</span>
+      </div>
+      <div class="tbl-wrap"><table class="ptable">
+        ${opts.headHtml || ""}
+        <tbody>${g.rows.map(opts.rowFn).join("")}</tbody>
+      </table></div>
+    </div>
+  `).join("");
+}
+
+/* -------- Renderers -------------------------------------------------- */
+function renderResolved(geo) {
+  const a = geo.address || {};
+  setText("ra-street", getStreet(a));
+  setText("ra-city",   a.city || a.town || a.village || a.hamlet || "—");
+  // County with inferred-marker if we filled it from city fallback
+  const countyMeta = getCountyMeta(a);
+  const countyEl = $("ra-county");
+  if (countyMeta.name) {
+    countyEl.innerHTML = `${escapeHtml(countyMeta.name)} County${countyMeta.inferred ? '<span class="inferred">(inferred)</span>' : ''}`;
+  } else {
+    countyEl.textContent = "—";
+  }
+  setText("ra-zip",    a.postcode || "—");
+  setText("ra-state",  a.state || "—");
+  const latNum = parseFloat(geo.lat), lonNum = parseFloat(geo.lon);
+  setText("ra-coords", `${latNum.toFixed(5)}, ${lonNum.toFixed(5)}`);
+
+  // Embed an OpenStreetMap view of the home (no API key, free forever).
+  // bbox is ~200m on each side at SF latitudes — block-level zoom.
+  const d = 0.002;
+  const bbox = `${lonNum - d},${latNum - d},${lonNum + d},${latNum + d}`;
+  const iframeSrc = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${latNum},${lonNum}`;
+  const mapEl = $("ra-map");
+  const loadingEl = $("ra-map-loading");
+  if (loadingEl) loadingEl.style.display = "grid";
+  mapEl.onload = () => { if (loadingEl) loadingEl.style.display = "none"; };
+  mapEl.src = iframeSrc;
+  $("ra-map-link").innerHTML = `<a href="https://www.openstreetmap.org/?mlat=${latNum}&mlon=${lonNum}#map=18/${latNum}/${lonNum}" target="_blank" rel="noopener">View larger map on OpenStreetMap →</a>`;
+}
+
+function renderElectric(e, geo) {
+  setText("electric-value", e.utility);
+  setText("electric-meta",  e.note);
+  const body = $("electric-body");
+  if (e.rows.length === 0) {
+    // Help-callout when we couldn't determine utility — common for unincorporated areas
+    body.innerHTML = `
+      <div class="help-callout">
+        <p><b>We don't have utility info for this address yet.</b> Most of California is served by PG&amp;E, SCE, SDG&amp;E, LADWP, SMUD, or one of ~40 publicly-owned utilities (POUs).</p>
+        <p>To find yours, look up your address on the official map:</p>
+        <a class="visit-btn" href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">Open CEC service-territory map →</a>
+        <a class="visit-btn" href="https://www.google.com/search?q=${encodeURIComponent('electric utility for ' + (geo.display_name || ''))}" target="_blank" rel="noopener" style="margin-left:6px;">Google search →</a>
+      </div>`;
+    setHTML("electric-source", "");
+    return;
+  }
+  body.innerHTML = `<div class="tbl-wrap"><table class="ptable">
+    <thead><tr><th>Provider</th><th>Role</th><th></th></tr></thead>
+    <tbody>${e.rows.map(r => `<tr>
+      <td>${providerCell(r.name)}</td>
+      <td class="role">${escapeHtml(r.role)}</td>
+      <td style="text-align:right">${visitBtn(r.name)}</td>
+    </tr>`).join("")}</tbody>
+  </table></div>`;
+  setHTML("electric-source", 'Verify exact territory on the <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC service-territory map</a>.');
+}
+
+function renderInternet(i, lat, lon) {
+  setText("internet-value", `${i.rows.length} options`);
+  renderGroupedSections("internet-body", i.rows, {
+    order: ISP_GROUP_ORDER,
+    headHtml: `<thead><tr><th>Provider</th><th>Technology</th><th class="num-h">Down</th><th class="num-h">Up</th><th></th></tr></thead>`,
+    rowFn: r => `<tr>
+      <td>${providerCell(r.name)}</td>
+      <td class="tech">${escapeHtml(r.tech)}</td>
+      <td class="numeric">${r.down}</td>
+      <td class="numeric">${r.up}</td>
+      <td style="text-align:right">${visitBtn(r.name)}</td>
+    </tr>`
+  });
+  const fccUrl = `https://broadbandmap.fcc.gov/location-summary/fixed?location=${lat},${lon}`;
+  setHTML("internet-source", `Speeds shown are typical max residential plans. <a href="${fccUrl}" target="_blank" rel="noopener">Open the FCC report for this exact location →</a>`);
+}
+
+function renderTV(t) {
+  setText("tv-value", `${t.rows.length} options`);
+  renderGroupedSections("tv-body", t.rows, {
+    order: TV_GROUP_ORDER,
+    headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
+    rowFn: r => {
+      const isAntenna = r.name.startsWith("OTA Antenna");
+      const visit = isAntenna
+        ? `<a class="visit-btn" href="https://www.fcc.gov/media/engineering/dtvmaps" target="_blank" rel="noopener">FCC DTV map →</a>`
+        : visitBtn(r.name);
+      return `<tr>
+        <td>${isAntenna ? escapeHtml(r.name) : providerCell(r.name)}</td>
+        <td class="tech">${escapeHtml(r.type)}</td>
+        <td style="text-align:right">${visit}</td>
+      </tr>`;
+    }
+  });
+}
+
+function renderSecurity(s) {
+  setText("security-value", `${s.rows.length} options`);
+  renderGroupedSections("security-body", s.rows, {
+    order: SECURITY_GROUP_ORDER,
+    headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
+    rowFn: r => `<tr>
+      <td>${providerCell(r.name)}</td>
+      <td class="tech">${escapeHtml(r.type)}</td>
+      <td style="text-align:right">${visitBtn(r.name)}</td>
+    </tr>`
+  });
+}
+
+function renderDistrictHeader(sc) {
+  setText("school-value", sc.name);
+  setText("school-meta",  sc.note);
+}
+function placeRow(item, cityKey) {
+  const q = `${item.name} ${cityKey || "California"}`;
+  const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  return `<tr>
+    <td><a class="provider-link" href="${url}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a></td>
+    <td class="role">${escapeHtml(item.subtype)}</td>
+    <td class="numeric">${item.dist.toFixed(2)} mi</td>
+    <td style="text-align:right"><a class="visit-btn" href="${url}" target="_blank" rel="noopener">Find →</a></td>
+  </tr>`;
+}
+function renderSchoolSections(grouped, total, cityKey) {
+  $("school-loading").hidden = true;
+  $("school-sections").hidden = false;
+  const pill = $("school-summary"); pill.hidden = false;
+  pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.5 mi`;
+  const fill = (sectionId, tbodyId, items) => {
+    const sec = $(sectionId), tb = $(tbodyId);
+    if (!items.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tb.innerHTML = items.map(it => placeRow(it, cityKey)).join("");
+  };
+  fill("public-section",     "public-tbody",     grouped.public);
+  fill("private-section",    "private-tbody",    grouped.private);
+  fill("higher-section",     "higher-tbody",     grouped.higher);
+  fill("enrichment-section", "enrichment-tbody", grouped.enrichment);
+  if (total === 0) {
+    $("school-sections").innerHTML =
+      `<div class="schools-empty">No schools or educational facilities found within 2.5 miles. Try a more central address, or check the school district directly.</div>`;
+  }
+}
+
+let lastSchoolGeo = null;
+async function loadNearbySchools(geo) {
+  lastSchoolGeo = geo;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  const a = geo.address || {};
+  const cityKey = getCityKey(a);
+
+  const loading = $("school-loading");
+  loading.classList.remove("error");
+  loading.textContent = "Finding schools, libraries, and nearby educational facilities… (this can take 15–40 seconds)";
+  loading.hidden = false;
+  $("school-sections").hidden = true;
+  $("school-summary").hidden = true;
+
+  try {
+    const elements = await fetchNearbyEducation(lat, lon, 4000, (idx, total, host) => {
+      // Progress callback — fires when we move to a new mirror so the user
+      // sees activity rather than wondering whether it's stuck.
+      if (idx === 1) {
+        loading.textContent = `Searching ${host} for nearby schools… (this can take 15–40 seconds)`;
+      } else {
+        loading.textContent = `Server ${idx - 1} was slow. Trying backup server ${idx} of ${total} (${host})…`;
+      }
+    });
+    const items = elements
+      .map(classifyEducationItem)
+      .filter(Boolean)
+      .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name && x.subtype === it.subtype))
+      .sort((a, b) => a.dist - b.dist);
+
+    const levelRank = { "Elementary":1, "Middle":2, "High":3, "K-8 / K-12":4, "School":5 };
+    const sortedPublic = items.filter(i => i.category === "public")
+      .sort((a, b) => (levelRank[a.subtype] || 9) - (levelRank[b.subtype] || 9) || a.dist - b.dist)
+      .slice(0, 12);
+    const grouped = {
+      public:     sortedPublic,
+      private:    items.filter(i => i.category === "private").slice(0, 10),
+      higher:     items.filter(i => i.category === "higher").slice(0, 6),
+      enrichment: items.filter(i => i.category === "enrichment").slice(0, 12)
+    };
+    renderSchoolSections(grouped, items.length, cityKey);
+  } catch (err) {
+    loading.classList.add("error");
+    loading.innerHTML =
+      `Couldn't load nearby schools: <b>${escapeHtml(err.message || "network error")}</b>. ` +
+      `<button class="retry-btn" id="schoolRetry" type="button">Retry</button> ` +
+      `<a class="visit-btn" href="https://www.openstreetmap.org/#map=14/${lat}/${lon}" target="_blank" rel="noopener" style="margin-left:6px;">Open on OpenStreetMap →</a>`;
+    const r = $("schoolRetry");
+    if (r) r.addEventListener("click", () => loadNearbySchools(lastSchoolGeo));
+  }
+}
+
+/* -------- Loading state ---------------------------------------------- */
+function setLoading() {
+  $("results").hidden = false;
+  ["electric","internet","tv","security"].forEach(k => {
+    setHTML(`${k}-value`, '<div class="skeleton" style="width:60%;height:22px;"></div>');
+    const meta = $(`${k}-meta`); if (meta) meta.textContent = "";
+    const body = $(`${k}-body`); if (body) body.innerHTML = `<div class="skeleton" style="width:90%;margin-top:10px;"></div>`.repeat(3);
+  });
+  setHTML("school-value", '<div class="skeleton" style="width:50%;height:22px;"></div>');
+  setText("school-meta", "");
+}
+
+function renderResults(geo) {
+  renderResolved(geo);
+  const a = geo.address || {};
+  const e = resolveElectric(a); renderElectric(e, geo);
+  const i = resolveInternet(a); renderInternet(i, geo.lat, geo.lon);
+  const cableForTV = (i.rows.find(r => (r.tech || "").toLowerCase() === "cable") || {}).name || null;
+  const t = resolveTV(cableForTV); renderTV(t);
+  const sec = resolveSecurity(); renderSecurity(sec);
+  const sc = resolveDistrict(a); renderDistrictHeader(sc);
+  loadNearbySchools(geo);
+}
+
+/* -------- Main flow -------------------------------------------------- */
+async function runLookupFromFeature(feature) {
+  const [lon, lat] = feature.geometry.coordinates;
+  $("results").hidden = false;
+  setLoading();
+  $("searchBtn").disabled = true;
+  $("searchBtn").textContent = "Looking up…";
+  try {
+    const geo = await reverseGeocode(lat, lon);
+    const state = (geo.address && geo.address.state) || "";
+    if (state && !/california/i.test(state)) {
+      $("results").hidden = true;
+      showStatus(`This preview is California-only — that address resolved to <b>${state}</b>. US-wide coverage is on the roadmap.`, "info");
+      return;
+    }
+    geo.lat = lat; geo.lon = lon;
+    renderResults(geo);
+    $("results").scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    $("results").hidden = true;
+    showStatus(`Could not look up that address: ${escapeHtml(err.message)}.`, "error");
+  } finally {
+    $("searchBtn").disabled = false;
+    $("searchBtn").textContent = "Find my zones";
+    hideSuggestions();
+  }
+}
+
+/* -------- Event wiring ----------------------------------------------- */
+const addrEl = $("addr"), formEl = $("searchForm"), sugEl = $("suggestions");
+addrEl.addEventListener("input", () => { clearStatus(); onTypeDebounced(); });
+addrEl.addEventListener("keydown", (e) => {
+  if (sugEl.hidden || !suggestState.items.length) return;
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    suggestState.activeIdx = Math.min(suggestState.items.length - 1, suggestState.activeIdx + 1);
+    renderSuggestions();
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    suggestState.activeIdx = Math.max(0, suggestState.activeIdx - 1);
+    renderSuggestions();
+  } else if (e.key === "Enter") {
+    if (suggestState.activeIdx >= 0) {
+      e.preventDefault();
+      const f = suggestState.items[suggestState.activeIdx];
+      const lbl = suggestionLabel(f);
+      addrEl.value = `${lbl.top}${lbl.sub ? ", " + lbl.sub : ""}`;
+      hideSuggestions();
+      runLookupFromFeature(f);
+    }
+  } else if (e.key === "Escape") { hideSuggestions(); }
+});
+sugEl.addEventListener("click", (e) => {
+  const target = e.target.closest(".suggestion");
+  if (!target) return;
+  const idx = parseInt(target.getAttribute("data-idx"), 10);
+  const f = suggestState.items[idx]; if (!f) return;
+  const lbl = suggestionLabel(f);
+  addrEl.value = `${lbl.top}${lbl.sub ? ", " + lbl.sub : ""}`;
+  hideSuggestions();
+  runLookupFromFeature(f);
+});
+document.addEventListener("click", (e) => {
+  if (!e.target.closest(".search-wrap")) hideSuggestions();
+});
+formEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const raw = addrEl.value.trim(); if (!raw) return;
+  hideSuggestions();
+  $("searchBtn").disabled = true; $("searchBtn").textContent = "Searching…";
+  try {
+    const items = await searchSuggestions(raw);
+    if (!items.length) { showStatus(`Could not find that address. Try including the city &amp; ZIP.`, "error"); return; }
+    runLookupFromFeature(items[0]);
+  } catch (err) { showStatus(`Search failed: ${escapeHtml(err.message)}`, "error"); }
+  finally { $("searchBtn").disabled = false; $("searchBtn").textContent = "Find my zones"; }
+});
+$("resetBtn").addEventListener("click", () => {
+  $("results").hidden = true;
+  addrEl.value = ""; addrEl.focus();
+  clearStatus();
+});
+</script>
+</body>
+</html>
