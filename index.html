@@ -233,7 +233,7 @@
     <div class="brand">
       <span class="brand-dot"></span>
       HomeAtlas
-      <span class="brand-tag">Preview · United States</span>
+      <span class="brand-tag">Preview · 6 states deep</span>
     </div>
   </header>
 
@@ -252,7 +252,7 @@
       </form>
       <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
-    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. US addresses for now — international coming later. State-specific depth (electric utility, cable, school district) is being added one state at a time, starting with California.</p>
+    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. US addresses for now. State-specific depth (electric, cable, school district) is loaded for <b>CA, PA, NY, TX, WA, NJ</b> — other states show nationwide options + helpful fallback links.</p>
     <div id="status"></div>
   </section>
 
@@ -405,7 +405,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.9 · April 2026 · United States · CA depth loaded · more states coming
+      <b>HomeAtlas</b> &mdash; v0.10 · April 2026 · United States · depth loaded for CA · PA · NY · TX · WA · NJ
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -648,7 +648,100 @@ const PROVIDER_URL = {
   "Brinks":"https://www.brinkshome.com","Frontpoint":"https://www.frontpointsecurity.com",
   "Cove":"https://www.covesmart.com",
   "Google Nest Aware":"https://store.google.com/category/nest_subscriptions",
-  "Apple Home (HomeKit)":"https://www.apple.com/home-app/"
+  "Apple Home (HomeKit)":"https://www.apple.com/home-app/",
+
+  // PA utilities (FirstEnergy companies + others)
+  "PECO":"https://www.peco.com",
+  "PPL Electric":"https://www.pplelectric.com",
+  "Duquesne Light":"https://www.duquesnelight.com",
+  "Met-Ed":"https://www.firstenergycorp.com/met-ed.html",
+  "Penelec":"https://www.firstenergycorp.com/penelec.html",
+  "Penn Power":"https://www.firstenergycorp.com/penn-power.html",
+  "West Penn Power":"https://www.firstenergycorp.com/west-penn-power.html",
+  // NY utilities
+  "Con Edison":"https://www.coned.com",
+  "National Grid":"https://www.nationalgridus.com",
+  "NYSEG":"https://www.nyseg.com",
+  "RG&E":"https://www.rge.com",
+  "Orange & Rockland":"https://www.oru.com",
+  "Central Hudson":"https://www.cenhud.com",
+  "PSEG Long Island":"https://www.psegliny.com",
+  // TX utilities/TDUs
+  "Oncor":"https://www.oncor.com",
+  "CenterPoint Energy":"https://www.centerpointenergy.com",
+  "AEP Texas":"https://www.aeptexas.com",
+  "TNMP":"https://tnmp.com",
+  "El Paso Electric":"https://www.epelectric.com",
+  "Entergy Texas":"https://www.entergy-texas.com",
+  "SWEPCO":"https://www.swepco.com",
+  "Xcel Energy":"https://www.xcelenergy.com",
+  "Austin Energy":"https://austinenergy.com",
+  "CPS Energy":"https://www.cpsenergy.com",
+  "Brownsville PUB":"https://www.brownsville-pub.com",
+  "Garland Power & Light":"https://www.gpltexas.org",
+  "Lubbock Power & Light":"https://www.lpandl.com",
+  "Bryan Texas Utilities":"https://www.btutilities.com",
+  "Georgetown Utility Systems":"https://gus.georgetown.org",
+  "Denton Municipal Electric":"https://www.cityofdenton.com/dme",
+  "New Braunfels Utilities":"https://www.nbutexas.com",
+  "Boerne Public Utilities":"https://www.boerne-tx.gov/189/Public-Utilities",
+  // WA utilities
+  "Seattle City Light":"https://www.seattle.gov/city-light",
+  "Tacoma Power":"https://www.mytpu.org/tacoma-power",
+  "Snohomish County PUD":"https://www.snopud.com",
+  "Puget Sound Energy":"https://www.pse.com",
+  "Avista":"https://www.myavista.com",
+  "Pacific Power":"https://www.pacificpower.net",
+  "Clark Public Utilities":"https://www.clarkpublicutilities.com",
+  "Chelan County PUD":"https://www.chelanpud.org",
+  "Grant County PUD":"https://www.grantpud.org",
+  "Benton PUD":"https://www.bentonpud.org",
+  "Cowlitz PUD":"https://www.cowlitzpud.org",
+  "Franklin PUD":"https://www.franklinpud.com",
+  "Clallam County PUD":"https://www.clallampud.net",
+  "Mason County PUD No. 3":"https://www.pud3.org",
+  "Lewis County PUD":"https://www.lcpud.org",
+  "Grays Harbor PUD":"https://www.ghpud.org",
+  "Jefferson County PUD":"https://jeffpud.org",
+  "OPALCO":"https://www.opalco.com",
+  "Big Bend Electric Coop":"https://www.bbec.org",
+  "Inland Power":"https://www.inlandpower.com",
+  "Columbia REA":"https://www.columbiarea.com",
+  "Douglas County PUD":"https://www.douglaspud.org",
+  "Skamania County PUD":"https://www.skamaniapud.com",
+  "Klickitat PUD":"https://www.klickpud.com",
+  "Pend Oreille PUD":"https://www.popud.org",
+  "Okanogan PUD":"https://www.okanoganpud.org",
+  "Wahkiakum PUD":"https://www.wpud.org",
+  "Pacific County PUD":"https://www.pacificpud.org",
+  // NJ utilities
+  "PSE&G":"https://www.pseg.com",
+  "JCP&L":"https://firstenergycorp.com/jcp-l.html",
+  "Atlantic City Electric":"https://www.atlanticcityelectric.com",
+  "Rockland Electric":"https://www.oru.com",
+  "Vineland Municipal Electric Utility":"https://www.vinelandcity.org/elec_utility/",
+  "Pemberton Electric":"https://www.pemberton-twp.com/electric.html",
+  // Cable / fiber
+  "Verizon Fios":"https://www.verizon.com/home/fios/",
+  "Optimum (Altice)":"https://www.optimum.com",
+  "Optimum Fiber":"https://www.optimum.com/fiber",
+  "Service Electric":"https://www.sectv.com",
+  "Blue Ridge Communications":"https://www.brctv.com",
+  "Astound (Wave)":"https://www.astound.com",
+  "Wave/Astound":"https://www.astound.com",
+  "Wave/Astound Fiber":"https://www.astound.com",
+  "Astound Fiber":"https://www.astound.com",
+  "Grande/Astound Fiber":"https://www.astound.com",
+  "Click! Network (muni)":"https://www.tacoma.click",
+  "Google Fiber":"https://fiber.google.com",
+  "CenturyLink Fiber":"https://www.centurylink.com/home/fiber/",
+  "Greenlight Networks":"https://greenlightnetworks.com",
+  "Frontier Fiber":"https://frontier.com/fiber",
+  "Spectrum Fiber":"https://www.spectrum.com",
+  "Charter Fiber":"https://www.spectrum.com",
+  "Charter Spectrum":"https://www.spectrum.com",
+  "Centurytel/Frontier":"https://frontier.com",
+  "Xfinity Fiber":"https://www.xfinity.com"
 };
 const ISP_TECH = {
   "Xfinity (Comcast)":      { tech:"Cable",          group:"Cable",          down:1200,  up:35   },
@@ -669,7 +762,28 @@ const ISP_TECH = {
   "AT&T Internet Air":      { tech:"5G Wireless",    group:"5G Home",        down:225,   up:25   },
   "Starlink":               { tech:"LEO Satellite",  group:"Satellite",      down:250,   up:30   },
   "HughesNet":              { tech:"GEO Satellite",  group:"Satellite",      down:100,   up:5    },
-  "Viasat":                 { tech:"GEO Satellite",  group:"Satellite",      down:150,   up:3    }
+  "Viasat":                 { tech:"GEO Satellite",  group:"Satellite",      down:150,   up:3    },
+  // East-coast cable + national fiber providers added in v0.10
+  "Verizon Fios":           { tech:"Fiber",          group:"Fiber",          down:2300,  up:2300 },
+  "Optimum (Altice)":       { tech:"Cable",          group:"Cable",          down:1000,  up:35   },
+  "Optimum Fiber":          { tech:"Fiber",          group:"Fiber",          down:8000,  up:8000 },
+  "Service Electric":       { tech:"Cable",          group:"Cable",          down:600,   up:30   },
+  "Blue Ridge Communications": { tech:"Cable",       group:"Cable",          down:1000,  up:35   },
+  "Astound (Wave)":         { tech:"Cable",          group:"Cable",          down:1500,  up:50   },
+  "Wave/Astound":           { tech:"Cable",          group:"Cable",          down:1500,  up:50   },
+  "Wave/Astound Fiber":     { tech:"Fiber",          group:"Fiber",          down:1500,  up:1500 },
+  "Astound Fiber":          { tech:"Fiber",          group:"Fiber",          down:1500,  up:1500 },
+  "Grande/Astound Fiber":   { tech:"Fiber",          group:"Fiber",          down:1500,  up:1500 },
+  "Click! Network (muni)":  { tech:"Fiber",          group:"Fiber",          down:1000,  up:1000 },
+  "Google Fiber":           { tech:"Fiber",          group:"Fiber",          down:8000,  up:8000 },
+  "CenturyLink Fiber":      { tech:"Fiber",          group:"Fiber",          down:940,   up:940  },
+  "Frontier Fiber":         { tech:"Fiber",          group:"Fiber",          down:5000,  up:5000 },
+  "Greenlight Networks":    { tech:"Fiber",          group:"Fiber",          down:1000,  up:1000 },
+  "Spectrum Fiber":         { tech:"Fiber",          group:"Fiber",          down:1000,  up:500  },
+  "Charter Fiber":          { tech:"Fiber",          group:"Fiber",          down:1000,  up:500  },
+  "Charter Spectrum":       { tech:"Cable",          group:"Cable",          down:1000,  up:35   },
+  "Centurytel/Frontier":    { tech:"DSL",            group:"DSL",            down:100,   up:20   },
+  "Xfinity Fiber":          { tech:"Fiber",          group:"Fiber",          down:10000, up:10000}
 };
 const ISP_GROUP_ORDER = ["Cable","Fiber","Fixed wireless","DSL","5G Home","Satellite"];
 
@@ -733,6 +847,581 @@ const CA_CITY_DISTRICT = {
   "Tracy":"Tracy Unified School District","Manteca":"Manteca Unified School District",
   "Roseville":"Roseville City School District","Folsom":"Folsom Cordova Unified School District",
   "Rancho Cordova":"Folsom Cordova Unified School District"
+};
+
+/* =====================================================================
+   STATE_DATA — per-state lookup tables for non-CA states
+   --------------------------------------------------------------------
+   CA still uses the dedicated CA_* constants above (with CCA support).
+   Other states use this nested structure. Add a state by adding a key.
+   ===================================================================== */
+const STATE_NAME_TO_CODE = {
+  "California":"CA","Pennsylvania":"PA","New York":"NY",
+  "Texas":"TX","Washington":"WA","New Jersey":"NJ"
+};
+function getStateCode(addr) {
+  if (!addr) return "";
+  const iso = addr["ISO3166-2-lvl4"];
+  if (iso && /^US-/.test(iso)) return iso.slice(3).toUpperCase();
+  return STATE_NAME_TO_CODE[addr.state] || "";
+}
+
+const STATE_DATA = {
+  /* ─── Pennsylvania ──────────────────────────────────────────────── */
+  PA: {
+    countyUtility: {
+      "Adams":"Met-Ed","Allegheny":"Duquesne Light","Armstrong":"West Penn Power",
+      "Beaver":"Duquesne Light","Bedford":"Penelec","Berks":"Met-Ed",
+      "Blair":"Penelec","Bradford":"PPL Electric","Bucks":"PECO",
+      "Butler":"West Penn Power","Cambria":"Penelec","Cameron":"Penelec",
+      "Carbon":"PPL Electric","Centre":"West Penn Power","Chester":"PECO",
+      "Clarion":"Penn Power","Clearfield":"Penelec","Clinton":"PPL Electric",
+      "Columbia":"PPL Electric","Crawford":"Penn Power","Cumberland":"PPL Electric",
+      "Dauphin":"PPL Electric","Delaware":"PECO","Elk":"Penelec",
+      "Erie":"Penn Power","Fayette":"West Penn Power","Forest":"Penn Power",
+      "Franklin":"West Penn Power","Fulton":"Met-Ed","Greene":"West Penn Power",
+      "Huntingdon":"Penelec","Indiana":"West Penn Power","Jefferson":"Penelec",
+      "Juniata":"PPL Electric","Lackawanna":"PPL Electric","Lancaster":"PPL Electric",
+      "Lawrence":"Penn Power","Lebanon":"PPL Electric","Lehigh":"PPL Electric",
+      "Luzerne":"PPL Electric","Lycoming":"PPL Electric","McKean":"Penelec",
+      "Mercer":"Penn Power","Mifflin":"Penelec","Monroe":"PPL Electric",
+      "Montgomery":"PECO","Montour":"PPL Electric","Northampton":"PPL Electric",
+      "Northumberland":"PPL Electric","Perry":"PPL Electric","Philadelphia":"PECO",
+      "Pike":"PPL Electric","Potter":"Penelec","Schuylkill":"PPL Electric",
+      "Snyder":"PPL Electric","Somerset":"Penelec","Sullivan":"PPL Electric",
+      "Susquehanna":"PPL Electric","Tioga":"PPL Electric","Union":"PPL Electric",
+      "Venango":"Penn Power","Warren":"Penn Power","Washington":"West Penn Power",
+      "Wayne":"PPL Electric","Westmoreland":"West Penn Power","Wyoming":"PPL Electric",
+      "York":"Met-Ed"
+    },
+    cityUtility: {},   // PA has no major city-level munis serving electric
+    cableByCounty: {
+      "Philadelphia":"Xfinity (Comcast)","Bucks":"Xfinity (Comcast)",
+      "Chester":"Xfinity (Comcast)","Delaware":"Xfinity (Comcast)",
+      "Montgomery":"Xfinity (Comcast)","Allegheny":"Xfinity (Comcast)",
+      "Lehigh":"Service Electric","Northampton":"Service Electric",
+      "Berks":"Service Electric","Lackawanna":"Service Electric",
+      "Luzerne":"Service Electric","Lancaster":"Xfinity (Comcast)",
+      "Dauphin":"Xfinity (Comcast)","York":"Xfinity (Comcast)",
+      "Erie":"Spectrum (Charter)","Cumberland":"Xfinity (Comcast)",
+      "Westmoreland":"Xfinity (Comcast)","Beaver":"Xfinity (Comcast)",
+      "Washington":"Xfinity (Comcast)","Butler":"Xfinity (Comcast)",
+      "Centre":"Xfinity (Comcast)","Blair":"Xfinity (Comcast)",
+      "Bradford":"Xfinity (Comcast)","Carbon":"Blue Ridge Communications",
+      "Monroe":"Blue Ridge Communications","Pike":"Blue Ridge Communications",
+      "Wayne":"Blue Ridge Communications"
+    },
+    fiberByCity: {
+      "Philadelphia":["Verizon Fios","Xfinity Fiber"],
+      "Pittsburgh":["Verizon Fios","Xfinity Fiber"],
+      "Allentown":["Verizon Fios","Service Electric"],
+      "Bethlehem":["Verizon Fios","Service Electric"],
+      "Reading":["Verizon Fios","Service Electric"],
+      "Scranton":["Verizon Fios","Service Electric"],
+      "Wilkes-Barre":["Verizon Fios","Service Electric"],
+      "Lancaster":["Verizon Fios","Xfinity Fiber"],
+      "Harrisburg":["Verizon Fios","Xfinity Fiber"],
+      "York":["Verizon Fios"],"Erie":["Spectrum"],
+      "Bensalem":["Verizon Fios"],"Levittown":["Verizon Fios"],
+      "Norristown":["Verizon Fios"],"King of Prussia":["Verizon Fios"]
+    },
+    cityToCounty: {
+      "Philadelphia":"Philadelphia","Pittsburgh":"Allegheny","Allentown":"Lehigh",
+      "Erie":"Erie","Reading":"Berks","Scranton":"Lackawanna",
+      "Bethlehem":"Lehigh","Lancaster":"Lancaster","Harrisburg":"Dauphin",
+      "York":"York","Altoona":"Blair","Wilkes-Barre":"Luzerne",
+      "State College":"Centre","Norristown":"Montgomery","King of Prussia":"Montgomery",
+      "Bensalem":"Bucks","Levittown":"Bucks","Lower Merion":"Montgomery",
+      "Cheltenham":"Montgomery","Abington":"Montgomery","Williamsport":"Lycoming",
+      "Easton":"Northampton","West Chester":"Chester","Doylestown":"Bucks",
+      "Pottstown":"Montgomery","Hazleton":"Luzerne","Chambersburg":"Franklin",
+      "New Castle":"Lawrence","Johnstown":"Cambria"
+    },
+    cityDistrict: {
+      "Philadelphia":"School District of Philadelphia",
+      "Pittsburgh":"Pittsburgh Public Schools",
+      "Allentown":"Allentown School District",
+      "Erie":"Erie School District",
+      "Reading":"Reading School District",
+      "Scranton":"Scranton School District",
+      "Bethlehem":"Bethlehem Area School District",
+      "Lancaster":"School District of Lancaster",
+      "Harrisburg":"Harrisburg School District",
+      "York":"School District of the City of York",
+      "Altoona":"Altoona Area School District",
+      "Wilkes-Barre":"Wilkes-Barre Area School District",
+      "State College":"State College Area School District",
+      "Bensalem":"Bensalem Township School District",
+      "Norristown":"Norristown Area School District",
+      "Lower Merion":"Lower Merion School District",
+      "Cheltenham":"Cheltenham School District",
+      "Abington":"Abington School District",
+      "Williamsport":"Williamsport Area School District",
+      "Easton":"Easton Area School District",
+      "Hazleton":"Hazleton Area School District"
+    }
+  },
+
+  /* ─── New York ──────────────────────────────────────────────────── */
+  NY: {
+    countyUtility: {
+      "Albany":"National Grid","Allegany":"National Grid","Bronx":"Con Edison",
+      "Broome":"NYSEG","Cattaraugus":"National Grid","Cayuga":"NYSEG",
+      "Chautauqua":"National Grid","Chemung":"NYSEG","Chenango":"NYSEG",
+      "Clinton":"NYSEG","Columbia":"Central Hudson","Cortland":"NYSEG",
+      "Delaware":"NYSEG","Dutchess":"Central Hudson","Erie":"National Grid",
+      "Essex":"National Grid","Franklin":"National Grid","Fulton":"National Grid",
+      "Genesee":"National Grid","Greene":"Central Hudson","Hamilton":"National Grid",
+      "Herkimer":"National Grid","Jefferson":"National Grid","Kings":"Con Edison",
+      "Lewis":"National Grid","Livingston":"RG&E","Madison":"National Grid",
+      "Monroe":"RG&E","Montgomery":"National Grid","Nassau":"PSEG Long Island",
+      "New York":"Con Edison","Niagara":"National Grid","Oneida":"National Grid",
+      "Onondaga":"National Grid","Ontario":"RG&E","Orange":"Orange & Rockland",
+      "Orleans":"National Grid","Oswego":"National Grid","Otsego":"NYSEG",
+      "Putnam":"NYSEG","Queens":"Con Edison","Rensselaer":"National Grid",
+      "Richmond":"Con Edison","Rockland":"Orange & Rockland",
+      "Saint Lawrence":"National Grid","St. Lawrence":"National Grid",
+      "Saratoga":"National Grid","Schenectady":"National Grid",
+      "Schoharie":"National Grid","Schuyler":"NYSEG","Seneca":"NYSEG",
+      "Steuben":"NYSEG","Suffolk":"PSEG Long Island","Sullivan":"Orange & Rockland",
+      "Tioga":"NYSEG","Tompkins":"NYSEG","Ulster":"Central Hudson",
+      "Warren":"National Grid","Washington":"National Grid","Wayne":"RG&E",
+      "Westchester":"Con Edison","Wyoming":"National Grid","Yates":"NYSEG"
+    },
+    cityUtility: {
+      // No NY city-level munis among major cities. NYPA serves some loads.
+    },
+    cableByCounty: {
+      "Bronx":"Spectrum (Charter)","Kings":"Spectrum (Charter)",
+      "New York":"Spectrum (Charter)","Queens":"Spectrum (Charter)",
+      "Richmond":"Spectrum (Charter)","Westchester":"Optimum (Altice)",
+      "Nassau":"Optimum (Altice)","Suffolk":"Optimum (Altice)",
+      "Rockland":"Optimum (Altice)","Putnam":"Optimum (Altice)",
+      "Orange":"Optimum (Altice)","Dutchess":"Optimum (Altice)",
+      "Ulster":"Spectrum (Charter)","Sullivan":"Spectrum (Charter)",
+      "Erie":"Spectrum (Charter)","Niagara":"Spectrum (Charter)",
+      "Monroe":"Spectrum (Charter)","Onondaga":"Spectrum (Charter)",
+      "Albany":"Spectrum (Charter)","Schenectady":"Spectrum (Charter)",
+      "Rensselaer":"Spectrum (Charter)","Saratoga":"Spectrum (Charter)",
+      "Oneida":"Spectrum (Charter)","Broome":"Spectrum (Charter)",
+      "Tompkins":"Spectrum (Charter)","Chemung":"Spectrum (Charter)",
+      "Chautauqua":"Spectrum (Charter)","Cattaraugus":"Spectrum (Charter)",
+      "Allegany":"Spectrum (Charter)","Steuben":"Spectrum (Charter)",
+      "Cayuga":"Spectrum (Charter)","Wayne":"Spectrum (Charter)",
+      "Ontario":"Spectrum (Charter)","Livingston":"Spectrum (Charter)",
+      "Genesee":"Spectrum (Charter)","Orleans":"Spectrum (Charter)",
+      "Wyoming":"Spectrum (Charter)","Madison":"Spectrum (Charter)",
+      "Cortland":"Spectrum (Charter)","Tioga":"Spectrum (Charter)",
+      "Chenango":"Spectrum (Charter)","Otsego":"Spectrum (Charter)",
+      "Schoharie":"Spectrum (Charter)","Greene":"Spectrum (Charter)",
+      "Columbia":"Spectrum (Charter)","Delaware":"Spectrum (Charter)",
+      "Schuyler":"Spectrum (Charter)","Seneca":"Spectrum (Charter)",
+      "Yates":"Spectrum (Charter)","Oswego":"Spectrum (Charter)",
+      "Jefferson":"Spectrum (Charter)","Lewis":"Spectrum (Charter)",
+      "Saint Lawrence":"Spectrum (Charter)","St. Lawrence":"Spectrum (Charter)",
+      "Franklin":"Spectrum (Charter)","Clinton":"Spectrum (Charter)",
+      "Essex":"Spectrum (Charter)","Hamilton":"Spectrum (Charter)",
+      "Warren":"Spectrum (Charter)","Washington":"Spectrum (Charter)",
+      "Fulton":"Spectrum (Charter)","Montgomery":"Spectrum (Charter)",
+      "Herkimer":"Spectrum (Charter)"
+    },
+    fiberByCity: {
+      "New York":["Verizon Fios"],"Brooklyn":["Verizon Fios"],
+      "Manhattan":["Verizon Fios"],"Bronx":["Verizon Fios"],
+      "Queens":["Verizon Fios"],"Staten Island":["Verizon Fios"],
+      "Yonkers":["Verizon Fios","Optimum Fiber"],
+      "White Plains":["Verizon Fios","Optimum Fiber"],
+      "New Rochelle":["Verizon Fios","Optimum Fiber"],
+      "Mount Vernon":["Verizon Fios","Optimum Fiber"],
+      "Hempstead":["Verizon Fios","Optimum Fiber"],
+      "Babylon":["Verizon Fios","Optimum Fiber"],
+      "Brentwood":["Verizon Fios","Optimum Fiber"],
+      "Buffalo":["Verizon Fios","Greenlight Networks"],
+      "Rochester":["Verizon Fios","Greenlight Networks"],
+      "Syracuse":["Verizon Fios"],"Albany":["Verizon Fios"],
+      "Schenectady":["Verizon Fios"],"Utica":["Verizon Fios"],
+      "Binghamton":["Spectrum Fiber"],"Niagara Falls":["Spectrum Fiber"],
+      "Ithaca":["Spectrum Fiber"]
+    },
+    cityToCounty: {
+      "New York":"New York","Brooklyn":"Kings","Manhattan":"New York",
+      "Bronx":"Bronx","Queens":"Queens","Staten Island":"Richmond",
+      "Yonkers":"Westchester","Buffalo":"Erie","Rochester":"Monroe",
+      "Syracuse":"Onondaga","Albany":"Albany","Schenectady":"Schenectady",
+      "Utica":"Oneida","Binghamton":"Broome","Niagara Falls":"Niagara",
+      "Ithaca":"Tompkins","White Plains":"Westchester","New Rochelle":"Westchester",
+      "Mount Vernon":"Westchester","Hempstead":"Nassau","Babylon":"Suffolk",
+      "Brentwood":"Suffolk","Long Beach":"Nassau","Levittown":"Nassau",
+      "Troy":"Rensselaer","Saratoga Springs":"Saratoga","Poughkeepsie":"Dutchess",
+      "Newburgh":"Orange","Middletown":"Orange","Kingston":"Ulster"
+    },
+    cityDistrict: {
+      "New York":"New York City Department of Education",
+      "Brooklyn":"New York City Department of Education",
+      "Manhattan":"New York City Department of Education",
+      "Bronx":"New York City Department of Education",
+      "Queens":"New York City Department of Education",
+      "Staten Island":"New York City Department of Education",
+      "Yonkers":"Yonkers Public Schools",
+      "Buffalo":"Buffalo Public Schools",
+      "Rochester":"Rochester City School District",
+      "Syracuse":"Syracuse City School District",
+      "Albany":"City School District of Albany",
+      "New Rochelle":"New Rochelle City School District",
+      "White Plains":"White Plains City School District",
+      "Mount Vernon":"Mount Vernon City School District",
+      "Schenectady":"Schenectady City School District",
+      "Utica":"Utica City School District",
+      "Niagara Falls":"Niagara Falls City School District",
+      "Binghamton":"Binghamton City School District",
+      "Ithaca":"Ithaca City School District",
+      "Troy":"Troy City School District",
+      "Poughkeepsie":"Poughkeepsie City School District",
+      "Newburgh":"Newburgh Enlarged City School District",
+      "Kingston":"Kingston City School District"
+    }
+  },
+
+  /* ─── Texas ─────────────────────────────────────────────────────── */
+  TX: {
+    countyUtility: {
+      // ERCOT North/Central — Oncor TDU
+      "Dallas":"Oncor","Tarrant":"Oncor","Collin":"Oncor","Denton":"Oncor",
+      "Rockwall":"Oncor","Kaufman":"Oncor","Ellis":"Oncor","Johnson":"Oncor",
+      "Parker":"Oncor","Wise":"Oncor","Hood":"Oncor","Hunt":"Oncor",
+      "Grayson":"Oncor","Cooke":"Oncor","Fannin":"Oncor","Lamar":"Oncor",
+      "Erath":"Oncor","Palo Pinto":"Oncor","Stephens":"Oncor","Eastland":"Oncor",
+      "Brown":"Oncor","Comanche":"Oncor","Hamilton":"Oncor","Bosque":"Oncor",
+      "McLennan":"Oncor","Hill":"Oncor","Navarro":"Oncor","Henderson":"Oncor",
+      "Smith":"Oncor","Wood":"Oncor","Williamson":"Oncor","Bell":"Oncor",
+      // ERCOT Houston/Southeast — CenterPoint TDU
+      "Harris":"CenterPoint Energy","Galveston":"CenterPoint Energy",
+      "Brazoria":"CenterPoint Energy","Fort Bend":"CenterPoint Energy",
+      "Montgomery":"CenterPoint Energy","Liberty":"CenterPoint Energy",
+      "Chambers":"CenterPoint Energy","Walker":"CenterPoint Energy",
+      "Waller":"CenterPoint Energy","Wharton":"CenterPoint Energy",
+      "Matagorda":"CenterPoint Energy","Austin":"CenterPoint Energy",
+      // ERCOT South/West — AEP Texas
+      "Nueces":"AEP Texas","San Patricio":"AEP Texas","Aransas":"AEP Texas",
+      "Refugio":"AEP Texas","Bee":"AEP Texas","Live Oak":"AEP Texas",
+      "Webb":"AEP Texas","Cameron":"AEP Texas","Hidalgo":"AEP Texas",
+      "Willacy":"AEP Texas","Kleberg":"AEP Texas","Kenedy":"AEP Texas",
+      // City-county munis
+      "Travis":"Austin Energy",         // Austin
+      "Bexar":"CPS Energy",             // San Antonio
+      "El Paso":"El Paso Electric",
+      // Outside ERCOT — Entergy Texas (East TX)
+      "Jefferson":"Entergy Texas","Orange":"Entergy Texas",
+      "Hardin":"Entergy Texas","Tyler":"Entergy Texas","Polk":"Entergy Texas",
+      "San Jacinto":"Entergy Texas","Newton":"Entergy Texas","Jasper":"Entergy Texas",
+      // SWEPCO — NE Texas
+      "Bowie":"SWEPCO","Cass":"SWEPCO","Marion":"SWEPCO","Harrison":"SWEPCO",
+      "Panola":"SWEPCO","Shelby":"SWEPCO",
+      // Xcel/SPS — Panhandle
+      "Lubbock":"Lubbock Power & Light","Potter":"Xcel Energy",
+      "Randall":"Xcel Energy","Hale":"Xcel Energy","Lamb":"Xcel Energy",
+      "Hockley":"Xcel Energy"
+    },
+    cityUtility: {
+      "Austin":"Austin Energy","San Antonio":"CPS Energy",
+      "Garland":"Garland Power & Light","Brownsville":"Brownsville PUB",
+      "Lubbock":"Lubbock Power & Light","Bryan":"Bryan Texas Utilities",
+      "Georgetown":"Georgetown Utility Systems","Denton":"Denton Municipal Electric",
+      "New Braunfels":"New Braunfels Utilities","Boerne":"Boerne Public Utilities"
+    },
+    cableByCounty: {
+      "Harris":"Xfinity (Comcast)","Galveston":"Xfinity (Comcast)",
+      "Brazoria":"Xfinity (Comcast)","Fort Bend":"Xfinity (Comcast)",
+      "Montgomery":"Xfinity (Comcast)","Dallas":"Spectrum (Charter)",
+      "Tarrant":"Spectrum (Charter)","Collin":"Spectrum (Charter)",
+      "Denton":"Spectrum (Charter)","Travis":"Spectrum (Charter)",
+      "Williamson":"Spectrum (Charter)","Hays":"Spectrum (Charter)",
+      "Bexar":"Spectrum (Charter)","El Paso":"Spectrum (Charter)",
+      "Nueces":"Spectrum (Charter)","Webb":"Spectrum (Charter)",
+      "Hidalgo":"Spectrum (Charter)","Cameron":"Spectrum (Charter)",
+      "McLennan":"Spectrum (Charter)","Bell":"Spectrum (Charter)",
+      "Smith":"Optimum (Altice)","Gregg":"Optimum (Altice)",
+      "Jefferson":"Optimum (Altice)","Lubbock":"Optimum (Altice)",
+      "Potter":"Optimum (Altice)","Randall":"Optimum (Altice)",
+      "Wichita":"Optimum (Altice)","Bowie":"Optimum (Altice)"
+    },
+    fiberByCity: {
+      "Houston":["AT&T Fiber","Frontier FiberOptic"],
+      "Dallas":["AT&T Fiber","Frontier FiberOptic","Google Fiber"],
+      "Fort Worth":["AT&T Fiber","Frontier FiberOptic"],
+      "San Antonio":["AT&T Fiber","Google Fiber","Grande/Astound Fiber"],
+      "Austin":["AT&T Fiber","Google Fiber","Grande/Astound Fiber"],
+      "El Paso":["AT&T Fiber"],
+      "Plano":["AT&T Fiber","Frontier FiberOptic","Google Fiber"],
+      "Frisco":["AT&T Fiber","Google Fiber"],
+      "McKinney":["AT&T Fiber"],"Arlington":["AT&T Fiber","Frontier FiberOptic"],
+      "Irving":["AT&T Fiber","Frontier FiberOptic"],"Garland":["AT&T Fiber"],
+      "Grand Prairie":["AT&T Fiber"],"Mesquite":["AT&T Fiber"],
+      "Carrollton":["AT&T Fiber","Google Fiber"],"Richardson":["AT&T Fiber","Google Fiber"],
+      "Denton":["AT&T Fiber"],"Lewisville":["AT&T Fiber"],
+      "Pasadena":["AT&T Fiber"],"Sugar Land":["AT&T Fiber"],
+      "The Woodlands":["AT&T Fiber"],"Spring":["AT&T Fiber"],
+      "Katy":["AT&T Fiber"],"Pearland":["AT&T Fiber"],
+      "Round Rock":["AT&T Fiber","Google Fiber"],
+      "Cedar Park":["AT&T Fiber"],"Pflugerville":["AT&T Fiber"],
+      "Killeen":["AT&T Fiber"],"Tyler":["AT&T Fiber"],
+      "Lubbock":["AT&T Fiber"],"Amarillo":["AT&T Fiber"],
+      "Corpus Christi":["AT&T Fiber"],"McAllen":["AT&T Fiber"],
+      "Brownsville":["AT&T Fiber"],"Laredo":["AT&T Fiber"],
+      "Waco":["AT&T Fiber"],"Beaumont":["AT&T Fiber"],
+      "Wichita Falls":["AT&T Fiber"]
+    },
+    cityToCounty: {
+      "Houston":"Harris","Dallas":"Dallas","Fort Worth":"Tarrant",
+      "San Antonio":"Bexar","Austin":"Travis","El Paso":"El Paso",
+      "Arlington":"Tarrant","Corpus Christi":"Nueces","Plano":"Collin",
+      "Lubbock":"Lubbock","Garland":"Dallas","Irving":"Dallas",
+      "Frisco":"Collin","McKinney":"Collin","Grand Prairie":"Dallas",
+      "Amarillo":"Potter","Brownsville":"Cameron","Laredo":"Webb",
+      "Pasadena":"Harris","Mesquite":"Dallas","Killeen":"Bell",
+      "Carrollton":"Dallas","McAllen":"Hidalgo","Beaumont":"Jefferson",
+      "Tyler":"Smith","Wichita Falls":"Wichita","Sugar Land":"Fort Bend",
+      "The Woodlands":"Montgomery","Spring":"Harris","Katy":"Harris",
+      "Pearland":"Brazoria","Round Rock":"Williamson","Cedar Park":"Williamson",
+      "Pflugerville":"Travis","Waco":"McLennan","Lewisville":"Denton",
+      "Richardson":"Dallas","Allen":"Collin","Denton":"Denton",
+      "League City":"Galveston","Bryan":"Brazos","College Station":"Brazos",
+      "Conroe":"Montgomery","Tyler":"Smith","Longview":"Gregg",
+      "New Braunfels":"Comal","Georgetown":"Williamson"
+    },
+    cityDistrict: {
+      "Houston":"Houston Independent School District",
+      "Dallas":"Dallas Independent School District",
+      "Fort Worth":"Fort Worth Independent School District",
+      "San Antonio":"San Antonio Independent School District",
+      "Austin":"Austin Independent School District",
+      "El Paso":"El Paso Independent School District",
+      "Arlington":"Arlington Independent School District",
+      "Corpus Christi":"Corpus Christi Independent School District",
+      "Plano":"Plano Independent School District",
+      "Lubbock":"Lubbock Independent School District",
+      "Garland":"Garland Independent School District",
+      "Irving":"Irving Independent School District",
+      "Frisco":"Frisco Independent School District",
+      "McKinney":"McKinney Independent School District",
+      "Grand Prairie":"Grand Prairie Independent School District",
+      "Amarillo":"Amarillo Independent School District",
+      "Brownsville":"Brownsville Independent School District",
+      "Laredo":"United Independent School District",
+      "Pasadena":"Pasadena Independent School District",
+      "Mesquite":"Mesquite Independent School District",
+      "Killeen":"Killeen Independent School District",
+      "Carrollton":"Carrollton-Farmers Branch ISD",
+      "McAllen":"McAllen Independent School District",
+      "Beaumont":"Beaumont Independent School District",
+      "Tyler":"Tyler Independent School District",
+      "Wichita Falls":"Wichita Falls Independent School District",
+      "Sugar Land":"Fort Bend Independent School District",
+      "Katy":"Katy Independent School District",
+      "Round Rock":"Round Rock Independent School District",
+      "Cedar Park":"Leander Independent School District",
+      "Pflugerville":"Pflugerville Independent School District",
+      "Waco":"Waco Independent School District",
+      "Lewisville":"Lewisville Independent School District",
+      "Richardson":"Richardson Independent School District",
+      "Allen":"Allen Independent School District",
+      "Denton":"Denton Independent School District"
+    }
+  },
+
+  /* ─── Washington ────────────────────────────────────────────────── */
+  WA: {
+    countyUtility: {
+      "Adams":"Big Bend Electric Coop","Asotin":"Avista","Benton":"Benton PUD",
+      "Chelan":"Chelan County PUD","Clallam":"Clallam County PUD",
+      "Clark":"Clark Public Utilities","Columbia":"Columbia REA",
+      "Cowlitz":"Cowlitz PUD","Douglas":"Douglas County PUD",
+      "Ferry":"Avista","Franklin":"Franklin PUD","Garfield":"Pacific Power",
+      "Grant":"Grant County PUD","Grays Harbor":"Grays Harbor PUD",
+      "Island":"Puget Sound Energy","Jefferson":"Jefferson County PUD",
+      "King":"Puget Sound Energy","Kitsap":"Puget Sound Energy",
+      "Kittitas":"Puget Sound Energy","Klickitat":"Klickitat PUD",
+      "Lewis":"Lewis County PUD","Lincoln":"Inland Power",
+      "Mason":"Mason County PUD No. 3","Okanogan":"Okanogan PUD",
+      "Pacific":"Pacific County PUD","Pend Oreille":"Pend Oreille PUD",
+      "Pierce":"Puget Sound Energy","San Juan":"OPALCO",
+      "Skagit":"Puget Sound Energy","Skamania":"Skamania County PUD",
+      "Snohomish":"Snohomish County PUD","Spokane":"Avista",
+      "Stevens":"Avista","Thurston":"Puget Sound Energy",
+      "Wahkiakum":"Wahkiakum PUD","Walla Walla":"Pacific Power",
+      "Whatcom":"Puget Sound Energy","Whitman":"Avista","Yakima":"Pacific Power"
+    },
+    cityUtility: {
+      "Seattle":"Seattle City Light","Tacoma":"Tacoma Power",
+      "Vancouver":"Clark Public Utilities"
+      // Other major WA cities served by their county utility
+    },
+    cableByCounty: {
+      "King":"Xfinity (Comcast)","Pierce":"Xfinity (Comcast)",
+      "Snohomish":"Xfinity (Comcast)","Kitsap":"Xfinity (Comcast)",
+      "Thurston":"Xfinity (Comcast)","Clark":"Xfinity (Comcast)",
+      "Whatcom":"Xfinity (Comcast)","Skagit":"Xfinity (Comcast)",
+      "Island":"Xfinity (Comcast)","Mason":"Xfinity (Comcast)",
+      "Lewis":"Xfinity (Comcast)","Cowlitz":"Xfinity (Comcast)",
+      "Grays Harbor":"Xfinity (Comcast)","Pacific":"Xfinity (Comcast)",
+      "Kittitas":"Xfinity (Comcast)","Spokane":"Xfinity (Comcast)",
+      "Yakima":"Spectrum (Charter)","Benton":"Spectrum (Charter)",
+      "Franklin":"Spectrum (Charter)","Walla Walla":"Spectrum (Charter)",
+      "Whitman":"Spectrum (Charter)","Asotin":"Spectrum (Charter)",
+      "Stevens":"Spectrum (Charter)","Adams":"Spectrum (Charter)",
+      "Grant":"Spectrum (Charter)","Chelan":"Charter Spectrum",
+      "Douglas":"Charter Spectrum","Okanogan":"Spectrum (Charter)",
+      "Pend Oreille":"Spectrum (Charter)","Ferry":"Spectrum (Charter)",
+      "Lincoln":"Spectrum (Charter)","Klickitat":"Spectrum (Charter)",
+      "Skamania":"Xfinity (Comcast)","San Juan":"Centurytel/Frontier",
+      "Jefferson":"Wave/Astound","Clallam":"Wave/Astound","Wahkiakum":"Frontier",
+      "Garfield":"Frontier","Columbia":"Frontier"
+    },
+    fiberByCity: {
+      "Seattle":["CenturyLink Fiber","Wave/Astound Fiber","Xfinity Fiber"],
+      "Bellevue":["CenturyLink Fiber","Wave/Astound Fiber"],
+      "Tacoma":["Click! Network (muni)","CenturyLink Fiber"],
+      "Spokane":["CenturyLink Fiber"],
+      "Vancouver":["CenturyLink Fiber","Xfinity Fiber"],
+      "Bellingham":["Wave/Astound Fiber"],"Renton":["CenturyLink Fiber"],
+      "Federal Way":["CenturyLink Fiber"],"Kent":["CenturyLink Fiber"],
+      "Auburn":["CenturyLink Fiber"],"Everett":["Frontier Fiber","CenturyLink"],
+      "Redmond":["CenturyLink Fiber"],"Kirkland":["CenturyLink Fiber"],
+      "Sammamish":["CenturyLink Fiber"],"Issaquah":["CenturyLink Fiber"],
+      "Bothell":["CenturyLink Fiber"],"Edmonds":["Frontier Fiber"],
+      "Lynnwood":["Frontier Fiber"],"Olympia":["CenturyLink Fiber"],
+      "Lacey":["CenturyLink Fiber"],"Yakima":["Charter Fiber"],
+      "Kennewick":["Charter Fiber"]
+    },
+    cityToCounty: {
+      "Seattle":"King","Spokane":"Spokane","Tacoma":"Pierce",
+      "Vancouver":"Clark","Bellevue":"King","Kent":"King",
+      "Everett":"Snohomish","Renton":"King","Federal Way":"King",
+      "Yakima":"Yakima","Spokane Valley":"Spokane","Bellingham":"Whatcom",
+      "Kennewick":"Benton","Auburn":"King","Pasco":"Franklin",
+      "Marysville":"Snohomish","Redmond":"King","Shoreline":"King",
+      "Olympia":"Thurston","Lacey":"Thurston","Lakewood":"Pierce",
+      "Bothell":"King","Edmonds":"Snohomish","Kirkland":"King",
+      "Sammamish":"King","Issaquah":"King","Bremerton":"Kitsap",
+      "Puyallup":"Pierce","Lynnwood":"Snohomish","Burien":"King",
+      "Walla Walla":"Walla Walla","Pullman":"Whitman",
+      "Mount Vernon":"Skagit","Richland":"Benton","Wenatchee":"Chelan"
+    },
+    cityDistrict: {
+      "Seattle":"Seattle Public Schools",
+      "Spokane":"Spokane Public Schools",
+      "Tacoma":"Tacoma Public Schools",
+      "Vancouver":"Vancouver Public Schools",
+      "Bellevue":"Bellevue School District",
+      "Kent":"Kent School District",
+      "Everett":"Everett Public Schools",
+      "Renton":"Renton School District",
+      "Federal Way":"Federal Way Public Schools",
+      "Yakima":"Yakima School District",
+      "Bellingham":"Bellingham Public Schools",
+      "Kennewick":"Kennewick School District",
+      "Auburn":"Auburn School District",
+      "Pasco":"Pasco School District",
+      "Marysville":"Marysville School District",
+      "Lakewood":"Clover Park School District",
+      "Redmond":"Lake Washington School District",
+      "Shoreline":"Shoreline School District",
+      "Olympia":"Olympia School District",
+      "Bothell":"Northshore School District",
+      "Kirkland":"Lake Washington School District",
+      "Sammamish":"Lake Washington School District",
+      "Issaquah":"Issaquah School District",
+      "Bremerton":"Bremerton School District",
+      "Puyallup":"Puyallup School District",
+      "Lynnwood":"Edmonds School District",
+      "Edmonds":"Edmonds School District",
+      "Burien":"Highline Public Schools"
+    }
+  },
+
+  /* ─── New Jersey ────────────────────────────────────────────────── */
+  NJ: {
+    countyUtility: {
+      "Atlantic":"Atlantic City Electric","Bergen":"PSE&G",
+      "Burlington":"PSE&G","Camden":"PSE&G","Cape May":"Atlantic City Electric",
+      "Cumberland":"Atlantic City Electric","Essex":"PSE&G",
+      "Gloucester":"Atlantic City Electric","Hudson":"PSE&G",
+      "Hunterdon":"JCP&L","Mercer":"PSE&G","Middlesex":"PSE&G",
+      "Monmouth":"JCP&L","Morris":"JCP&L","Ocean":"JCP&L",
+      "Passaic":"PSE&G","Salem":"Atlantic City Electric",
+      "Somerset":"PSE&G","Sussex":"JCP&L","Union":"PSE&G","Warren":"JCP&L"
+    },
+    cityUtility: {
+      "Vineland":"Vineland Municipal Electric Utility",
+      "Pemberton":"Pemberton Electric"
+    },
+    cableByCounty: {
+      "Bergen":"Optimum (Altice)","Hudson":"Optimum (Altice)",
+      "Passaic":"Optimum (Altice)","Essex":"Optimum (Altice)",
+      "Union":"Optimum (Altice)","Middlesex":"Xfinity (Comcast)",
+      "Monmouth":"Xfinity (Comcast)","Ocean":"Xfinity (Comcast)",
+      "Mercer":"Xfinity (Comcast)","Somerset":"Xfinity (Comcast)",
+      "Hunterdon":"Xfinity (Comcast)","Morris":"Optimum (Altice)",
+      "Sussex":"Optimum (Altice)","Warren":"Service Electric",
+      "Burlington":"Xfinity (Comcast)","Camden":"Xfinity (Comcast)",
+      "Gloucester":"Xfinity (Comcast)","Atlantic":"Xfinity (Comcast)",
+      "Cape May":"Xfinity (Comcast)","Cumberland":"Xfinity (Comcast)",
+      "Salem":"Xfinity (Comcast)"
+    },
+    fiberByCity: {
+      "Newark":["Verizon Fios"],"Jersey City":["Verizon Fios"],
+      "Paterson":["Verizon Fios"],"Elizabeth":["Verizon Fios"],
+      "Edison":["Verizon Fios"],"Toms River":["Verizon Fios"],
+      "Trenton":["Verizon Fios"],"Camden":["Verizon Fios"],
+      "Clifton":["Verizon Fios"],"Passaic":["Verizon Fios"],
+      "Union City":["Verizon Fios"],"Bayonne":["Verizon Fios"],
+      "Atlantic City":["Verizon Fios"],"Hoboken":["Verizon Fios"],
+      "East Orange":["Verizon Fios"],"Vineland":["Verizon Fios"],
+      "New Brunswick":["Verizon Fios"],"Princeton":["Verizon Fios"],
+      "Hackensack":["Verizon Fios"],"Fort Lee":["Verizon Fios"],
+      "Englewood":["Verizon Fios"],"Cherry Hill":["Verizon Fios"],
+      "Brick":["Verizon Fios"],"Lakewood":["Verizon Fios"],
+      "Woodbridge":["Verizon Fios"],"West Orange":["Verizon Fios"],
+      "Wayne":["Verizon Fios"],"Plainfield":["Verizon Fios"]
+    },
+    cityToCounty: {
+      "Newark":"Essex","Jersey City":"Hudson","Paterson":"Passaic",
+      "Elizabeth":"Union","Edison":"Middlesex","Toms River":"Ocean",
+      "Trenton":"Mercer","Camden":"Camden","Clifton":"Passaic",
+      "Passaic":"Passaic","Union City":"Hudson","Bayonne":"Hudson",
+      "Atlantic City":"Atlantic","Hoboken":"Hudson","East Orange":"Essex",
+      "Vineland":"Cumberland","New Brunswick":"Middlesex","Princeton":"Mercer",
+      "Hackensack":"Bergen","Fort Lee":"Bergen","Englewood":"Bergen",
+      "Cherry Hill":"Camden","Brick":"Ocean","Lakewood":"Ocean",
+      "Woodbridge":"Middlesex","West Orange":"Essex","Wayne":"Passaic",
+      "Plainfield":"Union","Perth Amboy":"Middlesex","Long Branch":"Monmouth",
+      "Asbury Park":"Monmouth","Morristown":"Morris","Summit":"Union",
+      "Westfield":"Union","Montclair":"Essex"
+    },
+    cityDistrict: {
+      "Newark":"Newark Public Schools","Jersey City":"Jersey City Public Schools",
+      "Paterson":"Paterson Public Schools","Elizabeth":"Elizabeth Public Schools",
+      "Edison":"Edison Township Public Schools",
+      "Toms River":"Toms River Regional Schools",
+      "Trenton":"Trenton Public Schools","Camden":"Camden City School District",
+      "Clifton":"Clifton Public Schools","Passaic":"Passaic Public Schools",
+      "Union City":"Union City School District",
+      "Bayonne":"Bayonne Board of Education",
+      "Atlantic City":"Atlantic City Board of Education",
+      "Hoboken":"Hoboken Public Schools",
+      "East Orange":"East Orange Public Schools",
+      "Vineland":"Vineland Public Schools",
+      "New Brunswick":"New Brunswick Public Schools",
+      "Princeton":"Princeton Public Schools",
+      "Hackensack":"Hackensack Public Schools",
+      "Cherry Hill":"Cherry Hill Public Schools",
+      "Lakewood":"Lakewood Township School District",
+      "Woodbridge":"Woodbridge Township School District",
+      "Plainfield":"Plainfield Public Schools",
+      "West Orange":"West Orange Public Schools",
+      "Montclair":"Montclair Public Schools"
+    }
+  }
 };
 
 /* -------- DOM helpers ------------------------------------------------ */
@@ -808,22 +1497,45 @@ async function reverseGeocode(lat, lon) {
 }
 
 /* -------- Address helpers (with city→county fallback) ---------------- */
+
+// NYC boroughs are technically counties; Nominatim sometimes only returns
+// `borough` for NYC addresses, with no county field. Map them explicitly.
+const NYC_BOROUGH_TO_COUNTY = {
+  "Manhattan":"New York","Brooklyn":"Kings","Queens":"Queens",
+  "The Bronx":"Bronx","Bronx":"Bronx","Staten Island":"Richmond"
+};
+
 function getCityKey(addr) {
+  // For NYC, prefer borough name (more useful for school district etc.)
+  if (addr.borough && NYC_BOROUGH_TO_COUNTY[addr.borough]) return addr.borough;
   const c = addr.city || addr.town || addr.village || addr.hamlet || addr.suburb || addr.municipality || "";
   return c.replace(/^City of\s+/i, "").trim();
 }
+
+// Combined city→county fallback across all states with depth loaded
+function lookupCityCounty(city) {
+  if (!city) return null;
+  if (CA_CITY_TO_COUNTY[city]) return CA_CITY_TO_COUNTY[city];
+  if (NYC_BOROUGH_TO_COUNTY[city]) return NYC_BOROUGH_TO_COUNTY[city];
+  for (const s of Object.keys(STATE_DATA)) {
+    const m = STATE_DATA[s].cityToCounty || {};
+    if (m[city]) return m[city];
+  }
+  return null;
+}
+
 function getCountyKey(addr) {
   const direct = (addr.county || "").replace(/\s+County$/i, "").trim();
   if (direct) return direct;
-  // Fallback: derive from city for consolidated city-counties + major cities
   const city = getCityKey(addr);
-  return CA_CITY_TO_COUNTY[city] || "";
+  return lookupCityCounty(city) || "";
 }
 function getCountyMeta(addr) {
   const direct = (addr.county || "").replace(/\s+County$/i, "").trim();
   if (direct) return { name: direct, inferred: false };
   const city = getCityKey(addr);
-  if (CA_CITY_TO_COUNTY[city]) return { name: CA_CITY_TO_COUNTY[city], inferred: true };
+  const fallback = lookupCityCounty(city);
+  if (fallback) return { name: fallback, inferred: true };
   return { name: "", inferred: false };
 }
 function getStreet(addr) {
@@ -834,28 +1546,55 @@ function getStreet(addr) {
 function resolveElectric(addr) {
   const cityKey = getCityKey(addr);
   const county  = getCountyKey(addr);
+  const state   = getStateCode(addr);
   let utility = null, summaryNote = "";
-  if (CA_CITY_UTILITY[cityKey]) {
-    utility = CA_CITY_UTILITY[cityKey];
-    summaryNote = `Publicly-owned utility serving ${cityKey}.`;
-  } else if (CA_COUNTY_UTILITY[county]) {
-    utility = CA_COUNTY_UTILITY[county];
-    summaryNote = `Primary electric utility for most of ${county} County.`;
+
+  if (state === "CA") {
+    // CA path: existing dedicated maps + CCA logic
+    if (CA_CITY_UTILITY[cityKey]) {
+      utility = CA_CITY_UTILITY[cityKey];
+      summaryNote = `Publicly-owned utility serving ${cityKey}.`;
+    } else if (CA_COUNTY_UTILITY[county]) {
+      utility = CA_COUNTY_UTILITY[county];
+      summaryNote = `Primary electric utility for most of ${county} County.`;
+    }
+  } else if (STATE_DATA[state]) {
+    // Other-state path via STATE_DATA
+    const d = STATE_DATA[state];
+    if ((d.cityUtility || {})[cityKey]) {
+      utility = d.cityUtility[cityKey];
+      summaryNote = `Local utility serving ${cityKey}.`;
+    } else if ((d.countyUtility || {})[county]) {
+      utility = d.countyUtility[county];
+      summaryNote = `Primary electric utility for most of ${county} County.`;
+    }
   }
+
+  // CCAs only loaded for CA in v0.10
   let cca = null;
-  if (utility && IOU_SET.has(utility)) {
+  if (state === "CA" && utility && IOU_SET.has(utility)) {
     cca = CCA_BY_CITY[cityKey] || CCA_BY_COUNTY[county] || null;
   }
+
   const rows = [];
-  if (utility && IOU_SET.has(utility)) {
+  if (state === "CA" && utility && IOU_SET.has(utility)) {
     if (cca) {
       rows.push({ name: utility, role: "Wires + billing (delivery)" });
       rows.push({ name: cca, role: "Generation supplier (your CCA)" });
     } else {
       rows.push({ name: utility, role: "Full bundled service (no CCA in this area)" });
     }
+  } else if (state === "TX" && utility) {
+    // Texas has retail choice on ERCOT — TDU does delivery, customer picks REP
+    const ercotTDU = ["Oncor","CenterPoint Energy","AEP Texas","TNMP"].includes(utility);
+    if (ercotTDU) {
+      rows.push({ name: utility, role: "Wires + delivery (your TDU)" });
+      rows.push({ name: "PowerToChoose.org", role: "Shop your supplier (REP) — TX has retail choice" });
+    } else {
+      rows.push({ name: utility, role: "Full service (no retail choice in this area)" });
+    }
   } else if (utility) {
-    rows.push({ name: utility, role: "Full service (POU — wires, generation, billing)" });
+    rows.push({ name: utility, role: "Electric utility (wires + billing)" });
   }
   return { utility: utility || "Unknown", note: summaryNote, rows, county, cityKey };
 }
@@ -863,8 +1602,16 @@ function resolveElectric(addr) {
 function resolveInternet(addr) {
   const cityKey = getCityKey(addr);
   const county  = getCountyKey(addr);
-  const cable   = ISP_CABLE_BY_COUNTY[county] || null;
-  const fiberCity = ISP_FIBER_BY_CITY[cityKey] || [];
+  const state   = getStateCode(addr);
+  let cable = null, fiberCity = [];
+  if (state === "CA") {
+    cable     = ISP_CABLE_BY_COUNTY[county] || null;
+    fiberCity = ISP_FIBER_BY_CITY[cityKey] || [];
+  } else if (STATE_DATA[state]) {
+    const d = STATE_DATA[state];
+    cable     = (d.cableByCounty || {})[county] || null;
+    fiberCity = (d.fiberByCity   || {})[cityKey] || [];
+  }
   const rows = [];
   if (cable && ISP_TECH[cable]) rows.push({ name: cable, ...ISP_TECH[cable] });
   for (const f of fiberCity) {
@@ -889,18 +1636,25 @@ function resolveTV(cableProvider) {
 function resolveSecurity() { return { rows: SECURITY_PROVIDERS.slice() }; }
 function resolveDistrict(addr) {
   const cityKey = getCityKey(addr);
-  const state = (addr.state || "").trim();
-  const isCA = /california/i.test(state);
-  const district = isCA ? CA_CITY_DISTRICT[cityKey] : null;
+  const stateName = (addr.state || "").trim();
+  const stateCode = getStateCode(addr);
+  let district = null;
+  if (stateCode === "CA") district = CA_CITY_DISTRICT[cityKey];
+  else if (STATE_DATA[stateCode]) district = (STATE_DATA[stateCode].cityDistrict || {})[cityKey];
   if (district) return { name: district, note: `Likely district for addresses in ${cityKey}.` };
-  if (!isCA && state) {
+  // Loaded state but no city match → multiple districts possible
+  if (stateCode === "CA" || STATE_DATA[stateCode]) {
+    return { name: cityKey ? "Multiple possible districts" : "—",
+             note: cityKey ? `We don't have a single district mapping for ${cityKey} — multiple districts may serve the area.` : "City could not be determined." };
+  }
+  // State not yet loaded
+  if (stateName) {
     return {
-      name: `District lookup for ${state} not yet loaded`,
+      name: `District lookup for ${stateName} not yet loaded`,
       note: `We're rolling out state-by-state. The closest schools below come from OpenStreetMap and should still be accurate.`
     };
   }
-  return { name: cityKey ? "Multiple possible districts" : "—",
-           note: cityKey ? `We don't have a single district mapping for ${cityKey}.` : "City could not be determined." };
+  return { name: "—", note: "Could not determine state." };
 }
 
 /* =====================================================================
@@ -1121,12 +1875,14 @@ function renderElectric(e, geo) {
   setText("electric-value", e.utility);
   setText("electric-meta",  e.note);
   const body = $("electric-body");
-  const state = ((geo.address || {}).state || "").trim();
-  const isCA = /california/i.test(state);
+  const stateName = ((geo.address || {}).state || "").trim();
+  const stateCode = getStateCode(geo.address || {});
+  const isCA = stateCode === "CA";
+  const stateLoaded = isCA || !!STATE_DATA[stateCode];
   if (e.rows.length === 0) {
-    const intro = isCA
-      ? `<p><b>We don't have utility info for this exact address yet.</b> Most of California is served by PG&amp;E, SCE, SDG&amp;E, LADWP, SMUD, or one of ~40 publicly-owned utilities.</p>`
-      : `<p><b>Detailed electric-utility data for ${escapeHtml(state || "this state")} isn't loaded yet.</b> We're adding state-by-state — California is done, more on the way. To find your provider now, use the U.S. Energy Atlas or a quick Google.</p>`;
+    const intro = stateLoaded
+      ? `<p><b>We don't have utility info for this exact address yet.</b> ${isCA ? "Most of California is served by PG&amp;E, SCE, SDG&amp;E, LADWP, SMUD, or one of ~40 publicly-owned utilities." : "It might be a smaller co-op or municipal utility we haven't mapped yet."}</p>`
+      : `<p><b>Detailed electric-utility data for ${escapeHtml(stateName || "this state")} isn't loaded yet.</b> So far we've added depth for CA, PA, NY, TX, WA, and NJ — more states on the way. To find your provider now, use the U.S. Energy Atlas or a quick Google.</p>`;
     const eiaUrl = "https://atlas.eia.gov/datasets/eia::electric-retail-service-territories-2/explore";
     const cecUrl = "https://cecgis-caenergy.opendata.arcgis.com/";
     body.innerHTML = `
@@ -1165,9 +1921,8 @@ function renderInternet(i, lat, lon, state) {
     </tr>`
   });
   const fccUrl = `https://broadbandmap.fcc.gov/location-summary/fixed?location=${lat},${lon}`;
-  const isCA = /california/i.test(state || "");
   const hasCable = i.rows.some(r => (r.tech || "").toLowerCase() === "cable");
-  const stateNote = (!isCA && !hasCable && state)
+  const stateNote = (!hasCable && state)
     ? `Cable &amp; fiber availability for <b>${escapeHtml(state)}</b> isn't loaded yet — 5G home and satellite shown are nationwide. `
     : `Speeds shown are typical max residential plans. `;
   setHTML("internet-source", `${stateNote}<a href="${fccUrl}" target="_blank" rel="noopener">Open the FCC report for this exact location →</a>`);
