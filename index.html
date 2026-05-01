@@ -553,11 +553,11 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.14 · April 2026 · Phase 2 · Better address resolution for partial OSM coverage
+      <b>HomeAtlas</b> &mdash; v0.15 · April 2026 · Phase 2 · 4 geocoders incl. U.S. Census Bureau
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
-    <p>Sources: <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC GIS</a> · <a href="https://broadbandmap.fcc.gov/" target="_blank" rel="noopener">FCC Broadband Map</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap (ODbL)</a> · <a href="https://overpass-api.de/" target="_blank" rel="noopener">Overpass API</a></p>
+    <p>Sources: <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC GIS</a> · <a href="https://broadbandmap.fcc.gov/" target="_blank" rel="noopener">FCC Broadband Map</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap (ODbL)</a> · <a href="https://overpass-api.de/" target="_blank" rel="noopener">Overpass API</a> · <a href="https://geocoding.geo.census.gov/" target="_blank" rel="noopener">U.S. Census Bureau Geocoder</a> · <a href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noopener">USDA PHZM</a></p>
     <p>Internet speeds shown are typical max residential plans — actual speeds at your address may differ. Always verify exact availability with the provider or via the FCC report link.</p>
   </footer>
 </div>
@@ -1716,6 +1716,56 @@ function parseAddressInput(raw) {
   return { housenum, street, city, state, zip };
 }
 
+// v0.15: U.S. Census Bureau Geocoder — free, no API key, public domain.
+// Uses TIGER/Line address-range data, so it can interpolate house positions
+// even when the exact address point isn't in OpenStreetMap. Particularly
+// useful for newer subdivisions where OSM hasn't caught up yet.
+function censusToFeature(m) {
+  const c = m.addressComponents || {};
+  const x = m.coordinates && m.coordinates.x;
+  const y = m.coordinates && m.coordinates.y;
+  if (typeof x !== "number" || typeof y !== "number") return null;
+  const street = [c.preDirection, c.preType, c.streetName, c.suffixType, c.suffixDirection]
+    .filter(Boolean).join(" ").trim();
+  // Census addressComponents has fromAddress/toAddress (the range); for
+  // display purposes use the user-input number which the API parsed back
+  // — but we don't have that here, so derive from the matchedAddress.
+  const matchedAddress = m.matchedAddress || "";
+  const numM = matchedAddress.match(/^(\d+)\b/);
+  const housenumber = numM ? numM[1] : c.fromAddress;
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [x, y] },
+    properties: {
+      name: matchedAddress || street,
+      housenumber: housenumber || undefined,
+      street: street || undefined,
+      city: c.city,
+      state: c.state,
+      postcode: c.zip,
+      country: "United States",
+      countrycode: "US",
+      _source: "census"
+    }
+  };
+}
+async function tryCensus(rawQuery) {
+  const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress`
+            + `?address=${encodeURIComponent(rawQuery)}`
+            + `&benchmark=Public_AR_Current&format=json`;
+  try {
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const matches = (data && data.result && data.result.addressMatches) || [];
+    return matches.map(censusToFeature).filter(Boolean);
+  } catch (e) {
+    // Census API can be flaky / occasionally CORS-restricted from some
+    // origins. Fail silently and let other geocoders handle it.
+    return [];
+  }
+}
+
 // Nominatim structured search — much better hit rate for US house numbers.
 async function tryNominatimStructured(parsed) {
   if (!parsed || (!parsed.street && !parsed.city)) return [];
@@ -1750,30 +1800,44 @@ async function searchSuggestions(rawQuery) {
   return [];
 }
 
-// v0.14: aggressive submit-time geocoder — runs more queries to find an
-// exact house-number match, which the type-ahead path can't afford to do.
+// v0.14+: aggressive submit-time geocoder — chain of free US-friendly
+// geocoders, each adding house-number coverage the previous one missed.
+//   1. Photon (fast type-ahead source)
+//   2. Nominatim free-text
+//   3. Nominatim structured (?street=...&city=...&state=...&postalcode=...)
+//   4. v0.15: U.S. Census Bureau Geocoder (TIGER/Line interpolated)
 async function geocodeForSubmit(rawQuery) {
-  // Always try Photon (fast, may already have it cached)
+  const allCandidates = [];
+
+  // 1) Photon
   const photon = await tryPhoton(rawQuery);
+  allCandidates.push(...photon);
   const photonHN = photon.find(f => f.properties && f.properties.housenumber);
   if (photonHN) return photonHN;
 
-  // No HN match in Photon → try Nominatim free-text + structured in sequence.
-  // (Sequential, not parallel, to stay under the 1-req/sec policy.)
+  // 2) Nominatim free-text
   const nomFree = await tryNominatim(rawQuery);
+  allCandidates.push(...nomFree);
   const nomFreeHN = nomFree.find(f => f.properties && f.properties.housenumber);
   if (nomFreeHN) return nomFreeHN;
 
+  // 3) Nominatim structured (highest-quality free OSM-based US lookup)
   const parsed = parseAddressInput(rawQuery);
   if (parsed && parsed.street) {
     const nomStruct = await tryNominatimStructured(parsed);
+    allCandidates.push(...nomStruct);
     const nomStructHN = nomStruct.find(f => f.properties && f.properties.housenumber);
     if (nomStructHN) return nomStructHN;
-    if (nomStruct.length) return nomStruct[0];   // street-level structured match
   }
 
-  // No house-level match anywhere → return best effort (Photon street, Nominatim street, or null)
-  return photon[0] || nomFree[0] || null;
+  // 4) v0.15: Census Bureau Geocoder — interpolates from TIGER/Line ranges,
+  // catches addresses present in federal data but missing from OSM.
+  const census = await tryCensus(rawQuery);
+  allCandidates.push(...census);
+  if (census.length > 0) return census[0];
+
+  // No house-level match anywhere → best-effort street-level result (or null)
+  return allCandidates[0] || null;
 }
 function suggestionLabel(feature) {
   const p = feature.properties || {};
