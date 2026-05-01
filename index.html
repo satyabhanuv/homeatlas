@@ -198,6 +198,72 @@
   .card.coming-soon { opacity: 0.78; border-style: dashed; }
   .card .badge { position: absolute; top: 14px; right: 14px; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
 
+  /* ─── Yard & garden full-width card (v0.13 — Phase 2) ───────────── */
+  .yard-card {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); padding: 22px 26px;
+    box-shadow: var(--shadow); margin-top: 14px;
+  }
+  .yard-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .yard-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
+  .yard-head .text-block { display: flex; flex-direction: column; }
+  .yard-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .yard-head .value { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .yard-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 13px; font-weight: 600; }
+  .yard-section { margin-top: 18px; }
+  .yard-section h4 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .yard-section h4 .hint { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 4px; }
+  .climate-grid {
+    display: grid; gap: 12px 24px;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+  .climate-cell { display: flex; flex-direction: column; gap: 3px; }
+  .climate-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-faint); font-weight: 700; }
+  .climate-value { font-size: 16px; color: var(--ink); font-weight: 600; }
+  .climate-sub { font-size: 12px; color: var(--ink-soft); }
+
+  /* Plant cards grid */
+  .plant-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    margin-top: 4px;
+  }
+  .plant-card {
+    background: rgba(45,106,79,0.04);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 4px;
+  }
+  .plant-card .plant-name { font-weight: 700; color: var(--ink); font-size: 14px; }
+  .plant-card .plant-sci  { color: var(--ink-faint); font-size: 12px; font-style: italic; }
+  .plant-card .plant-desc { color: var(--ink-soft); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
+  .plant-card .plant-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .plant-tag {
+    display: inline-block; padding: 2px 7px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
+  }
+  .plant-tag.native { background: rgba(45,106,79,0.12); color: var(--primary-2); }
+  .plant-tag.drought { background: rgba(212,163,115,0.18); color: #8a5a1f; }
+  .plant-tag.shade { background: rgba(76,86,140,0.12); color: #46508a; }
+  .plant-tag.edible { background: rgba(178,52,52,0.12); color: #8c2222; }
+  .plant-cat-row { margin-bottom: 14px; }
+  .plant-cat-row:last-child { margin-bottom: 0; }
+  .plant-cat-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+    color: var(--ink-faint); font-weight: 700; margin: 4px 0 6px;
+  }
+  .plant-cat-label .emoji { font-size: 14px; vertical-align: middle; margin-right: 4px; }
+
+  .yard-tip {
+    background: rgba(45,106,79,0.04);
+    border-left: 3px solid var(--primary);
+    padding: 10px 14px; border-radius: 0 6px 6px 0;
+    font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;
+  }
+  .yard-tip + .yard-tip { margin-top: 8px; }
+  .yard-tip b { color: var(--primary-2); }
+
   /* Schools full-width card */
   .schools-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
   .schools-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -254,7 +320,7 @@
     <div class="brand">
       <span class="brand-dot"></span>
       HomeAtlas
-      <span class="brand-tag">Preview · 6 states deep</span>
+      <span class="brand-tag">Preview · Phase 2</span>
     </div>
   </header>
 
@@ -405,6 +471,49 @@
       </div>
     </div>
 
+    <!-- Yard & Garden — full width below schools -->
+    <div class="yard-card" id="card-yard" hidden>
+      <div class="yard-head">
+        <div class="icon">🌱</div>
+        <div class="text-block">
+          <h3>Yard &amp; garden</h3>
+          <div class="value" id="yard-value">—</div>
+        </div>
+        <div class="summary-pill" id="yard-summary" hidden></div>
+      </div>
+
+      <div class="yard-section" id="yard-climate-section">
+        <h4>Climate at a glance <span class="hint">— USDA hardiness zone &amp; growing season</span></h4>
+        <div class="climate-grid">
+          <div class="climate-cell"><span class="climate-label">USDA hardiness zone</span><span class="climate-value" id="yard-zone">—</span><span class="climate-sub" id="yard-zone-sub"></span></div>
+          <div class="climate-cell"><span class="climate-label">Avg min temp (winter)</span><span class="climate-value" id="yard-min-temp">—</span></div>
+          <div class="climate-cell"><span class="climate-label">First fall frost</span><span class="climate-value" id="yard-frost-fall">—</span></div>
+          <div class="climate-cell"><span class="climate-label">Last spring frost</span><span class="climate-value" id="yard-frost-spring">—</span></div>
+          <div class="climate-cell"><span class="climate-label">Growing season</span><span class="climate-value" id="yard-growing-season">—</span></div>
+          <div class="climate-cell"><span class="climate-label">Climate type</span><span class="climate-value" id="yard-climate-type">—</span></div>
+        </div>
+      </div>
+
+      <div class="yard-section">
+        <h4>Recommended plants <span class="hint">— suited to your zone, with native &amp; drought-tolerant flagged</span></h4>
+        <div id="yard-plants-body"></div>
+      </div>
+
+      <div class="yard-section">
+        <h4>Soil <span class="hint">— typical for your region; click for exact composition</span></h4>
+        <div id="yard-soil-body"></div>
+      </div>
+
+      <div class="yard-section">
+        <h4>Watering &amp; care</h4>
+        <div id="yard-care-body"></div>
+      </div>
+
+      <div class="source" style="margin-top:16px;">
+        Hardiness zones based on <a href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noopener">USDA Plant Hardiness Zone Map (2023)</a>. Plant recommendations are general for your zone — verify with a local nursery or extension office for site-specific advice (sun/shade, slope, microclimate). Soil details available from <a href="https://websoilsurvey.nrcs.usda.gov/" target="_blank" rel="noopener">USDA Web Soil Survey</a>.
+      </div>
+    </div>
+
   </section>
 
   <!-- Coming Soon -->
@@ -415,7 +524,6 @@
       <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🏠</div><h3>House anatomy</h3><div class="value">By year built</div><div class="meta">Likely framing, wiring, plumbing, insulation, roofing era.</div></div>
       <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🔧</div><h3>HVAC &amp; ducts</h3><div class="value">Sizing &amp; standards</div><div class="meta">Dryer vent (4″), supply &amp; return trunks per ACCA Manual D.</div></div>
       <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🧰</div><h3>Materials &amp; upgrades</h3><div class="value">What works with what you have</div><div class="meta">Compatible connectors and modern retrofits.</div></div>
-      <div class="card coming-soon"><span class="badge">Phase 2</span><div class="icon">🌱</div><h3>Yard &amp; garden</h3><div class="value">Soil + plants</div><div class="meta">USDA hardiness zone, soil type, native plants.</div></div>
       <div class="card coming-soon"><span class="badge">Phase 3</span><div class="icon">🔥</div><h3>Risk profile</h3><div class="value">Fire · Flood · Quake</div><div class="meta">Cal Fire FHSZ, FEMA flood, USGS shaking hazard.</div></div>
       <div class="card coming-soon"><span class="badge">Phase 3</span><div class="icon">🗳️</div><h3>Civic</h3><div class="value">Voting · Tax · Water · Gas</div><div class="meta">Voting precinct, sales tax, water + gas utilities.</div></div>
     </div>
@@ -431,7 +539,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.12 · April 2026 · 6 states deep · top-5 providers + map links per row
+      <b>HomeAtlas</b> &mdash; v0.13 · April 2026 · Phase 2 begins: Yard &amp; garden live for all 50 states
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2267,6 +2375,305 @@ async function loadNearbySchools(geo) {
   }
 }
 
+/* =====================================================================
+   Yard & Garden module (v0.13 — Phase 2)
+   --------------------------------------------------------------------
+   • USDA hardiness zone via city lookup → state fallback → latitude approx
+   • First/last frost + growing season derived from zone
+   • Plant recommendations from a curated DB filtered by zone
+   • Soil description by region (linked to USDA Web Soil Survey for detail)
+   • Watering tips by climate type
+   ===================================================================== */
+
+// Top US cities → 2023 USDA hardiness zone. Used as primary lookup —
+// most queries hit a city we know. Sources: USDA PHZM 2023.
+const USDA_ZONE_BY_CITY = {
+  // Major cities (population top ~150)
+  "New York":"7b","Los Angeles":"10b","Chicago":"6a","Houston":"9a",
+  "Phoenix":"9b","Philadelphia":"7b","San Antonio":"9a","San Diego":"10b",
+  "Dallas":"8b","San Jose":"10a","Austin":"9a","Jacksonville":"9a",
+  "Fort Worth":"8b","Columbus":"6b","Charlotte":"8a","San Francisco":"10b",
+  "Indianapolis":"6b","Seattle":"9a","Denver":"6a","Washington":"8a",
+  "Boston":"7a","El Paso":"8b","Detroit":"6b","Nashville":"7b",
+  "Memphis":"8a","Portland":"9a","Oklahoma City":"7b","Las Vegas":"9b",
+  "Louisville":"7a","Baltimore":"8a","Milwaukee":"6a","Albuquerque":"7b",
+  "Tucson":"9a","Fresno":"9b","Sacramento":"10a","Mesa":"9b",
+  "Kansas City":"7a","Atlanta":"8a","Long Beach":"10b","Colorado Springs":"6a",
+  "Raleigh":"7b","Miami":"11a","Virginia Beach":"8a","Omaha":"6a",
+  "Oakland":"10b","Minneapolis":"5a","Tulsa":"7b","Arlington":"8b",
+  "New Orleans":"9b","Wichita":"7a","Cleveland":"6b","Tampa":"10a",
+  "Bakersfield":"9b","Aurora":"6a","Anaheim":"10b","Honolulu":"12b",
+  "Santa Ana":"10b","Riverside":"9b","Corpus Christi":"9b","Lexington":"7a",
+  "Stockton":"9b","Henderson":"9b","Saint Paul":"5a","St. Paul":"5a",
+  "St. Louis":"6b","Saint Louis":"6b","Cincinnati":"6b","Pittsburgh":"6b",
+  "Greensboro":"7b","Anchorage":"5a","Plano":"8a","Lincoln":"6a",
+  "Orlando":"9b","Irvine":"10a","Newark":"7b","Toledo":"6a",
+  "Durham":"8a","Chula Vista":"10b","Fort Wayne":"6a","Jersey City":"7b",
+  "St. Petersburg":"10a","Saint Petersburg":"10a","Laredo":"9b","Madison":"5b",
+  "Chandler":"9b","Buffalo":"6a","Lubbock":"7b","Scottsdale":"9b",
+  "Reno":"7a","Glendale":"9b","Gilbert":"9b","Winston-Salem":"7b",
+  "North Las Vegas":"9a","Norfolk":"8a","Chesapeake":"8a","Garland":"8a",
+  "Irving":"8a","Hialeah":"11a","Fremont":"10a","Boise":"6b",
+  "Richmond":"7b","Baton Rouge":"9a","Spokane":"6b","Des Moines":"5b",
+  "Tacoma":"9a","San Bernardino":"9a","Modesto":"9b","Fontana":"9a",
+  "Santa Clarita":"10a","Birmingham":"8a","Oxnard":"10a","Rochester":"6a",
+  "Moreno Valley":"9b","Grand Rapids":"6a","Salt Lake City":"7a","Tallahassee":"9a",
+  "Yonkers":"7a","Glendale (AZ)":"9b","Huntington Beach":"10b","Montgomery":"8b",
+  "Amarillo":"7a","Little Rock":"8a","Akron":"6a","Columbus (GA)":"8b",
+  "Augusta":"8a","Knoxville":"7b","Fort Lauderdale":"11a","Worcester":"6a",
+  "Newport News":"8a","Brownsville":"10a","Overland Park":"6b","Santa Rosa":"9b",
+  "Salem":"8b","Tempe":"9b","Huntsville":"7b","Cape Coral":"10b",
+  "Ontario":"9b","Vancouver":"8b","Sioux Falls":"4b","Springfield (MO)":"6b",
+  "Pembroke Pines":"11a","Elk Grove":"9b","Salinas":"9b","Eugene":"8b",
+  "Hayward":"10a","Pomona":"9b","Frisco":"8a","McKinney":"8a",
+  "Joliet":"5b","Pasadena":"10a","Mesquite":"8a","Killeen":"8a",
+  "Naperville":"5b","Rockford":"5b","Bridgeport":"7a","Savannah":"8b",
+  "Carrollton":"8a","Fairfield":"9b","Lakewood":"6a","Hampton":"8a",
+  "Springfield (MA)":"6a","Berkeley":"10a","Palo Alto":"10a","Mountain View":"10a",
+  "Sunnyvale":"10a","Cupertino":"10a","Daly City":"10a","San Mateo":"10a",
+  "Allentown":"7a","Bethlehem":"7a","Reading":"7a","Scranton":"6a",
+  "Wilkes-Barre":"6a","Lancaster":"7a","Harrisburg":"7a","Erie":"6a",
+  "York":"7a","State College":"5b","Trenton":"7a","Toms River":"7a",
+  "Edison":"7a","Elizabeth":"7a","Paterson":"7a","Clifton":"7a",
+  "Atlantic City":"7b","Camden":"7b","Vineland":"7a","Princeton":"7a",
+  "Phoenixville":"7a","West Chester":"7a","Doylestown":"7a","Norristown":"7a",
+  "Bensalem":"7a","King of Prussia":"7a"
+};
+
+// State centers → typical zone (used when city not in list)
+const USDA_ZONE_BY_STATE = {
+  "AL":"8a","AK":"4b","AZ":"9a","AR":"7b","CA":"9a","CO":"6a","CT":"7a","DE":"7b",
+  "FL":"9b","GA":"8a","HI":"12a","ID":"5b","IL":"6a","IN":"6a","IA":"5a","KS":"6b",
+  "KY":"7a","LA":"9a","ME":"5a","MD":"7b","MA":"6b","MI":"5b","MN":"4a","MS":"8b",
+  "MO":"6b","MT":"4b","NE":"5a","NV":"7b","NH":"5a","NJ":"7a","NM":"7a","NY":"6a",
+  "NC":"7b","ND":"4a","OH":"6a","OK":"7a","OR":"8a","PA":"6b","RI":"7a","SC":"8a",
+  "SD":"5a","TN":"7a","TX":"8b","UT":"6b","VT":"5a","VA":"7a","WA":"7b","WV":"6b",
+  "WI":"5a","WY":"4b","DC":"7b"
+};
+
+// Per-zone metadata: avg minimum temp, frost dates, growing-season length, climate type
+const ZONE_INFO = {
+  "1a": { minTemp:"-60 to -55°F", lastFrost:"early Jun", firstFrost:"early Sep", season:"~90 days", climate:"Subarctic" },
+  "1b": { minTemp:"-55 to -50°F", lastFrost:"late May",  firstFrost:"early Sep", season:"~95 days", climate:"Subarctic" },
+  "2a": { minTemp:"-50 to -45°F", lastFrost:"late May",  firstFrost:"mid Sep",   season:"~110 days", climate:"Subarctic" },
+  "2b": { minTemp:"-45 to -40°F", lastFrost:"mid May",   firstFrost:"mid Sep",   season:"~120 days", climate:"Subarctic" },
+  "3a": { minTemp:"-40 to -35°F", lastFrost:"early May", firstFrost:"late Sep",  season:"~135 days", climate:"Cold continental" },
+  "3b": { minTemp:"-35 to -30°F", lastFrost:"early May", firstFrost:"late Sep",  season:"~140 days", climate:"Cold continental" },
+  "4a": { minTemp:"-30 to -25°F", lastFrost:"late Apr",  firstFrost:"early Oct", season:"~150 days", climate:"Cold continental" },
+  "4b": { minTemp:"-25 to -20°F", lastFrost:"late Apr",  firstFrost:"early Oct", season:"~155 days", climate:"Cold continental" },
+  "5a": { minTemp:"-20 to -15°F", lastFrost:"mid Apr",   firstFrost:"mid Oct",   season:"~165 days", climate:"Cool continental" },
+  "5b": { minTemp:"-15 to -10°F", lastFrost:"mid Apr",   firstFrost:"mid Oct",   season:"~170 days", climate:"Cool continental" },
+  "6a": { minTemp:"-10 to -5°F",  lastFrost:"early Apr", firstFrost:"late Oct",  season:"~180 days", climate:"Temperate" },
+  "6b": { minTemp:"-5 to 0°F",    lastFrost:"early Apr", firstFrost:"late Oct",  season:"~190 days", climate:"Temperate" },
+  "7a": { minTemp:"0 to 5°F",     lastFrost:"late Mar",  firstFrost:"early Nov", season:"~205 days", climate:"Temperate" },
+  "7b": { minTemp:"5 to 10°F",    lastFrost:"late Mar",  firstFrost:"early Nov", season:"~215 days", climate:"Temperate" },
+  "8a": { minTemp:"10 to 15°F",   lastFrost:"mid Mar",   firstFrost:"mid Nov",   season:"~225 days", climate:"Warm temperate" },
+  "8b": { minTemp:"15 to 20°F",   lastFrost:"mid Mar",   firstFrost:"mid Nov",   season:"~235 days", climate:"Warm temperate" },
+  "9a": { minTemp:"20 to 25°F",   lastFrost:"late Feb",  firstFrost:"late Nov",  season:"~250 days", climate:"Subtropical / Mediterranean" },
+  "9b": { minTemp:"25 to 30°F",   lastFrost:"early Feb", firstFrost:"early Dec", season:"~270 days", climate:"Subtropical / Mediterranean" },
+  "10a":{ minTemp:"30 to 35°F",   lastFrost:"rare",      firstFrost:"rare",       season:"year-round", climate:"Subtropical / Mediterranean" },
+  "10b":{ minTemp:"35 to 40°F",   lastFrost:"none typically", firstFrost:"none typically", season:"year-round", climate:"Subtropical / Mediterranean" },
+  "11a":{ minTemp:"40 to 45°F",   lastFrost:"none",      firstFrost:"none",       season:"year-round", climate:"Tropical" },
+  "11b":{ minTemp:"45 to 50°F",   lastFrost:"none",      firstFrost:"none",       season:"year-round", climate:"Tropical" },
+  "12a":{ minTemp:"50 to 55°F",   lastFrost:"none",      firstFrost:"none",       season:"year-round", climate:"Tropical" },
+  "12b":{ minTemp:"55 to 60°F",   lastFrost:"none",      firstFrost:"none",       season:"year-round", climate:"Tropical" },
+  "13a":{ minTemp:"60 to 65°F",   lastFrost:"none",      firstFrost:"none",       season:"year-round", climate:"Tropical" },
+  "13b":{ minTemp:"65 to 70°F",   lastFrost:"none",      firstFrost:"none",       season:"year-round", climate:"Tropical" }
+};
+
+// Recommended plants by zone group (cold/cool/temperate/mild/warm/tropical).
+// Each plant: name, scientific, type, minZone, maxZone, native (regions),
+// droughtTolerant, shadeTolerant, edible, description.
+const PLANT_DB = [
+  // Trees
+  { name:"Sugar Maple", sci:"Acer saccharum", type:"Tree", min:3, max:7, native:["Northeast","Midwest"], drought:false, shade:true, edible:false, desc:"Iconic for fall color. Slow-growing, long-lived. Prefers well-drained soil." },
+  { name:"Eastern Redbud", sci:"Cercis canadensis", type:"Tree", min:4, max:9, native:["Eastern US"], drought:true, shade:true, edible:false, desc:"Pink spring flowers; tolerates a wide range of conditions." },
+  { name:"American Sycamore", sci:"Platanus occidentalis", type:"Tree", min:4, max:9, native:["Eastern US"], drought:false, shade:false, edible:false, desc:"Massive shade tree, distinctive mottled bark; needs space." },
+  { name:"Live Oak", sci:"Quercus virginiana", type:"Tree", min:7, max:10, native:["Southeast","Gulf Coast"], drought:true, shade:false, edible:false, desc:"Iconic Southern shade tree, salt-tolerant, evergreen." },
+  { name:"California Live Oak", sci:"Quercus agrifolia", type:"Tree", min:8, max:10, native:["California"], drought:true, shade:false, edible:false, desc:"California native; drought-tolerant once established. Avoid summer water near trunk." },
+  { name:"Crape Myrtle", sci:"Lagerstroemia indica", type:"Tree", min:7, max:10, native:[], drought:true, shade:false, edible:false, desc:"Long-blooming summer color (white/pink/red/lavender). Heat-loving." },
+  { name:"Coastal Redwood", sci:"Sequoia sempervirens", type:"Tree", min:7, max:9, native:["NorCal coast"], drought:false, shade:true, edible:false, desc:"Fastest-growing native tree on West Coast; needs deep watering and space." },
+  { name:"Royal Poinciana", sci:"Delonix regia", type:"Tree", min:10, max:13, native:[], drought:true, shade:false, edible:false, desc:"Spectacular orange-red flowers in summer; tropical specimen tree." },
+  { name:"Mango", sci:"Mangifera indica", type:"Tree", min:10, max:13, native:[], drought:false, shade:false, edible:true, desc:"Evergreen tropical fruit tree; needs heat and humidity, sensitive to frost." },
+  { name:"Plumeria (Frangipani)", sci:"Plumeria spp.", type:"Tree", min:10, max:13, native:[], drought:true, shade:false, edible:false, desc:"Iconic Hawaiian flowers; deciduous in dry season, fragrant blooms." },
+  { name:"Douglas Fir", sci:"Pseudotsuga menziesii", type:"Tree", min:4, max:8, native:["Pacific NW","Rockies"], drought:false, shade:true, edible:false, desc:"Pacific Northwest native conifer; soft needles, fast-growing." },
+  { name:"Pinyon Pine", sci:"Pinus edulis", type:"Tree", min:5, max:8, native:["Southwest"], drought:true, shade:false, edible:true, desc:"Drought-tolerant native of arid Southwest; produces edible pine nuts." },
+
+  // Shrubs
+  { name:"Manzanita", sci:"Arctostaphylos spp.", type:"Shrub", min:7, max:10, native:["California","Pacific NW"], drought:true, shade:false, edible:false, desc:"Reddish bark, evergreen, drought-loving native; many CA-native cultivars." },
+  { name:"Toyon (CA Holly)", sci:"Heteromeles arbutifolia", type:"Shrub", min:7, max:10, native:["California"], drought:true, shade:true, edible:false, desc:"Bright red berries in winter; namesake of Hollywood. Wildlife magnet." },
+  { name:"Hydrangea", sci:"Hydrangea macrophylla", type:"Shrub", min:5, max:9, native:[], drought:false, shade:true, edible:false, desc:"Big mophead blooms; flower color shifts with soil pH. Loves morning sun." },
+  { name:"Rhododendron", sci:"Rhododendron spp.", type:"Shrub", min:4, max:8, native:["East","Pacific NW"], drought:false, shade:true, edible:false, desc:"Spring blooms in many colors; needs acidic soil and partial shade." },
+  { name:"Texas Sage", sci:"Leucophyllum frutescens", type:"Shrub", min:8, max:11, native:["Southwest","Texas"], drought:true, shade:false, edible:false, desc:"Silver-gray leaves with purple flowers after rain; thrives on neglect." },
+  { name:"Desert Marigold", sci:"Baileya multiradiata", type:"Shrub", min:7, max:10, native:["Southwest"], drought:true, shade:false, edible:false, desc:"Tough native of arid Southwest; yellow daisy flowers spring through fall." },
+  { name:"Hibiscus", sci:"Hibiscus rosa-sinensis", type:"Shrub", min:9, max:13, native:[], drought:false, shade:false, edible:false, desc:"Tropical color; summer-long blooms in red/pink/yellow/white." },
+  { name:"Bougainvillea", sci:"Bougainvillea spp.", type:"Shrub", min:9, max:13, native:[], drought:true, shade:false, edible:false, desc:"Vivid magenta/pink/orange bracts; thorny climber, loves heat & sun." },
+  { name:"Beautyberry", sci:"Callicarpa americana", type:"Shrub", min:6, max:10, native:["Southeast"], drought:true, shade:true, edible:false, desc:"Vivid purple berries fall through winter; deer-resistant." },
+  { name:"Red-twig Dogwood", sci:"Cornus sericea", type:"Shrub", min:3, max:7, native:["North America"], drought:false, shade:true, edible:false, desc:"Bright red stems give winter color; thrives in moist spots." },
+
+  // Perennials / Flowers
+  { name:"California Poppy", sci:"Eschscholzia californica", type:"Perennial", min:6, max:10, native:["California","Southwest"], drought:true, shade:false, edible:false, desc:"State flower of California. Self-seeds; bright orange, no care needed once established." },
+  { name:"Black-eyed Susan", sci:"Rudbeckia hirta", type:"Perennial", min:3, max:9, native:["North America"], drought:true, shade:false, edible:false, desc:"Cheerful yellow daisies, butterfly magnet, very low-maintenance." },
+  { name:"Coneflower", sci:"Echinacea purpurea", type:"Perennial", min:3, max:9, native:["Eastern/Central US"], drought:true, shade:false, edible:false, desc:"Classic prairie native; long bloom season; pollinator favorite." },
+  { name:"Lavender", sci:"Lavandula angustifolia", type:"Perennial", min:5, max:9, native:[], drought:true, shade:false, edible:true, desc:"Mediterranean herb; fragrant blooms. Loves dry, well-drained soil." },
+  { name:"Salvia (Black & Blue)", sci:"Salvia guaranitica", type:"Perennial", min:7, max:10, native:[], drought:true, shade:false, edible:false, desc:"Hummingbird magnet; deep blue flowers all summer." },
+  { name:"Hosta", sci:"Hosta spp.", type:"Perennial", min:3, max:8, native:[], drought:false, shade:true, edible:false, desc:"Lush foliage in shade; many leaf colors and sizes." },
+  { name:"Daylily", sci:"Hemerocallis", type:"Perennial", min:3, max:9, native:[], drought:true, shade:false, edible:true, desc:"Tough as nails; thousands of cultivars. Edible flower buds." },
+  { name:"Bird of Paradise", sci:"Strelitzia reginae", type:"Perennial", min:9, max:13, native:[], drought:true, shade:false, edible:false, desc:"Iconic tropical flower; clump-forming, drought-tolerant in coastal CA/FL." },
+  { name:"Plumbago", sci:"Plumbago auriculata", type:"Perennial", min:9, max:13, native:[], drought:true, shade:false, edible:false, desc:"Sky-blue flowers nearly year-round in warm climates; pollinator favorite." },
+  { name:"Russian Sage", sci:"Perovskia atriplicifolia", type:"Perennial", min:4, max:9, native:[], drought:true, shade:false, edible:false, desc:"Lavender-blue flowers, silver foliage; thrives in heat and dry conditions." },
+  { name:"Bleeding Heart", sci:"Dicentra spectabilis", type:"Perennial", min:3, max:9, native:[], drought:false, shade:true, edible:false, desc:"Pink heart-shaped blooms in spring; loves shade and rich soil." },
+
+  // Edibles
+  { name:"Tomato", sci:"Solanum lycopersicum", type:"Edible", min:3, max:11, native:[], drought:false, shade:false, edible:true, desc:"Annual veggie. Plant after last frost. Full sun, regular water." },
+  { name:"Blueberry", sci:"Vaccinium spp.", type:"Edible", min:3, max:9, native:["North America"], drought:false, shade:false, edible:true, desc:"Acidic-soil fruit; needs cross-pollination from 2 varieties for best yield." },
+  { name:"Fig", sci:"Ficus carica", type:"Edible", min:7, max:11, native:[], drought:true, shade:false, edible:true, desc:"Mediterranean classic; productive once established. Likes hot summers." },
+  { name:"Citrus (Lemon/Lime)", sci:"Citrus spp.", type:"Edible", min:9, max:11, native:[], drought:true, shade:false, edible:true, desc:"Year-round in mild climates; protect from frost in zone 9." },
+  { name:"Apple", sci:"Malus domestica", type:"Edible", min:3, max:8, native:[], drought:false, shade:false, edible:true, desc:"Most varieties need 500-1000 chill hours below 45°F. Pick a variety bred for your zone." },
+  { name:"Avocado (Hass)", sci:"Persea americana", type:"Edible", min:9, max:13, native:[], drought:false, shade:false, edible:true, desc:"Frost-sensitive subtropical; perfect for coastal CA, mild SoCal, Florida." },
+  { name:"Banana", sci:"Musa spp.", type:"Edible", min:10, max:13, native:[], drought:false, shade:false, edible:true, desc:"Fast-growing herbaceous perennial; produces fruit after 9-15 months in tropical zones." },
+  { name:"Papaya", sci:"Carica papaya", type:"Edible", min:10, max:13, native:[], drought:false, shade:false, edible:true, desc:"Single-trunk tropical tree; produces fruit within a year. Hates frost." },
+  { name:"Rosemary", sci:"Salvia rosmarinus", type:"Edible", min:7, max:11, native:[], drought:true, shade:false, edible:true, desc:"Mediterranean herb. Evergreen in mild zones; treat as annual where it freezes." },
+  { name:"Strawberry", sci:"Fragaria × ananassa", type:"Edible", min:3, max:10, native:[], drought:false, shade:false, edible:true, desc:"Easy fruit for raised beds or containers. Pick everbearing or June-bearing variety." },
+  { name:"Mint", sci:"Mentha spp.", type:"Edible", min:3, max:11, native:[], drought:false, shade:true, edible:true, desc:"Vigorous; grow in containers to avoid taking over the garden." }
+];
+
+// Soil descriptions by region (very approximate — links to authoritative WSS for exact)
+const SOIL_BY_STATE = {
+  "CA": "Wide variety: clay-heavy in Central Valley (good for ag, slow-draining), sandy loam in coastal areas, rocky soils in foothills. Mediterranean climate means many soils dry out completely in summer.",
+  "PA": "Mix of well-drained loam in valleys to acidic clay/shale in highlands. The eastern PA Piedmont has fertile silt loams; the Appalachians have rockier, more acidic soils.",
+  "NY": "Glacial deposits dominate — varies from heavy clay (Hudson Valley, Western NY) to sandy outwash plains (Long Island). Often acidic, often rocky.",
+  "TX": "Dramatically varies by region: blackland clay (DFW area, very expansive), sandy loam (East TX, Houston), caliche/limestone (Hill Country), arid sandy soils (West TX).",
+  "WA": "West of Cascades: deep volcanic loams, often acidic. East: silt loam to sandy in arid eastern half. Coastal areas can be peaty/wet.",
+  "NJ": "Coastal plain (south & central) has sandy, well-drained soils. Northern NJ has glacial till and rocky uplands. Pine Barrens area is very acidic and sandy.",
+  "FL": "Mostly sandy with low organic matter; needs amending and frequent fertilization. Some clay in panhandle. High water table in many areas.",
+  "AZ": "Desert soils: caliche (calcium carbonate hardpan) common, alkaline pH, low organic matter. Drought-tolerant plants essential without irrigation.",
+  "CO": "Clay loams along Front Range (very alkaline pH 7.5-8.5), sandier in Eastern Plains. Drought common; mulch is key."
+};
+const SOIL_DEFAULT = "Soil composition varies block by block. The USDA Web Soil Survey can give you the exact soil series and properties (texture, pH, drainage, depth) for any address.";
+
+// Watering tips by climate type
+const WATERING_BY_CLIMATE = {
+  "Subarctic":   "Short growing season — water deeply but infrequently. Hand-water young plants; established natives need almost no supplemental water.",
+  "Cold continental": "Water deeply 1× per week during the growing season. Mulch heavily to retain moisture and protect roots from temperature swings.",
+  "Cool continental": "Water 1×/week deeply (≈1in equivalent). Adjust based on rainfall. Mulch keeps soil cool in summer, warm in winter.",
+  "Temperate":   "Water deeply 1-2× per week. Lawns need ~1 inch/week total (rain + irrigation). Drip systems on a timer reduce waste vs. sprinklers.",
+  "Warm temperate": "Water deeply but less frequently to encourage deep roots. Established native plants and drought-tolerant species rarely need supplemental water.",
+  "Subtropical / Mediterranean": "Long dry summers. Water deeply 1× per week for non-natives. Drought-tolerant natives need essentially no water once established. Greywater + mulch = big savings.",
+  "Tropical":    "Frequent rainfall most of the year. Drainage is more important than irrigation. During dry season, water deeply 1-2×/week."
+};
+
+/* -------- Resolver --------------------------------------------------- */
+function approxZoneFromLatitude(lat) {
+  // Very coarse fallback — real zone depends on elevation, coastal effects, etc.
+  if (lat >= 65) return "1b";
+  if (lat >= 60) return "3a";
+  if (lat >= 55) return "4a";
+  if (lat >= 50) return "5a";
+  if (lat >= 45) return "5b";
+  if (lat >= 42) return "6a";
+  if (lat >= 39) return "6b";
+  if (lat >= 36) return "7b";
+  if (lat >= 33) return "8b";
+  if (lat >= 30) return "9b";
+  if (lat >= 26) return "10a";
+  return "11a";
+}
+
+function resolveYard(addr, lat, lon) {
+  const cityKey = getCityKey(addr);
+  const stateCode = getStateCode(addr);
+  const zone =
+    USDA_ZONE_BY_CITY[cityKey] ||
+    USDA_ZONE_BY_STATE[stateCode] ||
+    approxZoneFromLatitude(lat);
+  const zoneNum = parseInt(zone, 10);
+  const info = ZONE_INFO[zone] || {};
+  const inferred = !USDA_ZONE_BY_CITY[cityKey];   // true if zone came from state/lat fallback
+
+  // Filter plants suitable for this zone
+  const suitable = PLANT_DB.filter(p => zoneNum >= p.min && zoneNum <= p.max);
+  // Bucket by type
+  const byType = {
+    Tree:      suitable.filter(p => p.type === "Tree").slice(0, 4),
+    Shrub:     suitable.filter(p => p.type === "Shrub").slice(0, 4),
+    Perennial: suitable.filter(p => p.type === "Perennial").slice(0, 4),
+    Edible:    suitable.filter(p => p.type === "Edible").slice(0, 4)
+  };
+
+  const soil = SOIL_BY_STATE[stateCode] || SOIL_DEFAULT;
+  const watering = WATERING_BY_CLIMATE[info.climate] || WATERING_BY_CLIMATE["Temperate"];
+
+  return { zone, info, inferred, plants: byType, soil, watering, stateCode, lat, lon };
+}
+
+/* -------- Renderer --------------------------------------------------- */
+function plantCardHtml(p) {
+  const tags = [];
+  if (p.native && p.native.length) tags.push(`<span class="plant-tag native">Native (${escapeHtml(p.native.join(", "))})</span>`);
+  if (p.drought) tags.push(`<span class="plant-tag drought">Drought-tolerant</span>`);
+  if (p.shade)   tags.push(`<span class="plant-tag shade">Shade-OK</span>`);
+  if (p.edible)  tags.push(`<span class="plant-tag edible">Edible</span>`);
+  return `<div class="plant-card">
+    <div class="plant-name">${escapeHtml(p.name)}</div>
+    <div class="plant-sci">${escapeHtml(p.sci)}</div>
+    <div class="plant-desc">${escapeHtml(p.desc)}</div>
+    ${tags.length ? `<div class="plant-tags">${tags.join("")}</div>` : ""}
+  </div>`;
+}
+
+function renderYard(yard) {
+  $("card-yard").hidden = false;
+  setText("yard-value", `Zone ${yard.zone} · ${(yard.info.climate || "—")}`);
+  const pill = $("yard-summary");
+  pill.hidden = false;
+  pill.textContent = yard.inferred ? `Zone inferred from state/latitude` : `Zone for your city`;
+
+  setText("yard-zone", yard.zone);
+  setText("yard-zone-sub", yard.info.climate || "");
+  setText("yard-min-temp", yard.info.minTemp || "—");
+  setText("yard-frost-fall", yard.info.firstFrost || "—");
+  setText("yard-frost-spring", yard.info.lastFrost || "—");
+  setText("yard-growing-season", yard.info.season || "—");
+  setText("yard-climate-type", yard.info.climate || "—");
+
+  // Plants — 4 category rows
+  const categories = [
+    { key: "Tree",      label: "Trees",       emoji: "🌳" },
+    { key: "Shrub",     label: "Shrubs",      emoji: "🌿" },
+    { key: "Perennial", label: "Perennials & flowers", emoji: "🌸" },
+    { key: "Edible",    label: "Edibles & herbs",       emoji: "🥬" }
+  ];
+  const plantsHtml = categories.map(cat => {
+    const list = yard.plants[cat.key] || [];
+    if (!list.length) {
+      return `<div class="plant-cat-row">
+        <div class="plant-cat-label"><span class="emoji">${cat.emoji}</span>${cat.label}</div>
+        <div style="color:var(--ink-faint);font-size:13px;font-style:italic;">No matches in our database for zone ${yard.zone}.</div>
+      </div>`;
+    }
+    return `<div class="plant-cat-row">
+      <div class="plant-cat-label"><span class="emoji">${cat.emoji}</span>${cat.label}</div>
+      <div class="plant-grid">${list.map(plantCardHtml).join("")}</div>
+    </div>`;
+  }).join("");
+  $("yard-plants-body").innerHTML = plantsHtml;
+
+  // Soil + WSS link
+  const wssUrl = `https://websoilsurvey.nrcs.usda.gov/app/WebSoilSurvey.aspx`;
+  $("yard-soil-body").innerHTML = `
+    <div class="yard-tip"><b>Typical for ${escapeHtml(yard.stateCode || "your region")}:</b> ${escapeHtml(yard.soil)}</div>
+    <div style="margin-top:10px;"><a class="visit-btn" href="${wssUrl}" target="_blank" rel="noopener">Open Web Soil Survey →</a> <span style="font-size:12px;color:var(--ink-faint);">Click the AOI tool, then enter your address for the exact soil series at your home.</span></div>
+  `;
+
+  // Watering
+  $("yard-care-body").innerHTML = `
+    <div class="yard-tip">${escapeHtml(yard.watering)}</div>
+    <div class="yard-tip"><b>General principle:</b> water <i>deeply but infrequently</i> to encourage deep roots. A 2-3 inch layer of mulch around plants reduces watering needs by ~40% and keeps soil temperature stable.</div>
+    <div class="yard-tip"><b>Best times:</b> early morning (5-9 am) — minimizes evaporation and disease. Avoid evening watering on lawns (promotes fungal disease).</div>
+  `;
+}
+
 /* -------- Loading state ---------------------------------------------- */
 function setLoading() {
   $("results").hidden = false;
@@ -2290,6 +2697,10 @@ function renderResults(geo) {
   const sec = resolveSecurity(); renderSecurity(sec);
   const sc = resolveDistrict(a); renderDistrictHeader(sc);
   loadNearbySchools(geo);
+
+  // Phase 2: Yard & Garden module
+  const yard = resolveYard(a, parseFloat(geo.lat), parseFloat(geo.lon));
+  renderYard(yard);
 }
 
 /* -------- Main flow -------------------------------------------------- */
