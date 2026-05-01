@@ -405,7 +405,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.10 · April 2026 · United States · depth loaded for CA · PA · NY · TX · WA · NJ
+      <b>HomeAtlas</b> &mdash; v0.11 · April 2026 · United States · depth loaded for CA · PA · NY · TX · WA · NJ
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -1440,29 +1440,89 @@ function providerCell(name) { return `<a class="provider-link" href="${urlFor(na
 function visitBtn(name, label = "Visit →") { return `<a class="visit-btn" href="${urlFor(name)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`; }
 
 /* -------- Photon autocomplete ---------------------------------------- */
-let suggestState = { items: [], activeIdx: -1, lastQuery: "" };
-async function searchSuggestions(rawQuery) {
-  // Bias to contiguous-US center so US results outrank similar place names abroad,
-  // then post-filter to country=United States to be safe.
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(rawQuery)}&limit=12&lang=en&lat=39.8283&lon=-98.5795`;
+let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false };
+// Photon is fast and good for type-ahead, but its US house-number coverage
+// is patchy in smaller towns (e.g. Phoenixville PA). Nominatim has better
+// street-level US coverage but its policy forbids per-keystroke autocomplete.
+// Strategy: Photon first; if it returns 0 US results, fall back to a single
+// Nominatim search (well within the 1 req/sec limit thanks to debouncing).
+
+async function tryPhoton(rawQuery) {
+  // No geographic bias — earlier US-center bias was hurting east-coast queries.
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(rawQuery)}&limit=15&lang=en`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
-  const features = (data.features || []).filter(f => {
+  return (data.features || []).filter(f => {
     const p = f.properties || {};
-    return p.country === "United States" || p.country === "USA";
+    const cc = (p.countrycode || p.country_code || "").toLowerCase();
+    return cc === "us" || /^(united states|usa|us)$/i.test(p.country || "");
   });
-  return features.slice(0, 6);
+}
+
+// Convert a Nominatim /search result into the same shape Photon returns
+// so the rest of the suggestion pipeline doesn't need to know the difference.
+function nominatimToFeature(n) {
+  const a = n.address || {};
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [parseFloat(n.lon), parseFloat(n.lat)] },
+    properties: {
+      name: n.name || n.display_name,
+      housenumber: a.house_number,
+      street: a.road,
+      city: a.city || a.town || a.village || a.hamlet,
+      state: a.state,
+      postcode: a.postcode,
+      country: a.country,
+      countrycode: (a.country_code || "").toUpperCase()
+    }
+  };
+}
+
+async function tryNominatim(rawQuery) {
+  // Add USA hint if user didn't include a state abbreviation or country.
+  const hasGeoHint = /\bUSA\b|\bUS\b|United States|\b[A-Z]{2}\b/.test(rawQuery);
+  const q = hasGeoHint ? rawQuery : `${rawQuery}, USA`;
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=us`;
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return data.map(nominatimToFeature);
+}
+
+async function searchSuggestions(rawQuery) {
+  const photon = await tryPhoton(rawQuery);
+  if (photon.length > 0) return photon.slice(0, 6);
+  // Fallback only kicks in when Photon found nothing — protects Nominatim
+  // rate limit, since debounce already gates how often this runs.
+  if (rawQuery.length >= 4) {
+    const nom = await tryNominatim(rawQuery);
+    return nom.slice(0, 6);
+  }
+  return [];
 }
 function suggestionLabel(feature) {
   const p = feature.properties || {};
   const top = [p.housenumber, p.street].filter(Boolean).join(" ") || p.name || "";
   const sub = [p.city || p.locality || p.town, p.state, p.postcode].filter(Boolean).join(", ");
-  return { top: top || sub, sub: top ? sub : "California" };
+  return { top: top || sub || "Unknown", sub: top ? sub : "" };
 }
 function renderSuggestions() {
   const box = $("suggestions"); const bar = $("searchForm");
-  if (!suggestState.items.length) { box.hidden = true; bar.classList.remove("open"); return; }
+  // "No results" empty state when user has typed something meaningful but nothing came back
+  if (!suggestState.items.length) {
+    if (suggestState.lastQuery && suggestState.lastQuery.length >= 4 && suggestState.searched) {
+      box.innerHTML = `<div class="suggestion" style="cursor:default; color:var(--ink-faint);">
+        <div class="top" style="color:var(--ink-soft);">No matches for &ldquo;${escapeHtml(suggestState.lastQuery)}&rdquo;</div>
+        <div class="sub">Try including the city &amp; state — e.g. &ldquo;100 Main St, Phoenixville, PA&rdquo;. If still nothing, the address may be missing from OpenStreetMap.</div>
+      </div>`;
+      box.hidden = false; bar.classList.add("open");
+    } else {
+      box.hidden = true; bar.classList.remove("open");
+    }
+    return;
+  }
   box.innerHTML = suggestState.items.map((f, i) => {
     const lbl = suggestionLabel(f);
     return `<div class="suggestion ${i === suggestState.activeIdx ? "active" : ""}" data-idx="${i}" role="option">
@@ -1479,14 +1539,19 @@ function hideSuggestions() {
 const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const onTypeDebounced = debounce(async () => {
   const q = $("addr").value.trim();
-  if (q.length < 3) { suggestState.items = []; renderSuggestions(); return; }
+  if (q.length < 3) { suggestState.items = []; suggestState.searched = false; renderSuggestions(); return; }
   if (q === suggestState.lastQuery) return;
   suggestState.lastQuery = q;
   try {
     const items = await searchSuggestions(q);
-    suggestState.items = items; suggestState.activeIdx = -1; renderSuggestions();
-  } catch (e) { suggestState.items = []; renderSuggestions(); }
-}, 280);
+    suggestState.items = items;
+    suggestState.activeIdx = -1;
+    suggestState.searched = true;
+    renderSuggestions();
+  } catch (e) {
+    suggestState.items = []; suggestState.searched = true; renderSuggestions();
+  }
+}, 350);   // Bumped from 280ms — Nominatim fallback wants more breathing room
 
 /* -------- Reverse geocode -------------------------------------------- */
 async function reverseGeocode(lat, lon) {
