@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>HomeAtlas — Everything about your home, in one place</title>
-<meta name="description" content="Enter your California address and instantly see your electric utility, internet/TV/security providers, school district, and the educational facilities around your home.">
+<meta name="description" content="Enter your US home address and instantly see your electric utility, internet/TV/security providers, and the schools and educational facilities around your home.">
 <meta name="theme-color" content="#2d6a4f">
 
 <!-- Inline SVG favicon — green house, no extra file needed -->
@@ -13,7 +13,7 @@
 <!-- Open Graph / social-share preview -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="HomeAtlas — Everything about your home, in one place">
-<meta property="og:description" content="Enter your California address and instantly see your electric utility, internet/TV/security providers, and schools near your home.">
+<meta property="og:description" content="Enter your US home address and instantly see your electric utility, internet/TV/security providers, and schools near your home.">
 <meta property="og:site_name" content="HomeAtlas">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="HomeAtlas">
@@ -233,14 +233,14 @@
     <div class="brand">
       <span class="brand-dot"></span>
       HomeAtlas
-      <span class="brand-tag">Preview · California</span>
+      <span class="brand-tag">Preview · United States</span>
     </div>
   </header>
 
   <section class="hero">
     <h1>Everything about <em>your home</em>, in one place.</h1>
     <p class="lead">
-      Enter your address. We&rsquo;ll show you your electric utility (and your CCA), internet, TV and security options, and the schools and educational facilities around your home &mdash; grouped by type so you can scan fast.
+      Enter your home address. We&rsquo;ll show you your electric utility, internet, TV and security options, and the schools and educational facilities around your home &mdash; grouped by type so you can scan fast.
     </p>
 
     <div class="search-wrap">
@@ -252,7 +252,7 @@
       </form>
       <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
-    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. California addresses only for now.</p>
+    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. US addresses for now — international coming later. State-specific depth (electric utility, cable, school district) is being added one state at a time, starting with California.</p>
     <div id="status"></div>
   </section>
 
@@ -405,7 +405,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.8 · April 2026 · CA service-provider + nearby-schools preview
+      <b>HomeAtlas</b> &mdash; v0.9 · April 2026 · United States · CA depth loaded · more states coming
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -753,14 +753,15 @@ function visitBtn(name, label = "Visit →") { return `<a class="visit-btn" href
 /* -------- Photon autocomplete ---------------------------------------- */
 let suggestState = { items: [], activeIdx: -1, lastQuery: "" };
 async function searchSuggestions(rawQuery) {
-  const q = /\bCA\b|California/i.test(rawQuery) ? rawQuery : `${rawQuery}, California`;
-  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=8&lang=en`;
+  // Bias to contiguous-US center so US results outrank similar place names abroad,
+  // then post-filter to country=United States to be safe.
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(rawQuery)}&limit=12&lang=en&lat=39.8283&lon=-98.5795`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
   const features = (data.features || []).filter(f => {
     const p = f.properties || {};
-    return (p.state === "California" || p.state === "CA") && (p.country === "United States" || p.country === "USA");
+    return p.country === "United States" || p.country === "USA";
   });
   return features.slice(0, 6);
 }
@@ -888,8 +889,16 @@ function resolveTV(cableProvider) {
 function resolveSecurity() { return { rows: SECURITY_PROVIDERS.slice() }; }
 function resolveDistrict(addr) {
   const cityKey = getCityKey(addr);
-  const district = CA_CITY_DISTRICT[cityKey];
+  const state = (addr.state || "").trim();
+  const isCA = /california/i.test(state);
+  const district = isCA ? CA_CITY_DISTRICT[cityKey] : null;
   if (district) return { name: district, note: `Likely district for addresses in ${cityKey}.` };
+  if (!isCA && state) {
+    return {
+      name: `District lookup for ${state} not yet loaded`,
+      note: `We're rolling out state-by-state. The closest schools below come from OpenStreetMap and should still be accurate.`
+    };
+  }
   return { name: cityKey ? "Multiple possible districts" : "—",
            note: cityKey ? `We don't have a single district mapping for ${cityKey}.` : "City could not be determined." };
 }
@@ -1112,13 +1121,20 @@ function renderElectric(e, geo) {
   setText("electric-value", e.utility);
   setText("electric-meta",  e.note);
   const body = $("electric-body");
+  const state = ((geo.address || {}).state || "").trim();
+  const isCA = /california/i.test(state);
   if (e.rows.length === 0) {
-    // Help-callout when we couldn't determine utility — common for unincorporated areas
+    const intro = isCA
+      ? `<p><b>We don't have utility info for this exact address yet.</b> Most of California is served by PG&amp;E, SCE, SDG&amp;E, LADWP, SMUD, or one of ~40 publicly-owned utilities.</p>`
+      : `<p><b>Detailed electric-utility data for ${escapeHtml(state || "this state")} isn't loaded yet.</b> We're adding state-by-state — California is done, more on the way. To find your provider now, use the U.S. Energy Atlas or a quick Google.</p>`;
+    const eiaUrl = "https://atlas.eia.gov/datasets/eia::electric-retail-service-territories-2/explore";
+    const cecUrl = "https://cecgis-caenergy.opendata.arcgis.com/";
     body.innerHTML = `
       <div class="help-callout">
-        <p><b>We don't have utility info for this address yet.</b> Most of California is served by PG&amp;E, SCE, SDG&amp;E, LADWP, SMUD, or one of ~40 publicly-owned utilities (POUs).</p>
-        <p>To find yours, look up your address on the official map:</p>
-        <a class="visit-btn" href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">Open CEC service-territory map →</a>
+        ${intro}
+        ${isCA
+          ? `<a class="visit-btn" href="${cecUrl}" target="_blank" rel="noopener">Open CEC service-territory map →</a>`
+          : `<a class="visit-btn" href="${eiaUrl}" target="_blank" rel="noopener">Open U.S. Energy Atlas →</a>`}
         <a class="visit-btn" href="https://www.google.com/search?q=${encodeURIComponent('electric utility for ' + (geo.display_name || ''))}" target="_blank" rel="noopener" style="margin-left:6px;">Google search →</a>
       </div>`;
     setHTML("electric-source", "");
@@ -1132,10 +1148,10 @@ function renderElectric(e, geo) {
       <td style="text-align:right">${visitBtn(r.name)}</td>
     </tr>`).join("")}</tbody>
   </table></div>`;
-  setHTML("electric-source", 'Verify exact territory on the <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC service-territory map</a>.');
+  setHTML("electric-source", 'Verify exact territory on the <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC service-territory map</a> (CA) or the <a href="https://atlas.eia.gov/datasets/eia::electric-retail-service-territories-2/explore" target="_blank" rel="noopener">U.S. Energy Atlas</a> (other states).');
 }
 
-function renderInternet(i, lat, lon) {
+function renderInternet(i, lat, lon, state) {
   setText("internet-value", `${i.rows.length} options`);
   renderGroupedSections("internet-body", i.rows, {
     order: ISP_GROUP_ORDER,
@@ -1149,7 +1165,12 @@ function renderInternet(i, lat, lon) {
     </tr>`
   });
   const fccUrl = `https://broadbandmap.fcc.gov/location-summary/fixed?location=${lat},${lon}`;
-  setHTML("internet-source", `Speeds shown are typical max residential plans. <a href="${fccUrl}" target="_blank" rel="noopener">Open the FCC report for this exact location →</a>`);
+  const isCA = /california/i.test(state || "");
+  const hasCable = i.rows.some(r => (r.tech || "").toLowerCase() === "cable");
+  const stateNote = (!isCA && !hasCable && state)
+    ? `Cable &amp; fiber availability for <b>${escapeHtml(state)}</b> isn't loaded yet — 5G home and satellite shown are nationwide. `
+    : `Speeds shown are typical max residential plans. `;
+  setHTML("internet-source", `${stateNote}<a href="${fccUrl}" target="_blank" rel="noopener">Open the FCC report for this exact location →</a>`);
 }
 
 function renderTV(t) {
@@ -1322,7 +1343,7 @@ function renderResults(geo) {
   renderResolved(geo);
   const a = geo.address || {};
   const e = resolveElectric(a); renderElectric(e, geo);
-  const i = resolveInternet(a); renderInternet(i, geo.lat, geo.lon);
+  const i = resolveInternet(a); renderInternet(i, geo.lat, geo.lon, a.state);
   const cableForTV = (i.rows.find(r => (r.tech || "").toLowerCase() === "cable") || {}).name || null;
   const t = resolveTV(cableForTV); renderTV(t);
   const sec = resolveSecurity(); renderSecurity(sec);
@@ -1339,10 +1360,10 @@ async function runLookupFromFeature(feature) {
   $("searchBtn").textContent = "Looking up…";
   try {
     const geo = await reverseGeocode(lat, lon);
-    const state = (geo.address && geo.address.state) || "";
-    if (state && !/california/i.test(state)) {
+    const country = (geo.address && geo.address.country) || "";
+    if (country && !/united states|^usa?$/i.test(country)) {
       $("results").hidden = true;
-      showStatus(`This preview is California-only — that address resolved to <b>${state}</b>. US-wide coverage is on the roadmap.`, "info");
+      showStatus(`This preview is US-only — that address resolved to <b>${escapeHtml(country)}</b>. International coverage is on the roadmap.`, "info");
       return;
     }
     geo.lat = lat; geo.lon = lon;
