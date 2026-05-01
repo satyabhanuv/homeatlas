@@ -565,7 +565,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.16 · April 2026 · Phase 2 · 4-geocoder autocomplete (Photon → Census/Nominatim deep search)
+      <b>HomeAtlas</b> &mdash; v0.17 · April 2026 · Phase 2 · Photon + Census autocomplete; Nominatim only at submit
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -1881,7 +1881,7 @@ function renderSuggestions() {
   }
   // Header strip when deep search is running
   const deepHeader = suggestState.deepRunning
-    ? `<div class="suggest-deep-strip"><span class="suggest-spinner"></span>Searching Census + Nominatim for exact house number…</div>`
+    ? `<div class="suggest-deep-strip"><span class="suggest-spinner"></span>Searching U.S. Census Bureau for exact house number…</div>`
     : "";
   box.innerHTML = deepHeader + suggestState.items.map((f, i) => {
     const lbl = suggestionLabel(f);
@@ -1940,20 +1940,17 @@ async function runDeepSearch(query) {
   suggestState.deepRunning = true;
   renderSuggestions();
   try {
-    // Run Census + Nominatim free-text + Nominatim structured in parallel.
-    const parsed = parseAddressInput(query);
-    const tasks = [
-      tryCensus(query),
-      tryNominatim(query),
-      parsed && parsed.street ? tryNominatimStructured(parsed) : Promise.resolve([])
-    ];
-    const [census, nomFree, nomStruct] = await Promise.all(tasks);
-    dlog("Phase 2:", { census: census.length, nomFree: nomFree.length, nomStruct: nomStruct.length });
+    // v0.17 regression fix: ONLY Census in Phase 2.
+    // Nominatim's policy explicitly forbids autocomplete-style use; calling it
+    // here was getting users IP-blocked, which then broke reverseGeocode too.
+    // Nominatim is reserved for the submit path (one call per click).
+    const census = await tryCensus(query);
+    dlog("Phase 2 (Census only):", census.length, "results");
 
     // Bail if user has typed more since we kicked this off
     if (suggestState.lastQuery !== query) return;
 
-    // Merge with existing Phase-1 (Photon) results, dedupe by coords + name
+    // Merge Census results with existing Phase-1 (Photon) results
     const merged = [];
     const seen = new Set();
     const addUnique = (f) => {
@@ -1964,9 +1961,9 @@ async function runDeepSearch(query) {
       seen.add(key);
       merged.push(f);
     };
-    [...census, ...nomStruct, ...nomFree, ...suggestState.items].forEach(addUnique);
+    [...census, ...suggestState.items].forEach(addUnique);
 
-    // Re-rank: house-number matches first (preserves original order within each tier)
+    // Re-rank: house-number matches first
     suggestState.items = rerankByHouseNumber(merged).slice(0, 8);
   } catch (e) {
     dlog("deepSearch error:", e);
@@ -2980,7 +2977,29 @@ async function runLookupFromFeature(feature) {
   $("searchBtn").disabled = true;
   $("searchBtn").textContent = "Looking up…";
   try {
-    const geo = await reverseGeocode(lat, lon);
+    // v0.17: try Nominatim reverse-geocode for canonical address, but if it
+    // fails (rate limit, CORS, network), fall back to the feature's own
+    // structured properties so the page stays functional.
+    let geo;
+    try {
+      geo = await reverseGeocode(lat, lon);
+    } catch (revErr) {
+      dlog("reverseGeocode failed, using feature properties as fallback:", revErr.message);
+      const p = feature.properties || {};
+      geo = {
+        display_name: p.name || [p.housenumber, p.street, p.city, p.state, p.postcode].filter(Boolean).join(", "),
+        address: {
+          house_number: p.housenumber,
+          road: p.street,
+          city: p.city,
+          state: p.state,
+          postcode: p.postcode,
+          country: p.country || "United States",
+          country_code: (p.countrycode || "US").toLowerCase(),
+          "ISO3166-2-lvl4": p.state ? `US-${(STATE_NAME_TO_CODE[p.state] || p.state.toUpperCase().slice(0,2))}` : ""
+        }
+      };
+    }
     const country = (geo.address && geo.address.country) || "";
     if (country && !/united states|^usa?$/i.test(country)) {
       $("results").hidden = true;
@@ -3003,22 +3022,22 @@ async function runLookupFromFeature(feature) {
 /* -------- Event wiring ----------------------------------------------- */
 const addrEl = $("addr"), formEl = $("searchForm"), sugEl = $("suggestions");
 addrEl.addEventListener("input", () => { clearStatus(); onTypeDebounced(); });
-// v0.16: when user picks a suggestion that's only street-level but their
-// typed text contains a house number, try the deeper geocoder chain to see
-// if any of them can find the exact house. Silently upgrades the result.
+// v0.16/v0.17: when user picks a street-level suggestion but their typed text
+// contains a house number, try Census Geocoder to see if it has the exact
+// house. Silently upgrades the result if found.
+// (v0.17 regression fix: Census-only here, no Nominatim — that violates their
+// 1-req/sec policy when combined with the imminent reverseGeocode call.)
 async function pickAndLookup(feature) {
   const typed = addrEl.value.trim();
   const featureHN = feature && feature.properties && feature.properties.housenumber;
   const typedHN = /^\s*\d+/.test(typed);
-  // If the picked result already has a house number OR the user didn't type one, just use the pick.
   if (featureHN || !typedHN) return runLookupFromFeature(feature);
-  // Otherwise try the full chain on the typed text and use whichever has a HN
   try {
-    const better = await geocodeForSubmit(typed);
-    const betterHN = better && better.properties && better.properties.housenumber;
-    if (betterHN) {
-      dlog("Smart-upgrade: replaced street-level pick with HN match from", better.properties._source || "geocoder");
-      return runLookupFromFeature(better);
+    const census = await tryCensus(typed);
+    const censusHN = census.find(f => f.properties && f.properties.housenumber);
+    if (censusHN) {
+      dlog("Smart-upgrade: replaced street-level pick with Census HN match");
+      return runLookupFromFeature(censusHN);
     }
   } catch (e) { dlog("Smart-upgrade error:", e); }
   return runLookupFromFeature(feature);
