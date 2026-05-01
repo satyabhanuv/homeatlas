@@ -161,6 +161,27 @@
   .ptable .provider-link:hover { text-decoration: underline; }
   .ptable .visit-btn { display: inline-block; padding: 4px 10px; background: rgba(45,106,79,0.08); border: 1px solid rgba(45,106,79,0.2); border-radius: 6px; color: var(--primary); text-decoration: none; font-size: 12px; font-weight: 600; white-space: nowrap; }
   .ptable .visit-btn:hover { background: rgba(45,106,79,0.16); }
+  /* Dual-icon link cell (v0.12) — "Reach them" globe + "Map" pin */
+  .icon-cell { white-space: nowrap; text-align: right; }
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 6px;
+    background: rgba(45,106,79,0.06); border: 1px solid rgba(45,106,79,0.18);
+    color: var(--primary); text-decoration: none;
+    margin-left: 4px; vertical-align: middle;
+    transition: background 0.12s ease, transform 0.12s ease;
+  }
+  .icon-btn:hover { background: rgba(45,106,79,0.16); transform: translateY(-1px); }
+  .icon-btn:first-child { margin-left: 0; }
+  .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
+  .icon-btn[aria-label] { position: relative; }
+  .icon-btn[aria-label]:hover::after {
+    content: attr(aria-label);
+    position: absolute; bottom: calc(100% + 4px); right: 0;
+    background: var(--ink); color: #fff; padding: 4px 8px;
+    border-radius: 4px; font-size: 11px; font-weight: 500;
+    white-space: nowrap; pointer-events: none;
+  }
 
   /* Provider sub-groups (cable / fiber / 5G / satellite, etc.) */
   .pgroup { margin-top: 14px; }
@@ -334,30 +355,34 @@
       </div>
 
       <div id="school-sections" hidden>
-        <div class="school-section" id="closest-section" hidden>
-          <h4>Your closest schools <span class="hint">— most likely your zoned schools</span></h4>
-          <div class="schools-disclaimer">
-            <b>Important:</b> these are the <i>nearest</i> schools by level — they are usually but not always your home&rsquo;s assigned school. Real attendance boundaries vary block by block. To find the school you&rsquo;re officially zoned for, use your district&rsquo;s school finder or call the district directly. Click any school name to see its website &amp; ratings.
-          </div>
+        <div class="schools-disclaimer">
+          <b>Note:</b> these are the <i>nearest</i> schools by level &amp; type — usually but not always your home&rsquo;s assigned school. Attendance zones vary block by block. Verify your assigned school with your district&rsquo;s school finder.
+        </div>
+
+        <div class="school-section" id="public-section" hidden>
+          <h4>Public schools <span class="hint">— closest district school in each level</span></h4>
           <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>School</th><th>Level</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="closest-tbody"></tbody>
+            <thead><tr><th>Level</th><th>School</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="public-tbody"></tbody>
           </table></div>
         </div>
-        <div class="school-section" id="other-public-section" hidden>
-          <h4>Other public schools nearby <span class="hint">— next-best by distance</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>School</th><th>Level</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="other-public-tbody"></tbody>
-          </table></div>
-        </div>
+
         <div class="school-section" id="private-section" hidden>
-          <h4>Private schools, preschools &amp; parochial</h4>
+          <h4>Private schools <span class="hint">— closest religious/independent school in each level</span></h4>
           <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>School</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <thead><tr><th>Level</th><th>School</th><th class="num-h">Distance</th><th></th></tr></thead>
             <tbody id="private-tbody"></tbody>
           </table></div>
         </div>
+
+        <div class="school-section" id="other-section" hidden>
+          <h4>Other schools <span class="hint">— closest charter / magnet / specialty in each level</span></h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Level</th><th>School</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="other-tbody"></tbody>
+          </table></div>
+        </div>
+
         <div class="school-section" id="higher-section" hidden>
           <h4>Colleges &amp; universities</h4>
           <div class="tbl-wrap"><table class="ptable">
@@ -365,6 +390,7 @@
             <tbody id="higher-tbody"></tbody>
           </table></div>
         </div>
+
         <div class="school-section" id="enrichment-section" hidden>
           <h4>Libraries, pools, sports &amp; community centers</h4>
           <div class="tbl-wrap"><table class="ptable">
@@ -405,7 +431,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.11 · April 2026 · United States · depth loaded for CA · PA · NY · TX · WA · NJ
+      <b>HomeAtlas</b> &mdash; v0.12 · April 2026 · 6 states deep · top-5 providers + map links per row
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -1439,6 +1465,37 @@ function urlFor(name) { return PROVIDER_URL[name] || `https://www.google.com/sea
 function providerCell(name) { return `<a class="provider-link" href="${urlFor(name)}" target="_blank" rel="noopener">${escapeHtml(name)}</a>`; }
 function visitBtn(name, label = "Visit →") { return `<a class="visit-btn" href="${urlFor(name)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>`; }
 
+/* -------- v0.12: dual icon-button cell --------------------------------
+   Two icons per provider row:
+     1) globe icon   → "Reach them" (provider website)
+     2) pin icon     → Google Maps centered on user's lat/lon, searching
+                       for the provider name. If we have an exact lat/lon
+                       (e.g. school location from OSM), pin straight to it.
+   Module-level `lastGeo` is set at the start of renderResults so row
+   builders can compose map URLs without threading geo through every fn. */
+let lastGeo = null;
+
+const ICON_GLOBE = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 17.93A8.01 8.01 0 014.07 13H7c.16 1.93.62 3.65 1.32 5.04.6 1.18 1.34 1.6 1.68 1.89zM4.07 11A8.01 8.01 0 0111 4.07c-.34.29-1.08.71-1.68 1.89C8.62 7.35 8.16 9.07 8 11H4.07zM12 4c.7 0 1.95 1.61 2.68 5.04.18.85.32 1.78.32 2.96s-.14 2.11-.32 2.96C13.95 18.39 12.7 20 12 20s-1.95-1.61-2.68-5.04A18.5 18.5 0 019 12c0-1.18.14-2.11.32-2.96C10.05 5.61 11.3 4 12 4zm4.99 7c-.16-1.93-.62-3.65-1.32-5.04-.6-1.18-1.34-1.6-1.68-1.89A8.01 8.01 0 0119.93 11H17zm-2.99 8.93c.34-.29 1.08-.71 1.68-1.89.7-1.39 1.16-3.11 1.32-5.04h2.93A8.01 8.01 0 0114 19.93z"/></svg>';
+const ICON_PIN = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z"/></svg>';
+
+function reachUrl(name)         { return urlFor(name); }
+function mapUrlNear(name)        {
+  const lat = lastGeo && parseFloat(lastGeo.lat);
+  const lon = lastGeo && parseFloat(lastGeo.lon);
+  const center = (lat && lon) ? `/@${lat.toFixed(5)},${lon.toFixed(5)},14z` : "";
+  return `https://www.google.com/maps/search/${encodeURIComponent(name)}${center}`;
+}
+function mapUrlExact(lat, lon)   {
+  // Pin straight to a known point (used for schools where we have exact OSM coords)
+  return `https://www.google.com/maps/?q=${lat},${lon}&z=18`;
+}
+function iconButtonsHtml(name, opts = {}) {
+  const reach = opts.reachUrl || reachUrl(name);
+  const map   = opts.mapUrl   || mapUrlNear(name);
+  return `<a class="icon-btn" href="${reach}" target="_blank" rel="noopener" aria-label="Reach them">${ICON_GLOBE}</a>` +
+         `<a class="icon-btn" href="${map}" target="_blank" rel="noopener" aria-label="Map">${ICON_PIN}</a>`;
+}
+
 /* -------- Photon autocomplete ---------------------------------------- */
 let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false };
 // Photon is fast and good for type-ahead, but its US house-number coverage
@@ -1845,17 +1902,24 @@ function classifyEducationItem(el) {
 
     const isPrivateTag = t["school:type"] === "private" || t["operator:type"] === "private" || t["operator:type"] === "religious";
     const looksPrivate = PRIVATE_NAME_PATTERNS.test(name) || /\b(montessori)\b/i.test(name);
-    category = (isPrivateTag || looksPrivate) ? "private" : "public";
+    // v0.12: detect charter / magnet / specialty as a separate "other" category
+    const isCharterTag = t["school:type"] === "charter" || /\bcharter\b/i.test(t.operator || "");
+    const looksCharter = /\bcharter\b/i.test(name) || /\bmagnet\b/i.test(name);
+
+    if (isPrivateTag || looksPrivate)        category = "private";
+    else if (isCharterTag || looksCharter)   category = "other";   // charter/magnet/specialty
+    else                                     category = "public";
 
     const level = detectSchoolLevel(name, t);
     if (level) {
       subtype = level;
     } else {
-      // No detectable level → for public, drop entirely (would just be noise);
-      // for private, keep with subtype "Private school" since private schools
-      // often don't fit standard K-12 levels.
+      // No detectable level: for public, drop (would just be noise without
+      // a level). For private and "other" (charter/magnet), keep them as
+      // "Mixed levels" — these often span multiple grades (K-8 academies,
+      // K-12 charters), and pickByLevel will use them as a fallback.
       if (category === "public") return null;
-      subtype = "Private school";
+      subtype = "Mixed levels";
     }
   }
   else if (t.amenity === "kindergarten") {
@@ -1966,15 +2030,19 @@ function renderElectric(e, geo) {
     <tbody>${e.rows.map(r => `<tr>
       <td>${providerCell(r.name)}</td>
       <td class="role">${escapeHtml(r.role)}</td>
-      <td style="text-align:right">${visitBtn(r.name)}</td>
+      <td class="icon-cell">${iconButtonsHtml(r.name)}</td>
     </tr>`).join("")}</tbody>
   </table></div>`;
   setHTML("electric-source", 'Verify exact territory on the <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC service-territory map</a> (CA) or the <a href="https://atlas.eia.gov/datasets/eia::electric-retail-service-territories-2/explore" target="_blank" rel="noopener">U.S. Energy Atlas</a> (other states).');
 }
 
 function renderInternet(i, lat, lon, state) {
-  setText("internet-value", `${i.rows.length} options`);
-  renderGroupedSections("internet-body", i.rows, {
+  // v0.12: cap to top 5 across all groups. We pick the most useful ones:
+  // cable (1), best fiber (up to 2), best 5G (1), best satellite (1) = 5
+  const techPriority = { "Cable":1, "Fiber":2, "5G Wireless":3, "LEO Satellite":4, "GEO Satellite":5, "Fixed Wireless":3, "DSL":6 };
+  const capped = i.rows.slice().sort((a, b) => (techPriority[a.tech] || 9) - (techPriority[b.tech] || 9)).slice(0, 5);
+  setText("internet-value", `${capped.length} options${i.rows.length > capped.length ? ` (top of ${i.rows.length})` : ""}`);
+  renderGroupedSections("internet-body", capped, {
     order: ISP_GROUP_ORDER,
     headHtml: `<thead><tr><th>Provider</th><th>Technology</th><th class="num-h">Down</th><th class="num-h">Up</th><th></th></tr></thead>`,
     rowFn: r => `<tr>
@@ -1982,7 +2050,7 @@ function renderInternet(i, lat, lon, state) {
       <td class="tech">${escapeHtml(r.tech)}</td>
       <td class="numeric">${r.down}</td>
       <td class="numeric">${r.up}</td>
-      <td style="text-align:right">${visitBtn(r.name)}</td>
+      <td class="icon-cell">${iconButtonsHtml(r.name)}</td>
     </tr>`
   });
   const fccUrl = `https://broadbandmap.fcc.gov/location-summary/fixed?location=${lat},${lon}`;
@@ -1994,33 +2062,50 @@ function renderInternet(i, lat, lon, state) {
 }
 
 function renderTV(t) {
-  setText("tv-value", `${t.rows.length} options`);
-  renderGroupedSections("tv-body", t.rows, {
+  // v0.12: cap to top 5. Mix: cable (if any) + 2 satellite + 2 streaming + antenna if room
+  const cap5 = (() => {
+    const out = [];
+    const cable = t.rows.find(r => r.group === "Cable"); if (cable) out.push(cable);
+    out.push(...t.rows.filter(r => r.group === "Satellite").slice(0, 2));
+    out.push(...t.rows.filter(r => r.group === "Streaming live TV").slice(0, 2));
+    if (out.length < 5) out.push(...t.rows.filter(r => r.group === "Antenna").slice(0, 1));
+    return out.slice(0, 5);
+  })();
+  setText("tv-value", `${cap5.length} options${t.rows.length > cap5.length ? ` (top of ${t.rows.length})` : ""}`);
+  renderGroupedSections("tv-body", cap5, {
     order: TV_GROUP_ORDER,
     headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
     rowFn: r => {
       const isAntenna = r.name.startsWith("OTA Antenna");
-      const visit = isAntenna
-        ? `<a class="visit-btn" href="https://www.fcc.gov/media/engineering/dtvmaps" target="_blank" rel="noopener">FCC DTV map →</a>`
-        : visitBtn(r.name);
+      const icons = isAntenna
+        ? `<a class="icon-btn" href="https://www.fcc.gov/media/engineering/dtvmaps" target="_blank" rel="noopener" aria-label="FCC DTV reception map">${ICON_PIN}</a>`
+        : iconButtonsHtml(r.name);
       return `<tr>
         <td>${isAntenna ? escapeHtml(r.name) : providerCell(r.name)}</td>
         <td class="tech">${escapeHtml(r.type)}</td>
-        <td style="text-align:right">${visit}</td>
+        <td class="icon-cell">${icons}</td>
       </tr>`;
     }
   });
 }
 
 function renderSecurity(s) {
-  setText("security-value", `${s.rows.length} options`);
-  renderGroupedSections("security-body", s.rows, {
+  // v0.12: cap to top 5 — 3 DIY + 1 pro install + 1 smart home (well-balanced)
+  const cap5 = (() => {
+    const out = [];
+    out.push(...s.rows.filter(r => r.group === "DIY systems").slice(0, 3));
+    out.push(...s.rows.filter(r => r.group === "Pro install").slice(0, 1));
+    out.push(...s.rows.filter(r => r.group === "Smart home").slice(0, 1));
+    return out.slice(0, 5);
+  })();
+  setText("security-value", `${cap5.length} options${s.rows.length > cap5.length ? ` (top of ${s.rows.length})` : ""}`);
+  renderGroupedSections("security-body", cap5, {
     order: SECURITY_GROUP_ORDER,
     headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
     rowFn: r => `<tr>
       <td>${providerCell(r.name)}</td>
       <td class="tech">${escapeHtml(r.type)}</td>
-      <td style="text-align:right">${visitBtn(r.name)}</td>
+      <td class="icon-cell">${iconButtonsHtml(r.name)}</td>
     </tr>`
   });
 }
@@ -2030,18 +2115,59 @@ function renderDistrictHeader(sc) {
   setText("school-meta",  sc.note);
 }
 function placeRow(item, cityKey) {
-  const q = `${item.name} ${cityKey || "California"}`;
-  const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const q = `${item.name} ${cityKey || ""}`.trim();
+  const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const map   = mapUrlExact(item.lat, item.lon);
   return `<tr>
-    <td><a class="provider-link" href="${url}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a></td>
+    <td><a class="provider-link" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a></td>
     <td class="role">${escapeHtml(item.subtype)}</td>
     <td class="numeric">${item.dist.toFixed(2)} mi</td>
-    <td style="text-align:right"><a class="visit-btn" href="${url}" target="_blank" rel="noopener">Find →</a></td>
+    <td class="icon-cell">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</td>
   </tr>`;
 }
-// Pull the top-N nearest items in a single level from a sorted-by-distance array
-function takeByLevel(items, level, n) {
-  return items.filter(i => i.subtype === level).slice(0, n);
+// v0.12: build a 3×3 grid (Elementary/Middle/High × category).
+// `pool` is already sorted by distance ascending. Returns picks for all
+// three levels in one pass to avoid showing the same school twice (which
+// would happen if e.g. a single K-8 charter is the closest match for both
+// Elementary and Middle slots).
+function pickThreeLevels(pool) {
+  const used = new Set();
+  function pick(targetLevel) {
+    // Exact level first, then K-8/K-12, then Mixed levels (used by
+    // private + charter schools where level isn't tagged in OSM).
+    const candidates = [
+      pool.find(s => s.subtype === targetLevel && !used.has(s.name)),
+      pool.find(s => s.subtype === "K-8 / K-12" && !used.has(s.name)),
+      pool.find(s => s.subtype === "Mixed levels" && !used.has(s.name))
+    ];
+    const item = candidates.find(Boolean);
+    if (item) used.add(item.name);
+    return item || null;
+  }
+  return {
+    Elementary: pick("Elementary"),
+    Middle:     pick("Middle"),
+    High:       pick("High")
+  };
+}
+function levelRow(level, item, cityKey) {
+  if (!item) {
+    return `<tr>
+      <td><b>${level}</b></td>
+      <td style="color:var(--ink-faint);font-style:italic;">No nearby match found in OpenStreetMap</td>
+      <td class="numeric">—</td>
+      <td class="icon-cell"></td>
+    </tr>`;
+  }
+  const q = `${item.name} ${cityKey || "California"}`;
+  const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const map   = mapUrlExact(item.lat, item.lon);
+  return `<tr>
+    <td><b>${level}</b></td>
+    <td><a class="provider-link" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a></td>
+    <td class="numeric">${item.dist.toFixed(2)} mi</td>
+    <td class="icon-cell">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</td>
+  </tr>`;
 }
 
 function renderSchoolSections(grouped, total, cityKey) {
@@ -2050,43 +2176,35 @@ function renderSchoolSections(grouped, total, cityKey) {
   const pill = $("school-summary"); pill.hidden = false;
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.5 mi`;
 
-  const fill = (sectionId, tbodyId, items) => {
+  // Build a 3-row table (Elementary / Middle / High) for a given pool.
+  const fill3x = (sectionId, tbodyId, pool) => {
+    const sec = $(sectionId), tb = $(tbodyId);
+    if (!pool || !pool.length) { sec.hidden = true; return; }
+    const picks = pickThreeLevels(pool);
+    // Only render the section if there's at least one match across the 3 levels
+    if (!picks.Elementary && !picks.Middle && !picks.High) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tb.innerHTML = [
+      levelRow("Elementary", picks.Elementary, cityKey),
+      levelRow("Middle",     picks.Middle,     cityKey),
+      levelRow("High",       picks.High,       cityKey)
+    ].join("");
+  };
+
+  // 3 sections, 3 levels each
+  fill3x("public-section",  "public-tbody",  grouped.public);
+  fill3x("private-section", "private-tbody", grouped.private);
+  fill3x("other-section",   "other-tbody",   grouped.other || []);
+
+  // Higher Ed and enrichment use simple table rendering
+  const fillSimple = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
     tb.innerHTML = items.map(it => placeRow(it, cityKey)).join("");
   };
-
-  // ─── Tier 1: Closest schools (1 each: Elementary + Middle + High) ───
-  const publicSchools = grouped.public;
-  const closest1 = [
-    ...takeByLevel(publicSchools, "Elementary", 1),
-    ...takeByLevel(publicSchools, "Middle", 1),
-    ...takeByLevel(publicSchools, "High", 1)
-  ];
-  // K-8/K-12 schools straddle levels — include if no dedicated middle/high found
-  if (!closest1.find(s => s.subtype === "Middle") || !closest1.find(s => s.subtype === "High")) {
-    closest1.push(...takeByLevel(publicSchools, "K-8 / K-12", 1));
-  }
-  fill("closest-section", "closest-tbody", closest1);
-
-  // ─── Tier 2: Other public schools nearby (next 2 each) ───
-  const closestNames = new Set(closest1.map(s => s.name));
-  const remaining = publicSchools.filter(s => !closestNames.has(s.name));
-  const otherPublic = [
-    ...takeByLevel(remaining, "Elementary", 2),
-    ...takeByLevel(remaining, "Middle", 2),
-    ...takeByLevel(remaining, "High", 2),
-    ...takeByLevel(remaining, "K-8 / K-12", 1)
-  ];
-  fill("other-public-section", "other-public-tbody", otherPublic);
-
-  // ─── Tier 3: Private schools, preschools & parochial ───
-  fill("private-section", "private-tbody", grouped.private);
-
-  // Existing tiers
-  fill("higher-section",     "higher-tbody",     grouped.higher);
-  fill("enrichment-section", "enrichment-tbody", grouped.enrichment);
+  fillSimple("higher-section",     "higher-tbody",     grouped.higher);
+  fillSimple("enrichment-section", "enrichment-tbody", grouped.enrichment);
 
   if (total === 0) {
     $("school-sections").innerHTML =
@@ -2125,15 +2243,17 @@ async function loadNearbySchools(geo) {
       .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name && x.subtype === it.subtype))
       .sort((a, b) => a.dist - b.dist);
 
-    // Keep ALL public schools sorted by distance — no global slice. The
-    // tiering logic in renderSchoolSections takes top-N per level so that
-    // each of Elementary/Middle/High is independently represented.
-    const sortedPublic = items.filter(i => i.category === "public").sort((a, b) => a.dist - b.dist);
+    // v0.12: keep all sorted by distance — pickByLevel does per-level pick.
+    // Charter/magnet schools live in their own "other" pool now.
+    const sortedPublic  = items.filter(i => i.category === "public" ).sort((a, b) => a.dist - b.dist);
+    const sortedPrivate = items.filter(i => i.category === "private").sort((a, b) => a.dist - b.dist);
+    const sortedOther   = items.filter(i => i.category === "other"  ).sort((a, b) => a.dist - b.dist);
     const grouped = {
       public:     sortedPublic,
-      private:    items.filter(i => i.category === "private").slice(0, 10),
-      higher:     items.filter(i => i.category === "higher").slice(0, 6),
-      enrichment: items.filter(i => i.category === "enrichment").slice(0, 12)
+      private:    sortedPrivate,
+      other:      sortedOther,
+      higher:     items.filter(i => i.category === "higher").slice(0, 5),
+      enrichment: items.filter(i => i.category === "enrichment").slice(0, 5)
     };
     renderSchoolSections(grouped, items.length, cityKey);
   } catch (err) {
@@ -2160,6 +2280,7 @@ function setLoading() {
 }
 
 function renderResults(geo) {
+  lastGeo = geo;   // v0.12: row builders use this for "Map" icon URLs
   renderResolved(geo);
   const a = geo.address || {};
   const e = resolveElectric(a); renderElectric(e, geo);
