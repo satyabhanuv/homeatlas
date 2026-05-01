@@ -73,6 +73,19 @@
   .suggestion:hover, .suggestion.active { background: rgba(45,106,79,0.08); }
   .suggestion .top { font-weight: 600; color: var(--ink); }
   .suggestion .sub { color: var(--ink-faint); font-size: 12.5px; margin-top: 2px; }
+  .suggest-badge {
+    display: inline-block; margin-left: 8px; padding: 1px 7px;
+    background: rgba(176,137,0,0.16); color: #6b5400;
+    border-radius: 999px; font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.2px; vertical-align: middle;
+  }
+  .precision-notice {
+    margin-top: 12px; padding: 10px 14px;
+    background: #fff7e0; border: 1px solid #f1dc99;
+    border-radius: 8px; font-size: 13px; color: #6b5400;
+    line-height: 1.5;
+  }
+  .precision-notice b { color: #4a3700; }
 
   .hint { margin: 12px 4px 0; font-size: 13px; color: var(--ink-faint); }
   .hint b { color: var(--ink-soft); font-weight: 600; }
@@ -367,6 +380,7 @@
         </div>
       </div>
       <div class="ra-map-link" id="ra-map-link"></div>
+      <div id="ra-precision-notice"></div>
     </div>
 
     <div class="grid">
@@ -539,7 +553,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.13 · April 2026 · Phase 2 begins: Yard &amp; garden live for all 50 states
+      <b>HomeAtlas</b> &mdash; v0.14 · April 2026 · Phase 2 · Better address resolution for partial OSM coverage
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -1612,21 +1626,29 @@ let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false };
 // Strategy: Photon first; if it returns 0 US results, fall back to a single
 // Nominatim search (well within the 1 req/sec limit thanks to debouncing).
 
+// Re-rank features so house-number-tagged results outrank street-only ones.
+// Tiebreaker: keep the geocoder's original order.
+function rerankByHouseNumber(features) {
+  return features
+    .map((f, i) => ({ f, i, hasHN: !!(f.properties && f.properties.housenumber) }))
+    .sort((a, b) => (b.hasHN - a.hasHN) || (a.i - b.i))
+    .map(x => x.f);
+}
+
 async function tryPhoton(rawQuery) {
-  // No geographic bias — earlier US-center bias was hurting east-coast queries.
   const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(rawQuery)}&limit=15&lang=en`;
   const res = await fetch(url);
   if (!res.ok) return [];
   const data = await res.json();
-  return (data.features || []).filter(f => {
+  const features = (data.features || []).filter(f => {
     const p = f.properties || {};
     const cc = (p.countrycode || p.country_code || "").toLowerCase();
     return cc === "us" || /^(united states|usa|us)$/i.test(p.country || "");
   });
+  return rerankByHouseNumber(features);
 }
 
-// Convert a Nominatim /search result into the same shape Photon returns
-// so the rest of the suggestion pipeline doesn't need to know the difference.
+// Convert a Nominatim result into Photon-shaped feature
 function nominatimToFeature(n) {
   const a = n.address || {};
   return {
@@ -1646,32 +1668,121 @@ function nominatimToFeature(n) {
 }
 
 async function tryNominatim(rawQuery) {
-  // Add USA hint if user didn't include a state abbreviation or country.
   const hasGeoHint = /\bUSA\b|\bUS\b|United States|\b[A-Z]{2}\b/.test(rawQuery);
   const q = hasGeoHint ? rawQuery : `${rawQuery}, USA`;
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&limit=8&countrycodes=us`;
   const res = await fetch(url, { headers: { "Accept": "application/json" } });
   if (!res.ok) return [];
   const data = await res.json();
-  return data.map(nominatimToFeature);
+  return rerankByHouseNumber(data.map(nominatimToFeature));
+}
+
+// v0.14: parse "123 Main St, City, ST 12345" into structured pieces.
+// Used for Nominatim's structured-search endpoint, which is significantly
+// better at US house-number matching than the free-text endpoint.
+const US_STATE_CODES = "AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY|DC";
+function parseAddressInput(raw) {
+  let working = (raw || "").trim();
+  let zip = null, state = null, city = null, housenum = null, street = null;
+
+  // ZIP at end
+  const zipM = working.match(/\b(\d{5})(?:-\d{4})?\s*$/);
+  if (zipM) { zip = zipM[1]; working = working.slice(0, zipM.index).trim().replace(/,$/, "").trim(); }
+
+  // State at end — must be a valid US state code (avoids "St" being matched as state).
+  const stateRe = new RegExp(`[\\s,]+(${US_STATE_CODES})\\s*$`, "i");
+  const stateM = working.match(stateRe);
+  if (stateM) { state = stateM[1].toUpperCase(); working = working.slice(0, stateM.index).trim(); }
+
+  // Split on commas — last segment is usually city
+  const parts = working.split(/\s*,\s*/).filter(Boolean);
+  if (parts.length >= 2) {
+    city = parts[parts.length - 1];
+    street = parts.slice(0, -1).join(", ");
+  } else if (parts.length === 1) {
+    // One segment — heuristic: starts with digit → street; else if state was
+    // already extracted, treat as city; else fall back to street.
+    if (/^\d/.test(parts[0]))      street = parts[0];
+    else if (state)                city = parts[0];
+    else                           street = parts[0];
+  }
+
+  // House number at start of street
+  if (street) {
+    const hnM = street.match(/^(\d+[A-Za-z]?)\s+(.+)$/);
+    if (hnM) { housenum = hnM[1]; street = hnM[2]; }
+  }
+
+  return { housenum, street, city, state, zip };
+}
+
+// Nominatim structured search — much better hit rate for US house numbers.
+async function tryNominatimStructured(parsed) {
+  if (!parsed || (!parsed.street && !parsed.city)) return [];
+  const params = new URLSearchParams({
+    format: "jsonv2", addressdetails: "1", limit: "5", countrycodes: "us"
+  });
+  if (parsed.street) {
+    const street = (parsed.housenum ? parsed.housenum + " " : "") + parsed.street;
+    params.append("street", street);
+  }
+  if (parsed.city)  params.append("city", parsed.city);
+  if (parsed.state) params.append("state", parsed.state);
+  if (parsed.zip)   params.append("postalcode", parsed.zip);
+  const url = `https://nominatim.openstreetmap.org/search?${params}`;
+  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!res.ok) return [];
+  const data = await res.json();
+  return rerankByHouseNumber(data.map(nominatimToFeature));
 }
 
 async function searchSuggestions(rawQuery) {
+  // Type-ahead path — Photon only (Nominatim policy forbids per-keystroke).
+  // Re-ranking already favors house-number matches when present.
   const photon = await tryPhoton(rawQuery);
   if (photon.length > 0) return photon.slice(0, 6);
-  // Fallback only kicks in when Photon found nothing — protects Nominatim
-  // rate limit, since debounce already gates how often this runs.
+
+  // Fallback only when Photon empty (debounce gates rate to Nominatim).
   if (rawQuery.length >= 4) {
     const nom = await tryNominatim(rawQuery);
     return nom.slice(0, 6);
   }
   return [];
 }
+
+// v0.14: aggressive submit-time geocoder — runs more queries to find an
+// exact house-number match, which the type-ahead path can't afford to do.
+async function geocodeForSubmit(rawQuery) {
+  // Always try Photon (fast, may already have it cached)
+  const photon = await tryPhoton(rawQuery);
+  const photonHN = photon.find(f => f.properties && f.properties.housenumber);
+  if (photonHN) return photonHN;
+
+  // No HN match in Photon → try Nominatim free-text + structured in sequence.
+  // (Sequential, not parallel, to stay under the 1-req/sec policy.)
+  const nomFree = await tryNominatim(rawQuery);
+  const nomFreeHN = nomFree.find(f => f.properties && f.properties.housenumber);
+  if (nomFreeHN) return nomFreeHN;
+
+  const parsed = parseAddressInput(rawQuery);
+  if (parsed && parsed.street) {
+    const nomStruct = await tryNominatimStructured(parsed);
+    const nomStructHN = nomStruct.find(f => f.properties && f.properties.housenumber);
+    if (nomStructHN) return nomStructHN;
+    if (nomStruct.length) return nomStruct[0];   // street-level structured match
+  }
+
+  // No house-level match anywhere → return best effort (Photon street, Nominatim street, or null)
+  return photon[0] || nomFree[0] || null;
+}
 function suggestionLabel(feature) {
   const p = feature.properties || {};
   const top = [p.housenumber, p.street].filter(Boolean).join(" ") || p.name || "";
   const sub = [p.city || p.locality || p.town, p.state, p.postcode].filter(Boolean).join(", ");
-  return { top: top || sub || "Unknown", sub: top ? sub : "" };
+  // v0.14: flag results that have a street but no house number — user can
+  // pick them but should know precision is limited
+  const streetLevel = !!p.street && !p.housenumber;
+  return { top: top || sub || "Unknown", sub: top ? sub : "", streetLevel };
 }
 function renderSuggestions() {
   const box = $("suggestions"); const bar = $("searchForm");
@@ -1690,8 +1801,9 @@ function renderSuggestions() {
   }
   box.innerHTML = suggestState.items.map((f, i) => {
     const lbl = suggestionLabel(f);
+    const badge = lbl.streetLevel ? '<span class="suggest-badge">street level</span>' : '';
     return `<div class="suggestion ${i === suggestState.activeIdx ? "active" : ""}" data-idx="${i}" role="option">
-      <div class="top">${escapeHtml(lbl.top)}</div>
+      <div class="top">${escapeHtml(lbl.top)}${badge}</div>
       <div class="sub">${escapeHtml(lbl.sub)}</div>
     </div>`;
   }).join("");
@@ -2106,6 +2218,17 @@ function renderResolved(geo) {
   mapEl.onload = () => { if (loadingEl) loadingEl.style.display = "none"; };
   mapEl.src = iframeSrc;
   $("ra-map-link").innerHTML = `<a href="https://www.openstreetmap.org/?mlat=${latNum}&mlon=${lonNum}#map=18/${latNum}/${lonNum}" target="_blank" rel="noopener">View larger map on OpenStreetMap →</a>`;
+
+  // v0.14: precision notice when we couldn't pin to an exact house number.
+  // The reverse-geocoded `addr.house_number` will be undefined in that case.
+  const noticeEl = $("ra-precision-notice");
+  if (noticeEl) {
+    if (!a.house_number) {
+      noticeEl.innerHTML = `<div class="precision-notice"><b>Note:</b> resolved to street level — exact house number isn't in OpenStreetMap for this address. All results below (utility, internet, schools, climate) are based on the street's location, which is accurate enough for these lookups.</div>`;
+    } else {
+      noticeEl.innerHTML = "";
+    }
+  }
 }
 
 function renderElectric(e, geo) {
@@ -2774,9 +2897,11 @@ formEl.addEventListener("submit", async (e) => {
   hideSuggestions();
   $("searchBtn").disabled = true; $("searchBtn").textContent = "Searching…";
   try {
-    const items = await searchSuggestions(raw);
-    if (!items.length) { showStatus(`Could not find that address. Try including the city &amp; ZIP.`, "error"); return; }
-    runLookupFromFeature(items[0]);
+    // v0.14: aggressive submit-time search — tries multiple geocoders to
+    // find exact house number, falls back to street-level if necessary.
+    const feature = await geocodeForSubmit(raw);
+    if (!feature) { showStatus(`Could not find that address. Try including the city &amp; ZIP.`, "error"); return; }
+    runLookupFromFeature(feature);
   } catch (err) { showStatus(`Search failed: ${escapeHtml(err.message)}`, "error"); }
   finally { $("searchBtn").disabled = false; $("searchBtn").textContent = "Find my zones"; }
 });
