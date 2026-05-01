@@ -188,6 +188,10 @@
   .schools-meta { color: var(--ink-soft); font-size: 14px; margin: 6px 0 16px; }
   .school-section { margin-top: 18px; }
   .school-section h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+  .school-section h4 .hint { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 4px; }
+  .schools-disclaimer { background: rgba(45,106,79,0.04); border-left: 3px solid var(--primary); padding: 10px 14px; margin: 8px 0 12px; font-size: 13px; color: var(--ink-soft); border-radius: 0 6px 6px 0; line-height: 1.5; }
+  .schools-disclaimer b { color: var(--primary-2); }
+  .schools-disclaimer i { color: var(--ink); font-style: italic; }
   .schools-loading { margin-top: 16px; padding: 20px; text-align: center; color: var(--ink-soft); background: rgba(45,106,79,0.03); border: 1px dashed var(--line); border-radius: 10px; font-size: 14px; }
   .schools-loading::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 10px; vertical-align: middle; border: 2px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
   .schools-loading.error::before { display: none; }
@@ -330,11 +334,21 @@
       </div>
 
       <div id="school-sections" hidden>
-        <div class="school-section" id="public-section" hidden>
-          <h4>Public K-12 schools</h4>
+        <div class="school-section" id="closest-section" hidden>
+          <h4>Your closest schools <span class="hint">— most likely your zoned schools</span></h4>
+          <div class="schools-disclaimer">
+            <b>Important:</b> these are the <i>nearest</i> schools by level — they are usually but not always your home&rsquo;s assigned school. Real attendance boundaries vary block by block. To find the school you&rsquo;re officially zoned for, use your district&rsquo;s school finder or call the district directly. Click any school name to see its website &amp; ratings.
+          </div>
           <div class="tbl-wrap"><table class="ptable">
             <thead><tr><th>School</th><th>Level</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="public-tbody"></tbody>
+            <tbody id="closest-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="other-public-section" hidden>
+          <h4>Other public schools nearby <span class="hint">— next-best by distance</span></h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>School</th><th>Level</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="other-public-tbody"></tbody>
           </table></div>
         </div>
         <div class="school-section" id="private-section" hidden>
@@ -391,7 +405,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.7 · April 2026 · CA service-provider + nearby-schools preview
+      <b>HomeAtlas</b> &mdash; v0.8 · April 2026 · CA service-provider + nearby-schools preview
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -953,7 +967,39 @@ async function fetchNearbyEducation(lat, lon, radiusMeters = 4000, onProgress) {
   return elements;
 }
 
-const PRIVATE_NAME_PATTERNS = /\b(catholic|christian|episcopal|hebrew|jewish|islamic|muslim|lutheran|montessori|parochial|preparatory|prep|academy|day school|country day|saint |st\. |our lady|seventh-day|adventist|baptist|presbyterian|orthodox|waldorf)\b/i;
+const PRIVATE_NAME_PATTERNS = /\b(catholic|christian|episcopal|hebrew|jewish|islamic|muslim|lutheran|parochial|preparatory|academy|day school|country day|saint |st\. |our lady|seventh-day|adventist|baptist|presbyterian|orthodox|waldorf)\b/i;
+
+// Filter out things that get OSM-tagged amenity=school but aren't actually K-12.
+const NON_K12_PATTERNS = /\b(driving school|music school|dance school|cooking school|language school|art school(?! district)|martial arts|yoga|fitness|swim school|gymnastics|tutoring|learning center|test prep|trade school|beauty school|cosmetology|barber)\b/i;
+
+// Detect K-12 level from OSM tags + name patterns. Returns null if level
+// can't be confidently determined — those schools are dropped from the
+// public-K-12 sections (they only confuse the user when level is unknown).
+function detectSchoolLevel(name, t) {
+  const lvl    = (t["school:level"] || t.school || "").toLowerCase();
+  const isced  = String(t["isced:level"] || "");
+  const grades = (t.grades || t.min_grade || "").toLowerCase().replace(/\s+/g, "");
+  const lname  = name.toLowerCase();
+
+  // 1) Explicit OSM level tags (most reliable)
+  if (lvl.includes("elementary")  || lvl.includes("primary") || isced === "1") return "Elementary";
+  if (lvl.includes("middle")      || lvl.includes("intermediate") || isced === "2") return "Middle";
+  if (lvl.includes("high")        || lvl.includes("secondary") || isced === "3") return "High";
+
+  // 2) `grades` attribute — common patterns: "K-5", "K-6", "6-8", "7-8", "9-12", "K-12"
+  if (/^k-?(8|12)$/.test(grades))           return "K-8 / K-12";
+  if (/^(k|1)-?(5|6)$/.test(grades))         return "Elementary";
+  if (/^(6|7)-?(8|9)$/.test(grades))         return "Middle";
+  if (/^(9|10)-?12$/.test(grades))           return "High";
+
+  // 3) Name patterns (must be unambiguous — "School" alone is not enough)
+  if (/\bhigh school\b|\bsenior high\b/i.test(name)) return "High";
+  if (/\bmiddle school\b|\bjunior high\b|\bjr\.? high\b|\bj\.?h\.?s\.?\b|\bintermediate school\b/i.test(name)) return "Middle";
+  if (/\belementary\b|\bprimary school\b|\bgrade school\b|\bgrammar school\b/i.test(name)) return "Elementary";
+  if (/\bk[\s-]?(8|12)\b|kindergarten through/i.test(name)) return "K-8 / K-12";
+
+  return null;
+}
 
 function classifyEducationItem(el) {
   const t = el.tags || {};
@@ -964,24 +1010,29 @@ function classifyEducationItem(el) {
   if (lat == null || lon == null) return null;
 
   let category = null, subtype = null;
+
   if (t.amenity === "school") {
+    // Drop things that aren't actually K-12 (driving schools, music schools, etc.)
+    if (NON_K12_PATTERNS.test(name)) return null;
+
     const isPrivateTag = t["school:type"] === "private" || t["operator:type"] === "private" || t["operator:type"] === "religious";
-    const looksPrivate = PRIVATE_NAME_PATTERNS.test(name);
+    const looksPrivate = PRIVATE_NAME_PATTERNS.test(name) || /\b(montessori)\b/i.test(name);
     category = (isPrivateTag || looksPrivate) ? "private" : "public";
-    const lvl = (t["school:level"] || t.school || "").toLowerCase();
-    const isced = String(t["isced:level"] || "");
-    const lname = name.toLowerCase();
-    if (lvl.includes("elementary") || lvl.includes("primary") || isced === "1" ||
-        /\belementary\b|primary school/.test(lname)) subtype = "Elementary";
-    else if (lvl.includes("middle") || lvl.includes("intermediate") || isced === "2" ||
-             /\bmiddle\b|\bjunior high\b|\bintermediate\b/.test(lname)) subtype = "Middle";
-    else if (lvl.includes("high") || lvl.includes("secondary") || isced === "3" ||
-             /\bhigh school\b|\bsecondary\b/.test(lname)) subtype = "High";
-    else if (/\bk[\s-]?(8|12)\b/i.test(name)) subtype = "K-8 / K-12";
-    else if (PRIVATE_NAME_PATTERNS.test(name)) subtype = "Private school";
-    else subtype = "School";
+
+    const level = detectSchoolLevel(name, t);
+    if (level) {
+      subtype = level;
+    } else {
+      // No detectable level → for public, drop entirely (would just be noise);
+      // for private, keep with subtype "Private school" since private schools
+      // often don't fit standard K-12 levels.
+      if (category === "public") return null;
+      subtype = "Private school";
+    }
   }
-  else if (t.amenity === "kindergarten") { category = "private"; subtype = "Preschool / Kindergarten"; }
+  else if (t.amenity === "kindergarten") {
+    category = "private"; subtype = "Preschool / Kindergarten";
+  }
   else if (t.amenity === "college")    { category = "higher"; subtype = "College"; }
   else if (t.amenity === "university") { category = "higher"; subtype = "University"; }
   else if (t.amenity === "library")    { category = "enrichment"; subtype = "Public library"; }
@@ -992,6 +1043,7 @@ function classifyEducationItem(el) {
   }
   else if (t.leisure === "sports_centre")    { category = "enrichment"; subtype = "Sports / rec center"; }
   else if (t.amenity === "community_centre") { category = "enrichment"; subtype = "Community center"; }
+
   if (!category) return null;
   return { name, category, subtype, lat, lon };
 }
@@ -1146,21 +1198,55 @@ function placeRow(item, cityKey) {
     <td style="text-align:right"><a class="visit-btn" href="${url}" target="_blank" rel="noopener">Find →</a></td>
   </tr>`;
 }
+// Pull the top-N nearest items in a single level from a sorted-by-distance array
+function takeByLevel(items, level, n) {
+  return items.filter(i => i.subtype === level).slice(0, n);
+}
+
 function renderSchoolSections(grouped, total, cityKey) {
   $("school-loading").hidden = true;
   $("school-sections").hidden = false;
   const pill = $("school-summary"); pill.hidden = false;
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.5 mi`;
+
   const fill = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
     tb.innerHTML = items.map(it => placeRow(it, cityKey)).join("");
   };
-  fill("public-section",     "public-tbody",     grouped.public);
-  fill("private-section",    "private-tbody",    grouped.private);
+
+  // ─── Tier 1: Closest schools (1 each: Elementary + Middle + High) ───
+  const publicSchools = grouped.public;
+  const closest1 = [
+    ...takeByLevel(publicSchools, "Elementary", 1),
+    ...takeByLevel(publicSchools, "Middle", 1),
+    ...takeByLevel(publicSchools, "High", 1)
+  ];
+  // K-8/K-12 schools straddle levels — include if no dedicated middle/high found
+  if (!closest1.find(s => s.subtype === "Middle") || !closest1.find(s => s.subtype === "High")) {
+    closest1.push(...takeByLevel(publicSchools, "K-8 / K-12", 1));
+  }
+  fill("closest-section", "closest-tbody", closest1);
+
+  // ─── Tier 2: Other public schools nearby (next 2 each) ───
+  const closestNames = new Set(closest1.map(s => s.name));
+  const remaining = publicSchools.filter(s => !closestNames.has(s.name));
+  const otherPublic = [
+    ...takeByLevel(remaining, "Elementary", 2),
+    ...takeByLevel(remaining, "Middle", 2),
+    ...takeByLevel(remaining, "High", 2),
+    ...takeByLevel(remaining, "K-8 / K-12", 1)
+  ];
+  fill("other-public-section", "other-public-tbody", otherPublic);
+
+  // ─── Tier 3: Private schools, preschools & parochial ───
+  fill("private-section", "private-tbody", grouped.private);
+
+  // Existing tiers
   fill("higher-section",     "higher-tbody",     grouped.higher);
   fill("enrichment-section", "enrichment-tbody", grouped.enrichment);
+
   if (total === 0) {
     $("school-sections").innerHTML =
       `<div class="schools-empty">No schools or educational facilities found within 2.5 miles. Try a more central address, or check the school district directly.</div>`;
@@ -1198,10 +1284,10 @@ async function loadNearbySchools(geo) {
       .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name && x.subtype === it.subtype))
       .sort((a, b) => a.dist - b.dist);
 
-    const levelRank = { "Elementary":1, "Middle":2, "High":3, "K-8 / K-12":4, "School":5 };
-    const sortedPublic = items.filter(i => i.category === "public")
-      .sort((a, b) => (levelRank[a.subtype] || 9) - (levelRank[b.subtype] || 9) || a.dist - b.dist)
-      .slice(0, 12);
+    // Keep ALL public schools sorted by distance — no global slice. The
+    // tiering logic in renderSchoolSections takes top-N per level so that
+    // each of Elementary/Middle/High is independently represented.
+    const sortedPublic = items.filter(i => i.category === "public").sort((a, b) => a.dist - b.dist);
     const grouped = {
       public:     sortedPublic,
       private:    items.filter(i => i.category === "private").slice(0, 10),
