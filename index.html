@@ -79,6 +79,18 @@
     border-radius: 999px; font-size: 10.5px; font-weight: 600;
     letter-spacing: 0.2px; vertical-align: middle;
   }
+  .suggest-deep-strip {
+    padding: 8px 18px; background: rgba(45,106,79,0.04);
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-soft); font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .suggest-spinner {
+    width: 12px; height: 12px;
+    border: 2px solid var(--line); border-top-color: var(--primary);
+    border-radius: 50%; animation: spin 0.8s linear infinite;
+    display: inline-block;
+  }
   .precision-notice {
     margin-top: 12px; padding: 10px 14px;
     background: #fff7e0; border: 1px solid #f1dc99;
@@ -553,7 +565,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.15 · April 2026 · Phase 2 · 4 geocoders incl. U.S. Census Bureau
+      <b>HomeAtlas</b> &mdash; v0.16 · April 2026 · Phase 2 · 4-geocoder autocomplete (Photon → Census/Nominatim deep search)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -1618,8 +1630,12 @@ function iconButtonsHtml(name, opts = {}) {
          `<a class="icon-btn" href="${map}" target="_blank" rel="noopener" aria-label="Map">${ICON_PIN}</a>`;
 }
 
-/* -------- Photon autocomplete ---------------------------------------- */
-let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false };
+/* -------- Address autocomplete (two-phase: Photon → Census/Nominatim) -- */
+// v0.16: flip to true in DevTools to log each geocoder's results
+window.HOMEATLAS_DEBUG = false;
+function dlog(...args) { if (window.HOMEATLAS_DEBUG) console.log("[homeatlas]", ...args); }
+
+let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false, deepRunning: false };
 // Photon is fast and good for type-ahead, but its US house-number coverage
 // is patchy in smaller towns (e.g. Phoenixville PA). Nominatim has better
 // street-level US coverage but its policy forbids per-keystroke autocomplete.
@@ -1851,11 +1867,11 @@ function suggestionLabel(feature) {
 function renderSuggestions() {
   const box = $("suggestions"); const bar = $("searchForm");
   // "No results" empty state when user has typed something meaningful but nothing came back
-  if (!suggestState.items.length) {
+  if (!suggestState.items.length && !suggestState.deepRunning) {
     if (suggestState.lastQuery && suggestState.lastQuery.length >= 4 && suggestState.searched) {
       box.innerHTML = `<div class="suggestion" style="cursor:default; color:var(--ink-faint);">
         <div class="top" style="color:var(--ink-soft);">No matches for &ldquo;${escapeHtml(suggestState.lastQuery)}&rdquo;</div>
-        <div class="sub">Try including the city &amp; state — e.g. &ldquo;100 Main St, Phoenixville, PA&rdquo;. If still nothing, the address may be missing from OpenStreetMap.</div>
+        <div class="sub">Try including the city &amp; state — e.g. &ldquo;100 Main St, Phoenixville, PA&rdquo;. If still nothing, the address may be missing from all our geocoders.</div>
       </div>`;
       box.hidden = false; bar.classList.add("open");
     } else {
@@ -1863,11 +1879,18 @@ function renderSuggestions() {
     }
     return;
   }
-  box.innerHTML = suggestState.items.map((f, i) => {
+  // Header strip when deep search is running
+  const deepHeader = suggestState.deepRunning
+    ? `<div class="suggest-deep-strip"><span class="suggest-spinner"></span>Searching Census + Nominatim for exact house number…</div>`
+    : "";
+  box.innerHTML = deepHeader + suggestState.items.map((f, i) => {
     const lbl = suggestionLabel(f);
-    const badge = lbl.streetLevel ? '<span class="suggest-badge">street level</span>' : '';
+    const badge = lbl.streetLevel ? '<span class="suggest-badge">street level</span>' : "";
+    const sourceTag = (f.properties && f.properties._source === "census")
+      ? '<span class="suggest-badge" style="background:rgba(45,106,79,0.12);color:var(--primary);">Census</span>'
+      : "";
     return `<div class="suggestion ${i === suggestState.activeIdx ? "active" : ""}" data-idx="${i}" role="option">
-      <div class="top">${escapeHtml(lbl.top)}${badge}</div>
+      <div class="top">${escapeHtml(lbl.top)}${badge}${sourceTag}</div>
       <div class="sub">${escapeHtml(lbl.sub)}</div>
     </div>`;
   }).join("");
@@ -1878,21 +1901,80 @@ function hideSuggestions() {
   suggestState.activeIdx = -1;
 }
 const debounce = (fn, ms = 300) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+// v0.16: two-phase autocomplete.
+//   Phase 1 (350ms after typing pauses): Photon — fast, fills dropdown.
+//   Phase 2 (fires after Phase 1 if no house-number match AND query has digits):
+//     Census + Nominatim run in parallel and merge into the dropdown so the
+//     user sees the precise match without having to press Enter.
 const onTypeDebounced = debounce(async () => {
   const q = $("addr").value.trim();
-  if (q.length < 3) { suggestState.items = []; suggestState.searched = false; renderSuggestions(); return; }
+  if (q.length < 3) {
+    suggestState.items = []; suggestState.searched = false; suggestState.deepRunning = false;
+    renderSuggestions(); return;
+  }
   if (q === suggestState.lastQuery) return;
   suggestState.lastQuery = q;
+
+  // Phase 1: Photon (or Nominatim fallback if Photon empty — existing behavior)
   try {
     const items = await searchSuggestions(q);
+    if (suggestState.lastQuery !== q) return;   // user typed more, abandon
     suggestState.items = items;
     suggestState.activeIdx = -1;
     suggestState.searched = true;
     renderSuggestions();
+    dlog("Phase 1 (Photon):", items.length, "results");
   } catch (e) {
     suggestState.items = []; suggestState.searched = true; renderSuggestions();
   }
-}, 350);   // Bumped from 280ms — Nominatim fallback wants more breathing room
+
+  // Phase 2 trigger: query has a house number AND the Phase 1 results don't
+  // include a house-number match → kick off deep search (Census + Nominatim).
+  const hasDigit = /\d/.test(q);
+  const hasHN = suggestState.items.some(f => f.properties && f.properties.housenumber);
+  if (hasDigit && q.length >= 5 && !hasHN) runDeepSearch(q);
+}, 350);
+
+async function runDeepSearch(query) {
+  if (suggestState.deepRunning) return;
+  suggestState.deepRunning = true;
+  renderSuggestions();
+  try {
+    // Run Census + Nominatim free-text + Nominatim structured in parallel.
+    const parsed = parseAddressInput(query);
+    const tasks = [
+      tryCensus(query),
+      tryNominatim(query),
+      parsed && parsed.street ? tryNominatimStructured(parsed) : Promise.resolve([])
+    ];
+    const [census, nomFree, nomStruct] = await Promise.all(tasks);
+    dlog("Phase 2:", { census: census.length, nomFree: nomFree.length, nomStruct: nomStruct.length });
+
+    // Bail if user has typed more since we kicked this off
+    if (suggestState.lastQuery !== query) return;
+
+    // Merge with existing Phase-1 (Photon) results, dedupe by coords + name
+    const merged = [];
+    const seen = new Set();
+    const addUnique = (f) => {
+      if (!f || !f.geometry) return;
+      const c = f.geometry.coordinates;
+      const key = `${(f.properties && f.properties.name) || ""}|${c[0].toFixed(5)},${c[1].toFixed(5)}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+      merged.push(f);
+    };
+    [...census, ...nomStruct, ...nomFree, ...suggestState.items].forEach(addUnique);
+
+    // Re-rank: house-number matches first (preserves original order within each tier)
+    suggestState.items = rerankByHouseNumber(merged).slice(0, 8);
+  } catch (e) {
+    dlog("deepSearch error:", e);
+  } finally {
+    suggestState.deepRunning = false;
+    renderSuggestions();
+  }
+}
 
 /* -------- Reverse geocode -------------------------------------------- */
 async function reverseGeocode(lat, lon) {
@@ -2921,6 +3003,27 @@ async function runLookupFromFeature(feature) {
 /* -------- Event wiring ----------------------------------------------- */
 const addrEl = $("addr"), formEl = $("searchForm"), sugEl = $("suggestions");
 addrEl.addEventListener("input", () => { clearStatus(); onTypeDebounced(); });
+// v0.16: when user picks a suggestion that's only street-level but their
+// typed text contains a house number, try the deeper geocoder chain to see
+// if any of them can find the exact house. Silently upgrades the result.
+async function pickAndLookup(feature) {
+  const typed = addrEl.value.trim();
+  const featureHN = feature && feature.properties && feature.properties.housenumber;
+  const typedHN = /^\s*\d+/.test(typed);
+  // If the picked result already has a house number OR the user didn't type one, just use the pick.
+  if (featureHN || !typedHN) return runLookupFromFeature(feature);
+  // Otherwise try the full chain on the typed text and use whichever has a HN
+  try {
+    const better = await geocodeForSubmit(typed);
+    const betterHN = better && better.properties && better.properties.housenumber;
+    if (betterHN) {
+      dlog("Smart-upgrade: replaced street-level pick with HN match from", better.properties._source || "geocoder");
+      return runLookupFromFeature(better);
+    }
+  } catch (e) { dlog("Smart-upgrade error:", e); }
+  return runLookupFromFeature(feature);
+}
+
 addrEl.addEventListener("keydown", (e) => {
   if (sugEl.hidden || !suggestState.items.length) return;
   if (e.key === "ArrowDown") {
@@ -2938,7 +3041,7 @@ addrEl.addEventListener("keydown", (e) => {
       const lbl = suggestionLabel(f);
       addrEl.value = `${lbl.top}${lbl.sub ? ", " + lbl.sub : ""}`;
       hideSuggestions();
-      runLookupFromFeature(f);
+      pickAndLookup(f);
     }
   } else if (e.key === "Escape") { hideSuggestions(); }
 });
@@ -2950,7 +3053,7 @@ sugEl.addEventListener("click", (e) => {
   const lbl = suggestionLabel(f);
   addrEl.value = `${lbl.top}${lbl.sub ? ", " + lbl.sub : ""}`;
   hideSuggestions();
-  runLookupFromFeature(f);
+  pickAndLookup(f);
 });
 document.addEventListener("click", (e) => {
   if (!e.target.closest(".search-wrap")) hideSuggestions();
