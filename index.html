@@ -442,6 +442,131 @@
   .privacy { background: rgba(45,106,79,0.06); border: 1px solid rgba(45,106,79,0.18); padding: 14px 16px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; margin-top: 16px; }
   .privacy b { color: var(--primary-2); }
 
+  /* ─── v0.21: Big distinctive section headers ──────────────────────── */
+  .page-section-header {
+    display: flex; gap: 16px; align-items: center;
+    padding: 22px 26px;
+    border-radius: var(--radius);
+    margin: 36px 0 14px;
+    background: var(--psh-bg, rgba(45,106,79,0.06));
+    border-left: 6px solid var(--psh-accent, var(--primary));
+    flex-wrap: wrap;
+  }
+  .page-section-header.your-home  { --psh-bg: rgba(45,106,79,0.06); --psh-accent: #2d6a4f; }
+  .page-section-header.services   { --psh-bg: rgba(43,90,158,0.06);  --psh-accent: #2b5a9e; }
+  .page-section-header.schools    { --psh-bg: rgba(29,58,95,0.07);   --psh-accent: #1d3a5f; }
+  .page-section-header.parks      { --psh-bg: rgba(212,163,115,0.16); --psh-accent: #c08552; }
+  .page-section-header.yard       { --psh-bg: rgba(76,140,82,0.10);  --psh-accent: #4c8c52; }
+  .page-section-header.risks      { --psh-bg: rgba(176,52,52,0.07);  --psh-accent: #b34d4d; }
+  .psh-icon {
+    width: 56px; height: 56px; flex: 0 0 56px;
+    background: rgba(255,255,255,0.7); border-radius: 14px;
+    display: grid; place-items: center;
+    font-size: 28px;
+  }
+  .psh-text { flex: 1; min-width: 200px; }
+  .psh-eyebrow {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--ink-faint); font-weight: 700;
+  }
+  .psh-title { margin: 4px 0 0; font-size: 22px; line-height: 1.1; color: var(--ink); }
+  .psh-sub   { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); max-width: 60ch; }
+  /* First section header has less top margin */
+  .results > .page-section-header:first-child { margin-top: 24px; }
+
+  /* ─── v0.21: Collapsible card (Climate risks default closed) ───── */
+  .collapsible {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    margin-top: 12px;
+  }
+  .collapsible-header {
+    width: 100%; cursor: pointer; background: transparent; border: none;
+    display: flex; align-items: center; gap: 14px;
+    padding: 18px 22px;
+    font-family: inherit; text-align: left; color: var(--ink);
+  }
+  .collapsible-header:hover { background: rgba(0,0,0,0.02); }
+  .collapsible-icon {
+    width: 40px; height: 40px; flex: 0 0 40px;
+    border-radius: 10px; display: grid; place-items: center;
+    background: rgba(176,52,52,0.10); color: #b34d4d; font-size: 20px;
+  }
+  .collapsible-text { flex: 1; min-width: 0; }
+  .collapsible-title { font-size: 16px; font-weight: 700; }
+  .collapsible-summary { font-size: 13px; color: var(--ink-soft); margin-top: 3px; }
+  .collapsible-arrow {
+    color: var(--ink-faint); font-size: 18px; flex-shrink: 0;
+    transition: transform 0.2s ease;
+  }
+  .collapsible:not(.collapsed) .collapsible-arrow { transform: rotate(180deg); }
+  .collapsible-body {
+    padding: 0 22px 22px 22px;
+    overflow: hidden;
+    max-height: 4000px;
+    transition: max-height 0.3s ease, padding 0.3s ease;
+  }
+  .collapsible.collapsed .collapsible-body { max-height: 0; padding-top: 0; padding-bottom: 0; }
+
+  /* ─── v0.21: Today's-action hero in yard card ────────────────────── */
+  .today-hero {
+    background: linear-gradient(135deg, rgba(76,140,82,0.12), rgba(212,163,115,0.10));
+    border: 1px solid rgba(76,140,82,0.22);
+    border-radius: 14px;
+    padding: 18px 22px;
+    margin-bottom: 16px;
+    display: flex; gap: 16px; align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .today-hero-icon {
+    width: 56px; height: 56px; flex: 0 0 56px;
+    background: rgba(76,140,82,0.18); border-radius: 50%;
+    display: grid; place-items: center;
+    font-size: 28px;
+  }
+  .today-hero-body { flex: 1; min-width: 200px; }
+  .today-hero-eyebrow {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px;
+    color: #2d6a4f; font-weight: 700;
+  }
+  .today-hero-title { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .today-hero-text { font-size: 14px; color: var(--ink-soft); margin-top: 6px; line-height: 1.55; }
+
+  /* ─── v0.21: Mobile responsive — fix overflow & stacking ──────── */
+  @media (max-width: 700px) {
+    .wrap { padding: 0 16px; }
+    .resolved-body { grid-template-columns: 1fr !important; }
+    .resolved-tiles { grid-template-columns: repeat(2, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+    .home-grid { grid-template-columns: 1fr 1fr; }
+    .schools-card, .parks-card, .yard-card, .risks-card,
+    .home-card, .collapsible { padding: 16px 14px; }
+    .school-row { gap: 10px; padding: 10px 4px; }
+    .school-row .school-badge { width: 46px; height: 46px; flex-basis: 46px; }
+    .school-badge .badge-num { font-size: 14px; }
+    .school-info { min-width: 0; }
+    .school-icons { flex-basis: 100%; padding-top: 4px; justify-content: flex-end; }
+    .schools-head, .parks-head, .yard-head, .home-head, .risks-head {
+      flex-wrap: wrap;
+    }
+    .schools-head .summary-pill, .parks-head .summary-pill, .yard-head .summary-pill,
+    .risks-head .summary-pill {
+      margin-left: 0; margin-top: 6px;
+    }
+    .ptable { font-size: 12px; }
+    .ptable td, .ptable th { padding: 8px 6px; }
+    .icon-cell { white-space: normal; }
+    .icon-btn { width: 28px; height: 28px; }
+    .page-section-header { padding: 16px 18px; }
+    .psh-icon { width: 44px; height: 44px; flex-basis: 44px; font-size: 22px; }
+    .psh-title { font-size: 18px; }
+    .psh-sub { font-size: 13px; }
+  }
+  @media (max-width: 480px) {
+    .resolved-tiles { grid-template-columns: 1fr; }
+    .home-grid { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 26px; }
+  }
   @media (max-width: 540px) {
     .searchbar { flex-direction: column; }
     .searchbar button { padding: 14px; }
@@ -507,6 +632,16 @@
       <div id="ra-precision-notice"></div>
     </div>
 
+    <!-- v0.21: Section header — Your home -->
+    <div class="page-section-header your-home">
+      <div class="psh-icon">🏠</div>
+      <div class="psh-text">
+        <div class="psh-eyebrow">Section 1 · Your home</div>
+        <h2 class="psh-title">Tell us about your house</h2>
+        <p class="psh-sub">A few details unlock more recommendations — year built lights up the house-anatomy module, lot size feeds yard planning.</p>
+      </div>
+    </div>
+
     <!-- Home details placeholder (v0.19) — laying groundwork for house anatomy module -->
     <div class="home-card" id="card-home" hidden>
       <div class="home-head">
@@ -517,6 +652,16 @@
         </div>
       </div>
       <div class="home-grid" id="home-grid"></div>
+    </div>
+
+    <!-- v0.21: Section header — Services -->
+    <div class="page-section-header services">
+      <div class="psh-icon">🔌</div>
+      <div class="psh-text">
+        <div class="psh-eyebrow">Section 2 · Connectivity &amp; services</div>
+        <h2 class="psh-title">Who powers, connects &amp; protects your home</h2>
+        <p class="psh-sub">Electric utility (with CCA where applicable), internet providers, TV options, and home-security brands at this address.</p>
+      </div>
     </div>
 
     <div class="grid">
@@ -554,19 +699,13 @@
       </div>
     </div>
 
-    <!-- Climate risks (v0.19) — full width, Zillow-style score rows -->
-    <div class="risks-card" id="card-risks" hidden>
-      <div class="risks-head">
-        <div class="icon">⚠️</div>
-        <div class="text-block">
-          <h3>Climate risks</h3>
-          <div class="value" id="risks-headline">—</div>
-        </div>
-        <div class="summary-pill" id="risks-summary"></div>
-      </div>
-      <div id="risks-body"></div>
-      <div class="source" style="margin-top:12px;">
-        Scores are rough estimates by region/state/climate zone. Click any factor for the authoritative free source (FEMA / Cal Fire / AirNow / NOAA) for your specific address.
+    <!-- v0.21: Section header — Schools -->
+    <div class="page-section-header schools">
+      <div class="psh-icon">🎓</div>
+      <div class="psh-text">
+        <div class="psh-eyebrow">Section 3 · Schools &amp; education</div>
+        <h2 class="psh-title">Where the kids learn</h2>
+        <p class="psh-sub">Likely-assigned public school for each level, plus closest private and charter options. Click any school to see GreatSchools ratings.</p>
       </div>
     </div>
 
@@ -622,6 +761,60 @@
       </div>
     </div>
 
+    <!-- v0.21: Section header — Parks (kid/pet/me focused) -->
+    <div class="page-section-header parks">
+      <div class="psh-icon">🌳</div>
+      <div class="psh-text">
+        <div class="psh-eyebrow">Section 4 · Lifestyle</div>
+        <h2 class="psh-title">For the kids, the dog, and you</h2>
+        <p class="psh-sub">Playgrounds, parks, dog parks, and trails — sorted by who they're for, ranked by closeness.</p>
+      </div>
+    </div>
+
+    <!-- Parks & places card MOVED here (between Schools and Yard) -->
+    <div class="parks-card" id="card-parks" hidden>
+      <div class="parks-head">
+        <div class="icon">🌳</div>
+        <div class="text-block">
+          <h3>Parks &amp; places to go</h3>
+          <div class="value" id="parks-value">—</div>
+        </div>
+        <div class="summary-pill" id="parks-summary" hidden></div>
+      </div>
+      <div class="parks-loading" id="parks-loading" hidden>Finding parks, dog parks, playgrounds, and trails near you…</div>
+      <div id="parks-sections" hidden>
+        <div class="school-section" id="parks-playground-section" hidden>
+          <h4>👦 For the kids <span class="hint">— playgrounds &amp; family-friendly parks</span></h4>
+          <div id="parks-playground-tbody"></div>
+        </div>
+        <div class="school-section" id="parks-dog-section" hidden>
+          <h4>🐕 For your pet <span class="hint">— dog parks where they can run free</span></h4>
+          <div id="parks-dog-tbody"></div>
+        </div>
+        <div class="school-section" id="parks-trail-section" hidden>
+          <h4>🏃 For you <span class="hint">— trails to run, hike, and walk</span></h4>
+          <div id="parks-trail-tbody"></div>
+        </div>
+        <div class="school-section" id="parks-park-section" hidden>
+          <h4>🌳 General parks &amp; gardens</h4>
+          <div id="parks-park-tbody"></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line from your address.
+      </div>
+    </div>
+
+    <!-- v0.21: Section header — Yard & garden -->
+    <div class="page-section-header yard">
+      <div class="psh-icon">🌱</div>
+      <div class="psh-text">
+        <div class="psh-eyebrow">Section 5 · Yard &amp; garden</div>
+        <h2 class="psh-title">What to plant, when to water</h2>
+        <p class="psh-sub">Today's seasonal action, plant recommendations for your USDA hardiness zone, soil typical for your region.</p>
+      </div>
+    </div>
+
     <!-- Yard & Garden — full width below schools -->
     <div class="yard-card" id="card-yard" hidden>
       <div class="yard-head">
@@ -631,6 +824,16 @@
           <div class="value" id="yard-value">—</div>
         </div>
         <div class="summary-pill" id="yard-summary" hidden></div>
+      </div>
+
+      <!-- v0.21: Today's seasonal action — what should I do RIGHT NOW? -->
+      <div class="today-hero" id="yard-today-hero" hidden>
+        <div class="today-hero-icon">🌱</div>
+        <div class="today-hero-body">
+          <div class="today-hero-eyebrow" id="yard-today-eyebrow">Right now in your garden</div>
+          <div class="today-hero-title" id="yard-today-title">—</div>
+          <div class="today-hero-text" id="yard-today-text">—</div>
+        </div>
       </div>
 
       <div class="yard-section" id="yard-climate-section">
@@ -665,37 +868,31 @@
       </div>
     </div>
 
-    <!-- Parks & places (v0.19) — full width, Overpass-driven -->
-    <div class="parks-card" id="card-parks" hidden>
-      <div class="parks-head">
-        <div class="icon">🌳</div>
-        <div class="text-block">
-          <h3>Parks &amp; places to go</h3>
-          <div class="value" id="parks-value">—</div>
-        </div>
-        <div class="summary-pill" id="parks-summary" hidden></div>
+    <!-- v0.21: Section header — Climate risks (collapsed by default) -->
+    <div class="page-section-header risks">
+      <div class="psh-icon">⚠️</div>
+      <div class="psh-text">
+        <div class="psh-eyebrow">Section 6 · Optional details</div>
+        <h2 class="psh-title">Climate risks</h2>
+        <p class="psh-sub">Flood, fire, heat, and air-quality estimates for the region. Click to expand.</p>
       </div>
-      <div class="parks-loading" id="parks-loading" hidden>Finding parks, dog parks, playgrounds, and trails near you…</div>
-      <div id="parks-sections" hidden>
-        <div class="school-section" id="parks-park-section" hidden>
-          <h4>Parks &amp; gardens</h4>
-          <div id="parks-park-tbody"></div>
+    </div>
+
+    <!-- Climate risks — collapsed by default -->
+    <div class="collapsible collapsed risks-card" id="card-risks" hidden>
+      <button class="collapsible-header" type="button" id="risks-toggle" aria-expanded="false">
+        <span class="collapsible-icon">⚠️</span>
+        <span class="collapsible-text">
+          <span class="collapsible-title" id="risks-headline">Climate risks summary</span>
+          <span class="collapsible-summary" id="risks-summary">Click to see Flood / Fire / Heat / Air factors</span>
+        </span>
+        <span class="collapsible-arrow">▼</span>
+      </button>
+      <div class="collapsible-body">
+        <div id="risks-body"></div>
+        <div class="source" style="margin-top:12px;">
+          Scores are rough estimates by region/state/climate zone. Click any factor for the authoritative free source (FEMA / Cal Fire / AirNow / NOAA) for your specific address.
         </div>
-        <div class="school-section" id="parks-dog-section" hidden>
-          <h4>Dog parks <span class="hint">— for your pet to play</span></h4>
-          <div id="parks-dog-tbody"></div>
-        </div>
-        <div class="school-section" id="parks-playground-section" hidden>
-          <h4>Playgrounds <span class="hint">— for kids</span></h4>
-          <div id="parks-playground-tbody"></div>
-        </div>
-        <div class="school-section" id="parks-trail-section" hidden>
-          <h4>Trails &amp; nature <span class="hint">— for running, hiking, walking</span></h4>
-          <div id="parks-trail-tbody"></div>
-        </div>
-      </div>
-      <div class="source" style="margin-top:14px;">
-        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line from your address.
       </div>
     </div>
 
@@ -724,7 +921,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.20 · April 2026 · Phase 2 · Visual restyle (address tiles + school rating circles)
+      <b>HomeAtlas</b> &mdash; v0.21 · April 2026 · Phase 2 · Page-wide redesign (sections + collapsible risks + today hero)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3065,6 +3262,33 @@ const SOIL_BY_STATE = {
 };
 const SOIL_DEFAULT = "Soil composition varies block by block. The USDA Web Soil Survey can give you the exact soil series and properties (texture, pH, drainage, depth) for any address.";
 
+// v0.21: Seasonal "today's action" by month + zone group
+const MONTH_NAMES = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const SEASONAL_TIPS = {
+  // Each month → tips by zone group (cold = 4-6, mild = 7-9, warm = 10-11, tropical = 12+)
+  0:  { cold:"Plan and order seeds. Start dormant pruning. Stake tall plants exposed to wind.", mild:"Final dormant pruning. Cool-season crops still going (lettuce, kale, spinach).", warm:"Citrus harvest peaks. Plant cool-season vegetables (broccoli, cabbage). Watch for frost on warm coast.", tropical:"Dry season. Water deeply. Tropical fruit trees set blooms — avoid heavy pruning." },
+  1:  { cold:"Prune dormant fruit trees & roses. Start onions/leeks indoors.", mild:"Plant bare-root roses, fruit trees. Last call for winter pruning.", warm:"Plant tomatoes (south-facing/coastal), strawberries, herbs. Citrus still producing.", tropical:"Plant heat-tolerant veggies (eggplant, peppers). Apply mulch ahead of dry months." },
+  2:  { cold:"Start tomatoes & peppers indoors. Direct-sow peas, lettuce, radishes once soil thaws.", mild:"Plant tomatoes, peppers, beans, basil. Spring-flowering bulbs at peak.", warm:"Last frost-safe window for warm-season crops. Mulch generously before summer heat.", tropical:"Rainy/dry transition. Plant pollinator-friendly natives. Trim hedges before nesting season." },
+  3:  { cold:"Direct-sow cool-season crops. Watch for late-frost dates before transplanting tomatoes.", mild:"Peak planting time — tomatoes, peppers, squash, beans. Perennials waking up.", warm:"Mediterranean dry season starts soon. Plant drought-tolerant natives now while soil is moist.", tropical:"Manage rainy-season drainage. Plant tropical fruit trees while rains help establish them." },
+  4:  { cold:"Last-frost period over. Plant warm-season crops (tomatoes, peppers, basil, squash).", mild:"Plant tomatoes, peppers, basil now. Mulch is essential — summer heat is weeks away. Set up drip irrigation.", warm:"Reduce watering frequency. Wildfire prep: clear brush within 100ft of house. Final time to plant for summer harvest.", tropical:"Plant heat-loving edibles (mango, banana, papaya). Pest pressure rising — inspect weekly." },
+  5:  { cold:"Peak summer growth. Water deeply 1×/week. Stake tomatoes, pinch basil tips. Mulch heavily.", mild:"Hot days arriving. Water deep but infrequent. Harvest cool-season crops before they bolt.", warm:"Heat stress — shade afternoon-sun plants. Water before 9am. Avoid pruning (sunscald risk).", tropical:"Hurricane prep where applicable. Stake tall plants. Watch for fungal disease in humid weather." },
+  6:  { cold:"Hottest stretch — early-morning watering only. Pinch off zucchini blossoms past prime.", mild:"Mid-summer heat. Water deeply but less often. Watch for tomato hornworms.", warm:"Peak heat — water 2-3am. Many plants go dormant. Avoid fertilizing until cooler.", tropical:"Rainy season peak. Reduce watering. Watch drainage. Harvest mangoes." },
+  7:  { cold:"Plant fall crops (broccoli, kale, lettuce). Start seeds for autumn vegetables.", mild:"Plant fall vegetables now. Start dividing irises and other rhizomes.", warm:"Late summer heat continues. Plant fall garden in 6 weeks. Order spring bulbs.", tropical:"Continued rainy season. Plant cover crops. Trim trees for hurricane prep." },
+  8:  { cold:"Plant garlic, shallots. Last call for fall greens. Begin compost prep.", mild:"Excellent planting time — fall vegetables, perennials, trees, shrubs.", warm:"Cool-season planting begins. Tomatoes still producing. Plant winter veggies.", tropical:"End of rainy season approaching. Plant tropical perennials. Reduce watering frequency." },
+  9:  { cold:"Plant spring bulbs. Fall foliage peak. Last harvest before freeze. Mulch perennials.", mild:"Plant garlic. Spring bulbs in by month's end. Compost fall leaves.", warm:"Major planting month — natives, fruit trees, cool-season vegetables.", tropical:"Dry season starting. Plant new trees while temperatures are cooler. Citrus groves wake up." },
+  10: { cold:"Last leaf cleanup. Drain hoses & shut off outdoor water. Wrap young trees.", mild:"Plant garlic. Last call for fall planting. Apply mulch for winter protection.", warm:"Plant winter veggies (broccoli, cabbage, kale). Citrus harvest beginning.", tropical:"Cool dry season — peak planting time. Plant fruit trees, perennials. Less rainfall expected." },
+  11: { cold:"Winter dormancy. Plan next year's garden. Sharpen and oil tools.", mild:"Dormant pruning of fruit trees. Plant bare-root in milder zones.", warm:"Plant cool-season veggies, sweet peas, snap peas. Citrus harvest peaks.", tropical:"Cool dry weather — ideal planting. Visit local nurseries — best selection of natives." }
+};
+function getSeasonalTip(zone) {
+  const month = new Date().getMonth();
+  const zoneNum = parseInt(zone, 10);
+  const grp = zoneNum >= 12 ? "tropical" : (zoneNum >= 10 ? "warm" : (zoneNum >= 7 ? "mild" : "cold"));
+  return {
+    monthName: MONTH_NAMES[month],
+    text: (SEASONAL_TIPS[month] || {})[grp] || "Adjust to your local conditions and watch for first/last frost dates."
+  };
+}
+
 // Watering tips by climate type
 const WATERING_BY_CLIMATE = {
   "Subarctic":   "Short growing season — water deeply but infrequently. Hand-water young plants; established natives need almost no supplemental water.",
@@ -3137,6 +3361,14 @@ function plantCardHtml(p) {
 
 function renderYard(yard) {
   $("card-yard").hidden = false;
+
+  // v0.21: Today's seasonal action — populate the hero
+  const tip = getSeasonalTip(yard.zone);
+  $("yard-today-hero").hidden = false;
+  setText("yard-today-eyebrow", `Right now · ${tip.monthName} · Zone ${yard.zone}`);
+  setText("yard-today-title", `What to do this ${tip.monthName.toLowerCase().includes("ember") ? "month" : "week"}`);
+  setText("yard-today-text", tip.text);
+
   setText("yard-value", `Zone ${yard.zone} · ${(yard.info.climate || "—")}`);
   const pill = $("yard-summary");
   pill.hidden = false;
@@ -3270,8 +3502,11 @@ function resolveRisks(addr, lat, lon, zone) {
 function renderRisks(risks) {
   $("card-risks").hidden = false;
   const maxScore = Math.max(...risks.rows.map(r => r.score));
-  setText("risks-headline", maxScore >= 7 ? "Significant risks — review each factor below" : (maxScore >= 4 ? "Some moderate risks worth knowing" : "Generally low risk in this area"));
-  $("risks-summary").textContent = "Click any factor for the official source";
+  const summary = maxScore >= 7 ? "Significant risks — click to review"
+                : maxScore >= 4 ? "Some moderate risks — click to review"
+                                : "Generally low risk — click to expand";
+  setText("risks-headline", `Climate risks · max ${maxScore}/10`);
+  setText("risks-summary", summary);
   const html = risks.rows.map(r => `
     <a class="risk-row" href="${r.url}" target="_blank" rel="noopener">
       <div class="risk-glyph">${r.glyph}</div>
@@ -3600,6 +3835,17 @@ $("resetBtn").addEventListener("click", () => {
   addrEl.value = ""; addrEl.focus();
   clearStatus();
 });
+
+// v0.21: Climate risks collapsible toggle
+const risksToggle = $("risks-toggle");
+if (risksToggle) {
+  risksToggle.addEventListener("click", () => {
+    const card = $("card-risks");
+    const wasCollapsed = card.classList.contains("collapsed");
+    card.classList.toggle("collapsed");
+    risksToggle.setAttribute("aria-expanded", String(wasCollapsed));
+  });
+}
 </script>
 </body>
 </html>
