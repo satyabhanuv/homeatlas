@@ -442,6 +442,57 @@
   .privacy { background: rgba(45,106,79,0.06); border: 1px solid rgba(45,106,79,0.18); padding: 14px 16px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; margin-top: 16px; }
   .privacy b { color: var(--primary-2); }
 
+  /* ─── v0.22: Slim context bar inside cards (replaces inner header) ── */
+  .card-context-bar {
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; margin-bottom: 14px;
+  }
+  .card-context-text {
+    font-size: 17px; font-weight: 700; color: var(--ink);
+    flex: 1; min-width: 0;
+  }
+  .card-context-text .ctx-sub {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--ink-soft); margin-top: 2px;
+  }
+  .card-context-bar .summary-pill {
+    margin-left: 0;
+    padding: 6px 12px; border-radius: 999px;
+    background: rgba(45,106,79,0.08); color: var(--primary);
+    font-size: 12px; font-weight: 600;
+  }
+  .info-btn {
+    width: 22px; height: 22px;
+    border-radius: 50%; border: 1px solid var(--line);
+    background: rgba(0,0,0,0.04); color: var(--ink-faint);
+    cursor: pointer; padding: 0;
+    display: grid; place-items: center;
+    font-size: 12px; font-weight: 700; font-style: italic; font-family: Georgia, serif;
+    transition: all 0.15s ease; flex-shrink: 0;
+  }
+  .info-btn:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .info-popover {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    background: rgba(45,106,79,0.05);
+    border-left: 3px solid var(--primary);
+    border-radius: 0 6px 6px 0;
+    font-size: 13px; color: var(--ink-soft); line-height: 1.5;
+  }
+  .info-popover[hidden] { display: none; }
+  .info-popover b { color: var(--primary-2); }
+  /* Compact service cards (no inner icon/h3 — section header is enough) */
+  .card.service-card { padding: 14px 16px; }
+  .card.service-card .card-context-text { font-size: 15px; }
+  /* "Most used in neighborhood" pill on category headers */
+  .pgroup-popular {
+    display: inline-block; margin-left: 8px;
+    padding: 2px 8px; border-radius: 999px;
+    background: var(--primary); color: #fff;
+    font-size: 10px; letter-spacing: 0.4px;
+    text-transform: uppercase; font-weight: 700;
+  }
+
   /* ─── v0.21: Big distinctive section headers ──────────────────────── */
   .page-section-header {
     display: flex; gap: 16px; align-items: center;
@@ -642,15 +693,8 @@
       </div>
     </div>
 
-    <!-- Home details placeholder (v0.19) — laying groundwork for house anatomy module -->
+    <!-- Home details placeholder — section header explains, no inner header -->
     <div class="home-card" id="card-home" hidden>
-      <div class="home-head">
-        <div class="icon">🏠</div>
-        <div>
-          <h3>Home details</h3>
-          <div class="value">Tell us about the house to unlock more</div>
-        </div>
-      </div>
       <div class="home-grid" id="home-grid"></div>
     </div>
 
@@ -665,37 +709,50 @@
     </div>
 
     <div class="grid">
-      <div class="card" id="card-electric">
-        <div class="icon">⚡</div>
-        <h3>Electric service</h3>
-        <div class="value" id="electric-value">—</div>
-        <div class="meta" id="electric-meta"></div>
+      <div class="card service-card" id="card-electric">
+        <div class="card-context-bar">
+          <div class="card-context-text">⚡ Electric · <span id="electric-value">—</span><span class="ctx-sub" id="electric-meta"></span></div>
+          <button class="info-btn" type="button" data-info-target="electric-info-popover" aria-label="About electric service">i</button>
+        </div>
+        <div class="info-popover" id="electric-info-popover" hidden>
+          <b>How this works:</b> we resolve your utility from your address. Where Community Choice Aggregators exist (CA only for now), we show both the wires/billing utility and the generation supplier.
+        </div>
         <div id="electric-body"></div>
         <div class="source" id="electric-source"></div>
       </div>
 
-      <div class="card" id="card-internet">
-        <div class="icon">🌐</div>
-        <h3>Internet providers</h3>
-        <div class="value" id="internet-value">—</div>
+      <div class="card service-card" id="card-internet">
+        <div class="card-context-bar">
+          <div class="card-context-text">🌐 Internet · <span id="internet-value">—</span></div>
+          <button class="info-btn" type="button" data-info-target="internet-info-popover" aria-label="About internet providers">i</button>
+        </div>
+        <div class="info-popover" id="internet-info-popover" hidden>
+          <b>About these speeds:</b> shown are typical max residential plans. Actual at your address may differ. Use the FCC link for the official block-level coverage.
+        </div>
         <div id="internet-body"></div>
         <div class="source" id="internet-source"></div>
       </div>
 
-      <div class="card" id="card-tv">
-        <div class="icon">📺</div>
-        <h3>TV providers</h3>
-        <div class="value" id="tv-value">—</div>
+      <div class="card service-card" id="card-tv">
+        <div class="card-context-bar">
+          <div class="card-context-text">📺 TV · <span id="tv-value">—</span></div>
+          <button class="info-btn" type="button" data-info-target="tv-info-popover" aria-label="About TV providers">i</button>
+        </div>
+        <div class="info-popover" id="tv-info-popover" hidden>
+          <b>Channel lineups</b> vary by plan — visit each provider for current packages.
+        </div>
         <div id="tv-body"></div>
-        <div class="source">Channel lineups vary by plan — visit each provider for current packages.</div>
       </div>
 
-      <div class="card" id="card-security">
-        <div class="icon">🛡️</div>
-        <h3>Home security</h3>
-        <div class="value" id="security-value">—</div>
+      <div class="card service-card" id="card-security">
+        <div class="card-context-bar">
+          <div class="card-context-text">🛡️ Security · <span id="security-value">—</span></div>
+          <button class="info-btn" type="button" data-info-target="security-info-popover" aria-label="About security providers">i</button>
+        </div>
+        <div class="info-popover" id="security-info-popover" hidden>
+          <b>DIY vs Pro:</b> DIY is no-contract and self-install. Pro-install often requires a multi-year monitoring contract. Smart-home options integrate with Google Nest or Apple HomeKit.
+        </div>
         <div id="security-body"></div>
-        <div class="source">Most major brands serve all of California. DIY is no-contract; pro-install often requires a multi-year agreement.</div>
       </div>
     </div>
 
@@ -711,25 +768,23 @@
 
     <!-- Schools — full width below grid -->
     <div class="schools-card" id="card-school">
-      <div class="schools-head">
-        <div class="icon">🎓</div>
-        <div class="text-block">
-          <h3>Schools &amp; nearby education</h3>
-          <div class="value" id="school-value">—</div>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="school-value">—</span>
+          <span class="ctx-sub" id="school-meta"></span>
         </div>
+        <button class="info-btn" type="button" data-info-target="school-info-popover" aria-label="About school assignment">i</button>
         <div class="summary-pill" id="school-summary" hidden></div>
       </div>
-      <div class="schools-meta" id="school-meta"></div>
+      <div class="info-popover" id="school-info-popover" hidden>
+        <b>About these schools:</b> these are the <i>nearest</i> schools by level &amp; type — usually but not always your home's assigned school. Attendance zones vary block by block. Verify your assigned school with your district's school finder.
+      </div>
 
       <div class="schools-loading" id="school-loading" hidden>
         Finding schools, libraries, and nearby educational facilities…
       </div>
 
       <div id="school-sections" hidden>
-        <div class="schools-disclaimer">
-          <b>Note:</b> these are the <i>nearest</i> schools by level &amp; type — usually but not always your home&rsquo;s assigned school. Attendance zones vary block by block. Verify your assigned school with your district&rsquo;s school finder.
-        </div>
-
         <div class="school-section" id="public-section" hidden>
           <h4>Public schools <span class="hint">— closest district school in each level</span></h4>
           <div id="public-tbody"></div>
@@ -773,13 +828,15 @@
 
     <!-- Parks & places card MOVED here (between Schools and Yard) -->
     <div class="parks-card" id="card-parks" hidden>
-      <div class="parks-head">
-        <div class="icon">🌳</div>
-        <div class="text-block">
-          <h3>Parks &amp; places to go</h3>
-          <div class="value" id="parks-value">—</div>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="parks-value">—</span>
         </div>
+        <button class="info-btn" type="button" data-info-target="parks-info-popover" aria-label="About parks data">i</button>
         <div class="summary-pill" id="parks-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="parks-info-popover" hidden>
+        <b>About these places:</b> sourced from OpenStreetMap. Distances are straight-line ("as the crow flies") from your address. Coverage is best in metros and improving in suburbs/rural areas as volunteers add data.
       </div>
       <div class="parks-loading" id="parks-loading" hidden>Finding parks, dog parks, playgrounds, and trails near you…</div>
       <div id="parks-sections" hidden>
@@ -817,13 +874,15 @@
 
     <!-- Yard & Garden — full width below schools -->
     <div class="yard-card" id="card-yard" hidden>
-      <div class="yard-head">
-        <div class="icon">🌱</div>
-        <div class="text-block">
-          <h3>Yard &amp; garden</h3>
-          <div class="value" id="yard-value">—</div>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="yard-value">—</span>
         </div>
+        <button class="info-btn" type="button" data-info-target="yard-info-popover" aria-label="About yard recommendations">i</button>
         <div class="summary-pill" id="yard-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="yard-info-popover" hidden>
+        <b>How this works:</b> we use your USDA Plant Hardiness Zone (resolved from your address) to recommend plants and seasonal actions. Climate type shapes watering tips. Zone is inferred from city/state when not directly mapped.
       </div>
 
       <!-- v0.21: Today's seasonal action — what should I do RIGHT NOW? -->
@@ -921,7 +980,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.21 · April 2026 · Phase 2 · Page-wide redesign (sections + collapsible risks + today hero)
+      <b>HomeAtlas</b> &mdash; v0.22 · April 2026 · Phase 2 · One header per section, info popovers, compact services
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2717,29 +2776,30 @@ function classifyEducationItem(el) {
 function renderGroupedSections(containerId, rows, opts) {
   const root = $(containerId); if (!root) return;
   if (!rows || rows.length === 0) { root.innerHTML = ""; return; }
-  // Group rows by their `group` field, preserving the supplied order
   const groups = [];
   for (const groupName of opts.order) {
     const groupRows = rows.filter(r => r.group === groupName);
     if (groupRows.length > 0) groups.push({ label: groupName, rows: groupRows });
   }
-  // Append any rows whose group isn't in the supplied order (shouldn't happen, defensive)
   const known = new Set(opts.order);
   const stragglers = rows.filter(r => !known.has(r.group));
   if (stragglers.length) groups.push({ label: "Other", rows: stragglers });
 
-  root.innerHTML = groups.map(g => `
+  // v0.22: tag the dominant group with a "Most used here" pill
+  root.innerHTML = groups.map(g => {
+    const popular = (g.label === opts.popularGroup) ? '<span class="pgroup-popular">Most used in neighborhood</span>' : "";
+    return `
     <div class="pgroup">
       <div class="pgroup-head">
         ${escapeHtml(g.label)}
-        <span class="pgroup-count">(${g.rows.length})</span>
+        <span class="pgroup-count">(${g.rows.length})</span>${popular}
       </div>
       <div class="tbl-wrap"><table class="ptable">
         ${opts.headHtml || ""}
         <tbody>${g.rows.map(opts.rowFn).join("")}</tbody>
       </table></div>
-    </div>
-  `).join("");
+    </div>`;
+  }).join("");
 }
 
 /* -------- Renderers -------------------------------------------------- */
@@ -2828,6 +2888,7 @@ function renderInternet(i, lat, lon, state) {
   setText("internet-value", `${capped.length} options${i.rows.length > capped.length ? ` (top of ${i.rows.length})` : ""}`);
   renderGroupedSections("internet-body", capped, {
     order: ISP_GROUP_ORDER,
+    popularGroup: "Cable",   // cable is the dominant home-internet choice in most US areas
     headHtml: `<thead><tr><th>Provider</th><th>Technology</th><th class="num-h">Down</th><th class="num-h">Up</th><th></th></tr></thead>`,
     rowFn: r => `<tr>
       <td>${providerCell(r.name)}</td>
@@ -2858,6 +2919,7 @@ function renderTV(t) {
   setText("tv-value", `${cap5.length} options${t.rows.length > cap5.length ? ` (top of ${t.rows.length})` : ""}`);
   renderGroupedSections("tv-body", cap5, {
     order: TV_GROUP_ORDER,
+    popularGroup: "Streaming live TV",   // cord-cutting is the dominant trend
     headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
     rowFn: r => {
       const isAntenna = r.name.startsWith("OTA Antenna");
@@ -2885,6 +2947,7 @@ function renderSecurity(s) {
   setText("security-value", `${cap5.length} options${s.rows.length > cap5.length ? ` (top of ${s.rows.length})` : ""}`);
   renderGroupedSections("security-body", cap5, {
     order: SECURITY_GROUP_ORDER,
+    popularGroup: "DIY systems",   // DIY (Ring, SimpliSafe) dominates new installs
     headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
     rowFn: r => `<tr>
       <td>${providerCell(r.name)}</td>
@@ -3834,6 +3897,17 @@ $("resetBtn").addEventListener("click", () => {
   $("results").hidden = true;
   addrEl.value = ""; addrEl.focus();
   clearStatus();
+});
+
+// v0.22: Info-button popovers (delegated handler for any [data-info-target])
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".info-btn[data-info-target]");
+  if (!btn) return;
+  const target = $(btn.dataset.infoTarget);
+  if (!target) return;
+  e.preventDefault();
+  target.hidden = !target.hidden;
+  btn.setAttribute("aria-expanded", String(!target.hidden));
 });
 
 // v0.21: Climate risks collapsible toggle
