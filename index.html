@@ -140,6 +140,12 @@
   .resolved-head .reset-btn { margin-left: auto; font-size: 12px; padding: 5px 10px; background: var(--line); color: var(--ink-soft); border: none; border-radius: 6px; cursor: pointer; font-weight: 600; }
   .resolved-head .reset-btn:hover { background: #d6cfc0; }
   .resolved-grid { display: grid; gap: 14px 28px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  /* v0.20: icon-tile grid for resolved card (reuses .home-tile from home-card) */
+  .resolved-tiles { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .resolved-tiles .home-tile { padding: 12px 14px; }
+  .resolved-tiles .home-tile-value { font-size: 15px; font-weight: 600; word-break: break-word; }
+  .resolved-tiles .home-tile-icon { font-size: 18px; flex: 0 0 22px; }
+  .resolved-tiles .home-tile-value .inferred { color: var(--ink-faint); font-size: 10.5px; font-weight: 600; margin-left: 4px; display: inline-block; }
   .resolved-cell { display: flex; flex-direction: column; gap: 3px; }
   .resolved-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-faint); font-weight: 700; }
   .resolved-value { font-size: 15px; color: var(--ink); font-weight: 500; word-break: break-word; }
@@ -396,6 +402,24 @@
   .schools-loading.error::before { display: none; }
   .schools-loading.error { color: var(--error); background: #fdecea; border-color: #f8c9c5; }
   .schools-empty { padding: 16px; color: var(--ink-faint); font-size: 14px; font-style: italic; }
+  /* v0.20: schools rendered as rows with circular rating-style badges */
+  .school-row { display: flex; align-items: center; gap: 14px; padding: 12px 6px; border-bottom: 1px solid var(--line); transition: background 0.12s ease; }
+  .school-row:last-child { border-bottom: none; }
+  .school-row:hover { background: rgba(0,0,0,0.02); }
+  .school-row .school-badge { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-weight: 700; line-height: 1; gap: 1px; }
+  .school-badge .badge-num  { font-size: 17px; }
+  .school-badge .badge-unit { font-size: 9.5px; opacity: 0.85; letter-spacing: 0.4px; text-transform: uppercase; }
+  .school-badge.dist-near   { background: #2d6a4f; }
+  .school-badge.dist-mid    { background: #1d3a5f; }
+  .school-badge.dist-far    { background: #6b7280; }
+  .school-badge.dist-na     { background: var(--ink-faint); opacity: 0.5; }
+  .school-info { flex: 1; min-width: 0; }
+  .school-name { font-size: 16px; font-weight: 700; color: var(--primary); text-decoration: none; word-break: break-word; }
+  .school-name:hover { text-decoration: underline; }
+  .school-meta { font-size: 13px; color: var(--ink-soft); margin-top: 4px; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .school-meta b { color: var(--ink); font-weight: 600; }
+  .school-meta-empty { font-size: 13px; color: var(--ink-faint); font-style: italic; }
+  .school-icons { display: flex; gap: 4px; flex-shrink: 0; align-self: center; }
   .retry-btn { display: inline-block; margin-left: 10px; padding: 5px 12px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; }
   .retry-btn:hover { background: var(--primary-2); }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -469,13 +493,14 @@
           <div class="map-loading" id="ra-map-loading">Loading map…</div>
           <iframe id="ra-map" src="" loading="lazy" title="Map of your address" referrerpolicy="no-referrer-when-downgrade"></iframe>
         </div>
-        <div class="resolved-grid">
-          <div class="resolved-cell"><span class="resolved-label">Street</span><span class="resolved-value" id="ra-street">—</span></div>
-          <div class="resolved-cell"><span class="resolved-label">City</span><span class="resolved-value" id="ra-city">—</span></div>
-          <div class="resolved-cell"><span class="resolved-label">County</span><span class="resolved-value" id="ra-county">—</span></div>
-          <div class="resolved-cell"><span class="resolved-label">ZIP</span><span class="resolved-value" id="ra-zip">—</span></div>
-          <div class="resolved-cell"><span class="resolved-label">State</span><span class="resolved-value" id="ra-state">—</span></div>
-          <div class="resolved-cell"><span class="resolved-label">Coordinates</span><span class="resolved-value" id="ra-coords">—</span></div>
+        <!-- v0.20: icon-tile grid (same data, new visual) -->
+        <div class="resolved-tiles">
+          <div class="home-tile"><div class="home-tile-icon">🛣️</div><div class="home-tile-body"><div class="home-tile-value" id="ra-street">—</div><div class="home-tile-label">Street</div></div></div>
+          <div class="home-tile"><div class="home-tile-icon">🏙️</div><div class="home-tile-body"><div class="home-tile-value" id="ra-city">—</div><div class="home-tile-label">City</div></div></div>
+          <div class="home-tile"><div class="home-tile-icon">🗺️</div><div class="home-tile-body"><div class="home-tile-value" id="ra-county">—</div><div class="home-tile-label">County</div></div></div>
+          <div class="home-tile"><div class="home-tile-icon">📮</div><div class="home-tile-body"><div class="home-tile-value" id="ra-zip">—</div><div class="home-tile-label">ZIP</div></div></div>
+          <div class="home-tile"><div class="home-tile-icon">🇺🇸</div><div class="home-tile-body"><div class="home-tile-value" id="ra-state">—</div><div class="home-tile-label">State</div></div></div>
+          <div class="home-tile"><div class="home-tile-icon">📍</div><div class="home-tile-body"><div class="home-tile-value" id="ra-coords">—</div><div class="home-tile-label">Coordinates</div></div></div>
         </div>
       </div>
       <div class="ra-map-link" id="ra-map-link"></div>
@@ -568,42 +593,27 @@
 
         <div class="school-section" id="public-section" hidden>
           <h4>Public schools <span class="hint">— closest district school in each level</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Level</th><th>School</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="public-tbody"></tbody>
-          </table></div>
+          <div id="public-tbody"></div>
         </div>
 
         <div class="school-section" id="private-section" hidden>
           <h4>Private schools <span class="hint">— closest religious/independent school in each level</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Level</th><th>School</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="private-tbody"></tbody>
-          </table></div>
+          <div id="private-tbody"></div>
         </div>
 
         <div class="school-section" id="other-section" hidden>
           <h4>Other schools <span class="hint">— closest charter / magnet / specialty in each level</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Level</th><th>School</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="other-tbody"></tbody>
-          </table></div>
+          <div id="other-tbody"></div>
         </div>
 
         <div class="school-section" id="higher-section" hidden>
           <h4>Colleges &amp; universities</h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Institution</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="higher-tbody"></tbody>
-          </table></div>
+          <div id="higher-tbody"></div>
         </div>
 
         <div class="school-section" id="enrichment-section" hidden>
           <h4>Libraries, pools, sports &amp; community centers</h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Place</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="enrichment-tbody"></tbody>
-          </table></div>
+          <div id="enrichment-tbody"></div>
         </div>
       </div>
 
@@ -669,31 +679,19 @@
       <div id="parks-sections" hidden>
         <div class="school-section" id="parks-park-section" hidden>
           <h4>Parks &amp; gardens</h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Park</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="parks-park-tbody"></tbody>
-          </table></div>
+          <div id="parks-park-tbody"></div>
         </div>
         <div class="school-section" id="parks-dog-section" hidden>
           <h4>Dog parks <span class="hint">— for your pet to play</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Place</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="parks-dog-tbody"></tbody>
-          </table></div>
+          <div id="parks-dog-tbody"></div>
         </div>
         <div class="school-section" id="parks-playground-section" hidden>
           <h4>Playgrounds <span class="hint">— for kids</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Place</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="parks-playground-tbody"></tbody>
-          </table></div>
+          <div id="parks-playground-tbody"></div>
         </div>
         <div class="school-section" id="parks-trail-section" hidden>
           <h4>Trails &amp; nature <span class="hint">— for running, hiking, walking</span></h4>
-          <div class="tbl-wrap"><table class="ptable">
-            <thead><tr><th>Trail</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
-            <tbody id="parks-trail-tbody"></tbody>
-          </table></div>
+          <div id="parks-trail-tbody"></div>
         </div>
       </div>
       <div class="source" style="margin-top:14px;">
@@ -726,7 +724,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.19 · April 2026 · Phase 2 · Climate risks + Parks card + Home details + visual UI overhaul
+      <b>HomeAtlas</b> &mdash; v0.20 · April 2026 · Phase 2 · Visual restyle (address tiles + school rating circles)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2703,16 +2701,25 @@ function renderDistrictHeader(sc) {
   setText("school-value", sc.name);
   setText("school-meta",  sc.note);
 }
+// v0.20: badge-row format for non-K-12 (Higher Ed, parks, libraries, etc.)
+// Badge shows distance number with "mi" subscript instead of a level letter.
 function placeRow(item, cityKey) {
   const q = `${item.name} ${cityKey || ""}`.trim();
   const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const map   = mapUrlExact(item.lat, item.lon);
-  return `<tr>
-    <td><a class="provider-link" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a></td>
-    <td class="role">${escapeHtml(item.subtype)}</td>
-    <td class="numeric">${item.dist.toFixed(2)} mi</td>
-    <td class="icon-cell">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</td>
-  </tr>`;
+  return `<div class="school-row">
+    <div class="school-badge ${distClass(item.dist)}">
+      <span class="badge-num">${item.dist.toFixed(1)}</span>
+      <span class="badge-unit">mi</span>
+    </div>
+    <div class="school-info">
+      <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
+      <div class="school-meta">
+        <span><b>Type:</b> ${escapeHtml(item.subtype)}</span>
+      </div>
+    </div>
+    <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
+  </div>`;
 }
 // v0.12: build a 3×3 grid (Elementary/Middle/High × category).
 // `pool` is already sorted by distance ascending. Returns picks for all
@@ -2739,24 +2746,49 @@ function pickThreeLevels(pool) {
     High:       pick("High")
   };
 }
+// v0.20: level badge color by distance
+function distClass(d) {
+  if (d == null) return "dist-na";
+  if (d < 0.5)   return "dist-near";
+  if (d < 1.5)   return "dist-mid";
+  return "dist-far";
+}
+// Level letter inside the badge: E, M, H, K-12 etc
+function levelLetter(level) {
+  if (level === "Elementary")     return "E";
+  if (level === "Middle")         return "M";
+  if (level === "High")           return "H";
+  if (level === "K-8 / K-12")     return "K-12";
+  if (level === "Mixed levels")   return "K-12";
+  return level && level[0] ? level[0].toUpperCase() : "?";
+}
+// v0.20: badge-row format replacing the old table cell layout
 function levelRow(level, item, cityKey) {
   if (!item) {
-    return `<tr>
-      <td><b>${level}</b></td>
-      <td style="color:var(--ink-faint);font-style:italic;">No nearby match found in OpenStreetMap</td>
-      <td class="numeric">—</td>
-      <td class="icon-cell"></td>
-    </tr>`;
+    return `<div class="school-row">
+      <div class="school-badge dist-na"><span class="badge-num">${escapeHtml(levelLetter(level))}</span></div>
+      <div class="school-info">
+        <div class="school-name" style="color:var(--ink-soft); pointer-events:none;">${escapeHtml(level)}</div>
+        <div class="school-meta-empty">No nearby match found in OpenStreetMap</div>
+      </div>
+    </div>`;
   }
-  const q = `${item.name} ${cityKey || "California"}`;
+  const q = `${item.name} ${cityKey || ""}`.trim();
   const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const map   = mapUrlExact(item.lat, item.lon);
-  return `<tr>
-    <td><b>${level}</b></td>
-    <td><a class="provider-link" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a></td>
-    <td class="numeric">${item.dist.toFixed(2)} mi</td>
-    <td class="icon-cell">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</td>
-  </tr>`;
+  return `<div class="school-row">
+    <div class="school-badge ${distClass(item.dist)}">
+      <span class="badge-num">${escapeHtml(levelLetter(level))}</span>
+    </div>
+    <div class="school-info">
+      <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
+      <div class="school-meta">
+        <span><b>Level:</b> ${escapeHtml(level)}</span>
+        <span><b>Distance:</b> ${item.dist.toFixed(2)} mi</span>
+      </div>
+    </div>
+    <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
+  </div>`;
 }
 
 function renderSchoolSections(grouped, total, cityKey) {
