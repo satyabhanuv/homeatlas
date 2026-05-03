@@ -289,6 +289,93 @@
   .yard-tip + .yard-tip { margin-top: 8px; }
   .yard-tip b { color: var(--primary-2); }
 
+  /* ─── v0.19: Climate risks card (Zillow/Redfin-style score rows) ── */
+  .risks-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  .risks-head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .risks-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(176,52,52,0.10); color: #b34d4d; }
+  .risks-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .risks-head .text-block { display: flex; flex-direction: column; }
+  .risks-head .value { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .risks-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(176,52,52,0.10); color: #b34d4d; font-size: 12px; font-weight: 600; }
+  .risk-row {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 4px; border-bottom: 1px solid var(--line);
+    text-decoration: none; color: inherit;
+    transition: background 0.12s ease;
+  }
+  .risk-row:last-child { border-bottom: none; }
+  .risk-row:hover { background: rgba(0,0,0,0.02); }
+  .risk-glyph {
+    width: 44px; height: 44px; flex: 0 0 44px;
+    display: grid; place-items: center; font-size: 26px;
+    border-radius: 8px;
+  }
+  .risk-text { flex: 1; min-width: 0; }
+  .risk-title { font-weight: 700; font-size: 15px; color: var(--ink); }
+  .risk-title .score { color: var(--ink); }
+  .risk-title .score-low    { color: #2d6a4f; }
+  .risk-title .score-mod    { color: #b08900; }
+  .risk-title .score-high   { color: #b34d4d; }
+  .risk-desc { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.45; }
+  .risk-arrow { color: var(--ink-faint); font-size: 22px; align-self: center; flex: 0 0 auto; }
+
+  /* ─── v0.19: Home details placeholder card ───────────────────────── */
+  .home-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  .home-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+  .home-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
+  .home-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .home-head .value { font-size: 20px; font-weight: 700; color: var(--ink); }
+  .home-grid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .home-tile {
+    background: rgba(45,106,79,0.04);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: default;
+  }
+  .home-tile.editable { cursor: pointer; transition: background 0.12s ease; }
+  .home-tile.editable:hover { background: rgba(45,106,79,0.10); }
+  .home-tile-icon { font-size: 22px; flex: 0 0 24px; }
+  .home-tile-body { display: flex; flex-direction: column; min-width: 0; }
+  .home-tile-value { font-size: 17px; font-weight: 700; color: var(--ink); }
+  .home-tile-value .edit-hint { font-size: 12px; font-weight: 500; color: var(--primary); margin-left: 4px; }
+  .home-tile-label { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
+  .home-tile-input { font-size: 16px; font-weight: 700; color: var(--ink); background: transparent; border: 1px solid var(--primary); border-radius: 4px; padding: 1px 4px; width: 80px; outline: none; }
+
+  /* ─── v0.19: Parks & places card ─────────────────────────────────── */
+  .parks-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  .parks-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
+  .parks-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
+  .parks-head .text-block { display: flex; flex-direction: column; }
+  .parks-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
+  .parks-head .value { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 2px; }
+  .parks-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 13px; font-weight: 600; }
+  .parks-loading { margin-top: 16px; padding: 20px; text-align: center; color: var(--ink-soft); background: rgba(45,106,79,0.03); border: 1px dashed var(--line); border-radius: 10px; font-size: 14px; }
+  .parks-loading::before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 10px; vertical-align: middle; border: 2px solid var(--line); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+
+  /* ─── v0.19: Watering tile prominence ───────────────────────────── */
+  .water-tile {
+    margin-top: 12px;
+    background: linear-gradient(135deg, rgba(45,106,79,0.10), rgba(212,163,115,0.08));
+    border: 1px solid rgba(45,106,79,0.20);
+    border-radius: 12px;
+    padding: 18px 22px;
+    display: flex; align-items: center; gap: 18px;
+  }
+  .water-tile-icon {
+    width: 56px; height: 56px; flex: 0 0 56px;
+    border-radius: 50%; background: rgba(45,106,79,0.14);
+    color: var(--primary-2); display: grid; place-items: center;
+    font-size: 28px;
+  }
+  .water-tile-body { flex: 1; }
+  .water-tile-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--primary-2); font-weight: 700;
+  }
+  .water-tile-text { font-size: 15px; color: var(--ink); margin-top: 4px; line-height: 1.5; font-weight: 500; }
+
   /* Schools full-width card */
   .schools-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
   .schools-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
@@ -395,6 +482,18 @@
       <div id="ra-precision-notice"></div>
     </div>
 
+    <!-- Home details placeholder (v0.19) — laying groundwork for house anatomy module -->
+    <div class="home-card" id="card-home" hidden>
+      <div class="home-head">
+        <div class="icon">🏠</div>
+        <div>
+          <h3>Home details</h3>
+          <div class="value">Tell us about the house to unlock more</div>
+        </div>
+      </div>
+      <div class="home-grid" id="home-grid"></div>
+    </div>
+
     <div class="grid">
       <div class="card" id="card-electric">
         <div class="icon">⚡</div>
@@ -427,6 +526,22 @@
         <div class="value" id="security-value">—</div>
         <div id="security-body"></div>
         <div class="source">Most major brands serve all of California. DIY is no-contract; pro-install often requires a multi-year agreement.</div>
+      </div>
+    </div>
+
+    <!-- Climate risks (v0.19) — full width, Zillow-style score rows -->
+    <div class="risks-card" id="card-risks" hidden>
+      <div class="risks-head">
+        <div class="icon">⚠️</div>
+        <div class="text-block">
+          <h3>Climate risks</h3>
+          <div class="value" id="risks-headline">—</div>
+        </div>
+        <div class="summary-pill" id="risks-summary"></div>
+      </div>
+      <div id="risks-body"></div>
+      <div class="source" style="margin-top:12px;">
+        Scores are rough estimates by region/state/climate zone. Click any factor for the authoritative free source (FEMA / Cal Fire / AirNow / NOAA) for your specific address.
       </div>
     </div>
 
@@ -540,6 +655,52 @@
       </div>
     </div>
 
+    <!-- Parks & places (v0.19) — full width, Overpass-driven -->
+    <div class="parks-card" id="card-parks" hidden>
+      <div class="parks-head">
+        <div class="icon">🌳</div>
+        <div class="text-block">
+          <h3>Parks &amp; places to go</h3>
+          <div class="value" id="parks-value">—</div>
+        </div>
+        <div class="summary-pill" id="parks-summary" hidden></div>
+      </div>
+      <div class="parks-loading" id="parks-loading" hidden>Finding parks, dog parks, playgrounds, and trails near you…</div>
+      <div id="parks-sections" hidden>
+        <div class="school-section" id="parks-park-section" hidden>
+          <h4>Parks &amp; gardens</h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Park</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="parks-park-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="parks-dog-section" hidden>
+          <h4>Dog parks <span class="hint">— for your pet to play</span></h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Place</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="parks-dog-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="parks-playground-section" hidden>
+          <h4>Playgrounds <span class="hint">— for kids</span></h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Place</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="parks-playground-tbody"></tbody>
+          </table></div>
+        </div>
+        <div class="school-section" id="parks-trail-section" hidden>
+          <h4>Trails &amp; nature <span class="hint">— for running, hiking, walking</span></h4>
+          <div class="tbl-wrap"><table class="ptable">
+            <thead><tr><th>Trail</th><th>Type</th><th class="num-h">Distance</th><th></th></tr></thead>
+            <tbody id="parks-trail-tbody"></tbody>
+          </table></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line from your address.
+      </div>
+    </div>
+
   </section>
 
   <!-- Coming Soon -->
@@ -565,7 +726,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.17 · April 2026 · Phase 2 · Photon + Census autocomplete; Nominatim only at submit
+      <b>HomeAtlas</b> &mdash; v0.19 · April 2026 · Phase 2 · Climate risks + Parks card + Home details + visual UI overhaul
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -1973,12 +2134,66 @@ async function runDeepSearch(query) {
   }
 }
 
-/* -------- Reverse geocode -------------------------------------------- */
-async function reverseGeocode(lat, lon) {
+/* -------- Reverse geocode (Nominatim → Census fallback) ------------- */
+async function reverseGeocodeNominatim(lat, lon) {
   const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=jsonv2&addressdetails=1`;
   const res = await fetch(url, { headers: { "Accept": "application/json" } });
-  if (!res.ok) throw new Error("Reverse geocode failed: " + res.status);
-  return await res.json();
+  if (!res.ok) throw new Error("Nominatim " + res.status);
+  const data = await res.json();
+  if (!data || !data.address) throw new Error("Nominatim: empty response");
+  return data;
+}
+
+// v0.18: Census Bureau reverse-geocode by coordinates. Public-domain,
+// browser-CORS friendly, and crucially returns structured Counties/States/
+// Places — which our downstream resolvers (resolveElectric, etc.) need.
+function censusReverseToNominatim(data, lat, lon) {
+  const geos = data && data.result && data.result.geographies;
+  if (!geos) return null;
+  const county = (geos["Counties"] && geos["Counties"][0] && geos["Counties"][0].NAME) || "";
+  const state  = (geos["States"] && geos["States"][0] && geos["States"][0].NAME)   || "";
+  const stateCode = (geos["States"] && geos["States"][0] && geos["States"][0].STUSAB) || "";
+  // "Incorporated Places" covers cities/boroughs; CDPs cover unincorporated places
+  const placeArr = geos["Incorporated Places"] || geos["Census Designated Places"] || [];
+  let place = (placeArr[0] && placeArr[0].NAME) || "";
+  // Census labels often include trailing type ("Phoenixville borough", "Berkeley city") — strip it
+  place = place.replace(/\s+(borough|city|town|township|village|CDP)$/i, "").trim();
+  // ZIP can come from Census 5-Digit ZIP layer if requested — not by default.
+  return {
+    display_name: [place, county, state].filter(Boolean).join(", "),
+    lat: String(lat), lon: String(lon),
+    address: {
+      city: place || undefined,
+      county: county || undefined,
+      state: state || undefined,
+      country: "United States",
+      country_code: "us",
+      "ISO3166-2-lvl4": stateCode ? `US-${stateCode}` : ""
+    }
+  };
+}
+async function reverseGeocodeCensus(lat, lon) {
+  const url = `https://geocoding.geo.census.gov/geocoder/geographies/coordinates`
+            + `?x=${lon}&y=${lat}`
+            + `&benchmark=Public_AR_Current&vintage=Current_Current&format=json`
+            + `&layers=Counties,States,Incorporated+Places,Census+Designated+Places`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Census " + res.status);
+  const data = await res.json();
+  const out = censusReverseToNominatim(data, lat, lon);
+  if (!out || !out.address.county) throw new Error("Census: no county returned");
+  return out;
+}
+
+async function reverseGeocode(lat, lon) {
+  // Try Nominatim first (most detailed — includes house number + road).
+  try {
+    return await reverseGeocodeNominatim(lat, lon);
+  } catch (e) {
+    dlog("Nominatim reverse failed, trying Census:", e.message);
+  }
+  // Fall back to Census (gives us state + county + place — enough for all cards).
+  return await reverseGeocodeCensus(lat, lon);
 }
 
 /* -------- Address helpers (with city→county fallback) ---------------- */
@@ -2932,12 +3147,259 @@ function renderYard(yard) {
     <div style="margin-top:10px;"><a class="visit-btn" href="${wssUrl}" target="_blank" rel="noopener">Open Web Soil Survey →</a> <span style="font-size:12px;color:var(--ink-faint);">Click the AOI tool, then enter your address for the exact soil series at your home.</span></div>
   `;
 
-  // Watering
+  // v0.19: Watering tile — prominent visual, can't miss it
   $("yard-care-body").innerHTML = `
-    <div class="yard-tip">${escapeHtml(yard.watering)}</div>
-    <div class="yard-tip"><b>General principle:</b> water <i>deeply but infrequently</i> to encourage deep roots. A 2-3 inch layer of mulch around plants reduces watering needs by ~40% and keeps soil temperature stable.</div>
+    <div class="water-tile">
+      <div class="water-tile-icon">💧</div>
+      <div class="water-tile-body">
+        <div class="water-tile-label">Watering schedule for your zone</div>
+        <div class="water-tile-text">${escapeHtml(yard.watering)}</div>
+      </div>
+    </div>
+    <div class="yard-tip" style="margin-top:10px;"><b>General principle:</b> water <i>deeply but infrequently</i> to encourage deep roots. A 2-3 inch layer of mulch around plants reduces watering needs by ~40% and keeps soil temperature stable.</div>
     <div class="yard-tip"><b>Best times:</b> early morning (5-9 am) — minimizes evaporation and disease. Avoid evening watering on lawns (promotes fungal disease).</div>
   `;
+}
+
+/* =====================================================================
+   v0.19: Climate risks (heuristic scoring + deep-links to authoritative)
+   ===================================================================== */
+const FIPS_BY_STATE = {
+  AL:"01",AK:"02",AZ:"04",AR:"05",CA:"06",CO:"08",CT:"09",DE:"10",FL:"12",GA:"13",
+  HI:"15",ID:"16",IL:"17",IN:"18",IA:"19",KS:"20",KY:"21",LA:"22",ME:"23",MD:"24",
+  MA:"25",MI:"26",MN:"27",MS:"28",MO:"29",MT:"30",NE:"31",NV:"32",NH:"33",NJ:"34",
+  NM:"35",NY:"36",NC:"37",ND:"38",OH:"39",OK:"40",OR:"41",PA:"42",RI:"44",SC:"45",
+  SD:"46",TN:"47",TX:"48",UT:"49",VT:"50",VA:"51",WA:"53",WV:"54",WI:"55",WY:"56",DC:"11"
+};
+
+function scoreClass(s) { return s <= 3 ? "score-low" : (s <= 6 ? "score-mod" : "score-high"); }
+function scoreLabel(s) { return s <= 3 ? "Low" : (s <= 6 ? "Moderate" : "High"); }
+
+function resolveRisks(addr, lat, lon, zone) {
+  const stateCode = getStateCode(addr);
+  const zoneNum = parseInt(zone, 10) || 7;
+  const cityKey = getCityKey(addr);
+  const fullAddr = [addr.house_number, addr.road, addr.city || cityKey, addr.state, addr.postcode].filter(Boolean).join(", ");
+
+  // Flood factor: states with significant coastal/floodplain exposure
+  const floodHigh = new Set(["FL","LA","TX","NC","SC","HI"]);
+  const floodMod  = new Set(["NJ","NY","VA","MD","DE","GA","AL","MS","CT","RI","MA","CA","WA","OR","KY","TN","MO","IL","IA","WV","AR"]);
+  let floodScore = 2, floodDesc = "Minimal flood risk in the next 30 years.";
+  if (floodHigh.has(stateCode)) { floodScore = 6; floodDesc = "Moderate-to-high flood risk; exact zone varies — check FEMA flood map for your address."; }
+  else if (floodMod.has(stateCode)) { floodScore = 4; floodDesc = "Low-to-moderate flood risk. Properties near rivers, coast, or low-lying areas may be higher."; }
+
+  // Fire factor: Western WUI + dry South-Central
+  const fireHigh = new Set(["CA","OR","WA","ID","MT","CO","NV","UT","AZ","NM","WY"]);
+  const fireMod  = new Set(["TX","OK","FL","GA","NC","SC","TN","KY","AR","KS","NE","SD","MN"]);
+  let fireScore = 2, fireDesc = "Low wildfire risk in your area.";
+  if (fireHigh.has(stateCode)) { fireScore = 7; fireDesc = "High wildfire-risk region; check Cal Fire / state hazard maps for your specific zone."; }
+  else if (fireMod.has(stateCode)) { fireScore = 4; fireDesc = "Moderate wildfire risk depending on terrain and vegetation."; }
+
+  // Heat factor: by USDA hardiness zone
+  let heatScore, heatDesc;
+  if (zoneNum >= 11)      { heatScore = 9; heatDesc = "Year-round heat; many days above 95°F."; }
+  else if (zoneNum >= 9)  { heatScore = 7; heatDesc = "Long hot summers; weeks above 90°F expected."; }
+  else if (zoneNum >= 7)  { heatScore = 4; heatDesc = "Hot summers but moderate annual heat."; }
+  else if (zoneNum >= 5)  { heatScore = 2; heatDesc = "Cool to mild summers."; }
+  else                    { heatScore = 1; heatDesc = "Short, mild summers."; }
+
+  // Air factor: regional heuristic + city overrides
+  const cityAirOverride = {
+    "Los Angeles":7,"Bakersfield":8,"Fresno":7,"Phoenix":6,"Salt Lake City":7,
+    "Denver":5,"Houston":6,"Las Vegas":5,"Riverside":7,"San Bernardino":7
+  };
+  let airScore = 3, airDesc = "Generally good air quality. AirNow.gov has today's exact AQI.";
+  if (cityAirOverride[cityKey] != null) {
+    airScore = cityAirOverride[cityKey];
+    airDesc = airScore >= 7 ? "Frequent unhealthy air days, especially summer wildfire/smog season." : "Moderate air quality; check AirNow.gov for today's AQI.";
+  } else if (stateCode === "CA") {
+    airScore = 4;
+    airDesc = "Air quality varies widely by region; coastal usually good, inland valleys often poor.";
+  }
+
+  // Deep-link URLs to authoritative free sources
+  const femaUrl = `https://msc.fema.gov/portal/search?AddressQuery=${encodeURIComponent(fullAddr)}`;
+  const wildfireUrl = stateCode === "CA"
+    ? `https://osfm.fire.ca.gov/divisions/community-wildfire-preparedness-and-mitigation/fire-hazard-severity-zones/`
+    : `https://wildfirerisk.org/explore/?location=${lat},${lon}`;
+  const heatUrl = `https://www.weather.gov/wrn/heat`;
+  const airUrl = `https://www.airnow.gov/?city=${encodeURIComponent(cityKey)}&state=${stateCode}&country=USA`;
+
+  return {
+    rows: [
+      { glyph:"💧", title:`${floodScore}/10 Flood Factor`, score:floodScore, desc:floodDesc, url:femaUrl },
+      { glyph:"🔥", title:`${fireScore}/10 Fire Factor`,   score:fireScore,  desc:fireDesc,  url:wildfireUrl },
+      { glyph:"☀️", title:`${heatScore}/10 Heat Factor`,    score:heatScore,  desc:heatDesc,  url:heatUrl },
+      { glyph:"🌬️", title:`${airScore}/10 Air Factor`,      score:airScore,   desc:airDesc,   url:airUrl }
+    ]
+  };
+}
+
+function renderRisks(risks) {
+  $("card-risks").hidden = false;
+  const maxScore = Math.max(...risks.rows.map(r => r.score));
+  setText("risks-headline", maxScore >= 7 ? "Significant risks — review each factor below" : (maxScore >= 4 ? "Some moderate risks worth knowing" : "Generally low risk in this area"));
+  $("risks-summary").textContent = "Click any factor for the official source";
+  const html = risks.rows.map(r => `
+    <a class="risk-row" href="${r.url}" target="_blank" rel="noopener">
+      <div class="risk-glyph">${r.glyph}</div>
+      <div class="risk-text">
+        <div class="risk-title"><span class="${scoreClass(r.score)}">${escapeHtml(r.title)}</span></div>
+        <div class="risk-desc">${escapeHtml(r.desc)}</div>
+      </div>
+      <div class="risk-arrow">›</div>
+    </a>
+  `).join("");
+  $("risks-body").innerHTML = html;
+}
+
+/* =====================================================================
+   v0.19: Home details placeholder (year-built input → unlocks Phase 2)
+   ===================================================================== */
+function loadHomeDetails(addr) {
+  const key = "homeatlas:home:" + (addr.postcode || "default");
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) {}
+  return saved;
+}
+function saveHomeDetails(addr, data) {
+  const key = "homeatlas:home:" + (addr.postcode || "default");
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
+}
+
+function renderHome(addr) {
+  $("card-home").hidden = false;
+  const saved = loadHomeDetails(addr);
+  const tiles = [
+    { icon:"🏠", label:"Property type", value: saved.propertyType || "Single-family", editable:true, key:"propertyType" },
+    { icon:"🔧", label:"Year built",    value: saved.yearBuilt    || null,            editable:true, key:"yearBuilt", placeholder:"e.g. 1995", hint:"Click to add — unlocks house-anatomy module" },
+    { icon:"📐", label:"Lot size",      value: saved.lotSize      || null,            editable:true, key:"lotSize",   placeholder:"e.g. 0.25 ac" },
+    { icon:"🚗", label:"Parking",       value: saved.parking      || "—",              editable:true, key:"parking" },
+    { icon:"🛏️", label:"Bedrooms",      value: saved.bedrooms     || null,            editable:true, key:"bedrooms",  placeholder:"e.g. 3" },
+    { icon:"🛁", label:"Bathrooms",     value: saved.bathrooms    || null,            editable:true, key:"bathrooms", placeholder:"e.g. 2.5" }
+  ];
+  const html = tiles.map(t => {
+    const display = t.value
+      ? escapeHtml(t.value)
+      : `— <span class="edit-hint">${t.hint || "Click to add"}</span>`;
+    return `<div class="home-tile ${t.editable ? "editable" : ""}" data-key="${t.key}" data-placeholder="${escapeHtml(t.placeholder || "")}">
+      <div class="home-tile-icon">${t.icon}</div>
+      <div class="home-tile-body">
+        <div class="home-tile-value">${display}</div>
+        <div class="home-tile-label">${escapeHtml(t.label)}</div>
+      </div>
+    </div>`;
+  }).join("");
+  $("home-grid").innerHTML = html;
+
+  // Wire up click-to-edit
+  $("home-grid").querySelectorAll(".home-tile.editable").forEach(tile => {
+    tile.addEventListener("click", () => {
+      const key = tile.dataset.key;
+      const placeholder = tile.dataset.placeholder || "";
+      const valueEl = tile.querySelector(".home-tile-value");
+      const current = saved[key] || "";
+      valueEl.innerHTML = `<input class="home-tile-input" type="text" value="${escapeHtml(current)}" placeholder="${escapeHtml(placeholder)}" />`;
+      const input = valueEl.querySelector("input");
+      input.focus();
+      input.select();
+      const commit = () => {
+        const newVal = input.value.trim();
+        const updated = loadHomeDetails(addr);
+        if (newVal) updated[key] = newVal;
+        else delete updated[key];
+        saveHomeDetails(addr, updated);
+        renderHome(addr);   // re-render
+      };
+      input.addEventListener("blur", commit);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); commit(); }
+        if (e.key === "Escape") { renderHome(addr); }
+      });
+    });
+  });
+}
+
+/* =====================================================================
+   v0.19: Parks & places (Overpass: parks, dog parks, playgrounds, trails)
+   ===================================================================== */
+async function fetchNearbyParks(lat, lon, radiusMeters = 3000) {
+  const q = `[out:json][timeout:18];(`
+    + `nwr["leisure"~"^(park|dog_park|playground|garden|nature_reserve)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["route"="hiking"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["highway"="path"]["foot"="designated"](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  return await overpassQuery(q);
+}
+
+function classifyParkItem(el) {
+  const t = el.tags || {};
+  const name = t.name || t["name:en"];
+  if (!name) return null;
+  const lat = el.lat ?? (el.center && el.center.lat);
+  const lon = el.lon ?? (el.center && el.center.lon);
+  if (lat == null || lon == null) return null;
+
+  let category = null, subtype = null;
+  if (t.leisure === "park")          { category="park";       subtype="Park"; }
+  else if (t.leisure === "garden")   { category="park";       subtype="Garden"; }
+  else if (t.leisure === "nature_reserve") { category="park"; subtype="Nature reserve"; }
+  else if (t.leisure === "dog_park") { category="dog";        subtype="Dog park"; }
+  else if (t.leisure === "playground") { category="playground"; subtype="Playground"; }
+  else if (t.route === "hiking")     { category="trail";      subtype="Hiking trail"; }
+  else if (t.highway === "path")     { category="trail";      subtype="Walking path"; }
+  else return null;
+
+  return { name, category, subtype, lat, lon };
+}
+
+let lastParksGeo = null;
+async function loadNearbyParks(geo) {
+  lastParksGeo = geo;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  $("card-parks").hidden = false;
+  const loading = $("parks-loading");
+  loading.hidden = false;
+  $("parks-sections").hidden = true;
+  $("parks-summary").hidden = true;
+  setText("parks-value", "Searching…");
+  try {
+    const elements = await fetchNearbyParks(lat, lon, 3000);
+    const items = elements
+      .map(classifyParkItem)
+      .filter(Boolean)
+      .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name))
+      .sort((a, b) => a.dist - b.dist);
+
+    const grouped = {
+      park:        items.filter(i => i.category === "park").slice(0, 6),
+      dog:         items.filter(i => i.category === "dog").slice(0, 4),
+      playground:  items.filter(i => i.category === "playground").slice(0, 5),
+      trail:       items.filter(i => i.category === "trail").slice(0, 5)
+    };
+    renderParks(grouped, items.length, getCityKey(geo.address || {}));
+  } catch (err) {
+    loading.innerHTML = `Couldn't load nearby parks: ${escapeHtml(err.message || "network error")}.`;
+  }
+}
+
+function renderParks(grouped, total, cityKey) {
+  $("parks-loading").hidden = true;
+  $("parks-sections").hidden = false;
+  $("parks-summary").hidden = false;
+  $("parks-summary").textContent = `${total} place${total === 1 ? "" : "s"} within 1.9 mi`;
+  setText("parks-value", total > 0 ? `${total} places to explore` : "Nothing nearby in OpenStreetMap");
+  const fillSection = (sectionId, tbodyId, items) => {
+    const sec = $(sectionId), tb = $(tbodyId);
+    if (!items.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tb.innerHTML = items.map(it => placeRow(it, cityKey)).join("");
+  };
+  fillSection("parks-park-section",       "parks-park-tbody",       grouped.park);
+  fillSection("parks-dog-section",        "parks-dog-tbody",        grouped.dog);
+  fillSection("parks-playground-section", "parks-playground-tbody", grouped.playground);
+  fillSection("parks-trail-section",      "parks-trail-tbody",      grouped.trail);
 }
 
 /* -------- Loading state ---------------------------------------------- */
@@ -2967,6 +3429,12 @@ function renderResults(geo) {
   // Phase 2: Yard & Garden module
   const yard = resolveYard(a, parseFloat(geo.lat), parseFloat(geo.lon));
   renderYard(yard);
+
+  // v0.19: Home details, Climate risks, Parks
+  renderHome(a);
+  const risks = resolveRisks(a, parseFloat(geo.lat), parseFloat(geo.lon), yard.zone);
+  renderRisks(risks);
+  loadNearbyParks(geo);   // async via Overpass
 }
 
 /* -------- Main flow -------------------------------------------------- */
@@ -2977,20 +3445,24 @@ async function runLookupFromFeature(feature) {
   $("searchBtn").disabled = true;
   $("searchBtn").textContent = "Looking up…";
   try {
-    // v0.17: try Nominatim reverse-geocode for canonical address, but if it
-    // fails (rate limit, CORS, network), fall back to the feature's own
-    // structured properties so the page stays functional.
+    // v0.17/v0.18: reverseGeocode now tries Nominatim → Census internally.
+    // If both fail (extremely rare), fall back to the feature's own properties
+    // so the page stays functional. Photon may put the street in either
+    // `street` or `name`, so try both.
     let geo;
     try {
       geo = await reverseGeocode(lat, lon);
     } catch (revErr) {
-      dlog("reverseGeocode failed, using feature properties as fallback:", revErr.message);
+      dlog("All reverse geocoders failed, using feature properties:", revErr.message);
       const p = feature.properties || {};
+      // Photon street-only results put street in `name`; fully-tagged results
+      // use `street`. Use whichever exists.
+      const road = p.street || (!p.housenumber && p.name) || undefined;
       geo = {
-        display_name: p.name || [p.housenumber, p.street, p.city, p.state, p.postcode].filter(Boolean).join(", "),
+        display_name: p.name || [p.housenumber, road, p.city, p.state, p.postcode].filter(Boolean).join(", "),
         address: {
           house_number: p.housenumber,
-          road: p.street,
+          road: road,
           city: p.city,
           state: p.state,
           postcode: p.postcode,
