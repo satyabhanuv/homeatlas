@@ -259,16 +259,17 @@
   }
 
   /* Provider sub-groups (cable / fiber / 5G / satellite, etc.) */
-  .pgroup { margin-top: 14px; }
+  /* v0.24: bump to 15px so subsection labels are larger than the 13.5px table content */
+  .pgroup { margin-top: 18px; }
   .pgroup:first-child { margin-top: 8px; }
   .pgroup-head {
-    display: flex; align-items: baseline; gap: 8px;
-    margin: 0 0 6px;
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
-    color: var(--primary); font-weight: 700;
-    border-bottom: 1px solid var(--line); padding-bottom: 6px;
+    display: flex; align-items: center; gap: 10px;
+    margin: 0 0 8px;
+    font-size: 15px; text-transform: none; letter-spacing: -0.01em;
+    color: var(--ink); font-weight: 700;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px;
   }
-  .pgroup-count { color: var(--ink-faint); font-weight: 600; }
+  .pgroup-count { color: var(--ink-faint); font-weight: 600; font-size: 13px; }
 
   .card.coming-soon { opacity: 0.78; border-style: dashed; }
   .card .badge { position: absolute; top: 14px; right: 14px; background: var(--accent); color: #fff; padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: 0.4px; text-transform: uppercase; }
@@ -285,35 +286,83 @@
   .yard-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
   .yard-head .value { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 2px; }
   .yard-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 13px; font-weight: 600; }
-  .yard-section { margin-top: 18px; }
-  .yard-section h4 { margin: 0 0 10px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
-  .yard-section h4 .hint { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 4px; }
+  /* v0.24: yard subsection headings — bigger, sentence-case, clearer */
+  .yard-section { margin-top: 24px; }
+  .yard-section h4 { margin: 0 0 12px; font-size: 17px; text-transform: none; letter-spacing: -0.01em; color: var(--ink); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .yard-section h4 .hint { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 13px; margin-left: 6px; }
   .climate-grid {
     display: grid; gap: 12px 24px;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
-  .climate-cell { display: flex; flex-direction: column; gap: 3px; }
-  .climate-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-faint); font-weight: 700; }
-  .climate-value { font-size: 16px; color: var(--ink); font-weight: 600; }
-  .climate-sub { font-size: 12px; color: var(--ink-soft); }
+  /* v0.24: climate cells — bigger value, sentence-case label, more readable */
+  .climate-cell { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; background: var(--surface-2); border-radius: 10px; border: 1px solid var(--line-2); }
+  .climate-label { font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink-soft); font-weight: 500; }
+  .climate-value { font-size: 18px; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
+  .climate-sub { font-size: 12px; color: var(--ink-faint); }
 
-  /* Plant cards grid */
+  /* Plant cards grid (v0.24: with image preview tile + buy link + recommendation badge) */
   .plant-grid {
-    display: grid; gap: 10px;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    display: grid; gap: 14px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     margin-top: 4px;
   }
   .plant-card {
-    background: rgba(45,106,79,0.04);
+    background: var(--surface);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 12px 14px;
-    display: flex; flex-direction: column; gap: 4px;
+    border-radius: 12px;
+    padding: 0;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+    position: relative;
   }
-  .plant-card .plant-name { font-weight: 700; color: var(--ink); font-size: 14px; }
+  .plant-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
+  .plant-card .plant-image {
+    height: 120px;
+    background: linear-gradient(135deg, rgba(76,140,82,0.18), rgba(212,163,115,0.18));
+    display: grid; place-items: center;
+    font-size: 56px;
+    border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .plant-card .plant-image-link {
+    position: absolute; right: 8px; bottom: 8px;
+    background: rgba(255,255,255,0.92); color: var(--ink-soft);
+    padding: 4px 8px; border-radius: 6px;
+    font-size: 11px; font-weight: 600; text-decoration: none;
+    border: 1px solid var(--line);
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .plant-card .plant-image-link:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+  .plant-card .plant-body {
+    padding: 12px 14px 14px;
+    display: flex; flex-direction: column; gap: 4px; flex: 1;
+  }
+  .plant-card .plant-name { font-weight: 700; color: var(--ink); font-size: 15px; }
   .plant-card .plant-sci  { color: var(--ink-faint); font-size: 12px; font-style: italic; }
-  .plant-card .plant-desc { color: var(--ink-soft); font-size: 12.5px; line-height: 1.45; margin-top: 2px; }
-  .plant-card .plant-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+  .plant-card .plant-desc { color: var(--ink-soft); font-size: 13px; line-height: 1.5; margin-top: 4px; }
+  .plant-card .plant-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+  .plant-card .plant-buy {
+    margin-top: 10px; display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 8px;
+    background: var(--primary-soft); border: 1px solid rgba(0,106,255,0.18);
+    color: var(--primary); text-decoration: none;
+    font-size: 12.5px; font-weight: 600;
+    align-self: flex-start;
+  }
+  .plant-card .plant-buy:hover { background: var(--primary); color: #fff; }
+  .plant-card .plant-buy::before { content: "🛒"; font-size: 13px; }
+  /* v0.24: "Recommendation" ribbon — makes it clear this is a suggestion, not a fact */
+  .plant-card .plant-rec-flag {
+    position: absolute; top: 10px; left: 10px;
+    background: var(--primary); color: #fff;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 10px; font-weight: 700;
+    letter-spacing: 0.4px; text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(0,106,255,0.30);
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .plant-card .plant-rec-flag::before { content: "★"; font-size: 10px; }
   .plant-tag {
     display: inline-block; padding: 2px 7px; border-radius: 999px;
     font-size: 10.5px; font-weight: 600; letter-spacing: 0.2px;
@@ -322,13 +371,14 @@
   .plant-tag.drought { background: rgba(212,163,115,0.18); color: #8a5a1f; }
   .plant-tag.shade { background: rgba(76,86,140,0.12); color: #46508a; }
   .plant-tag.edible { background: rgba(178,52,52,0.12); color: #8c2222; }
-  .plant-cat-row { margin-bottom: 14px; }
+  /* v0.24: bumped plant category labels — from 11px uppercase to 15px sentence-case */
+  .plant-cat-row { margin-bottom: 22px; }
   .plant-cat-row:last-child { margin-bottom: 0; }
   .plant-cat-label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
-    color: var(--ink-faint); font-weight: 700; margin: 4px 0 6px;
+    font-size: 15px; text-transform: none; letter-spacing: -0.01em;
+    color: var(--ink); font-weight: 700; margin: 4px 0 10px;
   }
-  .plant-cat-label .emoji { font-size: 14px; vertical-align: middle; margin-right: 4px; }
+  .plant-cat-label .emoji { font-size: 18px; vertical-align: middle; margin-right: 6px; }
 
   .yard-tip {
     background: rgba(45,106,79,0.04);
@@ -435,9 +485,10 @@
   .schools-head .text-block { display: flex; flex-direction: column; }
   .schools-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 13px; font-weight: 600; }
   .schools-meta { color: var(--ink-soft); font-size: 14px; margin: 6px 0 16px; }
-  .school-section { margin-top: 18px; }
-  .school-section h4 { margin: 0 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--primary); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
-  .school-section h4 .hint { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 12px; margin-left: 4px; }
+  /* v0.24: school subsection headings — more prominent, sentence-case, larger */
+  .school-section { margin-top: 22px; }
+  .school-section h4 { margin: 0 0 10px; font-size: 16px; text-transform: none; letter-spacing: -0.01em; color: var(--ink); font-weight: 700; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+  .school-section h4 .hint { color: var(--ink-faint); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: 13px; margin-left: 6px; }
   .schools-disclaimer { background: rgba(45,106,79,0.04); border-left: 3px solid var(--primary); padding: 10px 14px; margin: 8px 0 12px; font-size: 13px; color: var(--ink-soft); border-radius: 0 6px 6px 0; line-height: 1.5; }
   .schools-disclaimer b { color: var(--primary-2); }
   .schools-disclaimer i { color: var(--ink); font-style: italic; }
@@ -446,6 +497,25 @@
   .schools-loading.error::before { display: none; }
   .schools-loading.error { color: var(--error); background: #fdecea; border-color: #f8c9c5; }
   .schools-empty { padding: 16px; color: var(--ink-faint); font-size: 14px; font-style: italic; }
+  /* v0.24: schools two-column layout (public + private side-by-side) */
+  .schools-row-2col {
+    display: grid; gap: 16px 28px;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  }
+  .schools-row-2col .school-section { margin-top: 22px; }
+  /* v0.24: Level tag next to school name (Elementary / Middle / High) */
+  .school-level-tag {
+    display: inline-block; margin-left: 8px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1px;
+    background: var(--tag-data-bg); color: var(--tag-data-fg);
+    vertical-align: middle;
+  }
+  .school-level-tag.lvl-elem { background: rgba(45,106,79,0.10); color: #2d6a4f; }
+  .school-level-tag.lvl-mid  { background: rgba(43,90,158,0.10); color: #2b5a9e; }
+  .school-level-tag.lvl-high { background: rgba(29,58,95,0.12);  color: #1d3a5f; }
+  .school-level-tag.lvl-k12  { background: rgba(212,163,115,0.18); color: #8a5a1f; }
+
   /* v0.20: schools rendered as rows with circular rating-style badges */
   .school-row { display: flex; align-items: center; gap: 14px; padding: 12px 6px; border-bottom: 1px solid var(--line); transition: background 0.12s ease; }
   .school-row:last-child { border-bottom: none; }
@@ -530,6 +600,42 @@
   /* Compact service cards (no inner icon/h3 — section header is enough) */
   .card.service-card { padding: 14px 16px; }
   .card.service-card .card-context-text { font-size: 15px; }
+
+  /* ─── v0.24: Combined Services tile (Electric/Internet/TV/Security as subsections) ── */
+  .services-card-wrap {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow);
+    margin-top: 12px; padding: 8px 24px 24px;
+  }
+  .svc-sub {
+    border-bottom: 1px solid var(--line);
+    padding: 18px 0 22px;
+  }
+  .svc-sub:last-child { border-bottom: none; padding-bottom: 8px; }
+  .svc-sub:first-child { padding-top: 14px; }
+  .svc-sub-head {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 10px; flex-wrap: wrap;
+  }
+  .svc-sub-head h3 {
+    margin: 0; font-size: 18px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.01em;
+    flex: 1; min-width: 0; line-height: 1.3;
+    text-transform: none;
+  }
+  .svc-sub-head h3 .svc-value {
+    font-weight: 600; color: var(--ink-soft);
+    font-size: 15px; margin-left: 8px;
+  }
+  .svc-sub-head h3 .svc-sub-meta {
+    display: block; font-size: 13px; font-weight: 500;
+    color: var(--ink-soft); margin-top: 4px;
+  }
+  /* Inside the subsection, drop top margin from first pgroup so it hugs the heading */
+  .svc-sub .pgroup:first-child { margin-top: 6px; }
+  .svc-sub .info-popover { margin-top: 6px; margin-bottom: 12px; }
+  /* Stack the source line tighter inside subsections */
+  .svc-sub .source { margin-top: 12px; }
   /* "Most used in neighborhood" pill on category headers (v0.23: Zillow blue) */
   .pgroup-popular {
     display: inline-flex; align-items: center; gap: 4px;
@@ -757,10 +863,11 @@
       </div>
     </div>
 
-    <div class="grid">
-      <div class="card service-card" id="card-electric">
-        <div class="card-context-bar">
-          <div class="card-context-text">⚡ Electric · <span id="electric-value">—</span><span class="ctx-sub" id="electric-meta"></span></div>
+    <!-- v0.24: Combined Services tile — Electric / Internet / TV / Security as subsections -->
+    <div class="services-card-wrap">
+      <div class="svc-sub" id="card-electric">
+        <div class="svc-sub-head">
+          <h3>⚡ Electric <span class="svc-value" id="electric-value">—</span><span class="svc-sub-meta" id="electric-meta"></span></h3>
           <button class="info-btn" type="button" data-info-target="electric-info-popover" aria-label="About electric service">i</button>
         </div>
         <div class="info-popover" id="electric-info-popover" hidden>
@@ -770,9 +877,9 @@
         <div class="source" id="electric-source"></div>
       </div>
 
-      <div class="card service-card" id="card-internet">
-        <div class="card-context-bar">
-          <div class="card-context-text">🌐 Internet · <span id="internet-value">—</span></div>
+      <div class="svc-sub" id="card-internet">
+        <div class="svc-sub-head">
+          <h3>🌐 Internet <span class="svc-value" id="internet-value">—</span></h3>
           <button class="info-btn" type="button" data-info-target="internet-info-popover" aria-label="About internet providers">i</button>
         </div>
         <div class="info-popover" id="internet-info-popover" hidden>
@@ -782,9 +889,9 @@
         <div class="source" id="internet-source"></div>
       </div>
 
-      <div class="card service-card" id="card-tv">
-        <div class="card-context-bar">
-          <div class="card-context-text">📺 TV · <span id="tv-value">—</span></div>
+      <div class="svc-sub" id="card-tv">
+        <div class="svc-sub-head">
+          <h3>📺 TV <span class="svc-value" id="tv-value">—</span></h3>
           <button class="info-btn" type="button" data-info-target="tv-info-popover" aria-label="About TV providers">i</button>
         </div>
         <div class="info-popover" id="tv-info-popover" hidden>
@@ -793,9 +900,9 @@
         <div id="tv-body"></div>
       </div>
 
-      <div class="card service-card" id="card-security">
-        <div class="card-context-bar">
-          <div class="card-context-text">🛡️ Security · <span id="security-value">—</span></div>
+      <div class="svc-sub" id="card-security">
+        <div class="svc-sub-head">
+          <h3>🛡️ Security <span class="svc-value" id="security-value">—</span></h3>
           <button class="info-btn" type="button" data-info-target="security-info-popover" aria-label="About security providers">i</button>
         </div>
         <div class="info-popover" id="security-info-popover" hidden>
@@ -832,18 +939,21 @@
       </div>
 
       <div id="school-sections" hidden>
-        <div class="school-section" id="public-section" hidden>
-          <h4>Public schools <span class="hint">— closest district school in each level</span></h4>
-          <div id="public-tbody"></div>
-        </div>
+        <!-- v0.24: Public + Private side-by-side; Other (charter) below; then Colleges, then Libraries -->
+        <div class="schools-row schools-row-2col">
+          <div class="school-section" id="public-section" hidden>
+            <h4>Public schools <span class="hint">— closest district school in each level</span></h4>
+            <div id="public-tbody"></div>
+          </div>
 
-        <div class="school-section" id="private-section" hidden>
-          <h4>Private schools <span class="hint">— closest religious/independent school in each level</span></h4>
-          <div id="private-tbody"></div>
+          <div class="school-section" id="private-section" hidden>
+            <h4>Private schools <span class="hint">— closest religious/independent in each level</span></h4>
+            <div id="private-tbody"></div>
+          </div>
         </div>
 
         <div class="school-section" id="other-section" hidden>
-          <h4>Other schools <span class="hint">— closest charter / magnet / specialty in each level</span></h4>
+          <h4>Charter / magnet / specialty <span class="hint">— closest in each level</span></h4>
           <div id="other-tbody"></div>
         </div>
 
@@ -1021,7 +1131,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.23 · May 2026 · Phase 2 · Zillow-inspired UI refresh — Inter typography, slim headers, tag system
+      <b>HomeAtlas</b> &mdash; v0.24 · May 2026 · Phase 2 · Combined Services tile, two-column schools, plant cards with photos &amp; buy links
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2080,10 +2190,10 @@ function mapUrlExact(lat, lon)   {
   return `https://www.google.com/maps/?q=${lat},${lon}&z=18`;
 }
 function iconButtonsHtml(name, opts = {}) {
-  const reach = opts.reachUrl || reachUrl(name);
-  const map   = opts.mapUrl   || mapUrlNear(name);
-  return `<a class="icon-btn" href="${reach}" target="_blank" rel="noopener" aria-label="Reach them">${ICON_GLOBE}</a>` +
-         `<a class="icon-btn" href="${map}" target="_blank" rel="noopener" aria-label="Map">${ICON_PIN}</a>`;
+  // v0.24: dropped the globe icon — clicking the provider/place name already opens its site.
+  // Map pin is the only remaining quick action (location is not redundant with the name link).
+  const map = opts.mapUrl || mapUrlNear(name);
+  return `<a class="icon-btn" href="${map}" target="_blank" rel="noopener" aria-label="Map">${ICON_PIN}</a>`;
 }
 
 /* -------- Address autocomplete (two-phase: Photon → Census/Nominatim) -- */
@@ -3063,13 +3173,26 @@ function levelLetter(level) {
   if (level === "Mixed levels")   return "K-12";
   return level && level[0] ? level[0].toUpperCase() : "?";
 }
-// v0.20: badge-row format replacing the old table cell layout
+// v0.24: level tag class — color-codes Elementary / Middle / High
+function levelTagClass(level) {
+  if (level === "Elementary")   return "lvl-elem";
+  if (level === "Middle")       return "lvl-mid";
+  if (level === "High")         return "lvl-high";
+  return "lvl-k12";
+}
+// v0.24: a school badge now shows distance (rating-style number + "mi" unit)
+//        and the level (Elementary / Middle / High) is a tag next to the name.
+//        This makes the badge a real signal — closeness, not "what level is this".
 function levelRow(level, item, cityKey) {
+  const tagClass = levelTagClass(level);
   if (!item) {
     return `<div class="school-row">
-      <div class="school-badge dist-na"><span class="badge-num">${escapeHtml(levelLetter(level))}</span></div>
+      <div class="school-badge dist-na"><span class="badge-num">—</span></div>
       <div class="school-info">
-        <div class="school-name" style="color:var(--ink-soft); pointer-events:none;">${escapeHtml(level)}</div>
+        <div class="school-name" style="color:var(--ink-soft); pointer-events:none;">
+          ${escapeHtml(level)} school
+          <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
+        </div>
         <div class="school-meta-empty">No nearby match found in OpenStreetMap</div>
       </div>
     </div>`;
@@ -3079,13 +3202,14 @@ function levelRow(level, item, cityKey) {
   const map   = mapUrlExact(item.lat, item.lon);
   return `<div class="school-row">
     <div class="school-badge ${distClass(item.dist)}">
-      <span class="badge-num">${escapeHtml(levelLetter(level))}</span>
+      <span class="badge-num">${item.dist.toFixed(1)}</span>
+      <span class="badge-unit">mi</span>
     </div>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
+      <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
       <div class="school-meta">
-        <span><b>Level:</b> ${escapeHtml(level)}</span>
-        <span><b>Distance:</b> ${item.dist.toFixed(2)} mi</span>
+        <span>${item.dist.toFixed(2)} mi away</span>
       </div>
     </div>
     <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
@@ -3449,17 +3573,32 @@ function resolveYard(addr, lat, lon) {
 }
 
 /* -------- Renderer --------------------------------------------------- */
-function plantCardHtml(p) {
+// v0.24: plant cards now include an image-preview tile (emoji-based since
+// we don't bundle photos), a "see images" link to Google Images, a "buy"
+// button to a search on a major retailer, and a "RECOMMENDED" ribbon so
+// users understand these are suggestions for their zone, not stock listings.
+function plantCardHtml(p, categoryEmoji) {
   const tags = [];
   if (p.native && p.native.length) tags.push(`<span class="plant-tag native">Native (${escapeHtml(p.native.join(", "))})</span>`);
   if (p.drought) tags.push(`<span class="plant-tag drought">Drought-tolerant</span>`);
   if (p.shade)   tags.push(`<span class="plant-tag shade">Shade-OK</span>`);
   if (p.edible)  tags.push(`<span class="plant-tag edible">Edible</span>`);
+  const imagesUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(p.name + " plant")}`;
+  const buyUrl = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(p.name + " plant for sale")}`;
+  const emoji = categoryEmoji || "🌱";
   return `<div class="plant-card">
-    <div class="plant-name">${escapeHtml(p.name)}</div>
-    <div class="plant-sci">${escapeHtml(p.sci)}</div>
-    <div class="plant-desc">${escapeHtml(p.desc)}</div>
-    ${tags.length ? `<div class="plant-tags">${tags.join("")}</div>` : ""}
+    <span class="plant-rec-flag" title="Recommended for your USDA zone">Recommended</span>
+    <div class="plant-image">
+      <span aria-hidden="true">${emoji}</span>
+      <a class="plant-image-link" href="${imagesUrl}" target="_blank" rel="noopener" aria-label="See photos of ${escapeHtml(p.name)}">See photos</a>
+    </div>
+    <div class="plant-body">
+      <div class="plant-name">${escapeHtml(p.name)}</div>
+      <div class="plant-sci">${escapeHtml(p.sci)}</div>
+      <div class="plant-desc">${escapeHtml(p.desc)}</div>
+      ${tags.length ? `<div class="plant-tags">${tags.join("")}</div>` : ""}
+      <a class="plant-buy" href="${buyUrl}" target="_blank" rel="noopener">Where to buy</a>
+    </div>
   </div>`;
 }
 
@@ -3503,7 +3642,7 @@ function renderYard(yard) {
     }
     return `<div class="plant-cat-row">
       <div class="plant-cat-label"><span class="emoji">${cat.emoji}</span>${cat.label}</div>
-      <div class="plant-grid">${list.map(plantCardHtml).join("")}</div>
+      <div class="plant-grid">${list.map(p => plantCardHtml(p, cat.emoji)).join("")}</div>
     </div>`;
   }).join("");
   $("yard-plants-body").innerHTML = plantsHtml;
