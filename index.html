@@ -300,6 +300,64 @@
   .climate-value { font-size: 18px; color: var(--ink); font-weight: 700; letter-spacing: -0.01em; }
   .climate-sub { font-size: 12px; color: var(--ink-faint); }
 
+  /* ─── v0.25: Side-by-side Climate + Recommended Plants ─────────────── */
+  .yard-climate-plants-row {
+    display: grid;
+    gap: 24px;
+    grid-template-columns: minmax(260px, 320px) 1fr;
+    margin-top: 24px;
+    align-items: start;
+  }
+  .yard-climate-plants-row .yard-section { margin-top: 0; }
+  .yard-climate-plants-row .yard-climate-col .climate-grid {
+    grid-template-columns: 1fr 1fr;  /* 2 cells per row in narrow column */
+    gap: 10px;
+  }
+  @media (max-width: 900px) {
+    .yard-climate-plants-row { grid-template-columns: 1fr; }
+    .yard-climate-plants-row .yard-climate-col .climate-grid {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+  }
+  /* v0.25: Context banner above recommended plants — clarifies why these */
+  .plants-context-banner {
+    margin: 0 0 14px;
+    padding: 10px 14px;
+    background: var(--primary-soft);
+    border: 1px solid rgba(0,106,255,0.18);
+    border-radius: 10px;
+    font-size: 13px; color: var(--ink);
+    line-height: 1.5;
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .plants-context-banner::before {
+    content: "📍"; flex: 0 0 auto; font-size: 16px;
+  }
+  .plants-context-banner b { color: var(--primary-2); }
+  .plants-context-banner.pots-only {
+    background: rgba(212,163,115,0.14);
+    border-color: rgba(212,163,115,0.35);
+  }
+  .plants-context-banner.pots-only::before { content: "🪴"; }
+  .plants-context-banner .ctx-link {
+    color: var(--primary); font-weight: 600;
+    text-decoration: underline; cursor: pointer;
+  }
+  /* v0.25: Pot suitability tag on plant cards */
+  .plant-pot-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 2px 7px; border-radius: 999px;
+    font-size: 10.5px; font-weight: 600;
+    letter-spacing: 0.1px;
+  }
+  .plant-pot-tag.yes      { background: rgba(45,106,79,0.10); color: #2d6a4f; }
+  .plant-pot-tag.limited  { background: rgba(212,163,115,0.18); color: #8a5a1f; }
+  .plant-pot-tag.no       { background: rgba(176,52,52,0.10); color: #8c2222; }
+  .plant-pot-tag::before { font-size: 10px; }
+  .plant-pot-tag.yes::before     { content: "🪴"; font-size: 11px; }
+  .plant-pot-tag.limited::before { content: "🪴"; font-size: 11px; opacity: 0.6; }
+  .plant-pot-tag.no::before      { content: "🌳"; font-size: 11px; }
+
   /* Plant cards grid (v0.24: with image preview tile + buy link + recommendation badge) */
   .plant-grid {
     display: grid; gap: 14px;
@@ -318,12 +376,25 @@
   }
   .plant-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-2px); }
   .plant-card .plant-image {
-    height: 120px;
+    height: 140px;
     background: linear-gradient(135deg, rgba(76,140,82,0.18), rgba(212,163,115,0.18));
     display: grid; place-items: center;
     font-size: 56px;
     border-bottom: 1px solid var(--line);
     position: relative;
+    overflow: hidden;
+  }
+  /* v0.25: real photo — fills the image tile */
+  .plant-card .plant-image img.plant-photo {
+    width: 100%; height: 100%; object-fit: cover; display: block;
+    transition: transform 0.3s ease;
+  }
+  .plant-card:hover .plant-image img.plant-photo { transform: scale(1.04); }
+  .plant-card .plant-image .plant-photo-loading {
+    position: absolute; inset: 0;
+    display: grid; place-items: center;
+    font-size: 56px;
+    background: linear-gradient(135deg, rgba(76,140,82,0.18), rgba(212,163,115,0.18));
   }
   .plant-card .plant-image-link {
     position: absolute; right: 8px; bottom: 8px;
@@ -1048,21 +1119,26 @@
         </div>
       </div>
 
-      <div class="yard-section" id="yard-climate-section">
-        <h4>Climate at a glance <span class="hint">— USDA hardiness zone &amp; growing season</span></h4>
-        <div class="climate-grid">
-          <div class="climate-cell"><span class="climate-label">USDA hardiness zone</span><span class="climate-value" id="yard-zone">—</span><span class="climate-sub" id="yard-zone-sub"></span></div>
-          <div class="climate-cell"><span class="climate-label">Avg min temp (winter)</span><span class="climate-value" id="yard-min-temp">—</span></div>
-          <div class="climate-cell"><span class="climate-label">First fall frost</span><span class="climate-value" id="yard-frost-fall">—</span></div>
-          <div class="climate-cell"><span class="climate-label">Last spring frost</span><span class="climate-value" id="yard-frost-spring">—</span></div>
-          <div class="climate-cell"><span class="climate-label">Growing season</span><span class="climate-value" id="yard-growing-season">—</span></div>
-          <div class="climate-cell"><span class="climate-label">Climate type</span><span class="climate-value" id="yard-climate-type">—</span></div>
+      <!-- v0.25: Climate + Recommended plants side-by-side for at-a-glance reading -->
+      <div class="yard-climate-plants-row">
+        <div class="yard-section yard-climate-col" id="yard-climate-section">
+          <h4>Climate <span class="hint">— USDA zone &amp; growing season</span></h4>
+          <div class="climate-grid">
+            <div class="climate-cell"><span class="climate-label">USDA hardiness zone</span><span class="climate-value" id="yard-zone">—</span><span class="climate-sub" id="yard-zone-sub"></span></div>
+            <div class="climate-cell"><span class="climate-label">Avg min temp (winter)</span><span class="climate-value" id="yard-min-temp">—</span></div>
+            <div class="climate-cell"><span class="climate-label">First fall frost</span><span class="climate-value" id="yard-frost-fall">—</span></div>
+            <div class="climate-cell"><span class="climate-label">Last spring frost</span><span class="climate-value" id="yard-frost-spring">—</span></div>
+            <div class="climate-cell"><span class="climate-label">Growing season</span><span class="climate-value" id="yard-growing-season">—</span></div>
+            <div class="climate-cell"><span class="climate-label">Climate type</span><span class="climate-value" id="yard-climate-type">—</span></div>
+          </div>
         </div>
-      </div>
 
-      <div class="yard-section">
-        <h4>Recommended plants <span class="hint">— suited to your zone, with native &amp; drought-tolerant flagged</span></h4>
-        <div id="yard-plants-body"></div>
+        <div class="yard-section yard-plants-col">
+          <h4>Recommended plants <span class="hint" id="yard-plants-hint">— for your zone</span></h4>
+          <!-- v0.25: Context banner — explains how recs were tailored to home type / lot -->
+          <div class="plants-context-banner" id="plants-context-banner" hidden></div>
+          <div id="yard-plants-body"></div>
+        </div>
       </div>
 
       <div class="yard-section">
@@ -1131,7 +1207,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.24 · May 2026 · Phase 2 · Combined Services tile, two-column schools, plant cards with photos &amp; buy links
+      <b>HomeAtlas</b> &mdash; v0.25 · May 2026 · Phase 2 · Real plant photos (Wikipedia), Climate + Recs side-by-side, recommendations tailored to home type &amp; lot
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3545,7 +3621,7 @@ function approxZoneFromLatitude(lat) {
   return "11a";
 }
 
-function resolveYard(addr, lat, lon) {
+function resolveYard(addr, lat, lon, ctx) {
   const cityKey = getCityKey(addr);
   const stateCode = getStateCode(addr);
   const zone =
@@ -3557,10 +3633,23 @@ function resolveYard(addr, lat, lon) {
   const inferred = !USDA_ZONE_BY_CITY[cityKey];   // true if zone came from state/lat fallback
 
   // Filter plants suitable for this zone
-  const suitable = PLANT_DB.filter(p => zoneNum >= p.min && zoneNum <= p.max);
-  // Bucket by type
+  let suitable = PLANT_DB.filter(p => zoneNum >= p.min && zoneNum <= p.max);
+
+  // v0.25: home-context filter
+  if (ctx) {
+    if (ctx.recMode === "pots-only") {
+      // Drop everything that won't survive long-term in a container
+      suitable = suitable.filter(p => getPotSuitability(p) !== "no");
+    } else if (ctx.recMode === "compact") {
+      // Drop trees that need a big yard; keep dwarf-pottable edible "trees"
+      suitable = suitable.filter(p => p.type !== "Tree" || getPotSuitability(p) !== "no");
+    }
+  }
+
+  // v0.25: in pots-only mode, hide the empty Tree row entirely
+  const inclTrees = !ctx || ctx.recMode !== "pots-only";
   const byType = {
-    Tree:      suitable.filter(p => p.type === "Tree").slice(0, 4),
+    Tree:      inclTrees ? suitable.filter(p => p.type === "Tree").slice(0, 4) : [],
     Shrub:     suitable.filter(p => p.type === "Shrub").slice(0, 4),
     Perennial: suitable.filter(p => p.type === "Perennial").slice(0, 4),
     Edible:    suitable.filter(p => p.type === "Edible").slice(0, 4)
@@ -3569,27 +3658,114 @@ function resolveYard(addr, lat, lon) {
   const soil = SOIL_BY_STATE[stateCode] || SOIL_DEFAULT;
   const watering = WATERING_BY_CLIMATE[info.climate] || WATERING_BY_CLIMATE["Temperate"];
 
-  return { zone, info, inferred, plants: byType, soil, watering, stateCode, lat, lon };
+  return { zone, info, inferred, plants: byType, soil, watering, stateCode, lat, lon, ctx };
+}
+
+/* -------- v0.25: Pot-friendliness + home-context filter ----------------
+   We don't have a `potOk` field per plant, so we infer it from type + name.
+   Trees → "no" (too big). Edible trees (Citrus, Mango, Fig, etc.) → "limited"
+   (dwarf cultivars work in big pots). Shrubs → "limited". Perennials and
+   small edibles → "yes". This drives both the per-card tag and the filter
+   that hides incompatible plants when the user lives in a townhouse/condo. */
+const EDIBLE_TREES = ["Mango","Citrus","Avocado","Apple","Fig","Banana","Papaya","Plumeria"];
+function getPotSuitability(p) {
+  if (p.type === "Tree") return "no";
+  if (p.type === "Edible" && EDIBLE_TREES.some(n => p.name.includes(n))) return "limited";
+  if (p.type === "Shrub") return "limited";
+  return "yes";
+}
+function potTagHtml(p) {
+  const s = getPotSuitability(p);
+  const label = s === "yes"     ? "Pot-friendly"
+              : s === "limited" ? "Big pot OK (dwarf)"
+              :                   "Needs ground";
+  const title = s === "yes"     ? "Thrives in containers — patio, balcony, or windowsill."
+              : s === "limited" ? "Possible in a large container with a dwarf cultivar; verify the variety before buying."
+              :                   "Mature size requires open ground — won't thrive long-term in a pot.";
+  return `<span class="plant-pot-tag ${s}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
+}
+
+/* -------- v0.25: Home context (drives plant recommendations) -----------
+   Reads the user's saved propertyType + lotSize from the home-card and
+   returns a structured view: type key, whether they have a real yard,
+   yard size bucket, and a recommendation mode. */
+function getHomeContext(addr) {
+  const saved = (typeof loadHomeDetails === "function") ? loadHomeDetails(addr) : {};
+  const typeRaw = (saved.propertyType || "Single-family").trim();
+  const typeLow = typeRaw.toLowerCase();
+  const lotRaw  = (saved.lotSize || "").trim().toLowerCase();
+
+  let typeKey = "single-family";
+  if (typeLow.includes("townhouse") || typeLow.includes("townhome") || typeLow.includes("row")) typeKey = "townhouse";
+  else if (typeLow.includes("condo") || typeLow.includes("apartment") || typeLow.includes("studio") || typeLow.includes("loft")) typeKey = "no-yard";
+  else if (typeLow.includes("duplex") || typeLow.includes("multi")) typeKey = "duplex";
+  else if (typeLow.includes("mobile") || typeLow.includes("manufactured")) typeKey = "mobile";
+
+  // Parse lot size — accept "0.25 ac", "5000 sqft", "0", "none", "n/a"
+  let lotSqft = null;
+  const noneRe = /(^|\s)(none|n\/a|no\s*yard|no\s*lot|0)(\s|$)/;
+  const acRe   = /([\d.]+)\s*(ac|acre)/;
+  const sqftRe = /([\d.]+)\s*(sqft|sq\s*ft|sf)/;
+  if (lotRaw) {
+    if (noneRe.test(lotRaw)) lotSqft = 0;
+    else {
+      const ac = lotRaw.match(acRe);
+      const sf = lotRaw.match(sqftRe);
+      if (ac) lotSqft = parseFloat(ac[1]) * 43560;
+      else if (sf) lotSqft = parseFloat(sf[1]);
+      else {
+        // Bare number: assume sqft if > 100, acres if < 5
+        const n = parseFloat(lotRaw);
+        if (Number.isFinite(n)) lotSqft = n > 100 ? n : n * 43560;
+      }
+    }
+  }
+
+  // Decide rec mode
+  let recMode = "all";  // "all" | "compact" | "pots-only"
+  let yardSize = "unknown";
+  let hasYard = true;
+
+  if (typeKey === "no-yard" || lotSqft === 0) {
+    hasYard = false;
+    yardSize = "none";
+    recMode  = "pots-only";
+  } else if (lotSqft != null) {
+    yardSize = lotSqft < 500   ? "tiny"
+            : lotSqft < 2000   ? "small"
+            : lotSqft < 10000  ? "medium"
+            :                    "large";
+    if (yardSize === "tiny")    recMode = "pots-only";
+    else if (yardSize === "small") recMode = "compact";
+    else recMode = "all";
+  } else if (typeKey === "townhouse") {
+    // Townhouse without specified lot — assume small backyard
+    yardSize = "small";
+    recMode  = "compact";
+  }
+
+  return { typeRaw, typeKey, hasYard, yardSize, lotSqft, recMode, lotProvided: !!lotRaw };
 }
 
 /* -------- Renderer --------------------------------------------------- */
-// v0.24: plant cards now include an image-preview tile (emoji-based since
-// we don't bundle photos), a "see images" link to Google Images, a "buy"
-// button to a search on a major retailer, and a "RECOMMENDED" ribbon so
-// users understand these are suggestions for their zone, not stock listings.
+// v0.25: real photos via Wikipedia REST API, async loaded after card is
+// in the DOM. data-sci attribute lets the loader find the card to swap.
+// Pot-suitability tag visible inline. Recommended ribbon retained.
 function plantCardHtml(p, categoryEmoji) {
   const tags = [];
   if (p.native && p.native.length) tags.push(`<span class="plant-tag native">Native (${escapeHtml(p.native.join(", "))})</span>`);
   if (p.drought) tags.push(`<span class="plant-tag drought">Drought-tolerant</span>`);
   if (p.shade)   tags.push(`<span class="plant-tag shade">Shade-OK</span>`);
   if (p.edible)  tags.push(`<span class="plant-tag edible">Edible</span>`);
+  tags.push(potTagHtml(p));
   const imagesUrl = `https://www.google.com/search?tbm=isch&q=${encodeURIComponent(p.name + " plant")}`;
   const buyUrl = `https://www.google.com/search?tbm=shop&q=${encodeURIComponent(p.name + " plant for sale")}`;
   const emoji = categoryEmoji || "🌱";
-  return `<div class="plant-card">
-    <span class="plant-rec-flag" title="Recommended for your USDA zone">Recommended</span>
+  const photoKey = (p.sci || p.name);
+  return `<div class="plant-card" data-photo-key="${escapeHtml(photoKey)}">
+    <span class="plant-rec-flag" title="Recommended for your USDA zone &amp; home type">Recommended</span>
     <div class="plant-image">
-      <span aria-hidden="true">${emoji}</span>
+      <div class="plant-photo-loading"><span aria-hidden="true">${emoji}</span></div>
       <a class="plant-image-link" href="${imagesUrl}" target="_blank" rel="noopener" aria-label="See photos of ${escapeHtml(p.name)}">See photos</a>
     </div>
     <div class="plant-body">
@@ -3600,6 +3776,75 @@ function plantCardHtml(p, categoryEmoji) {
       <a class="plant-buy" href="${buyUrl}" target="_blank" rel="noopener">Where to buy</a>
     </div>
   </div>`;
+}
+
+/* -------- v0.25: Wikipedia photo loader (async, cached in localStorage)
+   Goal: replace the emoji placeholder with a real plant photo without
+   blocking initial render. We cache hits AND misses (so we don't hammer
+   Wikipedia for plants that don't have a sci-name page). 4 fetches in
+   parallel — well within Wikipedia's anonymous rate limits. */
+const PLANT_PHOTO_CACHE_KEY = "homeatlas:plant-photos:v1";
+function loadPlantPhotoCache() {
+  try { return JSON.parse(localStorage.getItem(PLANT_PHOTO_CACHE_KEY) || "{}"); } catch (e) { return {}; }
+}
+function savePlantPhotoCache(c) {
+  try { localStorage.setItem(PLANT_PHOTO_CACHE_KEY, JSON.stringify(c)); } catch (e) {}
+}
+async function wikiThumbnail(title) {
+  const slug = title.replace(/\s+/g, "_").replace(/spp\.?$/i, "").trim();
+  if (!slug) return null;
+  const url = `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(slug)}`;
+  try {
+    const res = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (!res.ok) return null;
+    const data = await res.json();
+    // thumbnail is ~320px; originalimage can be huge
+    return data.thumbnail?.source || null;
+  } catch (e) { return null; }
+}
+function applyPlantPhoto(key, src) {
+  if (!src || src === "__miss__") return;
+  document.querySelectorAll(`.plant-card[data-photo-key="${CSS && CSS.escape ? CSS.escape(key) : key.replace(/"/g,'')}"]`).forEach(card => {
+    const wrap = card.querySelector(".plant-image");
+    if (!wrap || wrap.querySelector("img.plant-photo")) return;
+    const img = document.createElement("img");
+    img.className = "plant-photo";
+    img.loading = "lazy";
+    img.alt = "";
+    img.src = src;
+    img.addEventListener("error", () => {
+      img.remove(); // fall back to emoji placeholder underneath
+    });
+    img.addEventListener("load", () => {
+      const ph = wrap.querySelector(".plant-photo-loading");
+      if (ph) ph.style.display = "none";
+    });
+    wrap.insertBefore(img, wrap.firstChild);
+  });
+}
+async function loadPlantPhotos(plants) {
+  const cache = loadPlantPhotoCache();
+  const todo = [];
+  for (const p of plants) {
+    const key = p.sci || p.name;
+    if (cache[key]) {
+      applyPlantPhoto(key, cache[key]);
+    } else {
+      todo.push(p);
+    }
+  }
+  // Batch-fetch the rest in parallel chunks of 4
+  for (let i = 0; i < todo.length; i += 4) {
+    const batch = todo.slice(i, i + 4);
+    await Promise.all(batch.map(async p => {
+      const key = p.sci || p.name;
+      let src = await wikiThumbnail(p.sci || p.name);
+      if (!src && p.name && p.sci && p.name !== p.sci) src = await wikiThumbnail(p.name);
+      cache[key] = src || "__miss__";
+      if (src) applyPlantPhoto(key, src);
+    }));
+    savePlantPhotoCache(cache);
+  }
 }
 
 function renderYard(yard) {
@@ -3625,6 +3870,36 @@ function renderYard(yard) {
   setText("yard-growing-season", yard.info.season || "—");
   setText("yard-climate-type", yard.info.climate || "—");
 
+  // v0.25: Plant context banner (above the plant grid) — clarifies why these
+  const banner = $("plants-context-banner");
+  const ctx = yard.ctx;
+  const hint = $("yard-plants-hint");
+  if (ctx && ctx.recMode === "pots-only") {
+    banner.hidden = false;
+    banner.className = "plants-context-banner pots-only";
+    const reason = ctx.typeKey === "no-yard"
+      ? `Because your home is a <b>${escapeHtml(ctx.typeRaw)}</b>`
+      : `Because you indicated <b>no yard space</b>`;
+    banner.innerHTML = `<div>${reason}, these are <b>container-friendly</b> picks for your patio, balcony, or sunny windowsill — they thrive in pots and don't need open ground.</div>`;
+    if (hint) hint.textContent = "— container-friendly for your zone";
+  } else if (ctx && ctx.recMode === "compact") {
+    banner.hidden = false;
+    banner.className = "plants-context-banner";
+    const why = ctx.typeKey === "townhouse"
+      ? `Because you're in a <b>townhouse</b>${ctx.lotSqft ? ` with about ${Math.round(ctx.lotSqft).toLocaleString()} sqft of lot` : ""}`
+      : `Because your lot is <b>small</b>${ctx.lotSqft ? ` (~${Math.round(ctx.lotSqft).toLocaleString()} sqft)` : ""}`;
+    banner.innerHTML = `<div>${why}, we've trimmed out big shade trees that won't fit. Watch the "Big pot OK" tag — those work with dwarf cultivars in large containers.</div>`;
+    if (hint) hint.textContent = "— sized for your lot";
+  } else if (!ctx || !ctx.lotProvided) {
+    banner.hidden = false;
+    banner.className = "plants-context-banner";
+    banner.innerHTML = `<div>Showing the full set for <b>USDA zone ${escapeHtml(yard.zone)}</b>. <span class="ctx-link" onclick="document.getElementById('card-home')?.scrollIntoView({behavior:'smooth'});">Add your lot size &amp; property type</span> in <i>Your home</i> for picks tailored to the space you actually have.</div>`;
+    if (hint) hint.textContent = "— for your zone";
+  } else {
+    banner.hidden = true;
+    if (hint) hint.textContent = "— sized for your lot";
+  }
+
   // Plants — 4 category rows
   const categories = [
     { key: "Tree",      label: "Trees",       emoji: "🌳" },
@@ -3634,7 +3909,10 @@ function renderYard(yard) {
   ];
   const plantsHtml = categories.map(cat => {
     const list = yard.plants[cat.key] || [];
+    // v0.25: hide empty rows entirely (don't show "No matches" if we filtered them out)
     if (!list.length) {
+      // In pots-only mode the Tree row is intentionally absent — skip it silently.
+      if (ctx && ctx.recMode === "pots-only" && cat.key === "Tree") return "";
       return `<div class="plant-cat-row">
         <div class="plant-cat-label"><span class="emoji">${cat.emoji}</span>${cat.label}</div>
         <div style="color:var(--ink-faint);font-size:13px;font-style:italic;">No matches in our database for zone ${yard.zone}.</div>
@@ -3646,6 +3924,10 @@ function renderYard(yard) {
     </div>`;
   }).join("");
   $("yard-plants-body").innerHTML = plantsHtml;
+
+  // v0.25: kick off async Wikipedia photo loading for everything we just rendered
+  const allPlants = categories.flatMap(c => yard.plants[c.key] || []);
+  if (allPlants.length) loadPlantPhotos(allPlants);
 
   // Soil + WSS link
   const wssUrl = `https://websoilsurvey.nrcs.usda.gov/app/WebSoilSurvey.aspx`;
@@ -3781,9 +4063,9 @@ function renderHome(addr) {
   $("card-home").hidden = false;
   const saved = loadHomeDetails(addr);
   const tiles = [
-    { icon:"🏠", label:"Property type", value: saved.propertyType || "Single-family", editable:true, key:"propertyType" },
+    { icon:"🏠", label:"Property type", value: saved.propertyType || "Single-family", editable:true, key:"propertyType", placeholder:"Single-family / Townhouse / Condo / Apartment" },
     { icon:"🔧", label:"Year built",    value: saved.yearBuilt    || null,            editable:true, key:"yearBuilt", placeholder:"e.g. 1995", hint:"Click to add — unlocks house-anatomy module" },
-    { icon:"📐", label:"Lot size",      value: saved.lotSize      || null,            editable:true, key:"lotSize",   placeholder:"e.g. 0.25 ac" },
+    { icon:"📐", label:"Lot size",      value: saved.lotSize      || null,            editable:true, key:"lotSize",   placeholder:"e.g. 0.25 ac, 5000 sqft, or none", hint:"Click to add — tailors plant recommendations" },
     { icon:"🚗", label:"Parking",       value: saved.parking      || "—",              editable:true, key:"parking" },
     { icon:"🛏️", label:"Bedrooms",      value: saved.bedrooms     || null,            editable:true, key:"bedrooms",  placeholder:"e.g. 3" },
     { icon:"🛁", label:"Bathrooms",     value: saved.bathrooms    || null,            editable:true, key:"bathrooms", placeholder:"e.g. 2.5" }
@@ -3819,7 +4101,11 @@ function renderHome(addr) {
         if (newVal) updated[key] = newVal;
         else delete updated[key];
         saveHomeDetails(addr, updated);
-        renderHome(addr);   // re-render
+        renderHome(addr);   // re-render the home card
+        // v0.25: property type or lot size edits should re-tailor plant recs
+        if (key === "propertyType" || key === "lotSize") {
+          rerenderYardIfReady();
+        }
       };
       input.addEventListener("blur", commit);
       input.addEventListener("keydown", (e) => {
@@ -3936,15 +4222,28 @@ function renderResults(geo) {
   const sc = resolveDistrict(a); renderDistrictHeader(sc);
   loadNearbySchools(geo);
 
-  // Phase 2: Yard & Garden module
-  const yard = resolveYard(a, parseFloat(geo.lat), parseFloat(geo.lon));
+  // v0.25: stash addr + lat/lon so editing home details can re-resolve yard
+  lastYardArgs = { addr: a, lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) };
+
+  // Phase 2: Yard & Garden module — pass home context so plant filter respects it
+  const ctx = getHomeContext(a);
+  const yard = resolveYard(a, lastYardArgs.lat, lastYardArgs.lon, ctx);
   renderYard(yard);
 
   // v0.19: Home details, Climate risks, Parks
   renderHome(a);
-  const risks = resolveRisks(a, parseFloat(geo.lat), parseFloat(geo.lon), yard.zone);
+  const risks = resolveRisks(a, lastYardArgs.lat, lastYardArgs.lon, yard.zone);
   renderRisks(risks);
   loadNearbyParks(geo);   // async via Overpass
+}
+
+// v0.25: cache last yard inputs so renderHome() can rerender plants after edits
+let lastYardArgs = null;
+function rerenderYardIfReady() {
+  if (!lastYardArgs) return;
+  const ctx = getHomeContext(lastYardArgs.addr);
+  const yard = resolveYard(lastYardArgs.addr, lastYardArgs.lat, lastYardArgs.lon, ctx);
+  renderYard(yard);
 }
 
 /* -------- Main flow -------------------------------------------------- */
