@@ -258,6 +258,112 @@
     white-space: nowrap; pointer-events: none;
   }
 
+  /* ─── v0.26: Provider cards (2-per-row) ─────────────────────────── */
+  .provider-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    margin: 0;
+  }
+  .provider-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex; flex-direction: column; gap: 8px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .provider-card:hover { box-shadow: var(--shadow); border-color: #d6dbe3; }
+  .provider-card-row {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .provider-card-name {
+    flex: 1; min-width: 0;
+    color: var(--ink); text-decoration: none;
+    font-weight: 700; font-size: 14.5px;
+    letter-spacing: -0.01em;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .provider-card-name:hover { color: var(--primary); text-decoration: underline; }
+  .provider-card-tech {
+    display: inline-flex; align-items: center;
+    padding: 2px 9px; border-radius: 999px;
+    background: var(--surface-2); color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 600;
+    align-self: flex-start;
+    border: 1px solid var(--line);
+  }
+  /* Tech badges with hint colors per technology */
+  .provider-card-tech.tech-fiber  { background: rgba(0,106,255,0.10);    color: #0050c2; border-color: rgba(0,106,255,0.18); }
+  .provider-card-tech.tech-cable  { background: rgba(212,163,115,0.18);  color: #8a5a1f; border-color: rgba(212,163,115,0.30); }
+  .provider-card-tech.tech-5g     { background: rgba(45,106,79,0.10);    color: #2d6a4f; border-color: rgba(45,106,79,0.20); }
+  .provider-card-tech.tech-sat    { background: rgba(76,86,140,0.12);    color: #46508a; }
+  .provider-card-tech.tech-dsl    { background: rgba(176,52,52,0.10);    color: #8c2222; }
+  .provider-card-speeds {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .provider-card-speeds .spd {
+    background: var(--surface-2); border: 1px solid var(--line-2);
+    border-radius: 8px; padding: 8px 10px;
+    text-align: left;
+  }
+  .provider-card-speeds .spd-num {
+    font-size: 18px; font-weight: 700; color: var(--ink);
+    font-variant-numeric: tabular-nums; letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+  .provider-card-speeds .spd-lbl {
+    font-size: 10.5px; color: var(--ink-faint);
+    font-weight: 600; letter-spacing: 0.2px;
+    margin-top: 2px;
+  }
+  /* Compact provider card variant for TV/Security/Electric (no speeds) */
+  .provider-card.compact { gap: 6px; padding: 10px 14px; }
+  .provider-card.compact .provider-card-tech { font-size: 11px; padding: 2px 8px; }
+
+  /* ─── v0.26: 2-per-row schools / parks list ─────────────────────── */
+  .row-grid-2 {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+  /* Avatar-style school badge — first letter, color by distance bucket */
+  .school-badge.avatar {
+    text-decoration: none; cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.15s ease;
+  }
+  .school-badge.avatar:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .school-badge.avatar .badge-num { font-size: 22px; line-height: 1; }
+  .school-badge.avatar .badge-unit { font-size: 9px; opacity: 0.92; letter-spacing: 0.5px; margin-top: 2px; }
+  /* Park/library bubble — category emoji */
+  .school-badge.icon-bubble {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--ink); font-size: 26px;
+    line-height: 1;
+  }
+  .school-badge.icon-bubble.cat-park       { background: rgba(76,140,82,0.14);   border-color: rgba(76,140,82,0.30); }
+  .school-badge.icon-bubble.cat-playground { background: rgba(212,163,115,0.18); border-color: rgba(212,163,115,0.32); }
+  .school-badge.icon-bubble.cat-dog        { background: rgba(176,137,0,0.14);   border-color: rgba(176,137,0,0.30); }
+  .school-badge.icon-bubble.cat-trail      { background: rgba(76,86,140,0.12);   border-color: rgba(76,86,140,0.30); }
+  .school-badge.icon-bubble.cat-library    { background: rgba(0,106,255,0.10);   border-color: rgba(0,106,255,0.20); }
+  .school-badge.icon-bubble.cat-college    { background: rgba(29,58,95,0.10);    border-color: rgba(29,58,95,0.22); }
+  .school-badge.icon-bubble.cat-pool       { background: rgba(0,160,200,0.12);   border-color: rgba(0,160,200,0.28); }
+
+  /* Distance + rating tags next to the school name */
+  .school-dist-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-left: 6px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    background: var(--surface-2); color: var(--ink-soft);
+    border: 1px solid var(--line);
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .school-dist-tag.dist-near   { background: rgba(45,106,79,0.10); color: #2d6a4f; border-color: rgba(45,106,79,0.20); }
+  .school-dist-tag.dist-mid    { background: rgba(43,90,158,0.10); color: #2b5a9e; border-color: rgba(43,90,158,0.20); }
+  .school-dist-tag.dist-far    { background: rgba(107,114,128,0.10); color: #4a5263; }
+  .school-dist-tag::before { content: "📍"; font-size: 10px; }
+
   /* Provider sub-groups (cable / fiber / 5G / satellite, etc.) */
   /* v0.24: bump to 15px so subsection labels are larger than the 13.5px table content */
   .pgroup { margin-top: 18px; }
@@ -1207,7 +1313,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.25 · May 2026 · Phase 2 · Real plant photos (Wikipedia), Climate + Recs side-by-side, recommendations tailored to home type &amp; lot
+      <b>HomeAtlas</b> &mdash; v0.26 · May 2026 · Phase 2 · 2-per-row provider cards · School avatar + GreatSchools deep-link · Park category icons + distance tags
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3013,20 +3119,63 @@ function renderGroupedSections(containerId, rows, opts) {
   if (stragglers.length) groups.push({ label: "Other", rows: stragglers });
 
   // v0.22: tag the dominant group with a "Most used here" pill
+  // v0.26: cardFn (when provided) wins over rowFn — renders cards in a 2-col grid
   root.innerHTML = groups.map(g => {
     const popular = (g.label === opts.popularGroup) ? '<span class="pgroup-popular">Most used in neighborhood</span>' : "";
+    const body = opts.cardFn
+      ? `<div class="provider-grid">${g.rows.map(opts.cardFn).join("")}</div>`
+      : `<div class="tbl-wrap"><table class="ptable">${opts.headHtml || ""}<tbody>${g.rows.map(opts.rowFn).join("")}</tbody></table></div>`;
     return `
     <div class="pgroup">
       <div class="pgroup-head">
         ${escapeHtml(g.label)}
         <span class="pgroup-count">(${g.rows.length})</span>${popular}
       </div>
-      <div class="tbl-wrap"><table class="ptable">
-        ${opts.headHtml || ""}
-        <tbody>${g.rows.map(opts.rowFn).join("")}</tbody>
-      </table></div>
+      ${body}
     </div>`;
   }).join("");
+}
+
+/* -------- v0.26: provider card builders ------------------------------ */
+function techClass(tech) {
+  const t = (tech || "").toLowerCase();
+  if (t.includes("fiber")) return "tech-fiber";
+  if (t.includes("cable")) return "tech-cable";
+  if (t.includes("5g") || t.includes("wireless")) return "tech-5g";
+  if (t.includes("satellite")) return "tech-sat";
+  if (t.includes("dsl")) return "tech-dsl";
+  return "";
+}
+function internetCardHtml(r) {
+  const map = mapUrlNear(r.name);
+  return `<div class="provider-card">
+    <div class="provider-card-row">
+      <a class="provider-card-name" href="${urlFor(r.name)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a>
+      <a class="icon-btn" href="${map}" target="_blank" rel="noopener" aria-label="Map">${ICON_PIN}</a>
+    </div>
+    <div class="provider-card-tech ${techClass(r.tech)}">${escapeHtml(r.tech)}</div>
+    <div class="provider-card-speeds">
+      <div class="spd"><div class="spd-num">${r.down}</div><div class="spd-lbl">Down · Mbps</div></div>
+      <div class="spd"><div class="spd-num">${r.up}</div><div class="spd-lbl">Up · Mbps</div></div>
+    </div>
+  </div>`;
+}
+function compactCardHtml(r, opts = {}) {
+  const isAntenna = r.name && r.name.startsWith("OTA Antenna");
+  const map = isAntenna
+    ? "https://www.fcc.gov/media/engineering/dtvmaps"
+    : mapUrlNear(r.name);
+  const nameHtml = isAntenna
+    ? `<span class="provider-card-name">${escapeHtml(r.name)}</span>`
+    : `<a class="provider-card-name" href="${urlFor(r.name)}" target="_blank" rel="noopener">${escapeHtml(r.name)}</a>`;
+  const meta = r.type || r.role || "";
+  return `<div class="provider-card compact">
+    <div class="provider-card-row">
+      ${nameHtml}
+      <a class="icon-btn" href="${map}" target="_blank" rel="noopener" aria-label="Map">${ICON_PIN}</a>
+    </div>
+    ${meta ? `<div class="provider-card-tech">${escapeHtml(meta)}</div>` : ""}
+  </div>`;
 }
 
 /* -------- Renderers -------------------------------------------------- */
@@ -3096,14 +3245,8 @@ function renderElectric(e, geo) {
     setHTML("electric-source", "");
     return;
   }
-  body.innerHTML = `<div class="tbl-wrap"><table class="ptable">
-    <thead><tr><th>Provider</th><th>Role</th><th></th></tr></thead>
-    <tbody>${e.rows.map(r => `<tr>
-      <td>${providerCell(r.name)}</td>
-      <td class="role">${escapeHtml(r.role)}</td>
-      <td class="icon-cell">${iconButtonsHtml(r.name)}</td>
-    </tr>`).join("")}</tbody>
-  </table></div>`;
+  // v0.26: 2-per-row cards instead of a table
+  body.innerHTML = `<div class="provider-grid">${e.rows.map(r => compactCardHtml({ name: r.name, type: r.role })).join("")}</div>`;
   setHTML("electric-source", 'Verify exact territory on the <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC service-territory map</a> (CA) or the <a href="https://atlas.eia.gov/datasets/eia::electric-retail-service-territories-2/explore" target="_blank" rel="noopener">U.S. Energy Atlas</a> (other states).');
 }
 
@@ -3116,14 +3259,7 @@ function renderInternet(i, lat, lon, state) {
   renderGroupedSections("internet-body", capped, {
     order: ISP_GROUP_ORDER,
     popularGroup: "Cable",   // cable is the dominant home-internet choice in most US areas
-    headHtml: `<thead><tr><th>Provider</th><th>Technology</th><th class="num-h">Down</th><th class="num-h">Up</th><th></th></tr></thead>`,
-    rowFn: r => `<tr>
-      <td>${providerCell(r.name)}</td>
-      <td class="tech">${escapeHtml(r.tech)}</td>
-      <td class="numeric">${r.down}</td>
-      <td class="numeric">${r.up}</td>
-      <td class="icon-cell">${iconButtonsHtml(r.name)}</td>
-    </tr>`
+    cardFn: internetCardHtml
   });
   const fccUrl = `https://broadbandmap.fcc.gov/location-summary/fixed?location=${lat},${lon}`;
   const hasCable = i.rows.some(r => (r.tech || "").toLowerCase() === "cable");
@@ -3147,18 +3283,7 @@ function renderTV(t) {
   renderGroupedSections("tv-body", cap5, {
     order: TV_GROUP_ORDER,
     popularGroup: "Streaming live TV",   // cord-cutting is the dominant trend
-    headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
-    rowFn: r => {
-      const isAntenna = r.name.startsWith("OTA Antenna");
-      const icons = isAntenna
-        ? `<a class="icon-btn" href="https://www.fcc.gov/media/engineering/dtvmaps" target="_blank" rel="noopener" aria-label="FCC DTV reception map">${ICON_PIN}</a>`
-        : iconButtonsHtml(r.name);
-      return `<tr>
-        <td>${isAntenna ? escapeHtml(r.name) : providerCell(r.name)}</td>
-        <td class="tech">${escapeHtml(r.type)}</td>
-        <td class="icon-cell">${icons}</td>
-      </tr>`;
-    }
+    cardFn: compactCardHtml
   });
 }
 
@@ -3175,12 +3300,7 @@ function renderSecurity(s) {
   renderGroupedSections("security-body", cap5, {
     order: SECURITY_GROUP_ORDER,
     popularGroup: "DIY systems",   // DIY (Ring, SimpliSafe) dominates new installs
-    headHtml: `<thead><tr><th>Provider</th><th>Type</th><th></th></tr></thead>`,
-    rowFn: r => `<tr>
-      <td>${providerCell(r.name)}</td>
-      <td class="tech">${escapeHtml(r.type)}</td>
-      <td class="icon-cell">${iconButtonsHtml(r.name)}</td>
-    </tr>`
+    cardFn: compactCardHtml
   });
 }
 
@@ -3188,22 +3308,35 @@ function renderDistrictHeader(sc) {
   setText("school-value", sc.name);
   setText("school-meta",  sc.note);
 }
-// v0.20: badge-row format for non-K-12 (Higher Ed, parks, libraries, etc.)
-// Badge shows distance number with "mi" subscript instead of a level letter.
+// v0.26: bubble shows the place's category emoji icon (visual cue for what
+// kind of place this is); distance moves to a tag inline next to the name.
+// Same treatment for parks (🏞️), playgrounds (🛝), dog parks (🐕), trails (🥾),
+// libraries (📚), pools (🏊), community centers (🏛️), colleges (🎓).
+function placeIconForSubtype(subtype, category) {
+  const s = (subtype || "").toLowerCase();
+  const c = (category || "").toLowerCase();
+  if (c === "dog"        || s.includes("dog"))        return { emoji: "🐕", cls: "cat-dog" };
+  if (c === "playground" || s.includes("playground")) return { emoji: "🛝", cls: "cat-playground" };
+  if (c === "trail"      || s.includes("trail") || s.includes("path") || s.includes("hiking")) return { emoji: "🥾", cls: "cat-trail" };
+  if (c === "park"       || s.includes("park") || s.includes("garden") || s.includes("nature")) return { emoji: "🏞️", cls: "cat-park" };
+  if (s.includes("library"))    return { emoji: "📚", cls: "cat-library" };
+  if (s.includes("pool") || s.includes("swimming"))   return { emoji: "🏊", cls: "cat-pool" };
+  if (s.includes("community") || s.includes("center") || s.includes("rec")) return { emoji: "🏛️", cls: "cat-college" };
+  if (s.includes("college") || s.includes("university") || s.includes("higher")) return { emoji: "🎓", cls: "cat-college" };
+  return { emoji: "📍", cls: "" };
+}
 function placeRow(item, cityKey) {
   const q = `${item.name} ${cityKey || ""}`.trim();
   const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const map   = mapUrlExact(item.lat, item.lon);
+  const distCls = distClass(item.dist);
+  const ic = placeIconForSubtype(item.subtype, item.category);
   return `<div class="school-row">
-    <div class="school-badge ${distClass(item.dist)}">
-      <span class="badge-num">${item.dist.toFixed(1)}</span>
-      <span class="badge-unit">mi</span>
-    </div>
+    <a class="school-badge icon-bubble ${ic.cls}" href="${map}" target="_blank" rel="noopener" aria-label="Open ${escapeHtml(item.name)} on map">${ic.emoji}</a>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
-      <div class="school-meta">
-        <span><b>Type:</b> ${escapeHtml(item.subtype)}</span>
-      </div>
+      <span class="school-level-tag lvl-k12">${escapeHtml(item.subtype)}</span>
+      <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
     </div>
     <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
   </div>`;
@@ -3256,14 +3389,24 @@ function levelTagClass(level) {
   if (level === "High")         return "lvl-high";
   return "lvl-k12";
 }
-// v0.24: a school badge now shows distance (rating-style number + "mi" unit)
-//        and the level (Elementary / Middle / High) is a tag next to the name.
-//        This makes the badge a real signal — closeness, not "what level is this".
+// v0.26: bubble is now a clickable rating avatar — first letter of school +
+// "GS?" as the visible label, color-coded by distance proximity. Click opens
+// GreatSchools search for the actual rating (paid API integration deferred to
+// Phase 6). Distance moves to a colored tag inline next to the school name.
+// Level (Elementary/Middle/High) stays as the existing colored level tag.
+function schoolFirstLetter(name) {
+  const m = (name || "").trim().match(/[A-Z]/i);
+  return m ? m[0].toUpperCase() : "?";
+}
+function gsSearchUrl(name, cityKey) {
+  const q = `${name || ""} ${cityKey || ""}`.trim();
+  return `https://www.greatschools.org/search/search.page?q=${encodeURIComponent(q)}`;
+}
 function levelRow(level, item, cityKey) {
   const tagClass = levelTagClass(level);
   if (!item) {
     return `<div class="school-row">
-      <div class="school-badge dist-na"><span class="badge-num">—</span></div>
+      <div class="school-badge dist-na avatar"><span class="badge-num">—</span></div>
       <div class="school-info">
         <div class="school-name" style="color:var(--ink-soft); pointer-events:none;">
           ${escapeHtml(level)} school
@@ -3276,16 +3419,19 @@ function levelRow(level, item, cityKey) {
   const q = `${item.name} ${cityKey || ""}`.trim();
   const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const map   = mapUrlExact(item.lat, item.lon);
+  const gsUrl = gsSearchUrl(item.name, cityKey);
+  const distCls = distClass(item.dist);
   return `<div class="school-row">
-    <div class="school-badge ${distClass(item.dist)}">
-      <span class="badge-num">${item.dist.toFixed(1)}</span>
-      <span class="badge-unit">mi</span>
-    </div>
+    <a class="school-badge avatar ${distCls}" href="${gsUrl}" target="_blank" rel="noopener" title="Open GreatSchools rating for ${escapeHtml(item.name)}">
+      <span class="badge-num">${escapeHtml(schoolFirstLetter(item.name))}</span>
+      <span class="badge-unit">GS ?</span>
+    </a>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
-      <div class="school-meta">
-        <span>${item.dist.toFixed(2)} mi away</span>
+      <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
+      <div class="school-meta" style="margin-top:4px;">
+        <a href="${gsUrl}" target="_blank" rel="noopener" style="color:var(--primary); font-size:12px; font-weight:500; text-decoration:none;">View GreatSchools rating →</a>
       </div>
     </div>
     <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
@@ -3298,19 +3444,19 @@ function renderSchoolSections(grouped, total, cityKey) {
   const pill = $("school-summary"); pill.hidden = false;
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.5 mi`;
 
-  // Build a 3-row table (Elementary / Middle / High) for a given pool.
+  // v0.26: render the 3 levels in a 2-per-row grid (E + M side-by-side, H alone on row 2)
   const fill3x = (sectionId, tbodyId, pool) => {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!pool || !pool.length) { sec.hidden = true; return; }
     const picks = pickThreeLevels(pool);
-    // Only render the section if there's at least one match across the 3 levels
     if (!picks.Elementary && !picks.Middle && !picks.High) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = [
+    const rows = [
       levelRow("Elementary", picks.Elementary, cityKey),
       levelRow("Middle",     picks.Middle,     cityKey),
       levelRow("High",       picks.High,       cityKey)
     ].join("");
+    tb.innerHTML = `<div class="row-grid-2">${rows}</div>`;
   };
 
   // 3 sections, 3 levels each
@@ -3318,12 +3464,12 @@ function renderSchoolSections(grouped, total, cityKey) {
   fill3x("private-section", "private-tbody", grouped.private);
   fill3x("other-section",   "other-tbody",   grouped.other || []);
 
-  // Higher Ed and enrichment use simple table rendering
+  // v0.26: Higher Ed and enrichment also render 2-per-row
   const fillSimple = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = items.map(it => placeRow(it, cityKey)).join("");
+    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
   };
   fillSimple("higher-section",     "higher-tbody",     grouped.higher);
   fillSimple("enrichment-section", "enrichment-tbody", grouped.enrichment);
@@ -4186,11 +4332,12 @@ function renderParks(grouped, total, cityKey) {
   $("parks-summary").hidden = false;
   $("parks-summary").textContent = `${total} place${total === 1 ? "" : "s"} within 1.9 mi`;
   setText("parks-value", total > 0 ? `${total} places to explore` : "Nothing nearby in OpenStreetMap");
+  // v0.26: 2-per-row layout for park lists
   const fillSection = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = items.map(it => placeRow(it, cityKey)).join("");
+    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
   };
   fillSection("parks-park-section",       "parks-park-tbody",       grouped.park);
   fillSection("parks-dog-section",        "parks-dog-tbody",        grouped.dog);
