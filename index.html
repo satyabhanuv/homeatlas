@@ -18,41 +18,65 @@
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="HomeAtlas">
 <meta name="twitter:description" content="Everything about your home, in one place — by address.">
+
+<!-- v0.23: Inter for cleaner Zillow-style typography -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
-  /* ---------- Theme ---------- */
+  /* ---------- Theme (v0.23: Zillow-inspired refresh) ---------- */
   :root {
-    --bg:        #f7f5f0;
+    --bg:        #fafafa;
     --surface:   #ffffff;
-    --ink:       #1a1f1a;
-    --ink-soft:  #4a544a;
-    --ink-faint: #8a948a;
-    --primary:   #2d6a4f;
-    --primary-2: #1b4332;
+    --surface-2: #f5f5f5;
+    --ink:       #0e1116;
+    --ink-soft:  #4a5263;
+    --ink-faint: #8b94a3;
+    --primary:   #006aff;       /* Zillow-style action blue */
+    --primary-2: #0050c2;
+    --primary-soft: rgba(0,106,255,0.08);
+    --green:     #2d6a4f;       /* legacy green still used for badges/icons */
+    --green-2:   #1b4332;
     --accent:    #d4a373;
-    --line:      #e6e2d6;
+    --line:      #e4e8ee;
+    --line-2:    #f0f3f7;
     --warn:      #b08900;
     --error:     #b3261e;
-    --radius:    14px;
-    --shadow:    0 1px 2px rgba(20,30,20,0.04), 0 8px 28px rgba(20,30,20,0.06);
+    --tag-rec-bg:   rgba(0,106,255,0.10);
+    --tag-rec-fg:   #0050c2;
+    --tag-info-bg:  rgba(43,90,158,0.08);
+    --tag-info-fg:  #2b5a9e;
+    --tag-data-bg:  #eef1f5;
+    --tag-data-fg:  #4a5263;
+    --tag-good-bg:  rgba(45,106,79,0.10);
+    --tag-good-fg:  #2d6a4f;
+    --radius:    12px;
+    --radius-lg: 16px;
+    --shadow:    0 1px 2px rgba(13,16,20,0.04), 0 4px 16px rgba(13,16,20,0.05);
+    --shadow-lg: 0 2px 4px rgba(13,16,20,0.05), 0 12px 32px rgba(13,16,20,0.08);
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; padding: 0; }
   body {
     background: var(--bg); color: var(--ink);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.005em;
   }
+  h1, h2, h3, h4 { letter-spacing: -0.02em; }
   a { color: var(--primary); }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
   header { padding: 28px 0 12px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: 0.2px; font-size: 18px; }
-  .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--primary), var(--accent)); }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; font-size: 18px; }
+  .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--accent)); }
   .brand-tag { margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--line); color: var(--ink-soft); font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; font-weight: 600; }
 
-  .hero { padding: 36px 0 24px; }
-  .hero h1 { font-size: clamp(28px, 5vw, 44px); line-height: 1.1; margin: 0 0 12px; letter-spacing: -0.5px; }
+  .hero { padding: 32px 0 20px; }
+  .hero h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.05; margin: 0 0 10px; letter-spacing: -0.03em; font-weight: 800; }
   .hero h1 em { color: var(--primary); font-style: normal; }
-  .hero p.lead { margin: 0 0 24px; max-width: 640px; font-size: clamp(16px, 2.2vw, 18px); color: var(--ink-soft); }
+  .hero p.lead { margin: 0 0 22px; max-width: 600px; font-size: clamp(15px, 1.8vw, 17px); color: var(--ink-soft); line-height: 1.5; }
 
   .search-wrap { position: relative; max-width: 720px; }
   .searchbar {
@@ -151,15 +175,34 @@
   .resolved-value { font-size: 15px; color: var(--ink); font-weight: 500; word-break: break-word; }
   .resolved-value .inferred { color: var(--ink-faint); font-size: 11px; font-weight: 600; margin-left: 4px; }
 
-  /* Cards */
-  .grid { margin-top: 16px; display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px 18px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); position: relative; overflow: hidden; }
-  .card .icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); font-size: 18px; margin-bottom: 6px; }
-  .card h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
-  .card .value { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px;}
-  .card .meta { font-size: 13px; color: var(--ink-soft); margin-top: 4px; margin-bottom: 8px; }
-  .card .source { font-size: 12px; color: var(--ink-faint); margin-top: 12px; }
-  .card .source a { color: var(--primary); text-decoration: underline; }
+  /* Cards (v0.23: Zillow-style — flatter, sharper, tighter) */
+  .grid { margin-top: 12px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 6px; box-shadow: var(--shadow); position: relative; overflow: hidden; transition: box-shadow 0.15s ease, border-color 0.15s ease; }
+  .card:hover { box-shadow: var(--shadow-lg); border-color: #d6dbe3; }
+  .card .icon { width: 32px; height: 32px; border-radius: 8px; display: grid; place-items: center; background: var(--surface-2); color: var(--green); font-size: 16px; margin-bottom: 4px; border: 1px solid var(--line); }
+  .card h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 600; }
+  .card .value { font-size: 18px; font-weight: 700; color: var(--ink); margin-top: 2px; letter-spacing: -0.01em; }
+  .card .meta { font-size: 13px; color: var(--ink-soft); margin-top: 4px; margin-bottom: 6px; }
+  .card .source { font-size: 12px; color: var(--ink-faint); margin-top: 10px; }
+  .card .source a { color: var(--primary); text-decoration: none; font-weight: 500; }
+  .card .source a:hover { text-decoration: underline; }
+
+  /* ─── v0.23: Tag system — distinguish recommendation / info / data ── */
+  .tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 9px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1px; line-height: 1.4;
+    white-space: nowrap;
+  }
+  .tag-rec   { background: var(--tag-rec-bg);  color: var(--tag-rec-fg); }   /* "Most picked", "Recommended" */
+  .tag-info  { background: var(--tag-info-bg); color: var(--tag-info-fg); }  /* informational notes */
+  .tag-data  { background: var(--tag-data-bg); color: var(--tag-data-fg); }  /* neutral facts (technology, distance, etc.) */
+  .tag-good  { background: var(--tag-good-bg); color: var(--tag-good-fg); }  /* positive signal (close, native, drought-tolerant) */
+  .tag::before { font-size: 10px; }
+  .tag-rec::before  { content: "★"; }
+  .tag-info::before { content: "ⓘ"; font-style: normal; }
+  .tag-good::before { content: "✓"; }
 
   /* Empty/help-state callout */
   .help-callout {
@@ -178,31 +221,32 @@
   }
   .help-callout .visit-btn:hover { background: rgba(45,106,79,0.16); }
 
-  /* Provider tables */
+  /* Provider tables (v0.23: tighter, more Zillow-grid-like) */
   .tbl-wrap { overflow-x: auto; }
   .ptable { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 100%; }
-  .ptable thead th { text-align: left; padding: 9px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-faint); font-weight: 700; border-bottom: 1px solid var(--line); background: rgba(45,106,79,0.04); white-space: nowrap; }
+  .ptable thead th { text-align: left; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-faint); font-weight: 600; border-bottom: 1px solid var(--line); background: var(--surface-2); white-space: nowrap; }
   .ptable thead th.num-h { text-align: right; }
-  .ptable tbody td { padding: 11px 10px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  .ptable tbody td { padding: 10px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
   .ptable tbody tr:last-child td { border-bottom: none; }
-  .ptable td.numeric { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; }
-  .ptable td.tech    { color: var(--ink-soft); white-space: nowrap; }
-  .ptable td.role    { color: var(--ink-soft); }
-  .ptable .provider-link { color: var(--primary); text-decoration: none; font-weight: 600; }
-  .ptable .provider-link:hover { text-decoration: underline; }
-  .ptable .visit-btn { display: inline-block; padding: 4px 10px; background: rgba(45,106,79,0.08); border: 1px solid rgba(45,106,79,0.2); border-radius: 6px; color: var(--primary); text-decoration: none; font-size: 12px; font-weight: 600; white-space: nowrap; }
-  .ptable .visit-btn:hover { background: rgba(45,106,79,0.16); }
+  .ptable tbody tr:hover { background: var(--line-2); }
+  .ptable td.numeric { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); white-space: nowrap; font-weight: 600; }
+  .ptable td.tech    { color: var(--ink-soft); white-space: nowrap; font-size: 12px; }
+  .ptable td.role    { color: var(--ink-soft); font-size: 12.5px; }
+  .ptable .provider-link { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .ptable .provider-link:hover { color: var(--primary); text-decoration: underline; }
+  .ptable .visit-btn { display: inline-block; padding: 4px 10px; background: var(--primary-soft); border: 1px solid rgba(0,106,255,0.2); border-radius: 6px; color: var(--primary); text-decoration: none; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .ptable .visit-btn:hover { background: rgba(0,106,255,0.16); }
   /* Dual-icon link cell (v0.12) — "Reach them" globe + "Map" pin */
   .icon-cell { white-space: nowrap; text-align: right; }
   .icon-btn {
     display: inline-flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; border-radius: 6px;
-    background: rgba(45,106,79,0.06); border: 1px solid rgba(45,106,79,0.18);
-    color: var(--primary); text-decoration: none;
+    background: var(--surface-2); border: 1px solid var(--line);
+    color: var(--ink-soft); text-decoration: none;
     margin-left: 4px; vertical-align: middle;
-    transition: background 0.12s ease, transform 0.12s ease;
+    transition: background 0.12s ease, color 0.12s ease, transform 0.12s ease;
   }
-  .icon-btn:hover { background: rgba(45,106,79,0.16); transform: translateY(-1px); }
+  .icon-btn:hover { background: var(--primary-soft); color: var(--primary); border-color: rgba(0,106,255,0.2); transform: translateY(-1px); }
   .icon-btn:first-child { margin-left: 0; }
   .icon-btn svg { width: 16px; height: 16px; fill: currentColor; }
   .icon-btn[aria-label] { position: relative; }
@@ -442,24 +486,26 @@
   .privacy { background: rgba(45,106,79,0.06); border: 1px solid rgba(45,106,79,0.18); padding: 14px 16px; border-radius: 10px; color: var(--ink-soft); font-size: 13.5px; margin-top: 16px; }
   .privacy b { color: var(--primary-2); }
 
-  /* ─── v0.22: Slim context bar inside cards (replaces inner header) ── */
+  /* ─── v0.23: Slim context bar inside cards (Zillow-style) ── */
   .card-context-bar {
     display: flex; align-items: center; gap: 10px;
-    flex-wrap: wrap; margin-bottom: 14px;
+    flex-wrap: wrap; margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-2);
   }
   .card-context-text {
-    font-size: 17px; font-weight: 700; color: var(--ink);
-    flex: 1; min-width: 0;
+    font-size: 16px; font-weight: 700; color: var(--ink);
+    flex: 1; min-width: 0; letter-spacing: -0.01em;
   }
   .card-context-text .ctx-sub {
-    display: block; font-size: 13px; font-weight: 500;
-    color: var(--ink-soft); margin-top: 2px;
+    display: block; font-size: 12.5px; font-weight: 500;
+    color: var(--ink-soft); margin-top: 2px; letter-spacing: 0;
   }
   .card-context-bar .summary-pill {
     margin-left: 0;
-    padding: 6px 12px; border-radius: 999px;
-    background: rgba(45,106,79,0.08); color: var(--primary);
-    font-size: 12px; font-weight: 600;
+    padding: 4px 10px; border-radius: 999px;
+    background: var(--tag-good-bg); color: var(--tag-good-fg);
+    font-size: 11.5px; font-weight: 600;
   }
   .info-btn {
     width: 22px; height: 22px;
@@ -484,44 +530,51 @@
   /* Compact service cards (no inner icon/h3 — section header is enough) */
   .card.service-card { padding: 14px 16px; }
   .card.service-card .card-context-text { font-size: 15px; }
-  /* "Most used in neighborhood" pill on category headers */
+  /* "Most used in neighborhood" pill on category headers (v0.23: Zillow blue) */
   .pgroup-popular {
-    display: inline-block; margin-left: 8px;
-    padding: 2px 8px; border-radius: 999px;
-    background: var(--primary); color: #fff;
-    font-size: 10px; letter-spacing: 0.4px;
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-left: 8px;
+    padding: 2px 9px; border-radius: 999px;
+    background: var(--tag-rec-bg); color: var(--tag-rec-fg);
+    font-size: 10px; letter-spacing: 0.3px;
     text-transform: uppercase; font-weight: 700;
   }
+  .pgroup-popular::before { content: "★"; font-size: 9px; }
 
-  /* ─── v0.21: Big distinctive section headers ──────────────────────── */
+  /* ─── v0.23: Slim Zillow-style section headers ──────────────────── */
   .page-section-header {
-    display: flex; gap: 16px; align-items: center;
-    padding: 22px 26px;
-    border-radius: var(--radius);
-    margin: 36px 0 14px;
-    background: var(--psh-bg, rgba(45,106,79,0.06));
-    border-left: 6px solid var(--psh-accent, var(--primary));
-    flex-wrap: wrap;
+    display: flex; gap: 12px; align-items: center;
+    padding: 0;
+    margin: 36px 0 12px;
+    border: none; background: transparent;
   }
-  .page-section-header.your-home  { --psh-bg: rgba(45,106,79,0.06); --psh-accent: #2d6a4f; }
-  .page-section-header.services   { --psh-bg: rgba(43,90,158,0.06);  --psh-accent: #2b5a9e; }
-  .page-section-header.schools    { --psh-bg: rgba(29,58,95,0.07);   --psh-accent: #1d3a5f; }
-  .page-section-header.parks      { --psh-bg: rgba(212,163,115,0.16); --psh-accent: #c08552; }
-  .page-section-header.yard       { --psh-bg: rgba(76,140,82,0.10);  --psh-accent: #4c8c52; }
-  .page-section-header.risks      { --psh-bg: rgba(176,52,52,0.07);  --psh-accent: #b34d4d; }
+  .page-section-header.your-home  { --psh-accent: #006aff; }
+  .page-section-header.services   { --psh-accent: #2b5a9e; }
+  .page-section-header.schools    { --psh-accent: #1d3a5f; }
+  .page-section-header.parks      { --psh-accent: #c08552; }
+  .page-section-header.yard       { --psh-accent: #4c8c52; }
+  .page-section-header.risks      { --psh-accent: #b34d4d; }
   .psh-icon {
-    width: 56px; height: 56px; flex: 0 0 56px;
-    background: rgba(255,255,255,0.7); border-radius: 14px;
+    width: 32px; height: 32px; flex: 0 0 32px;
+    background: var(--surface-2); border-radius: 8px;
     display: grid; place-items: center;
-    font-size: 28px;
+    font-size: 17px;
+    border: 1px solid var(--line);
   }
-  .psh-text { flex: 1; min-width: 200px; }
-  .psh-eyebrow {
-    font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--ink-faint); font-weight: 700;
+  .psh-text { flex: 1; min-width: 200px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  /* eyebrow and sub paragraph kept hidden — we want clean Zillow-style headers */
+  .psh-eyebrow { display: none; }
+  .psh-sub { display: none; margin: 0; }
+  .psh-title {
+    margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2;
+    color: var(--ink); letter-spacing: -0.02em;
   }
-  .psh-title { margin: 4px 0 0; font-size: 22px; line-height: 1.1; color: var(--ink); }
-  .psh-sub   { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); max-width: 60ch; }
+  /* Section header bottom rule */
+  .page-section-header::after {
+    content: ""; flex: 1 1 100%;
+    height: 0; border-bottom: 1px solid var(--line);
+    margin-top: 8px;
+  }
   /* First section header has less top margin */
   .results > .page-section-header:first-child { margin-top: 24px; }
 
@@ -637,9 +690,9 @@
   </header>
 
   <section class="hero">
-    <h1>Everything about <em>your home</em>, in one place.</h1>
+    <h1>Everything about <em>your home</em>.</h1>
     <p class="lead">
-      Enter your home address. We&rsquo;ll show you your electric utility, internet, TV and security options, and the schools and educational facilities around your home &mdash; grouped by type so you can scan fast.
+      Enter an address. See your utilities, internet, TV, security, schools, parks, and yard zone — all in one view.
     </p>
 
     <div class="search-wrap">
@@ -647,7 +700,7 @@
         <input id="addr" type="text" required
           placeholder="Start typing your address…  e.g. 123 Main St, Berkeley"
           aria-label="Home address" aria-autocomplete="list" aria-controls="suggestions" />
-        <button type="submit" id="searchBtn">Find my zones</button>
+        <button type="submit" id="searchBtn">Search</button>
       </form>
       <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
@@ -683,13 +736,11 @@
       <div id="ra-precision-notice"></div>
     </div>
 
-    <!-- v0.21: Section header — Your home -->
+    <!-- v0.23: Slim section header — Your home -->
     <div class="page-section-header your-home">
       <div class="psh-icon">🏠</div>
       <div class="psh-text">
-        <div class="psh-eyebrow">Section 1 · Your home</div>
-        <h2 class="psh-title">Tell us about your house</h2>
-        <p class="psh-sub">A few details unlock more recommendations — year built lights up the house-anatomy module, lot size feeds yard planning.</p>
+        <h2 class="psh-title">Your home</h2>
       </div>
     </div>
 
@@ -698,13 +749,11 @@
       <div class="home-grid" id="home-grid"></div>
     </div>
 
-    <!-- v0.21: Section header — Services -->
+    <!-- v0.23: Slim section header — Services -->
     <div class="page-section-header services">
       <div class="psh-icon">🔌</div>
       <div class="psh-text">
-        <div class="psh-eyebrow">Section 2 · Connectivity &amp; services</div>
-        <h2 class="psh-title">Who powers, connects &amp; protects your home</h2>
-        <p class="psh-sub">Electric utility (with CCA where applicable), internet providers, TV options, and home-security brands at this address.</p>
+        <h2 class="psh-title">Services</h2>
       </div>
     </div>
 
@@ -756,13 +805,11 @@
       </div>
     </div>
 
-    <!-- v0.21: Section header — Schools -->
+    <!-- v0.23: Slim section header — Schools -->
     <div class="page-section-header schools">
       <div class="psh-icon">🎓</div>
       <div class="psh-text">
-        <div class="psh-eyebrow">Section 3 · Schools &amp; education</div>
-        <h2 class="psh-title">Where the kids learn</h2>
-        <p class="psh-sub">Likely-assigned public school for each level, plus closest private and charter options. Click any school to see GreatSchools ratings.</p>
+        <h2 class="psh-title">Schools</h2>
       </div>
     </div>
 
@@ -816,13 +863,11 @@
       </div>
     </div>
 
-    <!-- v0.21: Section header — Parks (kid/pet/me focused) -->
+    <!-- v0.23: Slim section header — Parks -->
     <div class="page-section-header parks">
       <div class="psh-icon">🌳</div>
       <div class="psh-text">
-        <div class="psh-eyebrow">Section 4 · Lifestyle</div>
-        <h2 class="psh-title">For the kids, the dog, and you</h2>
-        <p class="psh-sub">Playgrounds, parks, dog parks, and trails — sorted by who they're for, ranked by closeness.</p>
+        <h2 class="psh-title">Parks &amp; lifestyle</h2>
       </div>
     </div>
 
@@ -862,13 +907,11 @@
       </div>
     </div>
 
-    <!-- v0.21: Section header — Yard & garden -->
+    <!-- v0.23: Slim section header — Yard & garden -->
     <div class="page-section-header yard">
       <div class="psh-icon">🌱</div>
       <div class="psh-text">
-        <div class="psh-eyebrow">Section 5 · Yard &amp; garden</div>
-        <h2 class="psh-title">What to plant, when to water</h2>
-        <p class="psh-sub">Today's seasonal action, plant recommendations for your USDA hardiness zone, soil typical for your region.</p>
+        <h2 class="psh-title">Yard &amp; garden</h2>
       </div>
     </div>
 
@@ -927,13 +970,11 @@
       </div>
     </div>
 
-    <!-- v0.21: Section header — Climate risks (collapsed by default) -->
+    <!-- v0.23: Slim section header — Climate risks (collapsed by default) -->
     <div class="page-section-header risks">
       <div class="psh-icon">⚠️</div>
       <div class="psh-text">
-        <div class="psh-eyebrow">Section 6 · Optional details</div>
         <h2 class="psh-title">Climate risks</h2>
-        <p class="psh-sub">Flood, fire, heat, and air-quality estimates for the region. Click to expand.</p>
       </div>
     </div>
 
@@ -980,7 +1021,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.22 · April 2026 · Phase 2 · One header per section, info popovers, compact services
+      <b>HomeAtlas</b> &mdash; v0.23 · May 2026 · Phase 2 · Zillow-inspired UI refresh — Inter typography, slim headers, tag system
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
