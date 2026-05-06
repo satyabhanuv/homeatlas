@@ -837,6 +837,23 @@
   .page-section-header.parks      { --psh-accent: #c08552; }
   .page-section-header.yard       { --psh-accent: #4c8c52; }
   .page-section-header.risks      { --psh-accent: #b34d4d; }
+  .page-section-header.home-services   { --psh-accent: #c08552; }
+  .page-section-header.public-services { --psh-accent: #b34d4d; }
+
+  /* v0.27: "Reviews coming in Phase 4" banner under Home services */
+  .reviews-coming-banner {
+    margin: 8px 0 14px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(0,106,255,0.06), rgba(45,106,79,0.06));
+    border: 1px solid rgba(0,106,255,0.18);
+    border-radius: 10px;
+    font-size: 13px; line-height: 1.5; color: var(--ink);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .reviews-coming-banner::before {
+    content: "🔒"; flex: 0 0 auto; font-size: 16px;
+  }
+  .reviews-coming-banner b { color: var(--primary-2); }
   .psh-icon {
     width: 32px; height: 32px; flex: 0 0 32px;
     background: var(--surface-2); border-radius: 8px;
@@ -1194,6 +1211,140 @@
       </div>
     </div>
 
+    <!-- v0.27: Slim section header — Home services -->
+    <div class="page-section-header home-services">
+      <div class="psh-icon">🛠️</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Home services</h2>
+      </div>
+    </div>
+
+    <div class="parks-card" id="card-home-services" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="hs-value">—</span>
+        </div>
+        <button class="info-btn" type="button" data-info-target="hs-info-popover" aria-label="About home services">i</button>
+        <div class="summary-pill" id="hs-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="hs-info-popover" hidden>
+        <b>Where this comes from:</b> registered businesses tagged on OpenStreetMap as a craft (plumber, electrician, carpenter, HVAC, painter, etc.) or a relevant shop (hardware, paint, appliance) within ~3 mi. Coverage is spotty for individual sole-proprietors who haven't registered on OSM yet.
+      </div>
+      <!-- v0.27: explicit "verified-resident reviews coming" note — sets expectations -->
+      <div class="reviews-coming-banner">
+        <div><b>Reviews coming in Phase 4.</b> When ratings launch, only verified neighbors — homeowners, residents, and tenants on this block — will be able to review. No paid placements, no random drive-by reviews. Until then, these are listings only.</div>
+      </div>
+      <div class="parks-loading" id="hs-loading" hidden>Finding nearby home-service providers…</div>
+      <div id="hs-sections" hidden>
+        <div class="school-section" id="hs-handyman-section" hidden>
+          <h4>🔧 Handyman &amp; general repair <span class="hint">— OSM craft=handyman / general</span></h4>
+          <div id="hs-handyman-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-plumber-section" hidden>
+          <h4>🚿 Plumbers</h4>
+          <div id="hs-plumber-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-electrician-section" hidden>
+          <h4>⚡ Electricians</h4>
+          <div id="hs-electrician-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-hvac-section" hidden>
+          <h4>❄️ HVAC &amp; heating-cooling</h4>
+          <div id="hs-hvac-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-painter-section" hidden>
+          <h4>🎨 Painters</h4>
+          <div id="hs-painter-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-carpenter-section" hidden>
+          <h4>🪚 Carpenters &amp; builders</h4>
+          <div id="hs-carpenter-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-roofer-section" hidden>
+          <h4>🏠 Roofers</h4>
+          <div id="hs-roofer-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-landscaper-section" hidden>
+          <h4>🌳 Landscapers &amp; gardeners</h4>
+          <div id="hs-landscaper-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-cleaner-section" hidden>
+          <h4>🧹 Cleaners</h4>
+          <div id="hs-cleaner-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-locksmith-section" hidden>
+          <h4>🔑 Locksmiths</h4>
+          <div id="hs-locksmith-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-hardware-section" hidden>
+          <h4>🛒 Hardware &amp; supply stores</h4>
+          <div id="hs-hardware-tbody"></div>
+        </div>
+        <div class="school-section" id="hs-other-section" hidden>
+          <h4>🧰 Other trades</h4>
+          <div id="hs-other-tbody"></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Listings from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> (<code>craft=*</code>, <code>shop=hardware</code>). Coverage of trades is improving but not exhaustive — a quick Google search for your specific need is still worth doing.
+      </div>
+    </div>
+
+    <!-- v0.27: Slim section header — Public services & emergency -->
+    <div class="page-section-header public-services">
+      <div class="psh-icon">🚨</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Public services &amp; emergency</h2>
+      </div>
+    </div>
+
+    <div class="parks-card" id="card-public-services" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="ps-value">—</span>
+        </div>
+        <button class="info-btn" type="button" data-info-target="ps-info-popover" aria-label="About public services">i</button>
+        <div class="summary-pill" id="ps-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="ps-info-popover" hidden>
+        <b>What this shows:</b> nearest public-safety facilities (fire, police), healthcare (hospitals, clinics, urgent care, doctors, dentists, pharmacies), and civic services (post office, town hall) within ~3 mi. <b>For an actual emergency call 911</b> — distances shown here are approximate, not response-time estimates.
+      </div>
+      <div class="parks-loading" id="ps-loading" hidden>Finding nearby public services…</div>
+      <div id="ps-sections" hidden>
+        <div class="school-section" id="ps-emergency-section" hidden>
+          <h4>🚒 Fire stations</h4>
+          <div id="ps-emergency-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-police-section" hidden>
+          <h4>🚓 Police</h4>
+          <div id="ps-police-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-hospital-section" hidden>
+          <h4>🏥 Hospitals &amp; urgent care</h4>
+          <div id="ps-hospital-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-clinic-section" hidden>
+          <h4>🩺 Clinics &amp; doctors</h4>
+          <div id="ps-clinic-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-pharmacy-section" hidden>
+          <h4>💊 Pharmacies</h4>
+          <div id="ps-pharmacy-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-dentist-section" hidden>
+          <h4>🦷 Dentists</h4>
+          <div id="ps-dentist-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-civic-section" hidden>
+          <h4>🏛️ Civic services <span class="hint">— post office, town hall</span></h4>
+          <div id="ps-civic-tbody"></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line. <b>For emergencies, call 911</b> — actual response time depends on dispatch and traffic, not the straight-line distance shown here.
+      </div>
+    </div>
+
     <!-- v0.23: Slim section header — Yard & garden -->
     <div class="page-section-header yard">
       <div class="psh-icon">🌱</div>
@@ -1313,7 +1464,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.26 · May 2026 · Phase 2 · 2-per-row provider cards · School avatar + GreatSchools deep-link · Park category icons + distance tags
+      <b>HomeAtlas</b> &mdash; v0.27 · May 2026 · Phase 2 · Home services (handyman/plumber/electrician/HVAC) &amp; Public services (fire/police/hospital/clinic/pharmacy)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3315,6 +3466,27 @@ function renderDistrictHeader(sc) {
 function placeIconForSubtype(subtype, category) {
   const s = (subtype || "").toLowerCase();
   const c = (category || "").toLowerCase();
+  // v0.27: Home services
+  if (c === "handyman"   || s.includes("handyman"))   return { emoji: "🔧", cls: "cat-park" };
+  if (c === "plumber"    || s.includes("plumb"))      return { emoji: "🚿", cls: "cat-library" };
+  if (c === "electrician"|| s.includes("electric"))   return { emoji: "⚡", cls: "cat-playground" };
+  if (c === "hvac"       || s.includes("hvac") || s.includes("heating") || s.includes("cooling") || s.includes("air-condition")) return { emoji: "❄️", cls: "cat-trail" };
+  if (c === "painter"    || s.includes("paint"))      return { emoji: "🎨", cls: "cat-playground" };
+  if (c === "carpenter"  || s.includes("carpenter") || s.includes("builder") || s.includes("construction")) return { emoji: "🪚", cls: "cat-park" };
+  if (c === "roofer"     || s.includes("roof"))       return { emoji: "🏠", cls: "cat-dog" };
+  if (c === "landscaper" || s.includes("landscap") || s.includes("gardener")) return { emoji: "🌳", cls: "cat-park" };
+  if (c === "cleaner"    || s.includes("clean"))      return { emoji: "🧹", cls: "cat-trail" };
+  if (c === "locksmith"  || s.includes("lock"))       return { emoji: "🔑", cls: "cat-college" };
+  if (c === "hardware"   || s.includes("hardware") || s.includes("doityourself") || s.includes("trade") || s.includes("appliance")) return { emoji: "🛒", cls: "cat-playground" };
+  // v0.27: Public services
+  if (c === "fire"       || s.includes("fire"))       return { emoji: "🚒", cls: "cat-dog" };
+  if (c === "police"     || s.includes("police"))     return { emoji: "🚓", cls: "cat-library" };
+  if (c === "hospital"   || s.includes("hospital") || s.includes("urgent")) return { emoji: "🏥", cls: "cat-dog" };
+  if (c === "clinic"     || s.includes("clinic") || s.includes("doctor") || s.includes("physician")) return { emoji: "🩺", cls: "cat-library" };
+  if (c === "pharmacy"   || s.includes("pharmacy"))   return { emoji: "💊", cls: "cat-college" };
+  if (c === "dentist"    || s.includes("dentist") || s.includes("dental")) return { emoji: "🦷", cls: "cat-pool" };
+  if (c === "civic"      || s.includes("post") || s.includes("townhall") || s.includes("government")) return { emoji: "🏛️", cls: "cat-college" };
+  // Existing parks/lifestyle
   if (c === "dog"        || s.includes("dog"))        return { emoji: "🐕", cls: "cat-dog" };
   if (c === "playground" || s.includes("playground")) return { emoji: "🛝", cls: "cat-playground" };
   if (c === "trail"      || s.includes("trail") || s.includes("path") || s.includes("hiking")) return { emoji: "🥾", cls: "cat-trail" };
@@ -4345,6 +4517,234 @@ function renderParks(grouped, total, cityKey) {
   fillSection("parks-trail-section",      "parks-trail-tbody",      grouped.trail);
 }
 
+/* =====================================================================
+   v0.27: Home services (handyman, plumber, electrician, HVAC, etc.)
+   Source: OpenStreetMap craft=* + selected shop=* tags. OSM coverage of
+   small home-service trades is uneven — we get what's there. The
+   reviews-from-verified-residents-only system is a Phase 4 feature
+   gated on accounts; until then this is a discovery list.
+   ===================================================================== */
+async function fetchHomeServices(lat, lon, radiusMeters = 4500) {
+  const q = `[out:json][timeout:20];(`
+    + `nwr["craft"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["shop"~"^(hardware|doityourself|trade|paint|appliance|electrical)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["office"="construction_company"](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  return await overpassQuery(q);
+}
+function classifyHomeService(el) {
+  const t = el.tags || {};
+  const name = t.name || t["name:en"];
+  if (!name) return null;
+  const lat = el.lat ?? (el.center && el.center.lat);
+  const lon = el.lon ?? (el.center && el.center.lon);
+  if (lat == null || lon == null) return null;
+
+  // Map OSM craft / shop tags to our category buckets
+  const craft = (t.craft || "").toLowerCase();
+  const shop  = (t.shop  || "").toLowerCase();
+  const office= (t.office|| "").toLowerCase();
+  let category = null, subtype = null;
+
+  if (craft === "handyman" || craft === "general") { category = "handyman"; subtype = "Handyman"; }
+  else if (craft === "plumber")                    { category = "plumber"; subtype = "Plumber"; }
+  else if (craft === "electrician")                { category = "electrician"; subtype = "Electrician"; }
+  else if (craft === "hvac" || craft === "heating_engineer" || craft === "air_conditioning") { category = "hvac"; subtype = "HVAC / heating-cooling"; }
+  else if (craft === "painter")                    { category = "painter"; subtype = "Painter"; }
+  else if (craft === "carpenter" || craft === "joiner" || craft === "cabinet_maker" || craft === "builder") { category = "carpenter"; subtype = "Carpenter / builder"; }
+  else if (craft === "roofer")                     { category = "roofer"; subtype = "Roofer"; }
+  else if (craft === "gardener" || craft === "garden")            { category = "landscaper"; subtype = "Landscaper / gardener"; }
+  else if (craft === "cleaner" || craft === "window_cleaner")     { category = "cleaner"; subtype = "Cleaner"; }
+  else if (craft === "locksmith")                  { category = "locksmith"; subtype = "Locksmith"; }
+  else if (shop === "hardware" || shop === "doityourself" || shop === "trade" || shop === "paint" || shop === "appliance" || shop === "electrical") {
+    category = "hardware";
+    subtype = shop === "hardware" ? "Hardware store" :
+              shop === "doityourself" ? "Home improvement store" :
+              shop === "trade" ? "Trade supply" :
+              shop === "paint" ? "Paint store" :
+              shop === "appliance" ? "Appliance store" :
+                                    "Electrical supply";
+  }
+  else if (office === "construction_company") { category = "carpenter"; subtype = "Construction company"; }
+  else if (craft) { category = "other"; subtype = craft.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()); }
+  else return null;
+
+  return { name, category, subtype, lat, lon };
+}
+
+let lastHsGeo = null;
+async function loadNearbyHomeServices(geo) {
+  lastHsGeo = geo;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  $("card-home-services").hidden = false;
+  const loading = $("hs-loading");
+  loading.hidden = false;
+  $("hs-sections").hidden = true;
+  $("hs-summary").hidden = true;
+  setText("hs-value", "Searching…");
+  try {
+    const elements = await fetchHomeServices(lat, lon, 4500);
+    const items = elements
+      .map(classifyHomeService)
+      .filter(Boolean)
+      .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name))
+      .sort((a, b) => a.dist - b.dist);
+
+    const grouped = {
+      handyman:    items.filter(i => i.category === "handyman").slice(0, 6),
+      plumber:     items.filter(i => i.category === "plumber").slice(0, 6),
+      electrician: items.filter(i => i.category === "electrician").slice(0, 6),
+      hvac:        items.filter(i => i.category === "hvac").slice(0, 6),
+      painter:     items.filter(i => i.category === "painter").slice(0, 6),
+      carpenter:   items.filter(i => i.category === "carpenter").slice(0, 6),
+      roofer:      items.filter(i => i.category === "roofer").slice(0, 6),
+      landscaper:  items.filter(i => i.category === "landscaper").slice(0, 6),
+      cleaner:     items.filter(i => i.category === "cleaner").slice(0, 6),
+      locksmith:   items.filter(i => i.category === "locksmith").slice(0, 6),
+      hardware:    items.filter(i => i.category === "hardware").slice(0, 8),
+      other:       items.filter(i => i.category === "other").slice(0, 6),
+    };
+    renderHomeServices(grouped, items.length, getCityKey(geo.address || {}));
+  } catch (err) {
+    loading.innerHTML = `Couldn't load nearby home services: ${escapeHtml(err.message || "network error")}.`;
+  }
+}
+function renderHomeServices(grouped, total, cityKey) {
+  $("hs-loading").hidden = true;
+  $("hs-sections").hidden = false;
+  const pill = $("hs-summary");
+  pill.hidden = false;
+  pill.textContent = `${total} listing${total === 1 ? "" : "s"} within 2.8 mi`;
+  setText("hs-value", total > 0 ? `${total} listings` : "No registered trades nearby in OSM");
+
+  const fill = (sectionId, tbodyId, items) => {
+    const sec = $(sectionId), tb = $(tbodyId);
+    if (!items.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
+  };
+  fill("hs-handyman-section",   "hs-handyman-tbody",   grouped.handyman);
+  fill("hs-plumber-section",    "hs-plumber-tbody",    grouped.plumber);
+  fill("hs-electrician-section","hs-electrician-tbody",grouped.electrician);
+  fill("hs-hvac-section",       "hs-hvac-tbody",       grouped.hvac);
+  fill("hs-painter-section",    "hs-painter-tbody",    grouped.painter);
+  fill("hs-carpenter-section",  "hs-carpenter-tbody",  grouped.carpenter);
+  fill("hs-roofer-section",     "hs-roofer-tbody",     grouped.roofer);
+  fill("hs-landscaper-section", "hs-landscaper-tbody", grouped.landscaper);
+  fill("hs-cleaner-section",    "hs-cleaner-tbody",    grouped.cleaner);
+  fill("hs-locksmith-section",  "hs-locksmith-tbody",  grouped.locksmith);
+  fill("hs-hardware-section",   "hs-hardware-tbody",   grouped.hardware);
+  fill("hs-other-section",      "hs-other-tbody",      grouped.other);
+
+  if (total === 0) {
+    setText("hs-value", "No registered trades nearby in OpenStreetMap");
+    $("hs-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">OpenStreetMap has no <code>craft=*</code> tagged trades within 2.8 mi of your home. This is common in suburbs and rural areas — coverage is improving as volunteers add data. For now, search Google or Yelp for "[trade] near me".</div>`;
+  }
+}
+
+/* =====================================================================
+   v0.27: Public services & emergency (fire, police, hospital, clinic, etc.)
+   Sources: OSM amenity=* + healthcare=*. We always include a clear
+   "for emergencies, call 911" reminder — distances here are
+   straight-line, not response-time predictions.
+   ===================================================================== */
+async function fetchPublicServices(lat, lon, radiusMeters = 4500) {
+  const q = `[out:json][timeout:20];(`
+    + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["emergency"="fire_station"](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  return await overpassQuery(q);
+}
+function classifyPublicService(el) {
+  const t = el.tags || {};
+  const name = t.name || t["name:en"];
+  if (!name) return null;
+  const lat = el.lat ?? (el.center && el.center.lat);
+  const lon = el.lon ?? (el.center && el.center.lon);
+  if (lat == null || lon == null) return null;
+
+  const am = (t.amenity || "").toLowerCase();
+  const hc = (t.healthcare || "").toLowerCase();
+  const em = (t.emergency || "").toLowerCase();
+  let category = null, subtype = null;
+
+  if (am === "fire_station" || em === "fire_station") { category = "fire";     subtype = "Fire station"; }
+  else if (am === "police")                           { category = "police";   subtype = "Police"; }
+  else if (am === "hospital" || hc === "hospital")    { category = "hospital"; subtype = (hc === "hospital" || am === "hospital") ? "Hospital" : subtype || "Hospital"; }
+  else if (hc === "urgent_care")                      { category = "hospital"; subtype = "Urgent care"; }
+  else if (am === "clinic" || hc === "clinic" || hc === "centre")   { category = "clinic";   subtype = "Clinic"; }
+  else if (am === "doctors" || hc === "doctor")       { category = "clinic";   subtype = "Doctor's office"; }
+  else if (am === "dentist" || hc === "dentist")      { category = "dentist";  subtype = "Dentist"; }
+  else if (am === "pharmacy" || hc === "pharmacy")    { category = "pharmacy"; subtype = "Pharmacy"; }
+  else if (am === "post_office")                      { category = "civic";    subtype = "Post office"; }
+  else if (am === "townhall")                         { category = "civic";    subtype = "Town hall"; }
+  else return null;
+
+  return { name, category, subtype, lat, lon };
+}
+
+let lastPsGeo = null;
+async function loadNearbyPublicServices(geo) {
+  lastPsGeo = geo;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  $("card-public-services").hidden = false;
+  const loading = $("ps-loading");
+  loading.hidden = false;
+  $("ps-sections").hidden = true;
+  $("ps-summary").hidden = true;
+  setText("ps-value", "Searching…");
+  try {
+    const elements = await fetchPublicServices(lat, lon, 4500);
+    const items = elements
+      .map(classifyPublicService)
+      .filter(Boolean)
+      .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name))
+      .sort((a, b) => a.dist - b.dist);
+
+    const grouped = {
+      fire:     items.filter(i => i.category === "fire").slice(0, 4),
+      police:   items.filter(i => i.category === "police").slice(0, 4),
+      hospital: items.filter(i => i.category === "hospital").slice(0, 4),
+      clinic:   items.filter(i => i.category === "clinic").slice(0, 6),
+      pharmacy: items.filter(i => i.category === "pharmacy").slice(0, 6),
+      dentist:  items.filter(i => i.category === "dentist").slice(0, 6),
+      civic:    items.filter(i => i.category === "civic").slice(0, 4),
+    };
+    renderPublicServices(grouped, items.length, getCityKey(geo.address || {}));
+  } catch (err) {
+    loading.innerHTML = `Couldn't load nearby public services: ${escapeHtml(err.message || "network error")}.`;
+  }
+}
+function renderPublicServices(grouped, total, cityKey) {
+  $("ps-loading").hidden = true;
+  $("ps-sections").hidden = false;
+  const pill = $("ps-summary");
+  pill.hidden = false;
+  pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.8 mi`;
+  setText("ps-value", total > 0 ? `${total} services nearby` : "No public services found in OSM");
+
+  const fill = (sectionId, tbodyId, items) => {
+    const sec = $(sectionId), tb = $(tbodyId);
+    if (!items.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
+  };
+  fill("ps-emergency-section", "ps-emergency-tbody", grouped.fire);
+  fill("ps-police-section",    "ps-police-tbody",    grouped.police);
+  fill("ps-hospital-section",  "ps-hospital-tbody",  grouped.hospital);
+  fill("ps-clinic-section",    "ps-clinic-tbody",    grouped.clinic);
+  fill("ps-pharmacy-section",  "ps-pharmacy-tbody",  grouped.pharmacy);
+  fill("ps-dentist-section",   "ps-dentist-tbody",   grouped.dentist);
+  fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic);
+
+  if (total === 0) {
+    $("ps-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within 2.8 mi. Try widening the radius (Phase 3 will let you adjust this), or check Google Maps directly.</div>`;
+  }
+}
+
 /* -------- Loading state ---------------------------------------------- */
 function setLoading() {
   $("results").hidden = false;
@@ -4382,6 +4782,10 @@ function renderResults(geo) {
   const risks = resolveRisks(a, lastYardArgs.lat, lastYardArgs.lon, yard.zone);
   renderRisks(risks);
   loadNearbyParks(geo);   // async via Overpass
+
+  // v0.27: Home services + Public services (also Overpass-driven, runs in parallel)
+  loadNearbyHomeServices(geo);
+  loadNearbyPublicServices(geo);
 }
 
 // v0.25: cache last yard inputs so renderHome() can rerender plants after edits
