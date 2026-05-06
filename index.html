@@ -325,14 +325,20 @@
     display: grid; gap: 10px;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
-  /* Avatar-style school badge — first letter, color by distance bucket */
+  /* v0.29: Rating-style school badge — number + "/10" with star prefix; click → GreatSchools */
   .school-badge.avatar {
     text-decoration: none; cursor: pointer;
     transition: transform 0.12s ease, box-shadow 0.15s ease;
+    background: linear-gradient(135deg, #2d6a4f, #1b4332);
   }
-  .school-badge.avatar:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
-  .school-badge.avatar .badge-num { font-size: 22px; line-height: 1; }
-  .school-badge.avatar .badge-unit { font-size: 9px; opacity: 0.92; letter-spacing: 0.5px; margin-top: 2px; }
+  .school-badge.avatar:hover { transform: scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.18); }
+  .school-badge.avatar .badge-num { font-size: 18px; line-height: 1; font-weight: 800; }
+  .school-badge.avatar .badge-unit { font-size: 9px; opacity: 0.92; letter-spacing: 0.4px; margin-top: 3px; font-weight: 700; }
+  /* Color by distance for rating bubbles too — closer schools render in a vibrant green */
+  .school-badge.avatar.dist-near { background: linear-gradient(135deg, #2d6a4f, #1b4332); }
+  .school-badge.avatar.dist-mid  { background: linear-gradient(135deg, #2b5a9e, #1d3a5f); }
+  .school-badge.avatar.dist-far  { background: linear-gradient(135deg, #6b7280, #4a5263); }
+  .school-badge.avatar.dist-na   { background: linear-gradient(135deg, #9aa0a6, #6b7280); opacity: 0.8; }
   /* Park/library bubble — category emoji */
   .school-badge.icon-bubble {
     background: var(--surface-2);
@@ -383,8 +389,8 @@
   /* ─── Yard & garden full-width card (v0.13 — Phase 2) ───────────── */
   .yard-card {
     background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 22px 26px;
-    box-shadow: var(--shadow); margin-top: 14px;
+    border-radius: var(--radius); padding: 16px 20px;
+    box-shadow: var(--shadow); margin-top: 12px;
   }
   .yard-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
   .yard-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
@@ -596,8 +602,8 @@
   .risk-desc { font-size: 13px; color: var(--ink-soft); margin-top: 3px; line-height: 1.45; }
   .risk-arrow { color: var(--ink-faint); font-size: 22px; align-self: center; flex: 0 0 auto; }
 
-  /* ─── v0.19: Home details placeholder card ───────────────────────── */
-  .home-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  /* ─── v0.19/v0.29: Home details placeholder card (tighter) ─────── */
+  .home-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); margin-top: 12px; }
   .home-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
   .home-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
   .home-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
@@ -620,8 +626,8 @@
   .home-tile-label { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
   .home-tile-input { font-size: 16px; font-weight: 700; color: var(--ink); background: transparent; border: 1px solid var(--primary); border-radius: 4px; padding: 1px 4px; width: 80px; outline: none; }
 
-  /* ─── v0.19: Parks & places card ─────────────────────────────────── */
-  .parks-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  /* ─── v0.19/v0.29: Parks & places card (tighter) ──────────────── */
+  .parks-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); margin-top: 12px; }
   .parks-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
   .parks-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
   .parks-head .text-block { display: flex; flex-direction: column; }
@@ -653,8 +659,8 @@
   }
   .water-tile-text { font-size: 15px; color: var(--ink); margin-top: 4px; line-height: 1.5; font-weight: 500; }
 
-  /* Schools full-width card */
-  .schools-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px 26px; box-shadow: var(--shadow); margin-top: 14px; }
+  /* Schools full-width card (v0.29: tighter padding) */
+  .schools-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 20px; box-shadow: var(--shadow); margin-top: 12px; }
   .schools-head { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 4px; }
   .schools-head .icon { width: 40px; height: 40px; flex: 0 0 40px; font-size: 20px; border-radius: 10px; display: grid; place-items: center; background: rgba(45,106,79,0.08); color: var(--primary); }
   .schools-head h3 { margin: 0; font-size: 13px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--ink-faint); font-weight: 700; }
@@ -824,18 +830,17 @@
   }
   .pgroup-popular::before { content: "★"; font-size: 9px; }
 
-  /* ─── v0.28: Sticky section-nav tabs (below search, jumps to sections) ── */
+  /* ─── v0.29: Sticky section-nav tabs — bigger, button-style, no emojis ── */
   .section-nav {
     position: sticky; top: 0; z-index: 20;
-    background: var(--bg);
-    margin: 24px -24px 0;            /* break out to viewport edges */
-    padding: 6px 24px;
+    margin: 20px -24px 18px;          /* break out to viewport edges */
+    padding: 10px 24px;
     border-bottom: 1px solid var(--line);
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(10px);
     background: rgba(250,250,250,0.92);
   }
   .section-nav-inner {
-    display: flex; gap: 4px;
+    display: flex; gap: 8px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
@@ -845,35 +850,76 @@
   .section-nav-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
   .sec-tab {
     flex: 0 0 auto;
-    padding: 10px 14px;
+    padding: 11px 18px;
+    border-radius: 10px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 15px; font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: -0.01em;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+  }
+  .sec-tab:hover { background: var(--surface-2); border-color: #d6dbe3; }
+  .sec-tab:active { transform: translateY(1px); }
+  .sec-tab.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0,106,255,0.22);
+  }
+  .sec-tab.active:hover { background: var(--primary-2); }
+  /* Section headers: leave room above for the sticky nav so they don't hide under it */
+  .page-section-header { scroll-margin-top: 84px; }
+  @media (max-width: 700px) {
+    .section-nav { margin: 14px -16px 14px; padding: 8px 16px; }
+    .sec-tab { padding: 9px 14px; font-size: 14px; }
+    .page-section-header { scroll-margin-top: 68px; }
+  }
+
+  /* ─── v0.29: Sub-nav strip inside each section (jumps to a subsection) ─── */
+  .subnav {
+    display: flex; gap: 6px;
+    overflow-x: auto;
+    margin: 0 0 14px;
+    padding: 4px 0 8px;
+    border-bottom: 1px solid var(--line-2);
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-2) transparent;
+  }
+  .subnav::-webkit-scrollbar { height: 3px; }
+  .subnav::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+  .subtab {
+    flex: 0 0 auto;
+    padding: 6px 12px;
     border-radius: 8px;
+    background: transparent;
+    border: 1px solid transparent;
     color: var(--ink-soft);
     text-decoration: none;
-    font-size: 13.5px; font-weight: 600;
+    font-size: 13px; font-weight: 600;
     white-space: nowrap;
-    letter-spacing: -0.005em;
+    cursor: pointer;
     transition: background 0.12s ease, color 0.12s ease;
-    border: 1px solid transparent;
   }
-  .sec-tab:hover { background: var(--surface-2); color: var(--ink); }
-  .sec-tab.active {
+  .subtab:hover { background: var(--surface-2); color: var(--ink); }
+  .subtab.active {
     background: var(--primary-soft);
     color: var(--primary-2);
     border-color: rgba(0,106,255,0.18);
   }
-  /* Section headers: leave room above for the sticky nav so they don't hide under it */
-  .page-section-header { scroll-margin-top: 70px; }
+  /* Sub-section headers: scroll-margin so they don't hide under sticky section-nav */
+  .school-section { scroll-margin-top: 88px; }
   @media (max-width: 700px) {
-    .section-nav { margin: 16px -16px 0; padding: 6px 16px; }
-    .sec-tab { padding: 8px 12px; font-size: 13px; }
-    .page-section-header { scroll-margin-top: 60px; }
+    .school-section { scroll-margin-top: 72px; }
   }
 
   /* ─── v0.23: Slim Zillow-style section headers ──────────────────── */
   .page-section-header {
     display: flex; gap: 12px; align-items: center;
     padding: 0;
-    margin: 36px 0 12px;
+    margin: 28px 0 8px;          /* v0.29: tighter top + less bottom gap */
     border: none; background: transparent;
   }
   .page-section-header.your-home  { --psh-accent: #006aff; }
@@ -1056,21 +1102,35 @@
   <!-- Results -->
   <section class="results" id="results" hidden>
 
-    <!-- v0.28: Section nav — sticky tabs that jump to each section -->
+    <!-- v0.28/v0.29: Section nav — sticky text-only tabs in user-requested order -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
       <div class="section-nav-inner">
-        <a href="#sec-yourhome"        class="sec-tab" data-target="sec-yourhome">🏠 Your home</a>
-        <a href="#sec-services"        class="sec-tab" data-target="sec-services">🔌 Services</a>
-        <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">🎓 Schools</a>
-        <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">🌳 Parks</a>
-        <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services">🛠️ Home services</a>
-        <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services">🚨 Public services</a>
-        <a href="#sec-yard"            class="sec-tab" data-target="sec-yard">🌱 Yard</a>
-        <a href="#sec-risks"           class="sec-tab" data-target="sec-risks">⚠️ Risks</a>
+        <a href="#sec-myhome"          class="sec-tab" data-target="sec-myhome">My home</a>
+        <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services">Emergency services</a>
+        <a href="#sec-services"        class="sec-tab" data-target="sec-services">Utility services</a>
+        <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">Education</a>
+        <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">Recreation</a>
+        <a href="#sec-yard"            class="sec-tab" data-target="sec-yard">Gardening</a>
+        <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services">Home services</a>
+        <a href="#sec-risks"           class="sec-tab" data-target="sec-risks">Climate risks</a>
       </div>
     </nav>
 
-    <div class="resolved">
+    <!-- v0.29: My Home — address + property details combined under one section -->
+    <div class="page-section-header your-home" id="sec-myhome">
+      <div class="psh-icon">🏠</div>
+      <div class="psh-text">
+        <h2 class="psh-title">My home</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for My Home — jump to address or property details -->
+    <div class="subnav">
+      <a href="#sub-myhome-address"  class="subtab" data-subtarget="sub-myhome-address">Address</a>
+      <a href="#sub-myhome-details"  class="subtab" data-subtarget="sub-myhome-details">Property details</a>
+    </div>
+
+    <div class="resolved" id="sub-myhome-address">
       <div class="resolved-head">
         <div class="pin">📍</div>
         <span class="pin-label">Address resolved</span>
@@ -1095,25 +1155,95 @@
       <div id="ra-precision-notice"></div>
     </div>
 
-    <!-- v0.23: Slim section header — Your home -->
-    <div class="page-section-header your-home" id="sec-yourhome">
-      <div class="psh-icon">🏠</div>
-      <div class="psh-text">
-        <h2 class="psh-title">Your home</h2>
-      </div>
-    </div>
-
-    <!-- Home details placeholder — section header explains, no inner header -->
+    <!-- v0.29: Property details — now part of the My Home section above -->
     <div class="home-card" id="card-home" hidden>
+      <div id="sub-myhome-details" style="display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;">
+        <span>Property details</span>
+        <span style="flex:1;height:1px;background:var(--line-2);"></span>
+      </div>
       <div class="home-grid" id="home-grid"></div>
     </div>
 
-    <!-- v0.23: Slim section header — Services -->
+    <!-- v0.29: Section 2 — Emergency services (moved up from position 6, renamed from "Public services") -->
+    <div class="page-section-header public-services" id="sec-public-services">
+      <div class="psh-icon">🚨</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Emergency services</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for Emergency services -->
+    <div class="subnav" data-subnav-for="card-public-services">
+      <a href="#ps-emergency-section" class="subtab" data-subtarget="ps-emergency-section">Fire</a>
+      <a href="#ps-police-section"    class="subtab" data-subtarget="ps-police-section">Police</a>
+      <a href="#ps-hospital-section"  class="subtab" data-subtarget="ps-hospital-section">Hospitals</a>
+      <a href="#ps-clinic-section"    class="subtab" data-subtarget="ps-clinic-section">Clinics</a>
+      <a href="#ps-pharmacy-section"  class="subtab" data-subtarget="ps-pharmacy-section">Pharmacies</a>
+      <a href="#ps-dentist-section"   class="subtab" data-subtarget="ps-dentist-section">Dentists</a>
+      <a href="#ps-civic-section"     class="subtab" data-subtarget="ps-civic-section">Civic</a>
+    </div>
+
+    <div class="parks-card" id="card-public-services" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="ps-value">—</span>
+        </div>
+        <button class="info-btn" type="button" data-info-target="ps-info-popover" aria-label="About emergency services">i</button>
+        <div class="summary-pill" id="ps-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="ps-info-popover" hidden>
+        <b>What this shows:</b> nearest public-safety facilities (fire, police), healthcare (hospitals, clinics, urgent care, doctors, dentists, pharmacies), and civic services (post office, town hall) within ~3 mi. <b>For an actual emergency call 911</b> — distances shown here are approximate, not response-time estimates.
+      </div>
+      <div class="parks-loading" id="ps-loading" hidden>Finding nearby emergency services…</div>
+      <div id="ps-sections" hidden>
+        <div class="school-section" id="ps-emergency-section" hidden>
+          <h4>🚒 Fire stations</h4>
+          <div id="ps-emergency-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-police-section" hidden>
+          <h4>🚓 Police</h4>
+          <div id="ps-police-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-hospital-section" hidden>
+          <h4>🏥 Hospitals &amp; urgent care</h4>
+          <div id="ps-hospital-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-clinic-section" hidden>
+          <h4>🩺 Clinics &amp; doctors</h4>
+          <div id="ps-clinic-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-pharmacy-section" hidden>
+          <h4>💊 Pharmacies</h4>
+          <div id="ps-pharmacy-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-dentist-section" hidden>
+          <h4>🦷 Dentists</h4>
+          <div id="ps-dentist-tbody"></div>
+        </div>
+        <div class="school-section" id="ps-civic-section" hidden>
+          <h4>🏛️ Civic services <span class="hint">— post office, town hall</span></h4>
+          <div id="ps-civic-tbody"></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line. <b>For emergencies, call 911</b> — actual response time depends on dispatch and traffic, not the straight-line distance shown here.
+      </div>
+    </div>
+
+    <!-- v0.29: Section 3 — Utility services (renamed from "Services") -->
     <div class="page-section-header services" id="sec-services">
       <div class="psh-icon">🔌</div>
       <div class="psh-text">
-        <h2 class="psh-title">Services</h2>
+        <h2 class="psh-title">Utility services</h2>
       </div>
+    </div>
+
+    <!-- Sub-nav for Utility services -->
+    <div class="subnav" data-subnav-for="services-card-wrap">
+      <a href="#card-electric" class="subtab" data-subtarget="card-electric">Electric</a>
+      <a href="#card-internet" class="subtab" data-subtarget="card-internet">Internet</a>
+      <a href="#card-tv"       class="subtab" data-subtarget="card-tv">TV</a>
+      <a href="#card-security" class="subtab" data-subtarget="card-security">Security</a>
     </div>
 
     <!-- v0.24: Combined Services tile — Electric / Internet / TV / Security as subsections -->
@@ -1165,12 +1295,21 @@
       </div>
     </div>
 
-    <!-- v0.23: Slim section header — Schools -->
+    <!-- v0.29: Section 4 — Education (renamed from "Schools") -->
     <div class="page-section-header schools" id="sec-schools">
       <div class="psh-icon">🎓</div>
       <div class="psh-text">
-        <h2 class="psh-title">Schools</h2>
+        <h2 class="psh-title">Education</h2>
       </div>
+    </div>
+
+    <!-- Sub-nav for Education -->
+    <div class="subnav" data-subnav-for="card-school">
+      <a href="#public-section"     class="subtab" data-subtarget="public-section">Public</a>
+      <a href="#private-section"    class="subtab" data-subtarget="private-section">Private</a>
+      <a href="#other-section"      class="subtab" data-subtarget="other-section">Charter / magnet</a>
+      <a href="#higher-section"     class="subtab" data-subtarget="higher-section">Colleges</a>
+      <a href="#enrichment-section" class="subtab" data-subtarget="enrichment-section">Libraries &amp; centers</a>
     </div>
 
     <!-- Schools — full width below grid -->
@@ -1226,12 +1365,20 @@
       </div>
     </div>
 
-    <!-- v0.23: Slim section header — Parks -->
+    <!-- v0.29: Section 5 — Recreation (renamed from "Parks & lifestyle") -->
     <div class="page-section-header parks" id="sec-parks">
       <div class="psh-icon">🌳</div>
       <div class="psh-text">
-        <h2 class="psh-title">Parks &amp; lifestyle</h2>
+        <h2 class="psh-title">Recreation</h2>
       </div>
+    </div>
+
+    <!-- Sub-nav for Recreation -->
+    <div class="subnav" data-subnav-for="card-parks">
+      <a href="#parks-playground-section" class="subtab" data-subtarget="parks-playground-section">For kids</a>
+      <a href="#parks-dog-section"        class="subtab" data-subtarget="parks-dog-section">For pets</a>
+      <a href="#parks-trail-section"      class="subtab" data-subtarget="parks-trail-section">For you</a>
+      <a href="#parks-park-section"       class="subtab" data-subtarget="parks-park-section">Parks &amp; gardens</a>
     </div>
 
     <!-- Parks & places card MOVED here (between Schools and Yard) -->
@@ -1270,12 +1417,103 @@
       </div>
     </div>
 
-    <!-- v0.27: Slim section header — Home services -->
+    <!-- v0.29: Section 6 — Gardening services (renamed from "Yard & garden", moved before Home services) -->
+    <div class="page-section-header yard" id="sec-yard">
+      <div class="psh-icon">🌱</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Gardening services</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for Gardening services -->
+    <div class="subnav" data-subnav-for="card-yard">
+      <a href="#yard-climate-section" class="subtab" data-subtarget="yard-climate-section">Climate</a>
+      <a href="#yard-plants-section"  class="subtab" data-subtarget="yard-plants-section">Plants</a>
+      <a href="#yard-soil-section"    class="subtab" data-subtarget="yard-soil-section">Soil</a>
+      <a href="#yard-care-section"    class="subtab" data-subtarget="yard-care-section">Watering</a>
+    </div>
+
+    <!-- Yard & Garden — full width -->
+    <div class="yard-card" id="card-yard" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="yard-value">—</span>
+        </div>
+        <button class="info-btn" type="button" data-info-target="yard-info-popover" aria-label="About yard recommendations">i</button>
+        <div class="summary-pill" id="yard-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="yard-info-popover" hidden>
+        <b>How this works:</b> we use your USDA Plant Hardiness Zone (resolved from your address) to recommend plants and seasonal actions. Climate type shapes watering tips. Zone is inferred from city/state when not directly mapped.
+      </div>
+
+      <!-- v0.21: Today's seasonal action — what should I do RIGHT NOW? -->
+      <div class="today-hero" id="yard-today-hero" hidden>
+        <div class="today-hero-icon">🌱</div>
+        <div class="today-hero-body">
+          <div class="today-hero-eyebrow" id="yard-today-eyebrow">Right now in your garden</div>
+          <div class="today-hero-title" id="yard-today-title">—</div>
+          <div class="today-hero-text" id="yard-today-text">—</div>
+        </div>
+      </div>
+
+      <!-- v0.25: Climate + Recommended plants side-by-side for at-a-glance reading -->
+      <div class="yard-climate-plants-row">
+        <div class="yard-section yard-climate-col" id="yard-climate-section">
+          <h4>Climate <span class="hint">— USDA zone &amp; growing season</span></h4>
+          <div class="climate-grid">
+            <div class="climate-cell"><span class="climate-label">USDA hardiness zone</span><span class="climate-value" id="yard-zone">—</span><span class="climate-sub" id="yard-zone-sub"></span></div>
+            <div class="climate-cell"><span class="climate-label">Avg min temp (winter)</span><span class="climate-value" id="yard-min-temp">—</span></div>
+            <div class="climate-cell"><span class="climate-label">First fall frost</span><span class="climate-value" id="yard-frost-fall">—</span></div>
+            <div class="climate-cell"><span class="climate-label">Last spring frost</span><span class="climate-value" id="yard-frost-spring">—</span></div>
+            <div class="climate-cell"><span class="climate-label">Growing season</span><span class="climate-value" id="yard-growing-season">—</span></div>
+            <div class="climate-cell"><span class="climate-label">Climate type</span><span class="climate-value" id="yard-climate-type">—</span></div>
+          </div>
+        </div>
+
+        <div class="yard-section yard-plants-col" id="yard-plants-section">
+          <h4>Recommended plants <span class="hint" id="yard-plants-hint">— for your zone</span></h4>
+          <!-- v0.25: Context banner — explains how recs were tailored to home type / lot -->
+          <div class="plants-context-banner" id="plants-context-banner" hidden></div>
+          <div id="yard-plants-body"></div>
+        </div>
+      </div>
+
+      <div class="yard-section" id="yard-soil-section">
+        <h4>Soil <span class="hint">— typical for your region; click for exact composition</span></h4>
+        <div id="yard-soil-body"></div>
+      </div>
+
+      <div class="yard-section" id="yard-care-section">
+        <h4>Watering &amp; care</h4>
+        <div id="yard-care-body"></div>
+      </div>
+
+      <div class="source" style="margin-top:16px;">
+        Hardiness zones based on <a href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noopener">USDA Plant Hardiness Zone Map (2023)</a>. Plant recommendations are general for your zone — verify with a local nursery or extension office for site-specific advice (sun/shade, slope, microclimate). Soil details available from <a href="https://websoilsurvey.nrcs.usda.gov/" target="_blank" rel="noopener">USDA Web Soil Survey</a>.
+      </div>
+    </div>
+
+    <!-- v0.29: Section 7 — Home services (handyman, plumber, electrician, etc.) -->
     <div class="page-section-header home-services" id="sec-home-services">
       <div class="psh-icon">🛠️</div>
       <div class="psh-text">
         <h2 class="psh-title">Home services</h2>
       </div>
+    </div>
+
+    <!-- Sub-nav for Home services -->
+    <div class="subnav" data-subnav-for="card-home-services">
+      <a href="#hs-handyman-section"   class="subtab" data-subtarget="hs-handyman-section">Handyman</a>
+      <a href="#hs-plumber-section"    class="subtab" data-subtarget="hs-plumber-section">Plumbers</a>
+      <a href="#hs-electrician-section" class="subtab" data-subtarget="hs-electrician-section">Electricians</a>
+      <a href="#hs-hvac-section"       class="subtab" data-subtarget="hs-hvac-section">HVAC</a>
+      <a href="#hs-painter-section"    class="subtab" data-subtarget="hs-painter-section">Painters</a>
+      <a href="#hs-carpenter-section"  class="subtab" data-subtarget="hs-carpenter-section">Carpenters</a>
+      <a href="#hs-roofer-section"     class="subtab" data-subtarget="hs-roofer-section">Roofers</a>
+      <a href="#hs-landscaper-section" class="subtab" data-subtarget="hs-landscaper-section">Landscapers</a>
+      <a href="#hs-cleaner-section"    class="subtab" data-subtarget="hs-cleaner-section">Cleaners</a>
+      <a href="#hs-locksmith-section"  class="subtab" data-subtarget="hs-locksmith-section">Locksmiths</a>
+      <a href="#hs-hardware-section"   class="subtab" data-subtarget="hs-hardware-section">Hardware</a>
     </div>
 
     <div class="parks-card" id="card-home-services" hidden>
@@ -1349,129 +1587,6 @@
       </div>
     </div>
 
-    <!-- v0.27: Slim section header — Public services & emergency -->
-    <div class="page-section-header public-services" id="sec-public-services">
-      <div class="psh-icon">🚨</div>
-      <div class="psh-text">
-        <h2 class="psh-title">Public services &amp; emergency</h2>
-      </div>
-    </div>
-
-    <div class="parks-card" id="card-public-services" hidden>
-      <div class="card-context-bar">
-        <div class="card-context-text">
-          <span id="ps-value">—</span>
-        </div>
-        <button class="info-btn" type="button" data-info-target="ps-info-popover" aria-label="About public services">i</button>
-        <div class="summary-pill" id="ps-summary" hidden></div>
-      </div>
-      <div class="info-popover" id="ps-info-popover" hidden>
-        <b>What this shows:</b> nearest public-safety facilities (fire, police), healthcare (hospitals, clinics, urgent care, doctors, dentists, pharmacies), and civic services (post office, town hall) within ~3 mi. <b>For an actual emergency call 911</b> — distances shown here are approximate, not response-time estimates.
-      </div>
-      <div class="parks-loading" id="ps-loading" hidden>Finding nearby public services…</div>
-      <div id="ps-sections" hidden>
-        <div class="school-section" id="ps-emergency-section" hidden>
-          <h4>🚒 Fire stations</h4>
-          <div id="ps-emergency-tbody"></div>
-        </div>
-        <div class="school-section" id="ps-police-section" hidden>
-          <h4>🚓 Police</h4>
-          <div id="ps-police-tbody"></div>
-        </div>
-        <div class="school-section" id="ps-hospital-section" hidden>
-          <h4>🏥 Hospitals &amp; urgent care</h4>
-          <div id="ps-hospital-tbody"></div>
-        </div>
-        <div class="school-section" id="ps-clinic-section" hidden>
-          <h4>🩺 Clinics &amp; doctors</h4>
-          <div id="ps-clinic-tbody"></div>
-        </div>
-        <div class="school-section" id="ps-pharmacy-section" hidden>
-          <h4>💊 Pharmacies</h4>
-          <div id="ps-pharmacy-tbody"></div>
-        </div>
-        <div class="school-section" id="ps-dentist-section" hidden>
-          <h4>🦷 Dentists</h4>
-          <div id="ps-dentist-tbody"></div>
-        </div>
-        <div class="school-section" id="ps-civic-section" hidden>
-          <h4>🏛️ Civic services <span class="hint">— post office, town hall</span></h4>
-          <div id="ps-civic-tbody"></div>
-        </div>
-      </div>
-      <div class="source" style="margin-top:14px;">
-        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line. <b>For emergencies, call 911</b> — actual response time depends on dispatch and traffic, not the straight-line distance shown here.
-      </div>
-    </div>
-
-    <!-- v0.23: Slim section header — Yard & garden -->
-    <div class="page-section-header yard" id="sec-yard">
-      <div class="psh-icon">🌱</div>
-      <div class="psh-text">
-        <h2 class="psh-title">Yard &amp; garden</h2>
-      </div>
-    </div>
-
-    <!-- Yard & Garden — full width below schools -->
-    <div class="yard-card" id="card-yard" hidden>
-      <div class="card-context-bar">
-        <div class="card-context-text">
-          <span id="yard-value">—</span>
-        </div>
-        <button class="info-btn" type="button" data-info-target="yard-info-popover" aria-label="About yard recommendations">i</button>
-        <div class="summary-pill" id="yard-summary" hidden></div>
-      </div>
-      <div class="info-popover" id="yard-info-popover" hidden>
-        <b>How this works:</b> we use your USDA Plant Hardiness Zone (resolved from your address) to recommend plants and seasonal actions. Climate type shapes watering tips. Zone is inferred from city/state when not directly mapped.
-      </div>
-
-      <!-- v0.21: Today's seasonal action — what should I do RIGHT NOW? -->
-      <div class="today-hero" id="yard-today-hero" hidden>
-        <div class="today-hero-icon">🌱</div>
-        <div class="today-hero-body">
-          <div class="today-hero-eyebrow" id="yard-today-eyebrow">Right now in your garden</div>
-          <div class="today-hero-title" id="yard-today-title">—</div>
-          <div class="today-hero-text" id="yard-today-text">—</div>
-        </div>
-      </div>
-
-      <!-- v0.25: Climate + Recommended plants side-by-side for at-a-glance reading -->
-      <div class="yard-climate-plants-row">
-        <div class="yard-section yard-climate-col" id="yard-climate-section">
-          <h4>Climate <span class="hint">— USDA zone &amp; growing season</span></h4>
-          <div class="climate-grid">
-            <div class="climate-cell"><span class="climate-label">USDA hardiness zone</span><span class="climate-value" id="yard-zone">—</span><span class="climate-sub" id="yard-zone-sub"></span></div>
-            <div class="climate-cell"><span class="climate-label">Avg min temp (winter)</span><span class="climate-value" id="yard-min-temp">—</span></div>
-            <div class="climate-cell"><span class="climate-label">First fall frost</span><span class="climate-value" id="yard-frost-fall">—</span></div>
-            <div class="climate-cell"><span class="climate-label">Last spring frost</span><span class="climate-value" id="yard-frost-spring">—</span></div>
-            <div class="climate-cell"><span class="climate-label">Growing season</span><span class="climate-value" id="yard-growing-season">—</span></div>
-            <div class="climate-cell"><span class="climate-label">Climate type</span><span class="climate-value" id="yard-climate-type">—</span></div>
-          </div>
-        </div>
-
-        <div class="yard-section yard-plants-col">
-          <h4>Recommended plants <span class="hint" id="yard-plants-hint">— for your zone</span></h4>
-          <!-- v0.25: Context banner — explains how recs were tailored to home type / lot -->
-          <div class="plants-context-banner" id="plants-context-banner" hidden></div>
-          <div id="yard-plants-body"></div>
-        </div>
-      </div>
-
-      <div class="yard-section">
-        <h4>Soil <span class="hint">— typical for your region; click for exact composition</span></h4>
-        <div id="yard-soil-body"></div>
-      </div>
-
-      <div class="yard-section">
-        <h4>Watering &amp; care</h4>
-        <div id="yard-care-body"></div>
-      </div>
-
-      <div class="source" style="margin-top:16px;">
-        Hardiness zones based on <a href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noopener">USDA Plant Hardiness Zone Map (2023)</a>. Plant recommendations are general for your zone — verify with a local nursery or extension office for site-specific advice (sun/shade, slope, microclimate). Soil details available from <a href="https://websoilsurvey.nrcs.usda.gov/" target="_blank" rel="noopener">USDA Web Soil Survey</a>.
-      </div>
-    </div>
-
     <!-- v0.23: Slim section header — Climate risks (collapsed by default) -->
     <div class="page-section-header risks" id="sec-risks">
       <div class="psh-icon">⚠️</div>
@@ -1523,7 +1638,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.28 · May 2026 · Phase 2 · Sticky section-nav tabs — jump to any section with one click
+      <b>HomeAtlas</b> &mdash; v0.29 · May 2026 · Phase 2 · Major restructure — My home merge, rename + reorder sections, sub-tabs inside every card, bigger button-style tabs
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3652,17 +3767,19 @@ function levelRow(level, item, cityKey) {
   const map   = mapUrlExact(item.lat, item.lon);
   const gsUrl = gsSearchUrl(item.name, cityKey);
   const distCls = distClass(item.dist);
+  // v0.29: rating badge — "★ /10" with placeholder until paid GreatSchools API.
+  // Click → opens GreatSchools search where the user can read the actual rating.
   return `<div class="school-row">
     <a class="school-badge avatar ${distCls}" href="${gsUrl}" target="_blank" rel="noopener" title="Open GreatSchools rating for ${escapeHtml(item.name)}">
-      <span class="badge-num">${escapeHtml(schoolFirstLetter(item.name))}</span>
-      <span class="badge-unit">GS ?</span>
+      <span class="badge-num">★&nbsp;—</span>
+      <span class="badge-unit">/ 10 · GS</span>
     </a>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
       <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
       <div class="school-meta" style="margin-top:4px;">
-        <a href="${gsUrl}" target="_blank" rel="noopener" style="color:var(--primary); font-size:12px; font-weight:500; text-decoration:none;">View GreatSchools rating →</a>
+        <a href="${gsUrl}" target="_blank" rel="noopener" style="color:var(--primary); font-size:12px; font-weight:500; text-decoration:none;">Open GreatSchools rating →</a>
       </div>
     </div>
     <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
@@ -5001,19 +5118,24 @@ document.addEventListener("click", (e) => {
   btn.setAttribute("aria-expanded", String(!target.hidden));
 });
 
-// v0.28: Section-nav — smooth-scroll on click + active-state via IntersectionObserver.
-// We listen on the document so the handler is attached even before the results
-// section is unhidden (the nav itself lives inside #results and reveals when search runs).
+// v0.28/v0.29: Section-nav + sub-nav — smooth-scroll on click + active-state.
+// One delegated handler covers both .sec-tab and .subtab clicks.
 document.addEventListener("click", (e) => {
-  const tab = e.target.closest(".sec-tab");
+  const tab = e.target.closest(".sec-tab, .subtab");
   if (!tab) return;
-  const targetId = tab.dataset.target;
+  const targetId = tab.dataset.target || tab.dataset.subtarget;
   const target = targetId && document.getElementById(targetId);
   if (!target) return;
   e.preventDefault();
   target.scrollIntoView({ behavior: "smooth", block: "start" });
   // Update URL hash without jumping
   if (history.replaceState) history.replaceState(null, "", "#" + targetId);
+  // For subtabs, instantly mark the clicked one active (visual feedback before scroll settles)
+  if (tab.classList.contains("subtab")) {
+    const peers = tab.parentElement.querySelectorAll(".subtab");
+    peers.forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+  }
 });
 
 // IntersectionObserver: highlight the tab whose section is most-visible.
