@@ -824,6 +824,51 @@
   }
   .pgroup-popular::before { content: "★"; font-size: 9px; }
 
+  /* ─── v0.28: Sticky section-nav tabs (below search, jumps to sections) ── */
+  .section-nav {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--bg);
+    margin: 24px -24px 0;            /* break out to viewport edges */
+    padding: 6px 24px;
+    border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(8px);
+    background: rgba(250,250,250,0.92);
+  }
+  .section-nav-inner {
+    display: flex; gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+  .section-nav-inner::-webkit-scrollbar { height: 4px; }
+  .section-nav-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+  .sec-tab {
+    flex: 0 0 auto;
+    padding: 10px 14px;
+    border-radius: 8px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 13.5px; font-weight: 600;
+    white-space: nowrap;
+    letter-spacing: -0.005em;
+    transition: background 0.12s ease, color 0.12s ease;
+    border: 1px solid transparent;
+  }
+  .sec-tab:hover { background: var(--surface-2); color: var(--ink); }
+  .sec-tab.active {
+    background: var(--primary-soft);
+    color: var(--primary-2);
+    border-color: rgba(0,106,255,0.18);
+  }
+  /* Section headers: leave room above for the sticky nav so they don't hide under it */
+  .page-section-header { scroll-margin-top: 70px; }
+  @media (max-width: 700px) {
+    .section-nav { margin: 16px -16px 0; padding: 6px 16px; }
+    .sec-tab { padding: 8px 12px; font-size: 13px; }
+    .page-section-header { scroll-margin-top: 60px; }
+  }
+
   /* ─── v0.23: Slim Zillow-style section headers ──────────────────── */
   .page-section-header {
     display: flex; gap: 12px; align-items: center;
@@ -1011,6 +1056,20 @@
   <!-- Results -->
   <section class="results" id="results" hidden>
 
+    <!-- v0.28: Section nav — sticky tabs that jump to each section -->
+    <nav class="section-nav" id="section-nav" aria-label="Sections">
+      <div class="section-nav-inner">
+        <a href="#sec-yourhome"        class="sec-tab" data-target="sec-yourhome">🏠 Your home</a>
+        <a href="#sec-services"        class="sec-tab" data-target="sec-services">🔌 Services</a>
+        <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">🎓 Schools</a>
+        <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">🌳 Parks</a>
+        <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services">🛠️ Home services</a>
+        <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services">🚨 Public services</a>
+        <a href="#sec-yard"            class="sec-tab" data-target="sec-yard">🌱 Yard</a>
+        <a href="#sec-risks"           class="sec-tab" data-target="sec-risks">⚠️ Risks</a>
+      </div>
+    </nav>
+
     <div class="resolved">
       <div class="resolved-head">
         <div class="pin">📍</div>
@@ -1037,7 +1096,7 @@
     </div>
 
     <!-- v0.23: Slim section header — Your home -->
-    <div class="page-section-header your-home">
+    <div class="page-section-header your-home" id="sec-yourhome">
       <div class="psh-icon">🏠</div>
       <div class="psh-text">
         <h2 class="psh-title">Your home</h2>
@@ -1050,7 +1109,7 @@
     </div>
 
     <!-- v0.23: Slim section header — Services -->
-    <div class="page-section-header services">
+    <div class="page-section-header services" id="sec-services">
       <div class="psh-icon">🔌</div>
       <div class="psh-text">
         <h2 class="psh-title">Services</h2>
@@ -1107,7 +1166,7 @@
     </div>
 
     <!-- v0.23: Slim section header — Schools -->
-    <div class="page-section-header schools">
+    <div class="page-section-header schools" id="sec-schools">
       <div class="psh-icon">🎓</div>
       <div class="psh-text">
         <h2 class="psh-title">Schools</h2>
@@ -1168,7 +1227,7 @@
     </div>
 
     <!-- v0.23: Slim section header — Parks -->
-    <div class="page-section-header parks">
+    <div class="page-section-header parks" id="sec-parks">
       <div class="psh-icon">🌳</div>
       <div class="psh-text">
         <h2 class="psh-title">Parks &amp; lifestyle</h2>
@@ -1212,7 +1271,7 @@
     </div>
 
     <!-- v0.27: Slim section header — Home services -->
-    <div class="page-section-header home-services">
+    <div class="page-section-header home-services" id="sec-home-services">
       <div class="psh-icon">🛠️</div>
       <div class="psh-text">
         <h2 class="psh-title">Home services</h2>
@@ -1291,7 +1350,7 @@
     </div>
 
     <!-- v0.27: Slim section header — Public services & emergency -->
-    <div class="page-section-header public-services">
+    <div class="page-section-header public-services" id="sec-public-services">
       <div class="psh-icon">🚨</div>
       <div class="psh-text">
         <h2 class="psh-title">Public services &amp; emergency</h2>
@@ -1346,7 +1405,7 @@
     </div>
 
     <!-- v0.23: Slim section header — Yard & garden -->
-    <div class="page-section-header yard">
+    <div class="page-section-header yard" id="sec-yard">
       <div class="psh-icon">🌱</div>
       <div class="psh-text">
         <h2 class="psh-title">Yard &amp; garden</h2>
@@ -1414,7 +1473,7 @@
     </div>
 
     <!-- v0.23: Slim section header — Climate risks (collapsed by default) -->
-    <div class="page-section-header risks">
+    <div class="page-section-header risks" id="sec-risks">
       <div class="psh-icon">⚠️</div>
       <div class="psh-text">
         <h2 class="psh-title">Climate risks</h2>
@@ -1464,7 +1523,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.27 · May 2026 · Phase 2 · Home services (handyman/plumber/electrician/HVAC) &amp; Public services (fire/police/hospital/clinic/pharmacy)
+      <b>HomeAtlas</b> &mdash; v0.28 · May 2026 · Phase 2 · Sticky section-nav tabs — jump to any section with one click
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -4748,6 +4807,8 @@ function renderPublicServices(grouped, total, cityKey) {
 /* -------- Loading state ---------------------------------------------- */
 function setLoading() {
   $("results").hidden = false;
+  // v0.28: kick off section-nav observer once results are visible (idempotent)
+  setTimeout(initSectionNavObserver, 100);
   ["electric","internet","tv","security"].forEach(k => {
     setHTML(`${k}-value`, '<div class="skeleton" style="width:60%;height:22px;"></div>');
     const meta = $(`${k}-meta`); if (meta) meta.textContent = "";
@@ -4939,6 +5000,62 @@ document.addEventListener("click", (e) => {
   target.hidden = !target.hidden;
   btn.setAttribute("aria-expanded", String(!target.hidden));
 });
+
+// v0.28: Section-nav — smooth-scroll on click + active-state via IntersectionObserver.
+// We listen on the document so the handler is attached even before the results
+// section is unhidden (the nav itself lives inside #results and reveals when search runs).
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest(".sec-tab");
+  if (!tab) return;
+  const targetId = tab.dataset.target;
+  const target = targetId && document.getElementById(targetId);
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  // Update URL hash without jumping
+  if (history.replaceState) history.replaceState(null, "", "#" + targetId);
+});
+
+// IntersectionObserver: highlight the tab whose section is most-visible.
+// Initialized on demand the first time results are revealed (so the observed
+// elements actually exist). Re-runs are idempotent because we cache `secNavObs`.
+let secNavObs = null;
+function initSectionNavObserver() {
+  if (secNavObs) return;
+  if (!("IntersectionObserver" in window)) return;
+  const headers = Array.from(document.querySelectorAll(".page-section-header[id]"));
+  if (!headers.length) return;
+  const tabsById = new Map();
+  document.querySelectorAll(".sec-tab[data-target]").forEach(t => tabsById.set(t.dataset.target, t));
+  // Track which sections are currently in view; activate the topmost one.
+  const visible = new Set();
+  secNavObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) visible.add(entry.target.id);
+      else visible.delete(entry.target.id);
+    });
+    // Pick the visible header that's earliest in document order
+    let activeId = null;
+    for (const h of headers) { if (visible.has(h.id)) { activeId = h.id; break; } }
+    // Fallback: when scrolled past the last header, keep the last one active
+    if (!activeId) {
+      const scrolledBeyond = headers.filter(h => h.getBoundingClientRect().top < 80);
+      if (scrolledBeyond.length) activeId = scrolledBeyond[scrolledBeyond.length - 1].id;
+    }
+    document.querySelectorAll(".sec-tab.active").forEach(t => t.classList.remove("active"));
+    if (activeId && tabsById.has(activeId)) {
+      const tab = tabsById.get(activeId);
+      tab.classList.add("active");
+      // Scroll the active tab into view in the horizontal nav (mobile)
+      tab.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+    }
+  }, {
+    // Trigger when the header crosses the area just below the sticky nav.
+    rootMargin: "-72px 0px -60% 0px",
+    threshold: 0
+  });
+  headers.forEach(h => secNavObs.observe(h));
+}
 
 // v0.21: Climate risks collapsible toggle
 const risksToggle = $("risks-toggle");
