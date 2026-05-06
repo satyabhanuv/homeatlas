@@ -830,7 +830,7 @@
   }
   .pgroup-popular::before { content: "★"; font-size: 9px; }
 
-  /* ─── v0.29: Sticky section-nav tabs — bigger, button-style, no emojis ── */
+  /* ─── v0.29/v0.30: Sticky section-nav tabs + radius filter row ── */
   .section-nav {
     position: sticky; top: 0; z-index: 20;
     margin: 20px -24px 18px;          /* break out to viewport edges */
@@ -839,6 +839,70 @@
     backdrop-filter: blur(10px);
     background: rgba(250,250,250,0.92);
   }
+
+  /* v0.30: Radius filter row — sits on top of the section-nav inner */
+  .radius-filter {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 6px 0 8px;
+    border-bottom: 1px solid var(--line-2);
+    margin-bottom: 8px;
+  }
+  .radius-filter-label {
+    font-size: 12px; font-weight: 600;
+    color: var(--ink-soft); letter-spacing: 0.2px;
+    text-transform: uppercase; margin-right: 4px;
+  }
+  .radius-btn {
+    flex: 0 0 auto;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 13px; font-weight: 600;
+    letter-spacing: -0.005em;
+    cursor: pointer;
+    transition: background 0.12s ease, border-color 0.12s ease;
+    font-family: inherit;
+  }
+  .radius-btn:hover { background: var(--surface-2); border-color: #d6dbe3; }
+  .radius-btn.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+    box-shadow: 0 1px 4px rgba(0,106,255,0.18);
+  }
+  .radius-status {
+    margin-left: auto;
+    font-size: 12px; color: var(--ink-faint);
+    font-weight: 500;
+  }
+  .radius-status.busy { color: var(--primary); }
+  .radius-status.busy::before {
+    content: ""; display: inline-block;
+    width: 10px; height: 10px; margin-right: 6px;
+    border: 2px solid var(--line); border-top-color: var(--primary);
+    border-radius: 50%; vertical-align: middle;
+    animation: spin 0.8s linear infinite;
+  }
+  @media (max-width: 700px) {
+    .radius-filter-label { width: 100%; margin-bottom: 4px; }
+    .radius-btn { padding: 5px 10px; font-size: 12px; }
+    .radius-status { width: 100%; margin-left: 0; margin-top: 4px; }
+  }
+
+  /* "Within X mi" badge added to each section header by JS */
+  .psh-radius-badge {
+    margin-left: auto;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--ink-soft);
+    font-size: 11.5px; font-weight: 600;
+    letter-spacing: 0.1px;
+    border: 1px solid var(--line);
+  }
+  .psh-text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 200px; }
   .section-nav-inner {
     display: flex; gap: 8px;
     overflow-x: auto;
@@ -1103,7 +1167,16 @@
   <section class="results" id="results" hidden>
 
     <!-- v0.28/v0.29: Section nav — sticky text-only tabs in user-requested order -->
+    <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
+      <div class="radius-filter" role="radiogroup" aria-label="Search radius">
+        <span class="radius-filter-label">Within</span>
+        <button type="button" class="radius-btn" data-radius="5"  role="radio">5 mi</button>
+        <button type="button" class="radius-btn" data-radius="10" role="radio" aria-checked="true">10 mi</button>
+        <button type="button" class="radius-btn" data-radius="20" role="radio">20 mi</button>
+        <button type="button" class="radius-btn" data-radius="60" role="radio">60 mi</button>
+        <span class="radius-status" id="radius-status"></span>
+      </div>
       <div class="section-nav-inner">
         <a href="#sec-myhome"          class="sec-tab" data-target="sec-myhome">My home</a>
         <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services">Emergency services</a>
@@ -1638,7 +1711,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.29 · May 2026 · Phase 2 · Major restructure — My home merge, rename + reorder sections, sub-tabs inside every card, bigger button-style tabs
+      <b>HomeAtlas</b> &mdash; v0.30 · May 2026 · Phase 2 · Radial distance filter (5/10/20/60 mi) — pick how far around your home to look
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2706,6 +2779,91 @@ function iconButtonsHtml(name, opts = {}) {
 /* -------- Address autocomplete (two-phase: Photon → Census/Nominatim) -- */
 // v0.16: flip to true in DevTools to log each geocoder's results
 window.HOMEATLAS_DEBUG = false;
+
+/* ─────────────────────────────────────────────────────────────────────
+   v0.30: Radial distance filter
+   Single source of truth for "how far around the home should we look".
+   Persisted in localStorage + URL hash. All Overpass-driven sections
+   read CURRENT_RADIUS_M when issuing their queries; changing the radius
+   triggers re-fetch of every distance-bound section without a page reload.
+   ───────────────────────────────────────────────────────────────────── */
+const RADIUS_OPTIONS = [5, 10, 20, 60];          // miles
+const DEFAULT_RADIUS_MI = 10;
+const MILES_TO_METERS = 1609.34;
+let CURRENT_RADIUS_MI = DEFAULT_RADIUS_MI;
+let CURRENT_RADIUS_M  = Math.round(DEFAULT_RADIUS_MI * MILES_TO_METERS);
+
+function loadSavedRadius() {
+  // URL hash wins over localStorage (so a shared link forces its radius)
+  const hashMatch = (location.hash || "").match(/radius=(\d+)/);
+  let r = hashMatch ? parseInt(hashMatch[1], 10) : NaN;
+  if (!RADIUS_OPTIONS.includes(r)) {
+    try { r = parseInt(localStorage.getItem("homeatlas:radius") || "", 10); } catch (e) {}
+  }
+  if (!RADIUS_OPTIONS.includes(r)) r = DEFAULT_RADIUS_MI;
+  setRadius(r, { silent: true, persist: false });
+}
+function setRadius(miles, opts = {}) {
+  if (!RADIUS_OPTIONS.includes(miles)) return;
+  CURRENT_RADIUS_MI = miles;
+  CURRENT_RADIUS_M  = Math.round(miles * MILES_TO_METERS);
+  // Update button state
+  document.querySelectorAll(".radius-btn").forEach(b => {
+    const on = parseInt(b.dataset.radius, 10) === miles;
+    b.classList.toggle("active", on);
+    b.setAttribute("aria-checked", String(on));
+  });
+  // Update per-section "Within X mi" badges
+  refreshRadiusBadges();
+  // Persist
+  if (opts.persist !== false) {
+    try { localStorage.setItem("homeatlas:radius", String(miles)); } catch (e) {}
+    if (history.replaceState) {
+      // Preserve any other hash fragment (like #sec-services); just update or add radius=X
+      const cur = (location.hash || "").replace(/^#/, "");
+      const parts = cur.split("&").filter(p => p && !p.startsWith("radius="));
+      // If the leading part is a section anchor (no =), keep it; append radius
+      const next = parts.length ? parts.join("&") + "&radius=" + miles : "radius=" + miles;
+      history.replaceState(null, "", "#" + next);
+    }
+  }
+  if (!opts.silent) refetchAllRadialSections();
+}
+function refreshRadiusBadges() {
+  document.querySelectorAll(".psh-radius-badge").forEach(b => b.remove());
+  document.querySelectorAll(".page-section-header.public-services .psh-text, .page-section-header.schools .psh-text, .page-section-header.parks .psh-text, .page-section-header.home-services .psh-text").forEach(t => {
+    const badge = document.createElement("span");
+    badge.className = "psh-radius-badge";
+    badge.textContent = `Within ${CURRENT_RADIUS_MI} mi`;
+    t.appendChild(badge);
+  });
+}
+let radiusRefetchTimer = null;
+function refetchAllRadialSections() {
+  // Debounce — clicks can stack quickly
+  if (radiusRefetchTimer) clearTimeout(radiusRefetchTimer);
+  const status = $("radius-status");
+  if (status) { status.textContent = "Refreshing within " + CURRENT_RADIUS_MI + " mi…"; status.classList.add("busy"); }
+  radiusRefetchTimer = setTimeout(async () => {
+    const tasks = [];
+    if (typeof lastSchoolGeo !== "undefined" && lastSchoolGeo)   tasks.push(loadNearbySchools(lastSchoolGeo));
+    if (typeof lastParksGeo  !== "undefined" && lastParksGeo)    tasks.push(loadNearbyParks(lastParksGeo));
+    if (typeof lastHsGeo     !== "undefined" && lastHsGeo)       tasks.push(loadNearbyHomeServices(lastHsGeo));
+    if (typeof lastPsGeo     !== "undefined" && lastPsGeo)       tasks.push(loadNearbyPublicServices(lastPsGeo));
+    try { await Promise.allSettled(tasks); }
+    finally {
+      if (status) { status.textContent = ""; status.classList.remove("busy"); }
+    }
+  }, 80);
+}
+// Wire the buttons (delegated, attached once at DOMContentLoaded equivalent)
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".radius-btn[data-radius]");
+  if (!btn) return;
+  e.preventDefault();
+  setRadius(parseInt(btn.dataset.radius, 10));
+});
+loadSavedRadius();
 function dlog(...args) { if (window.HOMEATLAS_DEBUG) console.log("[homeatlas]", ...args); }
 
 let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false, deepRunning: false };
@@ -3311,7 +3469,9 @@ async function overpassQuery(qlBody, onProgress) {
   throw lastErr || new Error("All Overpass mirrors failed");
 }
 
-async function fetchNearbyEducation(lat, lon, radiusMeters = 4000, onProgress) {
+async function fetchNearbyEducation(lat, lon, radiusMeters, onProgress) {
+  // v0.30: default to current global radius if not specified
+  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   // Split the original heavy query into TWO smaller parallel queries.
   // Each is roughly half the load, so each finishes in ~half the time
   // and is far less likely to 504. Promise.allSettled means partial
@@ -3790,7 +3950,7 @@ function renderSchoolSections(grouped, total, cityKey) {
   $("school-loading").hidden = true;
   $("school-sections").hidden = false;
   const pill = $("school-summary"); pill.hidden = false;
-  pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.5 mi`;
+  pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
 
   // v0.26: render the 3 levels in a 2-per-row grid (E + M side-by-side, H alone on row 2)
   const fill3x = (sectionId, tbodyId, pool) => {
@@ -3824,7 +3984,7 @@ function renderSchoolSections(grouped, total, cityKey) {
 
   if (total === 0) {
     $("school-sections").innerHTML =
-      `<div class="schools-empty">No schools or educational facilities found within 2.5 miles. Try a more central address, or check the school district directly.</div>`;
+      `<div class="schools-empty">No schools or educational facilities found within ${CURRENT_RADIUS_MI} miles. Try a wider radius above, a more central address, or check the school district directly.</div>`;
   }
 }
 
@@ -4613,7 +4773,9 @@ function renderHome(addr) {
 /* =====================================================================
    v0.19: Parks & places (Overpass: parks, dog parks, playgrounds, trails)
    ===================================================================== */
-async function fetchNearbyParks(lat, lon, radiusMeters = 3000) {
+async function fetchNearbyParks(lat, lon, radiusMeters) {
+  // v0.30: default to current global radius if not specified
+  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   const q = `[out:json][timeout:18];(`
     + `nwr["leisure"~"^(park|dog_park|playground|garden|nature_reserve)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["route"="hiking"](around:${radiusMeters},${lat},${lon});`
@@ -4654,7 +4816,7 @@ async function loadNearbyParks(geo) {
   $("parks-summary").hidden = true;
   setText("parks-value", "Searching…");
   try {
-    const elements = await fetchNearbyParks(lat, lon, 3000);
+    const elements = await fetchNearbyParks(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
     const items = elements
       .map(classifyParkItem)
       .filter(Boolean)
@@ -4678,7 +4840,7 @@ function renderParks(grouped, total, cityKey) {
   $("parks-loading").hidden = true;
   $("parks-sections").hidden = false;
   $("parks-summary").hidden = false;
-  $("parks-summary").textContent = `${total} place${total === 1 ? "" : "s"} within 1.9 mi`;
+  $("parks-summary").textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("parks-value", total > 0 ? `${total} places to explore` : "Nothing nearby in OpenStreetMap");
   // v0.26: 2-per-row layout for park lists
   const fillSection = (sectionId, tbodyId, items) => {
@@ -4700,7 +4862,9 @@ function renderParks(grouped, total, cityKey) {
    reviews-from-verified-residents-only system is a Phase 4 feature
    gated on accounts; until then this is a discovery list.
    ===================================================================== */
-async function fetchHomeServices(lat, lon, radiusMeters = 4500) {
+async function fetchHomeServices(lat, lon, radiusMeters) {
+  // v0.30: default to current global radius if not specified
+  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   const q = `[out:json][timeout:20];(`
     + `nwr["craft"](around:${radiusMeters},${lat},${lon});`
     + `nwr["shop"~"^(hardware|doityourself|trade|paint|appliance|electrical)$"](around:${radiusMeters},${lat},${lon});`
@@ -4759,7 +4923,7 @@ async function loadNearbyHomeServices(geo) {
   $("hs-summary").hidden = true;
   setText("hs-value", "Searching…");
   try {
-    const elements = await fetchHomeServices(lat, lon, 4500);
+    const elements = await fetchHomeServices(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
     const items = elements
       .map(classifyHomeService)
       .filter(Boolean)
@@ -4791,7 +4955,7 @@ function renderHomeServices(grouped, total, cityKey) {
   $("hs-sections").hidden = false;
   const pill = $("hs-summary");
   pill.hidden = false;
-  pill.textContent = `${total} listing${total === 1 ? "" : "s"} within 2.8 mi`;
+  pill.textContent = `${total} listing${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("hs-value", total > 0 ? `${total} listings` : "No registered trades nearby in OSM");
 
   const fill = (sectionId, tbodyId, items) => {
@@ -4815,7 +4979,7 @@ function renderHomeServices(grouped, total, cityKey) {
 
   if (total === 0) {
     setText("hs-value", "No registered trades nearby in OpenStreetMap");
-    $("hs-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">OpenStreetMap has no <code>craft=*</code> tagged trades within 2.8 mi of your home. This is common in suburbs and rural areas — coverage is improving as volunteers add data. For now, search Google or Yelp for "[trade] near me".</div>`;
+    $("hs-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">OpenStreetMap has no <code>craft=*</code> tagged trades within ${CURRENT_RADIUS_MI} mi of your home. Try widening the radius above, or this is common in suburbs and rural areas where OSM coverage is improving — search Google or Yelp for "[trade] near me" for now.</div>`;
   }
 }
 
@@ -4825,7 +4989,9 @@ function renderHomeServices(grouped, total, cityKey) {
    "for emergencies, call 911" reminder — distances here are
    straight-line, not response-time predictions.
    ===================================================================== */
-async function fetchPublicServices(lat, lon, radiusMeters = 4500) {
+async function fetchPublicServices(lat, lon, radiusMeters) {
+  // v0.30: default to current global radius if not specified
+  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   const q = `[out:json][timeout:20];(`
     + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
@@ -4872,7 +5038,7 @@ async function loadNearbyPublicServices(geo) {
   $("ps-summary").hidden = true;
   setText("ps-value", "Searching…");
   try {
-    const elements = await fetchPublicServices(lat, lon, 4500);
+    const elements = await fetchPublicServices(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
     const items = elements
       .map(classifyPublicService)
       .filter(Boolean)
@@ -4899,7 +5065,7 @@ function renderPublicServices(grouped, total, cityKey) {
   $("ps-sections").hidden = false;
   const pill = $("ps-summary");
   pill.hidden = false;
-  pill.textContent = `${total} place${total === 1 ? "" : "s"} within 2.8 mi`;
+  pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("ps-value", total > 0 ? `${total} services nearby` : "No public services found in OSM");
 
   const fill = (sectionId, tbodyId, items) => {
@@ -4917,7 +5083,7 @@ function renderPublicServices(grouped, total, cityKey) {
   fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic);
 
   if (total === 0) {
-    $("ps-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within 2.8 mi. Try widening the radius (Phase 3 will let you adjust this), or check Google Maps directly.</div>`;
+    $("ps-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius above, or check Google Maps directly.</div>`;
   }
 }
 
