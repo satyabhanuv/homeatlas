@@ -1711,7 +1711,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.30 · May 2026 · Phase 2 · Radial distance filter (5/10/20/60 mi) — pick how far around your home to look
+      <b>HomeAtlas</b> &mdash; v0.30.1 · May 2026 · Phase 2 · Radial filter + Overpass robustness fix (split queries, server-timeout retry, immediate refetch feedback)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2843,7 +2843,31 @@ function refetchAllRadialSections() {
   // Debounce — clicks can stack quickly
   if (radiusRefetchTimer) clearTimeout(radiusRefetchTimer);
   const status = $("radius-status");
-  if (status) { status.textContent = "Refreshing within " + CURRENT_RADIUS_MI + " mi…"; status.classList.add("busy"); }
+  // Detect whether we have anything to refetch — if no search has run yet, skip silently
+  const haveAddr = (typeof lastSchoolGeo !== "undefined" && lastSchoolGeo)
+                || (typeof lastParksGeo  !== "undefined" && lastParksGeo)
+                || (typeof lastHsGeo     !== "undefined" && lastHsGeo)
+                || (typeof lastPsGeo     !== "undefined" && lastPsGeo);
+  if (!haveAddr) {
+    if (status) { status.textContent = ""; status.classList.remove("busy"); }
+    return;
+  }
+  if (status) {
+    status.textContent = "Refreshing within " + CURRENT_RADIUS_MI + " mi…";
+    status.classList.add("busy");
+  }
+  // v0.30 fix: paint loading skeletons immediately so the user gets visual feedback
+  // instead of staring at stale data while Overpass mirrors churn.
+  ["parks-loading", "hs-loading", "ps-loading", "school-loading"].forEach(id => {
+    const el = $(id);
+    if (el) {
+      el.hidden = false;
+      el.textContent = `Searching within ${CURRENT_RADIUS_MI} mi…`;
+    }
+  });
+  ["parks-sections", "hs-sections", "ps-sections", "school-sections"].forEach(id => {
+    const el = $(id); if (el) el.hidden = true;
+  });
   radiusRefetchTimer = setTimeout(async () => {
     const tasks = [];
     if (typeof lastSchoolGeo !== "undefined" && lastSchoolGeo)   tasks.push(loadNearbySchools(lastSchoolGeo));
@@ -2851,8 +2875,10 @@ function refetchAllRadialSections() {
     if (typeof lastHsGeo     !== "undefined" && lastHsGeo)       tasks.push(loadNearbyHomeServices(lastHsGeo));
     if (typeof lastPsGeo     !== "undefined" && lastPsGeo)       tasks.push(loadNearbyPublicServices(lastPsGeo));
     try { await Promise.allSettled(tasks); }
+    catch (e) { console.error("[radius refetch]", e); }
     finally {
-      if (status) { status.textContent = ""; status.classList.remove("busy"); }
+      if (status) { status.textContent = "Updated to " + CURRENT_RADIUS_MI + " mi"; status.classList.remove("busy"); }
+      setTimeout(() => { if (status && !status.classList.contains("busy")) status.textContent = ""; }, 2500);
     }
   }, 80);
 }
@@ -3454,16 +3480,24 @@ async function overpassQuery(qlBody, onProgress) {
     if (onProgress) onProgress(i + 1, OVERPASS_MIRRORS.length, host);
     try {
       const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(new Error(`Timed out on ${host}`)), 20000);
+      const t = setTimeout(() => ctrl.abort(new Error(`Timed out on ${host}`)), 25000);
       const res = await fetch(baseUrl + "?data=" + encodeURIComponent(qlBody),
                               { method: "GET", signal: ctrl.signal });
       clearTimeout(t);
-      if (!res.ok) { lastErr = new Error(`${host}: HTTP ${res.status}`); continue; }
+      if (!res.ok) { lastErr = new Error(`${host}: HTTP ${res.status}`); console.warn("[overpass]", lastErr.message); continue; }
       const data = await res.json();
+      // v0.30: Overpass servers sometimes return 200 with `remark: "killed/timeout"`
+      // when the query is too heavy (large radius + dense category). Detect and retry.
+      if (data.remark && /timed?\s*out|killed|memory|too\s+many|exceeded/i.test(data.remark)) {
+        lastErr = new Error(`${host}: ${data.remark}`);
+        console.warn("[overpass]", lastErr.message);
+        continue;
+      }
       return data.elements || [];
     } catch (e) {
       if (e && e.name === "AbortError") lastErr = new Error(`${host}: server too slow`);
       else lastErr = new Error(`${host}: ${e.message || e}`);
+      console.warn("[overpass]", lastErr.message);
     }
   }
   throw lastErr || new Error("All Overpass mirrors failed");
@@ -4776,14 +4810,25 @@ function renderHome(addr) {
 async function fetchNearbyParks(lat, lon, radiusMeters) {
   // v0.30: default to current global radius if not specified
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
-  const q = `[out:json][timeout:18];(`
+  // v0.30 fix: footpath/path queries explode at >5mi radius (thousands of elements
+  // → server-side timeout → "killed" remark → empty response). Keep the foot-path
+  // subquery at a tighter radius regardless of user's chosen radius.
+  const FOOTPATH_CAP_M = Math.min(radiusMeters, 8000);  // ~5 mi cap for path query
+  // v0.30 fix: split into two queries — main parks (parks/playgrounds/dogs/hiking)
+  // can use full radius; footpath query is capped at FOOTPATH_CAP_M to avoid
+  // timeouts. Promise.allSettled means a failure in one doesn't kill the other.
+  const mainQ = `[out:json][timeout:25];(`
     + `nwr["leisure"~"^(park|dog_park|playground|garden|nature_reserve)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["route"="hiking"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["highway"="path"]["foot"="designated"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  return await overpassQuery(q);
+  const pathQ = `[out:json][timeout:18];(`
+    + `nwr["highway"="path"]["foot"="designated"]["name"](around:${FOOTPATH_CAP_M},${lat},${lon});`
+    + `);out center tags;`;
+  const results = await Promise.allSettled([overpassQuery(mainQ), overpassQuery(pathQ)]);
+  const out = [];
+  results.forEach(r => { if (r.status === "fulfilled" && Array.isArray(r.value)) out.push(...r.value); });
+  return out;
 }
-
 function classifyParkItem(el) {
   const t = el.tags || {};
   const name = t.name || t["name:en"];
@@ -4865,12 +4910,19 @@ function renderParks(grouped, total, cityKey) {
 async function fetchHomeServices(lat, lon, radiusMeters) {
   // v0.30: default to current global radius if not specified
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
-  const q = `[out:json][timeout:20];(`
-    + `nwr["craft"](around:${radiusMeters},${lat},${lon});`
+  // v0.30 fix: restrict craft=* to the trades we actually classify (instead of "all crafts")
+  // and split into parallel queries so one timeout doesn't kill the whole section.
+  const craftQ = `[out:json][timeout:25];(`
+    + `nwr["craft"~"^(handyman|general|plumber|electrician|hvac|heating_engineer|air_conditioning|painter|carpenter|joiner|cabinet_maker|builder|roofer|gardener|garden|cleaner|window_cleaner|locksmith)$"](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  const shopQ = `[out:json][timeout:20];(`
     + `nwr["shop"~"^(hardware|doityourself|trade|paint|appliance|electrical)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["office"="construction_company"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  return await overpassQuery(q);
+  const results = await Promise.allSettled([overpassQuery(craftQ), overpassQuery(shopQ)]);
+  const out = [];
+  results.forEach(r => { if (r.status === "fulfilled" && Array.isArray(r.value)) out.push(...r.value); });
+  return out;
 }
 function classifyHomeService(el) {
   const t = el.tags || {};
@@ -4992,12 +5044,18 @@ function renderHomeServices(grouped, total, cityKey) {
 async function fetchPublicServices(lat, lon, radiusMeters) {
   // v0.30: default to current global radius if not specified
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
-  const q = `[out:json][timeout:20];(`
+  // v0.30 fix: split into amenity vs healthcare so a slow query in one doesn't kill both
+  const amenQ = `[out:json][timeout:25];(`
     + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall)$"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["emergency"="fire_station"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  return await overpassQuery(q);
+  const hcQ = `[out:json][timeout:20];(`
+    + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ)]);
+  const out = [];
+  results.forEach(r => { if (r.status === "fulfilled" && Array.isArray(r.value)) out.push(...r.value); });
+  return out;
 }
 function classifyPublicService(el) {
   const t = el.tags || {};
