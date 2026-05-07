@@ -983,6 +983,12 @@
     .school-section { scroll-margin-top: 72px; }
   }
 
+  /* v0.34.0: Single-view layout — only the active SECTION shows on the page.
+     Click section nav to swap. Yard's inner content can still scroll within
+     itself. Removes whole-page scrolling between sections. */
+  .single-view .section-managed { display: none; }
+  .single-view .section-managed.section-active { display: block; }
+
   /* v0.33.1: True-tabbed subsections — only the active subtab's content shows */
   .subtab-managed { display: none; }
   .subtab-managed.subtab-active { display: block; }
@@ -1450,6 +1456,7 @@
 
     <!-- Sub-nav for Civic & gov't -->
     <div class="subnav" data-subnav-for="card-civic">
+      <a href="#civic-locations-section" class="subtab" data-subtarget="civic-locations-section">Nearby offices</a>
       <a href="#civic-voting"     class="subtab" data-subtarget="civic-voting">Voting</a>
       <a href="#civic-officials"  class="subtab" data-subtarget="civic-officials">Officials</a>
       <a href="#civic-property"   class="subtab" data-subtarget="civic-property">Property records</a>
@@ -1493,8 +1500,14 @@
         <div id="civic-permits-body" class="civic-grid"></div>
       </div>
 
+      <!-- v0.34.0: Civic map — nearby civic offices (post offices, town halls, libraries, courthouses) -->
+      <div class="school-section" id="civic-locations-section" style="margin-top:18px;">
+        <h4>🗺️ Nearby civic offices <span class="hint">— post office, town hall, library, courthouse</span></h4>
+        <div class="section-map" id="civic-map" style="margin-top:10px;"><div class="section-map-empty">Map populates with nearby civic offices once your search completes.</div></div>
+      </div>
+
       <div class="source" style="margin-top:14px;">
-        Deep-links to authoritative <i>free</i> sources only — no paid placement, no ad-funded aggregators. State portals are pre-filtered by URL parameters where the source supports it; some require a manual address entry on the next screen.
+        Deep-links to authoritative <i>free</i> sources only — no paid placement, no ad-funded aggregators. Map locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>.
       </div>
     </div>
 
@@ -1919,7 +1932,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.33.4 · May 2026 · Phase 2 · Phone &amp; hours on cards · Letter-coded school markers · Smart-default subtab · Radius 2/5/10 mi · Public/Private park tag · Property-records link fixed
+      <b>HomeAtlas</b> &mdash; v0.34.0 · May 2026 · Phase 2 · Single-view layout (one section at a time) + Civic map · backup of v0.33.4 saved alongside
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -5130,6 +5143,8 @@ async function loadNearbySchools(geo) {
     // v0.33.3: save grouped data + render map for active subtab only
     sectionState["card-school"] = { grouped, geo: { lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) } };
     refreshActiveSubtabFor("card-school");
+    // v0.34.0: civic map also pulls libraries from school enrichment data
+    if (typeof refreshCivicMap === "function") refreshCivicMap();
   } catch (err) {
     loading.classList.add("error");
     loading.innerHTML =
@@ -6204,6 +6219,8 @@ async function loadNearbyPublicServices(geo) {
     // v0.33.3: save state + render map for active subtab only
     sectionState["card-public-services"] = { grouped, geo: { lat, lon } };
     refreshActiveSubtabFor("card-public-services");
+    // v0.34.0: civic map reuses public-services civic items
+    refreshCivicMap();
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby public services: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -6422,6 +6439,21 @@ const CIVIC_DEEP_LINKS = {
   }
 };
 
+// v0.34.0: paint the civic locations map using already-fetched data from
+// public-services (post office, town hall) + schools (libraries). Avoids a
+// separate Overpass round-trip — these are already loaded from earlier sections.
+function refreshCivicMap() {
+  const ps  = sectionState["card-public-services"];
+  const sch = sectionState["card-school"];
+  if (!ps || !ps.geo) return;
+  const items = [];
+  if (ps.grouped && ps.grouped.civic) items.push(...ps.grouped.civic);
+  if (sch && sch.grouped && sch.grouped.enrichment) {
+    items.push(...sch.grouped.enrichment.filter(it => /library/i.test(it.subtype || "")));
+  }
+  setupSectionMap("civic-map", ps.geo.lat, ps.geo.lon, items);
+}
+
 function renderCivicSection(addr) {
   const stateCode = (typeof getStateCode === "function") ? getStateCode(addr || {}) : "";
   const stateName = (addr && addr.state) || "your state";
@@ -6512,11 +6544,15 @@ function maybeRenderCoverageBanner(addr) {
 /* -------- Loading state ---------------------------------------------- */
 function setLoading() {
   $("results").hidden = false;
+  // v0.34.0: enable single-view layout — only one section visible at a time
+  document.body.classList.add("single-view");
   // v0.28: kick off section-nav observer once results are visible (idempotent)
   setTimeout(initSectionNavObserver, 100);
   // v0.33.1: ensure subtabs are wired up (idempotent — re-applies subtab-managed
   // and subtab-active classes after any DOM change that revealed cards)
   setTimeout(initSubtabs, 50);
+  // v0.34.0: group siblings between section headers + activate the first section
+  setTimeout(initSingleViewSections, 75);
   ["electric","internet","tv","security"].forEach(k => {
     setHTML(`${k}-value`, '<div class="skeleton" style="width:60%;height:22px;"></div>');
     const meta = $(`${k}-meta`); if (meta) meta.textContent = "";
@@ -6714,8 +6750,10 @@ document.addEventListener("click", (e) => {
 });
 
 // v0.28/v0.29: Section-nav (.sec-tab) — smooth-scroll to a section.
-// v0.33.1: Sub-nav (.subtab) — true tabbed UX: swap which subsection is visible,
-// no scrolling. Only the active subtab's content is shown; siblings hide.
+// v0.33.1: Sub-nav (.subtab) — true tabbed UX: swap which subsection is visible.
+// v0.34.0: Single-view — sec-tab clicks now ALSO swap whole sections (only the
+//          active section shows on the page). Falls back to scroll if .single-view
+//          isn't applied (so the layout can be toggled off easily for A/B).
 document.addEventListener("click", (e) => {
   const tab = e.target.closest(".sec-tab, .subtab");
   if (!tab) return;
@@ -6724,8 +6762,18 @@ document.addEventListener("click", (e) => {
   if (!target) return;
   e.preventDefault();
   if (tab.classList.contains("sec-tab")) {
-    // Top-level section — smooth-scroll into view
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (document.body.classList.contains("single-view")) {
+      // v0.34.0: hide all sections, show only the clicked one
+      activateSingleViewSection(targetId);
+      // Map active state on tabs
+      document.querySelectorAll(".sec-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      // Scroll page top so user starts at the section header
+      window.scrollTo({ top: document.querySelector(".section-nav")?.offsetTop || 0, behavior: "smooth" });
+    } else {
+      // Legacy fallback: scroll the page to the section
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
     if (history.replaceState) history.replaceState(null, "", "#" + targetId);
   } else if (tab.classList.contains("subtab")) {
     // True-tabbed sub-section — swap visible content within this subnav
@@ -6747,6 +6795,55 @@ document.addEventListener("click", (e) => {
     if (cardId && SECTION_META[cardId]) refreshActiveSubtabFor(cardId);
   }
 });
+
+// v0.34.0: Single-view layout — group siblings between section headers,
+// mark them with data-section-group, then toggle one group visible at a time.
+// Idempotent — re-walking re-tags but doesn't duplicate.
+function initSingleViewSections() {
+  const headers = Array.from(document.querySelectorAll(".page-section-header[id]"));
+  if (!headers.length) return;
+  // Walk each header forward to the next page-section-header, tagging siblings
+  headers.forEach((header, i) => {
+    const sectionId = header.id;
+    const next = headers[i + 1] || null;
+    let cursor = header;
+    while (cursor) {
+      cursor.dataset.sectionGroup = sectionId;
+      cursor.classList.add("section-managed");
+      // stop at the element JUST before the next header
+      if (cursor.nextElementSibling === next) break;
+      cursor = cursor.nextElementSibling;
+      if (!cursor) break;
+    }
+  });
+  // Activate first section by default IF nothing is active yet
+  if (!document.querySelector(".section-managed.section-active")) {
+    activateSingleViewSection(headers[0].id);
+    // Mark first sec-tab as active
+    const firstTab = document.querySelector(`.sec-tab[data-target="${headers[0].id}"]`);
+    if (firstTab) {
+      document.querySelectorAll(".sec-tab").forEach(t => t.classList.remove("active"));
+      firstTab.classList.add("active");
+    }
+  }
+}
+function activateSingleViewSection(sectionId) {
+  // Hide all managed siblings, show only the matching group
+  document.querySelectorAll(".section-managed").forEach(el => el.classList.remove("section-active"));
+  document.querySelectorAll(`.section-managed[data-section-group="${sectionId}"]`).forEach(el => el.classList.add("section-active"));
+  // Re-trigger any Leaflet maps in the newly-visible section so they redraw correctly
+  // (Leaflet doesn't render properly when its container was display:none)
+  setTimeout(() => {
+    const section = document.querySelector(`.section-managed.section-active`);
+    if (!section) return;
+    document.querySelectorAll(".section-managed.section-active .section-map").forEach(mapEl => {
+      const id = mapEl.id;
+      if (id && _sectionMaps[id]) {
+        try { _sectionMaps[id].invalidateSize(); } catch (e) {}
+      }
+    });
+  }, 60);
+}
 
 // v0.33.1: Mark each subnav's targets as managed, default the first subtab + target active.
 // Idempotent — can be called repeatedly (e.g., after results render).
