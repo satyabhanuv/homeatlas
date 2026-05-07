@@ -1044,6 +1044,29 @@
   .page-section-header.home-services   { --psh-accent: #c08552; }
   .page-section-header.public-services { --psh-accent: #b34d4d; }
 
+  /* v0.33.4: contact + opening-hours line under the place name */
+  .place-contact {
+    display: block; flex-basis: 100%;
+    margin-top: 4px;
+    font-size: 12.5px; color: var(--ink-soft); line-height: 1.4;
+  }
+  .place-phone { color: var(--primary); text-decoration: none; font-weight: 600; }
+  .place-phone:hover { text-decoration: underline; }
+  .place-hours { color: var(--ink-soft); }
+  /* v0.33.4: Public vs Private (HOA / customers-only) tag for parks etc. */
+  .access-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-left: 6px;
+    padding: 2px 8px; border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    border: 1px solid;
+    vertical-align: middle;
+  }
+  .access-tag.access-private {
+    background: rgba(176,52,52,0.10); color: #8c2222; border-color: rgba(176,52,52,0.20);
+  }
+  .access-tag.access-private::before { content: "🔒 "; font-size: 10px; }
+
   /* v0.33: OSM-verified-contact badge — appears on places with phone+website+hours */
   .osm-verified-tag {
     display: inline-flex; align-items: center; gap: 3px;
@@ -1281,11 +1304,11 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
       <div class="radius-filter" role="radiogroup" aria-label="Search radius">
-        <span class="radius-filter-label">Within</span>
-        <button type="button" class="radius-btn" data-radius="5"  role="radio">5 mi</button>
-        <button type="button" class="radius-btn" data-radius="10" role="radio" aria-checked="true">10 mi</button>
-        <button type="button" class="radius-btn" data-radius="20" role="radio">20 mi</button>
-        <button type="button" class="radius-btn" data-radius="60" role="radio">60 mi</button>
+        <span class="radius-filter-label">Searching within</span>
+        <button type="button" class="radius-btn" data-radius="2"  role="radio">2 mi</button>
+        <button type="button" class="radius-btn" data-radius="5"  role="radio" aria-checked="true">5 mi</button>
+        <button type="button" class="radius-btn" data-radius="10" role="radio">10 mi</button>
+        <span class="radius-filter-label" style="margin-left:6px;text-transform:none;letter-spacing:0;color:var(--ink-faint);">RADIUS · daily-use range</span>
         <span class="radius-status" id="radius-status"></span>
       </div>
       <div class="section-nav-inner">
@@ -1896,7 +1919,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.33.3 · May 2026 · Phase 2 · Map + count now filter to active subtab — click Police, see only police pins
+      <b>HomeAtlas</b> &mdash; v0.33.4 · May 2026 · Phase 2 · Phone &amp; hours on cards · Letter-coded school markers · Smart-default subtab · Radius 2/5/10 mi · Public/Private park tag · Property-records link fixed
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3561,8 +3584,9 @@ window.HOMEATLAS_DEBUG = false;
    read CURRENT_RADIUS_M when issuing their queries; changing the radius
    triggers re-fetch of every distance-bound section without a page reload.
    ───────────────────────────────────────────────────────────────────── */
-const RADIUS_OPTIONS = [5, 10, 20, 60];          // miles
-const DEFAULT_RADIUS_MI = 10;
+// v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
+const RADIUS_OPTIONS = [2, 5, 10];               // miles
+const DEFAULT_RADIUS_MI = 5;
 const MILES_TO_METERS = 1609.34;
 let CURRENT_RADIUS_MI = DEFAULT_RADIUS_MI;
 let CURRENT_RADIUS_M  = Math.round(DEFAULT_RADIUS_MI * MILES_TO_METERS);
@@ -3674,6 +3698,57 @@ loadSavedRadius();
    ===================================================================== */
 const _sectionMaps = {};   // id → Leaflet map instance
 const _sectionMarkers = {}; // id → array of L.Marker
+
+// v0.33.4: per-item map-marker label (letter + color) so schools and parks
+// are visually distinguishable on the map, not just generic blue pins.
+function markerLabelFor(item) {
+  if (!item) return null;
+  const sub = (item.subtype || "").toLowerCase();
+  const cat = (item.category || "").toLowerCase();
+  // Schools — color-coded by level
+  if (cat === "public" || cat === "private" || cat === "other" || sub === "elementary" || sub === "middle" || sub === "high" || sub.includes("k-8") || sub.includes("k-12") || sub.includes("mixed")) {
+    if (sub === "elementary")              return { label: "E",  bg: "#2d6a4f" };
+    if (sub === "middle")                  return { label: "M",  bg: "#2b5a9e" };
+    if (sub === "high")                    return { label: "H",  bg: "#1d3a5f" };
+    if (sub.includes("k-8") || sub.includes("k-12") || sub.includes("mixed")) return { label: "K-12", bg: "#8a5a1f" };
+    // Charter / magnet
+    if (cat === "other") return { label: "Ch", bg: "#6b4d8a" };
+    // Private prefix on subtype
+    if (cat === "private") return { label: "P", bg: "#46508a" };
+    return { label: "S", bg: "#2d6a4f" };
+  }
+  // Education other
+  if (cat === "higher" || sub.includes("college") || sub.includes("university")) return { label: "U", bg: "#1d3a5f" };
+  if (cat === "enrichment" || sub.includes("library")) return { label: "📚", bg: "#0050c2" };
+  if (sub.includes("childcare") || sub.includes("daycare") || sub.includes("kindergarten")) return { label: "DC", bg: "#c08552" };
+  if (sub.includes("montessori")) return { label: "MS", bg: "#8a5a1f" };
+  // Parks
+  if (cat === "park")        return { label: "P",  bg: "#4c8c52" };
+  if (cat === "playground")  return { label: "Pl", bg: "#c08552" };
+  if (cat === "dog")         return { label: "🐕", bg: "#b08900" };
+  if (cat === "trail")       return { label: "🥾", bg: "#46508a" };
+  // Emergency
+  if (cat === "fire")        return { label: "🚒", bg: "#b34d4d" };
+  if (cat === "police")      return { label: "🚓", bg: "#1d3a5f" };
+  if (cat === "hospital")    return { label: "H",  bg: "#b34d4d" };
+  if (cat === "clinic")      return { label: "Cl", bg: "#0050c2" };
+  if (cat === "pharmacy")    return { label: "Rx", bg: "#0050c2" };
+  if (cat === "dentist")     return { label: "🦷", bg: "#46508a" };
+  if (cat === "civic")       return { label: "🏛", bg: "#4a5263" };
+  // Home services
+  if (cat === "plumber")     return { label: "🚿", bg: "#0050c2" };
+  if (cat === "electrician") return { label: "⚡", bg: "#b08900" };
+  if (cat === "hvac")        return { label: "❄", bg: "#46508a" };
+  if (cat === "handyman")    return { label: "🔧", bg: "#2d6a4f" };
+  if (cat === "painter")     return { label: "🎨", bg: "#c08552" };
+  if (cat === "carpenter")   return { label: "🪚", bg: "#8a5a1f" };
+  if (cat === "roofer")      return { label: "🏠", bg: "#b34d4d" };
+  if (cat === "landscaper")  return { label: "🌳", bg: "#4c8c52" };
+  if (cat === "cleaner")     return { label: "🧹", bg: "#46508a" };
+  if (cat === "locksmith")   return { label: "🔑", bg: "#4a5263" };
+  if (cat === "hardware")    return { label: "🛒", bg: "#c08552" };
+  return null;
+}
 function setupSectionMap(elId, centerLat, centerLon, items) {
   if (typeof L === "undefined") {
     // Leaflet still loading — try again shortly
@@ -3711,12 +3786,30 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     .addTo(map);
   _sectionMarkers[elId].push(homeMarker);
   // Place pins
+  // v0.33.4: schools, education facilities, and parks-by-type get custom letter
+  // markers (E/M/H/K12/DC/MS/Ch for schools; P/Pl/D/T for parks etc).
   const validItems = (items || []).filter(it => it && it.lat != null && it.lon != null);
   validItems.forEach(item => {
-    const m = L.marker([item.lat, item.lon])
-      .bindPopup(`<b>${(item.name || "").replace(/[<>]/g, '')}</b><br>${(item.subtype || "").replace(/[<>]/g, '')} · ${item.dist != null ? item.dist.toFixed(1) + " mi" : ""}${item.verified ? "<br><span style=\"color:#2d6a4f;\">✓ Verified contact info</span>" : ""}`)
-      .addTo(map);
-    _sectionMarkers[elId].push(m);
+    const labelInfo = markerLabelFor(item);
+    let marker;
+    if (labelInfo) {
+      const icon = L.divIcon({
+        className: "ha-label-marker",
+        html: `<div style="background:${labelInfo.bg};color:#fff;width:28px;height:36px;border-radius:14px 14px 14px 2px;display:grid;place-items:center;font-weight:700;font-size:11px;letter-spacing:-0.02em;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);transform:rotate(-45deg);"><span style="transform:rotate(45deg);">${labelInfo.label}</span></div>`,
+        iconSize: [28, 36], iconAnchor: [14, 32]
+      });
+      marker = L.marker([item.lat, item.lon], { icon });
+    } else {
+      marker = L.marker([item.lat, item.lon]);
+    }
+    const popupHtml = `<b>${(item.name || "").replace(/[<>]/g, '')}</b><br>` +
+      `${(item.subtype || "").replace(/[<>]/g, '')} · ${item.dist != null ? item.dist.toFixed(1) + " mi" : ""}` +
+      (item.access === "private" ? `<br><span style="color:#8c2222;">🔒 Private / HOA</span>` : "") +
+      (item.phone ? `<br>📞 ${(item.phone + "").replace(/[<>]/g, '')}` : "") +
+      (item.opening_hours ? `<br>🕐 ${(item.opening_hours.length > 50 ? item.opening_hours.slice(0,50) + '…' : item.opening_hours).replace(/[<>]/g, '')}` : "") +
+      (item.verified ? `<br><span style="color:#2d6a4f;">✓ Verified contact info</span>` : "");
+    marker.bindPopup(popupHtml).addTo(map);
+    _sectionMarkers[elId].push(marker);
   });
   // Fit bounds to all markers (home + places)
   if (validItems.length > 0) {
@@ -3795,25 +3888,44 @@ const sectionState = {
   "card-home-services": null, "card-public-services": null
 };
 // Re-render map + pill for the active subtab of a given card.
+// v0.33.4: if the currently-active subtab is empty BUT another subtab has data,
+// auto-switch to the first non-empty one. Avoids the dead-end of "default
+// Handyman is empty" when "Hardware" has 8 results.
 function refreshActiveSubtabFor(cardId) {
   const meta = SECTION_META[cardId];
   const state = sectionState[cardId];
   if (!meta || !state || !state.grouped) return;
   const subnav = document.querySelector(`.subnav[data-subnav-for="${cardId}"]`);
   if (!subnav) return;
-  const activeSubtab = subnav.querySelector(".subtab.active") || subnav.querySelector(".subtab");
+  let activeSubtab = subnav.querySelector(".subtab.active") || subnav.querySelector(".subtab");
   if (!activeSubtab) return;
-  const subtarget = activeSubtab.dataset.subtarget;
-  const category = meta.subtabToCategory[subtarget];
-  // For the active subtab, pull just that category's items
-  const items = (category && state.grouped[category]) || [];
+  const allSubtabs = Array.from(subnav.querySelectorAll(".subtab[data-subtarget]"));
+  const itemsFor = (subtab) => {
+    const cat = meta.subtabToCategory[subtab.dataset.subtarget];
+    return (cat && state.grouped[cat]) || [];
+  };
+  // If active subtab is empty but at least one peer has data, switch to the first non-empty.
+  // Skip when user has explicitly clicked active (track via dataset.userPicked).
+  if (!activeSubtab.dataset.userPicked && itemsFor(activeSubtab).length === 0) {
+    const firstWithData = allSubtabs.find(t => itemsFor(t).length > 0);
+    if (firstWithData && firstWithData !== activeSubtab) {
+      allSubtabs.forEach(t => t.classList.remove("active"));
+      firstWithData.classList.add("active");
+      // Update which target is .subtab-active too
+      allSubtabs.forEach(t => {
+        const el = document.getElementById(t.dataset.subtarget);
+        if (el) el.classList.toggle("subtab-active", t === firstWithData);
+      });
+      activeSubtab = firstWithData;
+    }
+  }
+  const items = itemsFor(activeSubtab);
   // Map: only the filtered items
   if (state.geo) setupSectionMap(meta.mapElId, state.geo.lat, state.geo.lon, items);
-  // Pill: replace "X places within Y mi" with "X [active label] within Y mi"
+  // Pill: "X [active label] · within Y mi"
   const pill = document.getElementById(meta.summaryElId);
   if (pill) {
     const label = activeSubtab.textContent.trim();
-    const noun = items.length === 1 ? "" : "";
     pill.textContent = `${items.length} ${label.toLowerCase()} · within ${CURRENT_RADIUS_MI} mi`;
   }
 }
@@ -4548,7 +4660,15 @@ function classifyEducationItem(el) {
   else if (t.amenity === "community_centre") { category = "enrichment"; subtype = "Community center"; }
 
   if (!category) return null;
-  return { name, category, subtype, lat, lon };
+  // v0.33.4: thread phone/website/hours/access through so school cards + map popups can show them
+  const score = osmScore(t);
+  const reasons = osmReasons(t);
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
+    website: t.website || t["contact:website"] || t.url || null,
+    phone: t.phone || t["contact:phone"] || null,
+    opening_hours: t.opening_hours || null,
+    access: (t.access === "private") ? "private" : null
+  };
 }
 
 /* -------- Generic grouped-table renderer ----------------------------- */
@@ -4802,15 +4922,22 @@ function placeRow(item, cityKey) {
   const verifiedBadge = item.verified
     ? `<span class="osm-verified-tag" title="Verified contact info on OpenStreetMap: ${(item.reasons || []).join(', ')}">✓ Verified</span>`
     : "";
-  // v0.33: transparent "why ranked here" — tooltip on the row shows ranking signals
+  // v0.33: transparent "why ranked here"
   const whyRanked = `Ranked by: ${item.dist.toFixed(1)} mi away${(item.reasons && item.reasons.length) ? ' · OSM-verified ' + item.reasons.join(', ') : ''}`;
+  // v0.33.4: contact + hours line under the name when OSM has them
+  const hours = (item.opening_hours || "").trim();
+  const phone = (item.phone || "").trim();
+  const accessTag = item.access ? `<span class="access-tag access-${escapeHtml(item.access)}">${escapeHtml(item.access === 'private' ? 'Private / HOA' : 'Public')}</span>` : "";
+  const contactLine = (phone || hours) ? `<div class="place-contact">${phone ? `<a class="place-phone" href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">📞 ${escapeHtml(phone)}</a>` : ""}${phone && hours ? ` · ` : ""}${hours ? `<span class="place-hours">🕐 ${escapeHtml(hours.length > 60 ? hours.slice(0,60) + '…' : hours)}</span>` : ""}</div>` : "";
   return `<div class="school-row" title="${escapeHtml(whyRanked)}">
     <a class="school-badge icon-bubble ${ic.cls}" href="${map}" target="_blank" rel="noopener" aria-label="Open ${escapeHtml(item.name)} on map">${ic.emoji}</a>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag lvl-k12">${escapeHtml(item.subtype)}</span>
       <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
+      ${accessTag}
       ${verifiedBadge}
+      ${contactLine}
     </div>
     <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
   </div>`;
@@ -5787,7 +5914,7 @@ function classifyParkItem(el) {
   // v0.33: OSM completeness score for transparent ranking
   const score = osmScore(t);
   const reasons = osmReasons(t);
-  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null };
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null, opening_hours: t.opening_hours || null, access: (t.access === "private" || t.access === "customers" || t.access === "permit") ? "private" : null, tags: t };
 }
 
 let lastParksGeo = null;
@@ -5910,7 +6037,7 @@ function classifyHomeService(el) {
   // a plumber with a phone+website+hours beats one with just a name).
   const score = osmScore(t);
   const reasons = osmReasons(t);
-  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null };
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null, opening_hours: t.opening_hours || null, access: (t.access === "private" || t.access === "customers" || t.access === "permit") ? "private" : null, tags: t };
 }
 
 let lastHsGeo = null;
@@ -6039,7 +6166,7 @@ function classifyPublicService(el) {
   // v0.33: completeness score
   const score = osmScore(t);
   const reasons = osmReasons(t);
-  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null };
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null, opening_hours: t.opening_hours || null, access: (t.access === "private" || t.access === "customers" || t.access === "permit") ? "private" : null, tags: t };
 }
 
 let lastPsGeo = null;
@@ -6277,19 +6404,21 @@ const CIVIC_DEEP_LINKS = {
     "DC":"https://dmv.dc.gov/"
   },
   // Property records / county assessor portal entry-points
+  // v0.33.4: switched from state portal pages (many had moved/404'd) to working
+  // state-level directory pages or Google searches that always resolve.
   propertyRecords: {
-    "CA":"https://www.boe.ca.gov/proptaxes/contactus.htm",
+    "CA":"https://www.boe.ca.gov/proptaxes/assessors.htm",
     "FL":"https://floridarevenue.com/property/Pages/LocalOfficials.aspx",
     "TX":"https://comptroller.texas.gov/taxes/property-tax/county-directory/",
-    "NY":"https://www.tax.ny.gov/research/property/",
-    "PA":"https://www.dced.pa.gov/local-government/local-government-services/local-property-tax-information/",
-    "IL":"https://tax.illinois.gov/research/taxinformation/property/general.html",
-    "OH":"https://tax.ohio.gov/researcher/property-tax-property-tax-rates",
-    "GA":"https://dor.georgia.gov/property-tax",
-    "NC":"https://www.ncdor.gov/taxes-forms/property-tax",
+    "NY":"https://www.tax.ny.gov/research/property/assess/",
+    "PA":"https://dced.pa.gov/local-government/local-property-tax/",
+    "IL":"https://tax.illinois.gov/localgovernments/property.html",
+    "OH":"https://tax.ohio.gov/researcher/property-tax",
+    "GA":"https://dor.georgia.gov/local-government-services/digest-compliance",
+    "NC":"https://www.ncdor.gov/taxes-forms/property-tax/property-tax-information",
     "MI":"https://www.michigan.gov/treasury/local/property-tax",
-    "WA":"https://dor.wa.gov/forms-publications/publications-subject/property-tax-publications",
-    "NJ":"https://www.nj.gov/treasury/taxation/lpt/lpt-search.shtml"
+    "WA":"https://dor.wa.gov/find-taxes-rates/property-tax",
+    "NJ":"https://www.state.nj.us/treasury/taxation/lpt/localtax.shtml"
   }
 };
 
@@ -6333,9 +6462,11 @@ function renderCivicSection(addr) {
   ].join("");
 
   // --- Property records ---
-  const prUrl = stateCode && CIVIC_DEEP_LINKS.propertyRecords[stateCode];
+  // v0.33.4: ALWAYS provide a working link — state portal first, county-search fallback second
+  const prUrl = (stateCode && CIVIC_DEEP_LINKS.propertyRecords[stateCode])
+                || `https://www.google.com/search?q=${encodeURIComponent((stateName || "your state") + " county assessor property records")}`;
   $("civic-property-body").innerHTML = [
-    card("📜", `${stateName} property records`, "County assessor / treasurer portal directory", prUrl || `https://www.usa.gov/property-tax-real-estate`, "Open assessor directory →"),
+    card("📜", `${stateName} property records`, "County assessor / treasurer portal", prUrl, "Open assessor directory →"),
     card("💰", "Property tax estimator", "SmartAsset property-tax tool by address", "https://smartasset.com/taxes/property-taxes", "Estimate property tax →"),
     card("📊", "Census property data", "Median home value + property characteristics for your tract", "https://data.census.gov/", "Open Census data →")
   ].join("");
@@ -6600,8 +6731,9 @@ document.addEventListener("click", (e) => {
     // True-tabbed sub-section — swap visible content within this subnav
     const subnav = tab.parentElement;
     const peers = Array.from(subnav.querySelectorAll(".subtab"));
-    peers.forEach(p => p.classList.remove("active"));
+    peers.forEach(p => { p.classList.remove("active"); delete p.dataset.userPicked; });
     tab.classList.add("active");
+    tab.dataset.userPicked = "1";  // v0.33.4: mark explicit choice so auto-default doesn't override
     // Find all sibling targets managed by this subnav, hide them, show only the clicked one
     peers.forEach(p => {
       const id = p.dataset.subtarget;
