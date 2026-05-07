@@ -1896,7 +1896,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.33.2 · May 2026 · Phase 2 · True-tabbed subsections + unified map per section (Leaflet + OSM tiles) — see all addresses on one map
+      <b>HomeAtlas</b> &mdash; v0.33.3 · May 2026 · Phase 2 · Map + count now filter to active subtab — click Police, see only police pins
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3728,6 +3728,95 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
 }
+
+/* =====================================================================
+   v0.33.3: Map + count filter by active subtab
+   When the user clicks Police, the map should ONLY show police pins —
+   not all 126 emergency facilities. This module wires each card's
+   subtabs to a category filter and re-renders the map + pill on every
+   subtab change AND every radius change.
+   ===================================================================== */
+const SECTION_META = {
+  "card-school": {
+    mapElId: "schools-map",
+    summaryElId: "school-summary",
+    subtabToCategory: {
+      "public-section": "public",
+      "private-section": "private",
+      "other-section": "other",
+      "higher-section": "higher",
+      "enrichment-section": "enrichment"
+    }
+  },
+  "card-parks": {
+    mapElId: "parks-map",
+    summaryElId: "parks-summary",
+    subtabToCategory: {
+      "parks-playground-section": "playground",
+      "parks-dog-section":        "dog",
+      "parks-trail-section":      "trail",
+      "parks-park-section":       "park"
+    }
+  },
+  "card-home-services": {
+    mapElId: "hs-map",
+    summaryElId: "hs-summary",
+    subtabToCategory: {
+      "hs-handyman-section":    "handyman",
+      "hs-plumber-section":     "plumber",
+      "hs-electrician-section": "electrician",
+      "hs-hvac-section":        "hvac",
+      "hs-painter-section":     "painter",
+      "hs-carpenter-section":   "carpenter",
+      "hs-roofer-section":      "roofer",
+      "hs-landscaper-section":  "landscaper",
+      "hs-cleaner-section":     "cleaner",
+      "hs-locksmith-section":   "locksmith",
+      "hs-hardware-section":    "hardware"
+    }
+  },
+  "card-public-services": {
+    mapElId: "ps-map",
+    summaryElId: "ps-summary",
+    subtabToCategory: {
+      "ps-emergency-section": "fire",
+      "ps-police-section":    "police",
+      "ps-hospital-section":  "hospital",
+      "ps-clinic-section":    "clinic",
+      "ps-pharmacy-section":  "pharmacy",
+      "ps-dentist-section":   "dentist",
+      "ps-civic-section":     "civic"
+    }
+  }
+};
+// Per-section state — { grouped, geo: {lat, lon} }. Populated by load functions.
+const sectionState = {
+  "card-school": null, "card-parks": null,
+  "card-home-services": null, "card-public-services": null
+};
+// Re-render map + pill for the active subtab of a given card.
+function refreshActiveSubtabFor(cardId) {
+  const meta = SECTION_META[cardId];
+  const state = sectionState[cardId];
+  if (!meta || !state || !state.grouped) return;
+  const subnav = document.querySelector(`.subnav[data-subnav-for="${cardId}"]`);
+  if (!subnav) return;
+  const activeSubtab = subnav.querySelector(".subtab.active") || subnav.querySelector(".subtab");
+  if (!activeSubtab) return;
+  const subtarget = activeSubtab.dataset.subtarget;
+  const category = meta.subtabToCategory[subtarget];
+  // For the active subtab, pull just that category's items
+  const items = (category && state.grouped[category]) || [];
+  // Map: only the filtered items
+  if (state.geo) setupSectionMap(meta.mapElId, state.geo.lat, state.geo.lon, items);
+  // Pill: replace "X places within Y mi" with "X [active label] within Y mi"
+  const pill = document.getElementById(meta.summaryElId);
+  if (pill) {
+    const label = activeSubtab.textContent.trim();
+    const noun = items.length === 1 ? "" : "";
+    pill.textContent = `${items.length} ${label.toLowerCase()} · within ${CURRENT_RADIUS_MI} mi`;
+  }
+}
 function dlog(...args) { if (window.HOMEATLAS_DEBUG) console.log("[homeatlas]", ...args); }
 
 let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false, deepRunning: false };
@@ -4911,8 +5000,9 @@ async function loadNearbySchools(geo) {
       enrichment: items.filter(i => i.category === "enrichment").slice(0, 5)
     };
     renderSchoolSections(grouped, items.length, cityKey);
-    // v0.33.2: unified map of all schools + your home
-    setupSectionMap("schools-map", parseFloat(geo.lat), parseFloat(geo.lon), items);
+    // v0.33.3: save grouped data + render map for active subtab only
+    sectionState["card-school"] = { grouped, geo: { lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) } };
+    refreshActiveSubtabFor("card-school");
   } catch (err) {
     loading.classList.add("error");
     loading.innerHTML =
@@ -5728,8 +5818,9 @@ async function loadNearbyParks(geo) {
       trail:       items.filter(i => i.category === "trail").slice(0, 5)
     };
     renderParks(grouped, items.length, getCityKey(geo.address || {}));
-    // v0.33.2: unified map of all recreation places + your home
-    setupSectionMap("parks-map", lat, lon, items);
+    // v0.33.3: save state + render map for active subtab only
+    sectionState["card-parks"] = { grouped, geo: { lat, lon } };
+    refreshActiveSubtabFor("card-parks");
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby parks: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -5858,8 +5949,9 @@ async function loadNearbyHomeServices(geo) {
       other:       items.filter(i => i.category === "other").slice(0, 6),
     };
     renderHomeServices(grouped, items.length, getCityKey(geo.address || {}));
-    // v0.33.2: unified map of all home-service providers + your home
-    setupSectionMap("hs-map", lat, lon, items);
+    // v0.33.3: save state + render map for active subtab only
+    sectionState["card-home-services"] = { grouped, geo: { lat, lon } };
+    refreshActiveSubtabFor("card-home-services");
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby home services: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -5982,8 +6074,9 @@ async function loadNearbyPublicServices(geo) {
       civic:    items.filter(i => i.category === "civic").slice(0, 4),
     };
     renderPublicServices(grouped, items.length, getCityKey(geo.address || {}));
-    // v0.33.2: unified map of all emergency services + your home
-    setupSectionMap("ps-map", lat, lon, items);
+    // v0.33.3: save state + render map for active subtab only
+    sectionState["card-public-services"] = { grouped, geo: { lat, lon } };
+    refreshActiveSubtabFor("card-public-services");
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby public services: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -6517,6 +6610,9 @@ document.addEventListener("click", (e) => {
     });
     target.classList.add("subtab-active");
     if (history.replaceState) history.replaceState(null, "", "#" + targetId);
+    // v0.33.3: also filter the map + count to show only the active subtab's items
+    const cardId = subnav.dataset.subnavFor;
+    if (cardId && SECTION_META[cardId]) refreshActiveSubtabFor(cardId);
   }
 });
 
