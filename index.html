@@ -24,6 +24,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
+<!-- v0.33.2: Leaflet for unified per-section maps (free, OSM tiles, no API key) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin=""/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="" defer></script>
+
 <style>
   /* ---------- Theme (v0.23: Zillow-inspired refresh) ---------- */
   :root {
@@ -979,6 +983,51 @@
     .school-section { scroll-margin-top: 72px; }
   }
 
+  /* v0.33.1: True-tabbed subsections — only the active subtab's content shows */
+  .subtab-managed { display: none; }
+  .subtab-managed.subtab-active { display: block; }
+  /* Some specific element types preserve their default display flavor */
+  .svc-sub.subtab-managed.subtab-active { display: block; }
+  .school-section.subtab-managed.subtab-active { display: block; }
+  /* When a 2-col schools row has only one active child, let it stretch */
+  .schools-row-2col:has(.school-section.subtab-managed.subtab-active:only-of-type) { grid-template-columns: 1fr; }
+
+  /* v0.33.2: Per-section unified map — list on left, map on right (Google-Maps-style) */
+  .card-with-map {
+    display: grid;
+    grid-template-columns: 1fr minmax(320px, 420px);
+    gap: 16px;
+    align-items: start;
+  }
+  .card-with-map .card-map-col {
+    position: sticky; top: 80px;
+  }
+  .section-map {
+    width: 100%;
+    height: 480px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    overflow: hidden;
+    background: var(--surface-2);
+  }
+  .section-map-empty {
+    height: 100%; display: grid; place-items: center;
+    color: var(--ink-faint); font-size: 13px; font-style: italic;
+    padding: 20px; text-align: center;
+  }
+  /* Marker labels */
+  .leaflet-marker-icon.home-pin {
+    filter: hue-rotate(170deg) saturate(1.5);
+  }
+  .leaflet-popup-content { font-family: inherit; font-size: 13px; }
+  .leaflet-popup-content b { font-weight: 700; }
+  /* Stack on narrower screens */
+  @media (max-width: 900px) {
+    .card-with-map { grid-template-columns: 1fr; }
+    .card-with-map .card-map-col { position: static; }
+    .section-map { height: 320px; }
+  }
+
   /* ─── v0.23: Slim Zillow-style section headers ──────────────────── */
   .page-section-header {
     display: flex; gap: 12px; align-items: center;
@@ -1260,10 +1309,10 @@
       </div>
     </div>
 
-    <!-- Sub-nav for My Home — jump to address or property details -->
+    <!-- Sub-nav for My Home — true tabs (v0.33.1): swap content, not scroll -->
     <div class="subnav">
       <a href="#sub-myhome-address"  class="subtab" data-subtarget="sub-myhome-address">Address</a>
-      <a href="#sub-myhome-details"  class="subtab" data-subtarget="sub-myhome-details">Property details</a>
+      <a href="#card-home"            class="subtab" data-subtarget="card-home">Property details</a>
     </div>
 
     <div class="resolved" id="sub-myhome-address">
@@ -1361,6 +1410,8 @@
           <div id="ps-civic-tbody"></div>
         </div>
       </div>
+      <!-- v0.33.2: Unified map showing all emergency facilities + your home -->
+      <div class="section-map" id="ps-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the emergency services above once results load.</div></div>
       <div class="source" style="margin-top:14px;">
         Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line. <b>For emergencies, call 911</b> — actual response time depends on dispatch and traffic, not the straight-line distance shown here.
       </div>
@@ -1560,6 +1611,9 @@
         </div>
       </div>
 
+      <!-- v0.33.2: Unified map showing all schools + your home -->
+      <div class="section-map" id="schools-map" style="margin-top:16px;"><div class="section-map-empty">Map shows pins for the schools above once results load.</div></div>
+
       <div class="source" style="margin-top:16px;">
         Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>; distances are straight-line ("as the crow flies") from your address. Public-school assignment varies block by block — verify exact attendance with the district. Public/private classification uses tags + name patterns and may occasionally be wrong.
       </div>
@@ -1612,6 +1666,8 @@
           <div id="parks-park-tbody"></div>
         </div>
       </div>
+      <!-- v0.33.2: Unified map showing all parks/playgrounds/trails + your home -->
+      <div class="section-map" id="parks-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the parks above once results load.</div></div>
       <div class="source" style="margin-top:14px;">
         Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line from your address.
       </div>
@@ -1782,6 +1838,8 @@
           <div id="hs-other-tbody"></div>
         </div>
       </div>
+      <!-- v0.33.2: Unified map showing all home-service providers + your home -->
+      <div class="section-map" id="hs-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the providers above once results load.</div></div>
       <div class="source" style="margin-top:14px;">
         Listings from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> (<code>craft=*</code>, <code>shop=hardware</code>). Coverage of trades is improving but not exhaustive — a quick Google search for your specific need is still worth doing.
       </div>
@@ -1838,7 +1896,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.33 · May 2026 · Phase 2 · Civic &amp; gov't deep-link hub · OSM completeness ranking · "Deeper data coming" banner for non-top-10 states
+      <b>HomeAtlas</b> &mdash; v0.33.2 · May 2026 · Phase 2 · True-tabbed subsections + unified map per section (Leaflet + OSM tiles) — see all addresses on one map
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3606,6 +3664,70 @@ document.addEventListener("click", (e) => {
   setRadius(parseInt(btn.dataset.radius, 10));
 });
 loadSavedRadius();
+
+/* =====================================================================
+   v0.33.2: Unified per-section map (Leaflet + OpenStreetMap tiles)
+   One map per radial section showing the home address + every place in
+   the list. Free, no API key. Markers reflect the same data the user is
+   reading on the left. Map updates whenever the section re-renders
+   (e.g., after a radius change).
+   ===================================================================== */
+const _sectionMaps = {};   // id → Leaflet map instance
+const _sectionMarkers = {}; // id → array of L.Marker
+function setupSectionMap(elId, centerLat, centerLon, items) {
+  if (typeof L === "undefined") {
+    // Leaflet still loading — try again shortly
+    setTimeout(() => setupSectionMap(elId, centerLat, centerLon, items), 200);
+    return;
+  }
+  const el = document.getElementById(elId);
+  if (!el) return;
+  // Clear empty-state placeholder if present
+  const empty = el.querySelector(".section-map-empty");
+  if (empty) empty.remove();
+  // Get or create the map
+  let map = _sectionMaps[elId];
+  if (!map) {
+    el.innerHTML = "";
+    map = L.map(el, { scrollWheelZoom: false, zoomControl: true }).setView([centerLat, centerLon], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19
+    }).addTo(map);
+    _sectionMaps[elId] = map;
+    _sectionMarkers[elId] = [];
+  }
+  // Clear old markers
+  _sectionMarkers[elId].forEach(m => m.remove());
+  _sectionMarkers[elId] = [];
+  // Home pin (always green, distinct icon via custom divIcon)
+  const homeIcon = L.divIcon({
+    className: "home-marker",
+    html: '<div style="background:#2d6a4f;color:#fff;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏠</div>',
+    iconSize: [30, 30], iconAnchor: [15, 15]
+  });
+  const homeMarker = L.marker([centerLat, centerLon], { icon: homeIcon, zIndexOffset: 1000 })
+    .bindPopup("<b>Your home</b>")
+    .addTo(map);
+  _sectionMarkers[elId].push(homeMarker);
+  // Place pins
+  const validItems = (items || []).filter(it => it && it.lat != null && it.lon != null);
+  validItems.forEach(item => {
+    const m = L.marker([item.lat, item.lon])
+      .bindPopup(`<b>${(item.name || "").replace(/[<>]/g, '')}</b><br>${(item.subtype || "").replace(/[<>]/g, '')} · ${item.dist != null ? item.dist.toFixed(1) + " mi" : ""}${item.verified ? "<br><span style=\"color:#2d6a4f;\">✓ Verified contact info</span>" : ""}`)
+      .addTo(map);
+    _sectionMarkers[elId].push(m);
+  });
+  // Fit bounds to all markers (home + places)
+  if (validItems.length > 0) {
+    const bounds = L.latLngBounds([[centerLat, centerLon], ...validItems.map(it => [it.lat, it.lon])]);
+    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
+  } else {
+    map.setView([centerLat, centerLon], 13);
+  }
+  // Force a re-layout in case the map div was hidden when initialized
+  setTimeout(() => map.invalidateSize(), 50);
+}
 function dlog(...args) { if (window.HOMEATLAS_DEBUG) console.log("[homeatlas]", ...args); }
 
 let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false, deepRunning: false };
@@ -4789,6 +4911,8 @@ async function loadNearbySchools(geo) {
       enrichment: items.filter(i => i.category === "enrichment").slice(0, 5)
     };
     renderSchoolSections(grouped, items.length, cityKey);
+    // v0.33.2: unified map of all schools + your home
+    setupSectionMap("schools-map", parseFloat(geo.lat), parseFloat(geo.lon), items);
   } catch (err) {
     loading.classList.add("error");
     loading.innerHTML =
@@ -5604,6 +5728,8 @@ async function loadNearbyParks(geo) {
       trail:       items.filter(i => i.category === "trail").slice(0, 5)
     };
     renderParks(grouped, items.length, getCityKey(geo.address || {}));
+    // v0.33.2: unified map of all recreation places + your home
+    setupSectionMap("parks-map", lat, lon, items);
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby parks: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -5732,6 +5858,8 @@ async function loadNearbyHomeServices(geo) {
       other:       items.filter(i => i.category === "other").slice(0, 6),
     };
     renderHomeServices(grouped, items.length, getCityKey(geo.address || {}));
+    // v0.33.2: unified map of all home-service providers + your home
+    setupSectionMap("hs-map", lat, lon, items);
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby home services: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -5854,6 +5982,8 @@ async function loadNearbyPublicServices(geo) {
       civic:    items.filter(i => i.category === "civic").slice(0, 4),
     };
     renderPublicServices(grouped, items.length, getCityKey(geo.address || {}));
+    // v0.33.2: unified map of all emergency services + your home
+    setupSectionMap("ps-map", lat, lon, items);
   } catch (err) {
     loading.innerHTML = `Couldn't load nearby public services: ${escapeHtml(err.message || "network error")}.`;
   }
@@ -6160,6 +6290,9 @@ function setLoading() {
   $("results").hidden = false;
   // v0.28: kick off section-nav observer once results are visible (idempotent)
   setTimeout(initSectionNavObserver, 100);
+  // v0.33.1: ensure subtabs are wired up (idempotent — re-applies subtab-managed
+  // and subtab-active classes after any DOM change that revealed cards)
+  setTimeout(initSubtabs, 50);
   ["electric","internet","tv","security"].forEach(k => {
     setHTML(`${k}-value`, '<div class="skeleton" style="width:60%;height:22px;"></div>');
     const meta = $(`${k}-meta`); if (meta) meta.textContent = "";
@@ -6356,8 +6489,9 @@ document.addEventListener("click", (e) => {
   btn.setAttribute("aria-expanded", String(!target.hidden));
 });
 
-// v0.28/v0.29: Section-nav + sub-nav — smooth-scroll on click + active-state.
-// One delegated handler covers both .sec-tab and .subtab clicks.
+// v0.28/v0.29: Section-nav (.sec-tab) — smooth-scroll to a section.
+// v0.33.1: Sub-nav (.subtab) — true tabbed UX: swap which subsection is visible,
+// no scrolling. Only the active subtab's content is shown; siblings hide.
 document.addEventListener("click", (e) => {
   const tab = e.target.closest(".sec-tab, .subtab");
   if (!tab) return;
@@ -6365,16 +6499,49 @@ document.addEventListener("click", (e) => {
   const target = targetId && document.getElementById(targetId);
   if (!target) return;
   e.preventDefault();
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
-  // Update URL hash without jumping
-  if (history.replaceState) history.replaceState(null, "", "#" + targetId);
-  // For subtabs, instantly mark the clicked one active (visual feedback before scroll settles)
-  if (tab.classList.contains("subtab")) {
-    const peers = tab.parentElement.querySelectorAll(".subtab");
+  if (tab.classList.contains("sec-tab")) {
+    // Top-level section — smooth-scroll into view
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (history.replaceState) history.replaceState(null, "", "#" + targetId);
+  } else if (tab.classList.contains("subtab")) {
+    // True-tabbed sub-section — swap visible content within this subnav
+    const subnav = tab.parentElement;
+    const peers = Array.from(subnav.querySelectorAll(".subtab"));
     peers.forEach(p => p.classList.remove("active"));
     tab.classList.add("active");
+    // Find all sibling targets managed by this subnav, hide them, show only the clicked one
+    peers.forEach(p => {
+      const id = p.dataset.subtarget;
+      const el = id && document.getElementById(id);
+      if (el) el.classList.remove("subtab-active");
+    });
+    target.classList.add("subtab-active");
+    if (history.replaceState) history.replaceState(null, "", "#" + targetId);
   }
 });
+
+// v0.33.1: Mark each subnav's targets as managed, default the first subtab + target active.
+// Idempotent — can be called repeatedly (e.g., after results render).
+function initSubtabs() {
+  document.querySelectorAll(".subnav").forEach(subnav => {
+    const subtabs = Array.from(subnav.querySelectorAll(".subtab[data-subtarget]"));
+    if (!subtabs.length) return;
+    // Resolve targets for this subnav
+    const targets = subtabs.map(t => document.getElementById(t.dataset.subtarget)).filter(Boolean);
+    targets.forEach(el => el.classList.add("subtab-managed"));
+    // If none of the subtabs are already active, activate the first one + its target
+    const alreadyActive = subnav.querySelector(".subtab.active");
+    if (!alreadyActive) {
+      subtabs[0].classList.add("active");
+      if (targets[0]) targets[0].classList.add("subtab-active");
+    } else {
+      // Sync: ensure the active subtab's target also has subtab-active
+      const id = alreadyActive.dataset.subtarget;
+      const el = id && document.getElementById(id);
+      if (el && !el.classList.contains("subtab-active")) el.classList.add("subtab-active");
+    }
+  });
+}
 
 // IntersectionObserver: highlight the tab whose section is most-visible.
 // Initialized on demand the first time results are revealed (so the observed
