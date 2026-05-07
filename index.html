@@ -995,6 +995,68 @@
   .page-section-header.home-services   { --psh-accent: #c08552; }
   .page-section-header.public-services { --psh-accent: #b34d4d; }
 
+  /* v0.33: OSM-verified-contact badge — appears on places with phone+website+hours */
+  .osm-verified-tag {
+    display: inline-flex; align-items: center; gap: 3px;
+    margin-left: 6px;
+    padding: 2px 8px; border-radius: 999px;
+    background: rgba(45,106,79,0.10); color: #2d6a4f;
+    border: 1px solid rgba(45,106,79,0.20);
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.1px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+
+  /* v0.33: "Deeper data coming" banner for non-top-10 states */
+  .coverage-banner {
+    margin: 8px 0 14px;
+    padding: 12px 14px;
+    background: linear-gradient(135deg, rgba(212,163,115,0.12), rgba(176,137,0,0.08));
+    border: 1px solid rgba(212,163,115,0.30);
+    border-radius: 10px;
+    font-size: 13px; line-height: 1.5; color: var(--ink);
+    display: flex; align-items: flex-start; gap: 10px;
+  }
+  .coverage-banner::before { content: "🗺️"; flex: 0 0 auto; font-size: 16px; }
+  .coverage-banner b { color: #6b5400; }
+  .coverage-banner.coming-soon { background: rgba(0,106,255,0.06); border-color: rgba(0,106,255,0.18); }
+  .coverage-banner.coming-soon::before { content: "📅"; }
+
+  /* v0.33: Civic & gov't deep-link card grid — ad-free hub of authoritative free sources */
+  .civic-grid {
+    display: grid; gap: 10px;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+  .civic-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .civic-card:hover { box-shadow: var(--shadow); border-color: rgba(0,106,255,0.30); }
+  .civic-card-icon {
+    font-size: 22px; line-height: 1;
+  }
+  .civic-card-title {
+    font-size: 15px; font-weight: 700;
+    color: var(--ink); letter-spacing: -0.01em;
+  }
+  .civic-card-meta {
+    font-size: 12.5px; color: var(--ink-soft); line-height: 1.45;
+  }
+  .civic-card-link {
+    margin-top: 6px;
+    color: var(--primary); font-size: 12.5px; font-weight: 600;
+    align-self: flex-start;
+  }
+  .civic-card.unavailable { opacity: 0.6; pointer-events: none; }
+  .civic-card.unavailable .civic-card-link { color: var(--ink-faint); }
+
   /* v0.27: "Reviews coming in Phase 4" banner under Home services */
   .reviews-coming-banner {
     margin: 8px 0 14px;
@@ -1159,7 +1221,7 @@
       </form>
       <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
-    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. US addresses for now. State-specific depth (electric, cable, school district) is loaded for <b>CA, PA, NY, TX, WA, NJ</b> — other states show nationwide options + helpful fallback links.</p>
+    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. US addresses for now. Granular state data (electric utility, cable, fiber, school district) is loaded for <b>CA, FL, IL, NY, OH, PA, TX</b> — plus WA, NJ. <b>Coming soon:</b> GA, NC, MI. Other states show nationwide options + helpful fallback links.</p>
     <div id="status"></div>
   </section>
 
@@ -1180,6 +1242,7 @@
       <div class="section-nav-inner">
         <a href="#sec-myhome"          class="sec-tab" data-target="sec-myhome">My home</a>
         <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services">Emergency services</a>
+        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic">Civic &amp; gov't</a>
         <a href="#sec-services"        class="sec-tab" data-target="sec-services">Utility services</a>
         <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">Education</a>
         <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">Recreation</a>
@@ -1303,6 +1366,64 @@
       </div>
     </div>
 
+    <!-- v0.33: Civic & gov't section header (deep-link hub to authoritative free sources) -->
+    <div class="page-section-header public-services" id="sec-civic">
+      <div class="psh-icon">🏛️</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Civic &amp; gov't</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for Civic & gov't -->
+    <div class="subnav" data-subnav-for="card-civic">
+      <a href="#civic-voting"     class="subtab" data-subtarget="civic-voting">Voting</a>
+      <a href="#civic-officials"  class="subtab" data-subtarget="civic-officials">Officials</a>
+      <a href="#civic-property"   class="subtab" data-subtarget="civic-property">Property records</a>
+      <a href="#civic-dmv"        class="subtab" data-subtarget="civic-dmv">DMV</a>
+      <a href="#civic-permits"    class="subtab" data-subtarget="civic-permits">Permits &amp; courts</a>
+    </div>
+
+    <div class="parks-card" id="card-civic" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text">
+          <span id="civic-value">—</span>
+        </div>
+        <button class="info-btn" type="button" data-info-target="civic-info-popover" aria-label="About civic links">i</button>
+      </div>
+      <div class="info-popover" id="civic-info-popover" hidden>
+        <b>What this is:</b> a deep-link hub to authoritative <i>free</i> civic data sources for your state and county. No accounts required, no ad-funded middlemen. Each card opens the official government portal pre-filtered to your area where supported. Phase 4 will add inline lookups (elected officials by address, polling place) once we have API keys configured.
+      </div>
+
+      <div class="school-section" id="civic-voting">
+        <h4>🗳️ Voting &amp; elections</h4>
+        <div id="civic-voting-body" class="civic-grid"></div>
+      </div>
+
+      <div class="school-section" id="civic-officials">
+        <h4>👤 Find your elected officials</h4>
+        <div id="civic-officials-body" class="civic-grid"></div>
+      </div>
+
+      <div class="school-section" id="civic-property">
+        <h4>🏠 Property records &amp; tax assessment</h4>
+        <div id="civic-property-body" class="civic-grid"></div>
+      </div>
+
+      <div class="school-section" id="civic-dmv">
+        <h4>🚗 DMV &amp; vehicle services</h4>
+        <div id="civic-dmv-body" class="civic-grid"></div>
+      </div>
+
+      <div class="school-section" id="civic-permits">
+        <h4>📋 Permits, courts &amp; civic offices</h4>
+        <div id="civic-permits-body" class="civic-grid"></div>
+      </div>
+
+      <div class="source" style="margin-top:14px;">
+        Deep-links to authoritative <i>free</i> sources only — no paid placement, no ad-funded aggregators. State portals are pre-filtered by URL parameters where the source supports it; some require a manual address entry on the next screen.
+      </div>
+    </div>
+
     <!-- v0.29: Section 3 — Utility services (renamed from "Services") -->
     <div class="page-section-header services" id="sec-services">
       <div class="psh-icon">🔌</div>
@@ -1310,6 +1431,9 @@
         <h2 class="psh-title">Utility services</h2>
       </div>
     </div>
+
+    <!-- v0.33: Coverage banner — surfaces "deeper data coming" for non-top-10 states -->
+    <div id="services-coverage-banner"></div>
 
     <!-- Sub-nav for Utility services -->
     <div class="subnav" data-subnav-for="services-card-wrap">
@@ -1375,6 +1499,9 @@
         <h2 class="psh-title">Education</h2>
       </div>
     </div>
+
+    <!-- v0.33: Coverage banner — surfaces "deeper data coming" for non-top-10 states -->
+    <div id="schools-coverage-banner"></div>
 
     <!-- Sub-nav for Education -->
     <div class="subnav" data-subnav-for="card-school">
@@ -1711,7 +1838,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.30.1 · May 2026 · Phase 2 · Radial filter + Overpass robustness fix (split queries, server-timeout retry, immediate refetch feedback)
+      <b>HomeAtlas</b> &mdash; v0.33 · May 2026 · Phase 2 · Civic &amp; gov't deep-link hub · OSM completeness ranking · "Deeper data coming" banner for non-top-10 states
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -2727,8 +2854,597 @@ const STATE_DATA = {
       "West Orange":"West Orange Public Schools",
       "Montclair":"Montclair Public Schools"
     }
+  },
+
+  /* ─── Florida (v0.31) ───────────────────────────────────────────────
+     67 counties, each its own school district. Two big IOUs (FPL state-wide
+     after the 2021 Gulf Power merger; Duke Energy FL in W Central + parts
+     of N FL) plus Tampa Electric (TECO) in Hillsborough. Major munis: JEA
+     (Jacksonville/Duval), OUC (Orlando), Lakeland Electric, Tallahassee,
+     KUA (Kissimmee), Gainesville Regional. Co-ops dominate rural counties
+     but we list the IOU that serves the developed parts. */
+  FL: {
+    countyUtility: {
+      "Alachua":"Duke Energy FL","Baker":"Florida Public Utilities",
+      "Bay":"FPL","Bradford":"Clay Electric Co-op","Brevard":"FPL",
+      "Broward":"FPL","Calhoun":"FPL","Charlotte":"FPL",
+      "Citrus":"Duke Energy FL","Clay":"Clay Electric Co-op",
+      "Collier":"FPL","Columbia":"Duke Energy FL","DeSoto":"FPL",
+      "Dixie":"Duke Energy FL","Duval":"JEA","Escambia":"FPL",
+      "Flagler":"FPL","Franklin":"FPL","Gadsden":"Talquin Electric",
+      "Gilchrist":"Clay Electric Co-op","Glades":"Glades Electric Co-op",
+      "Gulf":"FPL","Hamilton":"Suwannee Valley Electric",
+      "Hardee":"Duke Energy FL","Hendry":"Glades Electric Co-op",
+      "Hernando":"Duke Energy FL","Highlands":"Duke Energy FL",
+      "Hillsborough":"Tampa Electric (TECO)","Holmes":"West Florida Electric",
+      "Indian River":"FPL","Jackson":"West Florida Electric",
+      "Jefferson":"Duke Energy FL","Lafayette":"Suwannee Valley Electric",
+      "Lake":"Duke Energy FL","Lee":"Lee County Electric Co-op (LCEC)",
+      "Leon":"City of Tallahassee Utilities","Levy":"Duke Energy FL",
+      "Liberty":"West Florida Electric","Madison":"Duke Energy FL",
+      "Manatee":"FPL","Marion":"Duke Energy FL","Martin":"FPL",
+      "Miami-Dade":"FPL","Monroe":"FPL","Nassau":"FPL",
+      "Okaloosa":"FPL","Okeechobee":"FPL","Orange":"Duke Energy FL",
+      "Osceola":"Duke Energy FL","Palm Beach":"FPL","Pasco":"Duke Energy FL",
+      "Pinellas":"Duke Energy FL","Polk":"Duke Energy FL","Putnam":"Duke Energy FL",
+      "Saint Johns":"FPL","St. Johns":"FPL","Saint Lucie":"FPL","St. Lucie":"FPL",
+      "Santa Rosa":"FPL","Sarasota":"FPL","Seminole":"Duke Energy FL",
+      "Sumter":"Sumter Electric Co-op","Suwannee":"Suwannee Valley Electric",
+      "Taylor":"Duke Energy FL","Union":"Clay Electric Co-op",
+      "Volusia":"FPL","Wakulla":"Talquin Electric","Walton":"FPL",
+      "Washington":"West Florida Electric"
+    },
+    cityUtility: {
+      "Jacksonville":"JEA","Orlando":"Orlando Utilities Commission (OUC)",
+      "Tallahassee":"City of Tallahassee Utilities",
+      "Lakeland":"Lakeland Electric","Kissimmee":"Kissimmee Utility Authority (KUA)",
+      "Gainesville":"Gainesville Regional Utilities (GRU)",
+      "Ocala":"Ocala Electric Utility","Vero Beach":"FPL",
+      "Key West":"Keys Energy Services"
+    },
+    cableByCounty: {
+      "Miami-Dade":"Xfinity (Comcast)","Broward":"Xfinity (Comcast)",
+      "Palm Beach":"Xfinity (Comcast)","Monroe":"Xfinity (Comcast)",
+      "Lee":"Xfinity (Comcast)","Collier":"Xfinity (Comcast)",
+      "Charlotte":"Xfinity (Comcast)","Sarasota":"Xfinity (Comcast)",
+      "Manatee":"Xfinity (Comcast)","Hillsborough":"Spectrum (Charter)",
+      "Pinellas":"Spectrum (Charter)","Pasco":"Spectrum (Charter)",
+      "Hernando":"Spectrum (Charter)","Citrus":"Spectrum (Charter)",
+      "Polk":"Spectrum (Charter)","Highlands":"Spectrum (Charter)",
+      "Hardee":"Spectrum (Charter)","Orange":"Spectrum (Charter)",
+      "Osceola":"Spectrum (Charter)","Seminole":"Spectrum (Charter)",
+      "Lake":"Spectrum (Charter)","Volusia":"Spectrum (Charter)",
+      "Brevard":"Spectrum (Charter)","Indian River":"Spectrum (Charter)",
+      "Saint Lucie":"Comcast Xfinity","St. Lucie":"Comcast Xfinity",
+      "Martin":"Comcast Xfinity","Duval":"Xfinity (Comcast)",
+      "Clay":"Xfinity (Comcast)","Saint Johns":"Xfinity (Comcast)",
+      "St. Johns":"Xfinity (Comcast)","Nassau":"Xfinity (Comcast)",
+      "Alachua":"Cox Communications","Marion":"Cox Communications",
+      "Levy":"Cox Communications","Putnam":"Spectrum (Charter)",
+      "Leon":"Xfinity (Comcast)","Gadsden":"Xfinity (Comcast)",
+      "Wakulla":"Xfinity (Comcast)","Jefferson":"Xfinity (Comcast)",
+      "Escambia":"Cox Communications","Santa Rosa":"Cox Communications",
+      "Okaloosa":"Cox Communications","Walton":"Mediacom",
+      "Bay":"Xfinity (Comcast)","Gulf":"Mediacom","Franklin":"Mediacom"
+    },
+    fiberByCity: {
+      "Miami":["AT&T Fiber","Hotwire Communications"],
+      "Hialeah":["AT&T Fiber"],"Miami Gardens":["AT&T Fiber"],
+      "Doral":["AT&T Fiber","Hotwire Communications"],
+      "Homestead":["AT&T Fiber"],"Coral Gables":["AT&T Fiber"],
+      "Aventura":["AT&T Fiber","Hotwire Communications"],
+      "Fort Lauderdale":["AT&T Fiber","Hotwire Communications"],
+      "Hollywood":["AT&T Fiber"],"Pembroke Pines":["AT&T Fiber"],
+      "Pompano Beach":["AT&T Fiber"],"Plantation":["AT&T Fiber"],
+      "Sunrise":["AT&T Fiber"],"Davie":["AT&T Fiber"],
+      "Miramar":["AT&T Fiber"],"Coral Springs":["AT&T Fiber"],
+      "Boca Raton":["AT&T Fiber","Hotwire Communications"],
+      "West Palm Beach":["AT&T Fiber"],"Boynton Beach":["AT&T Fiber"],
+      "Wellington":["AT&T Fiber"],"Jupiter":["AT&T Fiber"],
+      "Tampa":["Frontier Fiber","AT&T Fiber"],"Brandon":["Frontier Fiber"],
+      "Plant City":["Frontier Fiber"],
+      "St. Petersburg":["Frontier Fiber","AT&T Fiber"],
+      "Saint Petersburg":["Frontier Fiber","AT&T Fiber"],
+      "Clearwater":["Frontier Fiber"],"Largo":["Frontier Fiber"],
+      "Orlando":["AT&T Fiber","Spectrum Fiber"],
+      "Kissimmee":["AT&T Fiber"],"Sanford":["AT&T Fiber"],
+      "Lakeland":["Frontier Fiber"],"Ocala":["AT&T Fiber"],
+      "Jacksonville":["AT&T Fiber"],"Gainesville":["Cox Fiber","AT&T Fiber"],
+      "Tallahassee":["AT&T Fiber"],"Pensacola":["Cox Fiber","AT&T Fiber"],
+      "Cape Coral":["Frontier Fiber"],"Fort Myers":["Frontier Fiber"],
+      "Naples":["Frontier Fiber"],"Sarasota":["Frontier Fiber"],
+      "North Port":["Frontier Fiber"],"Bradenton":["Frontier Fiber"],
+      "Port St. Lucie":["AT&T Fiber"],"Palm Bay":["AT&T Fiber"],
+      "Melbourne":["AT&T Fiber"],"Daytona Beach":["AT&T Fiber"],
+      "Deltona":["AT&T Fiber"]
+    },
+    cityToCounty: {
+      "Miami":"Miami-Dade","Hialeah":"Miami-Dade","Miami Gardens":"Miami-Dade",
+      "Doral":"Miami-Dade","Homestead":"Miami-Dade","Coral Gables":"Miami-Dade",
+      "Aventura":"Miami-Dade","North Miami":"Miami-Dade","Kendall":"Miami-Dade",
+      "Fort Lauderdale":"Broward","Hollywood":"Broward","Pembroke Pines":"Broward",
+      "Pompano Beach":"Broward","Plantation":"Broward","Sunrise":"Broward",
+      "Davie":"Broward","Miramar":"Broward","Coral Springs":"Broward",
+      "Lauderhill":"Broward","Tamarac":"Broward","Weston":"Broward",
+      "Deerfield Beach":"Broward",
+      "Boca Raton":"Palm Beach","West Palm Beach":"Palm Beach",
+      "Boynton Beach":"Palm Beach","Wellington":"Palm Beach","Jupiter":"Palm Beach",
+      "Delray Beach":"Palm Beach","Lake Worth":"Palm Beach","Palm Beach Gardens":"Palm Beach",
+      "Tampa":"Hillsborough","Brandon":"Hillsborough","Plant City":"Hillsborough",
+      "Riverview":"Hillsborough",
+      "St. Petersburg":"Pinellas","Saint Petersburg":"Pinellas",
+      "Clearwater":"Pinellas","Largo":"Pinellas","Pinellas Park":"Pinellas",
+      "Orlando":"Orange","Winter Park":"Orange","Apopka":"Orange",
+      "Kissimmee":"Osceola","St. Cloud":"Osceola","Saint Cloud":"Osceola",
+      "Sanford":"Seminole","Altamonte Springs":"Seminole",
+      "Lakeland":"Polk","Winter Haven":"Polk",
+      "Ocala":"Marion","Gainesville":"Alachua",
+      "Jacksonville":"Duval","Jacksonville Beach":"Duval",
+      "St. Augustine":"St. Johns","Saint Augustine":"Saint Johns",
+      "Tallahassee":"Leon","Pensacola":"Escambia",
+      "Cape Coral":"Lee","Fort Myers":"Lee","Lehigh Acres":"Lee",
+      "Naples":"Collier","Marco Island":"Collier",
+      "Sarasota":"Sarasota","North Port":"Sarasota","Venice":"Sarasota",
+      "Bradenton":"Manatee",
+      "Port St. Lucie":"Saint Lucie","Saint Lucie":"Saint Lucie",
+      "Fort Pierce":"Saint Lucie",
+      "Palm Bay":"Brevard","Melbourne":"Brevard","Titusville":"Brevard",
+      "Daytona Beach":"Volusia","Deltona":"Volusia","Ormond Beach":"Volusia",
+      "Port Orange":"Volusia","DeLand":"Volusia","Deland":"Volusia",
+      "Key West":"Monroe","Marathon":"Monroe","Key Largo":"Monroe",
+      "Punta Gorda":"Charlotte","Vero Beach":"Indian River",
+      "Stuart":"Martin","Panama City":"Bay","Destin":"Okaloosa",
+      "Fort Walton Beach":"Okaloosa"
+    },
+    cityDistrict: {
+      "Miami":"Miami-Dade County Public Schools",
+      "Hialeah":"Miami-Dade County Public Schools",
+      "Miami Gardens":"Miami-Dade County Public Schools",
+      "Doral":"Miami-Dade County Public Schools",
+      "Homestead":"Miami-Dade County Public Schools",
+      "Fort Lauderdale":"Broward County Public Schools",
+      "Hollywood":"Broward County Public Schools",
+      "Pembroke Pines":"Broward County Public Schools",
+      "Coral Springs":"Broward County Public Schools",
+      "Boca Raton":"School District of Palm Beach County",
+      "West Palm Beach":"School District of Palm Beach County",
+      "Tampa":"Hillsborough County Public Schools",
+      "Brandon":"Hillsborough County Public Schools",
+      "St. Petersburg":"Pinellas County Schools",
+      "Saint Petersburg":"Pinellas County Schools",
+      "Clearwater":"Pinellas County Schools","Largo":"Pinellas County Schools",
+      "Orlando":"Orange County Public Schools",
+      "Winter Park":"Orange County Public Schools",
+      "Kissimmee":"School District of Osceola County",
+      "Sanford":"Seminole County Public Schools",
+      "Lakeland":"Polk County Public Schools",
+      "Ocala":"Marion County Public Schools",
+      "Gainesville":"Alachua County Public Schools",
+      "Jacksonville":"Duval County Public Schools",
+      "Tallahassee":"Leon County Schools",
+      "Pensacola":"Escambia County Public Schools",
+      "Cape Coral":"School District of Lee County",
+      "Fort Myers":"School District of Lee County",
+      "Naples":"Collier County Public Schools",
+      "Sarasota":"Sarasota County Schools",
+      "North Port":"Sarasota County Schools",
+      "Bradenton":"School District of Manatee County",
+      "Port St. Lucie":"St. Lucie County Public Schools",
+      "Palm Bay":"Brevard Public Schools",
+      "Melbourne":"Brevard Public Schools",
+      "Daytona Beach":"Volusia County Schools",
+      "Deltona":"Volusia County Schools",
+      "Key West":"Monroe County Schools",
+      "Vero Beach":"School District of Indian River County",
+      "Stuart":"Martin County School District",
+      "Panama City":"Bay District Schools"
+    }
+  },
+
+  /* ─── Illinois (v0.31) ───────────────────────────────────────────────
+     102 counties. ComEd dominates N IL + Chicagoland; Ameren Illinois covers
+     central + S IL; MidAmerican Energy serves the Quad Cities (Rock Island).
+     Several muni utilities scattered (Springfield's CWLP is one of the few
+     big ones). Cable is mostly Xfinity in Chicago metro, Spectrum elsewhere,
+     plus Mediacom in central + S IL pockets. Fiber: AT&T metros, RCN/Astound
+     and WOW! in Chicago suburbs, MetroNet in central IL. */
+  IL: {
+    countyUtility: {
+      "Adams":"Ameren Illinois","Alexander":"Ameren Illinois","Bond":"Ameren Illinois",
+      "Boone":"ComEd","Brown":"Ameren Illinois","Bureau":"ComEd",
+      "Calhoun":"Ameren Illinois","Carroll":"ComEd","Cass":"Ameren Illinois",
+      "Champaign":"Ameren Illinois","Christian":"Ameren Illinois","Clark":"Ameren Illinois",
+      "Clay":"Ameren Illinois","Clinton":"Ameren Illinois","Coles":"Ameren Illinois",
+      "Cook":"ComEd","Crawford":"Ameren Illinois","Cumberland":"Ameren Illinois",
+      "DeKalb":"ComEd","De Kalb":"ComEd","DeWitt":"Ameren Illinois","De Witt":"Ameren Illinois",
+      "Douglas":"Ameren Illinois","DuPage":"ComEd","Du Page":"ComEd",
+      "Edgar":"Ameren Illinois","Edwards":"Ameren Illinois","Effingham":"Ameren Illinois",
+      "Fayette":"Ameren Illinois","Ford":"Ameren Illinois","Franklin":"Ameren Illinois",
+      "Fulton":"Ameren Illinois","Gallatin":"Ameren Illinois","Greene":"Ameren Illinois",
+      "Grundy":"ComEd","Hamilton":"Ameren Illinois","Hancock":"Ameren Illinois",
+      "Hardin":"Ameren Illinois","Henderson":"Ameren Illinois","Henry":"MidAmerican Energy",
+      "Iroquois":"ComEd","Jackson":"Ameren Illinois","Jasper":"Ameren Illinois",
+      "Jefferson":"Ameren Illinois","Jersey":"Ameren Illinois","Jo Daviess":"ComEd",
+      "Johnson":"Ameren Illinois","Kane":"ComEd","Kankakee":"ComEd","Kendall":"ComEd",
+      "Knox":"Ameren Illinois","Lake":"ComEd","LaSalle":"ComEd","La Salle":"ComEd",
+      "Lawrence":"Ameren Illinois","Lee":"ComEd","Livingston":"ComEd","Logan":"Ameren Illinois",
+      "Macon":"Ameren Illinois","Macoupin":"Ameren Illinois","Madison":"Ameren Illinois",
+      "Marion":"Ameren Illinois","Marshall":"ComEd","Mason":"Ameren Illinois",
+      "Massac":"Ameren Illinois","McDonough":"Ameren Illinois","Mc Donough":"Ameren Illinois",
+      "McHenry":"ComEd","Mc Henry":"ComEd","McLean":"Ameren Illinois","Mc Lean":"Ameren Illinois",
+      "Menard":"Ameren Illinois","Mercer":"MidAmerican Energy","Monroe":"Ameren Illinois",
+      "Montgomery":"Ameren Illinois","Morgan":"Ameren Illinois","Moultrie":"Ameren Illinois",
+      "Ogle":"ComEd","Peoria":"Ameren Illinois","Perry":"Ameren Illinois",
+      "Piatt":"Ameren Illinois","Pike":"Ameren Illinois","Pope":"Ameren Illinois",
+      "Pulaski":"Ameren Illinois","Putnam":"ComEd","Randolph":"Ameren Illinois",
+      "Richland":"Ameren Illinois","Rock Island":"MidAmerican Energy",
+      "Saline":"Ameren Illinois","Sangamon":"Ameren Illinois","Schuyler":"Ameren Illinois",
+      "Scott":"Ameren Illinois","Shelby":"Ameren Illinois","Stark":"Ameren Illinois",
+      "St. Clair":"Ameren Illinois","Saint Clair":"Ameren Illinois",
+      "Stephenson":"ComEd","Tazewell":"Ameren Illinois","Union":"Ameren Illinois",
+      "Vermilion":"Ameren Illinois","Wabash":"Ameren Illinois","Warren":"Ameren Illinois",
+      "Washington":"Ameren Illinois","Wayne":"Ameren Illinois","White":"Ameren Illinois",
+      "Whiteside":"ComEd","Will":"ComEd","Williamson":"Ameren Illinois",
+      "Winnebago":"ComEd","Woodford":"Ameren Illinois"
+    },
+    cityUtility: {
+      "Springfield":"CWLP (City Water, Light & Power)",
+      "Naperville":"Naperville Electric Utility",
+      "St. Charles":"St. Charles Public Power","Saint Charles":"Saint Charles Public Power",
+      "Geneva":"Geneva Electric","Batavia":"Batavia Electric",
+      "Winnetka":"Winnetka Electric","Highland":"Highland Communication Services"
+    },
+    cableByCounty: {
+      "Cook":"Xfinity (Comcast)","DuPage":"Xfinity (Comcast)","Du Page":"Xfinity (Comcast)",
+      "Lake":"Xfinity (Comcast)","Will":"Xfinity (Comcast)","Kane":"Xfinity (Comcast)",
+      "McHenry":"Xfinity (Comcast)","Mc Henry":"Xfinity (Comcast)","Kendall":"Xfinity (Comcast)",
+      "DeKalb":"Xfinity (Comcast)","De Kalb":"Xfinity (Comcast)","Boone":"Xfinity (Comcast)",
+      "Winnebago":"Xfinity (Comcast)","Stephenson":"Xfinity (Comcast)",
+      "Ogle":"Xfinity (Comcast)","Lee":"Mediacom","Whiteside":"Mediacom",
+      "Carroll":"Mediacom","Jo Daviess":"Mediacom","Bureau":"Mediacom",
+      "LaSalle":"Mediacom","La Salle":"Mediacom","Grundy":"Mediacom",
+      "Kankakee":"Spectrum (Charter)","Iroquois":"Mediacom","Livingston":"Mediacom",
+      "Sangamon":"Xfinity (Comcast)","Macon":"Xfinity (Comcast)","Christian":"Mediacom",
+      "Champaign":"Xfinity (Comcast)","McLean":"Xfinity (Comcast)","Mc Lean":"Xfinity (Comcast)",
+      "Peoria":"Xfinity (Comcast)","Tazewell":"Xfinity (Comcast)","Woodford":"Mediacom",
+      "Madison":"Spectrum (Charter)","St. Clair":"Spectrum (Charter)","Saint Clair":"Spectrum (Charter)",
+      "Monroe":"Spectrum (Charter)","Clinton":"Mediacom","Bond":"Mediacom",
+      "Macoupin":"Mediacom","Montgomery":"Mediacom","Effingham":"Mediacom",
+      "Vermilion":"Spectrum (Charter)","Ford":"Mediacom","Coles":"Mediacom",
+      "Williamson":"Mediacom","Jackson":"Mediacom","Franklin":"Mediacom",
+      "Saline":"Mediacom","Rock Island":"Mediacom","Henry":"Mediacom",
+      "Mercer":"Mediacom","Knox":"Mediacom","Fulton":"Mediacom",
+      "Adams":"Comcast Xfinity","Marshall":"Mediacom"
+    },
+    fiberByCity: {
+      "Chicago":["AT&T Fiber","Xfinity 10G","Astound (RCN)"],
+      "Aurora":["AT&T Fiber","WOW!"],"Naperville":["AT&T Fiber","WOW!"],
+      "Joliet":["AT&T Fiber"],"Elgin":["AT&T Fiber","WOW!"],
+      "Rockford":["AT&T Fiber"],"Springfield":["AT&T Fiber"],
+      "Peoria":["AT&T Fiber"],"Champaign":["AT&T Fiber","MetroNet"],
+      "Urbana":["AT&T Fiber","MetroNet"],"Bloomington":["AT&T Fiber","MetroNet"],
+      "Normal":["AT&T Fiber","MetroNet"],
+      "Decatur":["AT&T Fiber","MetroNet"],"Waukegan":["AT&T Fiber"],
+      "Cicero":["AT&T Fiber"],"Arlington Heights":["AT&T Fiber","WOW!"],
+      "Evanston":["AT&T Fiber","WOW!"],"Schaumburg":["AT&T Fiber","WOW!"],
+      "Bolingbrook":["AT&T Fiber"],"Palatine":["AT&T Fiber","WOW!"],
+      "Skokie":["AT&T Fiber","WOW!"],"Des Plaines":["AT&T Fiber","WOW!"],
+      "Orland Park":["AT&T Fiber"],"Tinley Park":["AT&T Fiber"],
+      "Oak Lawn":["AT&T Fiber"],"Berwyn":["AT&T Fiber"],
+      "Mount Prospect":["AT&T Fiber","WOW!"],"Wheaton":["AT&T Fiber","WOW!"],
+      "Hoffman Estates":["AT&T Fiber","WOW!"],"Oak Park":["AT&T Fiber","WOW!"],
+      "Downers Grove":["AT&T Fiber","WOW!"],"Elmhurst":["AT&T Fiber","WOW!"],
+      "Lombard":["AT&T Fiber","WOW!"],"Buffalo Grove":["AT&T Fiber","WOW!"],
+      "Glenview":["AT&T Fiber","WOW!"],"Northbrook":["AT&T Fiber","WOW!"]
+    },
+    cityToCounty: {
+      "Chicago":"Cook","Aurora":"Kane","Joliet":"Will",
+      "Naperville":"DuPage","Rockford":"Winnebago","Elgin":"Kane",
+      "Peoria":"Peoria","Springfield":"Sangamon","Waukegan":"Lake",
+      "Cicero":"Cook","Champaign":"Champaign","Urbana":"Champaign",
+      "Bloomington":"McLean","Normal":"McLean","Arlington Heights":"Cook",
+      "Evanston":"Cook","Schaumburg":"Cook","Bolingbrook":"Will",
+      "Decatur":"Macon","Palatine":"Cook","Skokie":"Cook",
+      "Des Plaines":"Cook","Orland Park":"Cook","Tinley Park":"Cook",
+      "Oak Lawn":"Cook","Berwyn":"Cook","Mount Prospect":"Cook",
+      "Wheaton":"DuPage","Hoffman Estates":"Cook","Oak Park":"Cook",
+      "Downers Grove":"DuPage","Elmhurst":"DuPage","Lombard":"DuPage",
+      "Buffalo Grove":"Lake","Glenview":"Cook","Northbrook":"Cook",
+      "Crystal Lake":"McHenry","Quincy":"Adams","Carbondale":"Jackson",
+      "Belleville":"St. Clair","East St. Louis":"St. Clair",
+      "Edwardsville":"Madison","Alton":"Madison","Granite City":"Madison",
+      "Moline":"Rock Island","Rock Island":"Rock Island","East Moline":"Rock Island",
+      "DeKalb":"DeKalb","Saint Charles":"Kane","St. Charles":"Kane",
+      "Geneva":"Kane","Batavia":"Kane","Calumet City":"Cook",
+      "Park Ridge":"Cook","Wheeling":"Cook","Highland Park":"Lake",
+      "Lake Forest":"Lake","Vernon Hills":"Lake","Mundelein":"Lake",
+      "Tinley Park":"Cook","Romeoville":"Will","Plainfield":"Will",
+      "Pekin":"Tazewell","East Peoria":"Tazewell","Galesburg":"Knox"
+    },
+    cityDistrict: {
+      "Chicago":"Chicago Public Schools (District 299)",
+      "Aurora":"East Aurora School District 131 / West Aurora School District 129",
+      "Joliet":"Joliet Public Schools District 86",
+      "Naperville":"Naperville Community Unit School District 203",
+      "Rockford":"Rockford Public Schools District 205",
+      "Elgin":"School District U-46",
+      "Peoria":"Peoria Public Schools District 150",
+      "Springfield":"Springfield Public Schools District 186",
+      "Waukegan":"Waukegan Community Unit School District 60",
+      "Cicero":"Cicero School District 99",
+      "Champaign":"Champaign Unit 4 Schools",
+      "Urbana":"Urbana School District 116",
+      "Bloomington":"Bloomington Public Schools District 87",
+      "Normal":"McLean County Unit District 5",
+      "Arlington Heights":"Township High School District 214",
+      "Evanston":"Evanston/Skokie School District 65 + ETHS 202",
+      "Schaumburg":"Schaumburg Community Consolidated School District 54",
+      "Decatur":"Decatur Public Schools District 61",
+      "Palatine":"Palatine Community Consolidated School District 15",
+      "Skokie":"Skokie School District 73.5",
+      "Wheaton":"Community Unit School District 200",
+      "Oak Park":"Oak Park Elementary School District 97 + OPRF 200",
+      "Berwyn":"Berwyn North School District 98",
+      "Quincy":"Quincy Public Schools District 172",
+      "Belleville":"Belleville Township High School District 201",
+      "Moline":"Moline-Coal Valley School District 40",
+      "DeKalb":"DeKalb Community Unit School District 428",
+      "Saint Charles":"St. Charles Community Unit School District 303",
+      "St. Charles":"St. Charles Community Unit School District 303"
+    }
+  },
+
+  /* ─── Ohio (v0.31) ───────────────────────────────────────────────────
+     88 counties. Four major IOUs: AEP Ohio (central + S + parts of E),
+     FirstEnergy operates as Ohio Edison (NE), Cleveland Electric Illuminating
+     (Cleveland metro), Toledo Edison (NW). Duke Energy Ohio in Cincinnati
+     metro. AES Ohio (formerly DP&L) in Dayton metro. Many municipal +
+     co-ops in rural counties. Cable: Spectrum dominant statewide; Xfinity
+     in Cleveland/Cincinnati metros; WOW! in Columbus + Cleveland; Cincinnati
+     Bell altafiber for Cincinnati fiber. */
+  OH: {
+    countyUtility: {
+      "Adams":"AEP Ohio","Allen":"AEP Ohio","Ashland":"Ohio Edison (FirstEnergy)",
+      "Ashtabula":"Cleveland Electric Illuminating (FirstEnergy)",
+      "Athens":"AEP Ohio","Auglaize":"AEP Ohio","Belmont":"AEP Ohio",
+      "Brown":"Duke Energy Ohio","Butler":"Duke Energy Ohio",
+      "Carroll":"AEP Ohio","Champaign":"AES Ohio","Clark":"AES Ohio",
+      "Clermont":"Duke Energy Ohio","Clinton":"Duke Energy Ohio",
+      "Columbiana":"Ohio Edison (FirstEnergy)","Coshocton":"AEP Ohio",
+      "Crawford":"Ohio Edison (FirstEnergy)",
+      "Cuyahoga":"Cleveland Electric Illuminating (FirstEnergy)",
+      "Darke":"AES Ohio","Defiance":"Toledo Edison (FirstEnergy)",
+      "Delaware":"AEP Ohio","Erie":"Ohio Edison (FirstEnergy)",
+      "Fairfield":"AEP Ohio","Fayette":"AEP Ohio","Franklin":"AEP Ohio",
+      "Fulton":"Toledo Edison (FirstEnergy)","Gallia":"AEP Ohio",
+      "Geauga":"Cleveland Electric Illuminating (FirstEnergy)",
+      "Greene":"AES Ohio","Guernsey":"AEP Ohio",
+      "Hamilton":"Duke Energy Ohio","Hancock":"AEP Ohio",
+      "Hardin":"AEP Ohio","Harrison":"AEP Ohio",
+      "Henry":"Toledo Edison (FirstEnergy)","Highland":"Duke Energy Ohio",
+      "Hocking":"AEP Ohio","Holmes":"Ohio Edison (FirstEnergy)",
+      "Huron":"Ohio Edison (FirstEnergy)","Jackson":"AEP Ohio",
+      "Jefferson":"AEP Ohio","Knox":"AEP Ohio",
+      "Lake":"Cleveland Electric Illuminating (FirstEnergy)",
+      "Lawrence":"AEP Ohio","Licking":"AEP Ohio","Logan":"AES Ohio",
+      "Lorain":"Ohio Edison (FirstEnergy)","Lucas":"Toledo Edison (FirstEnergy)",
+      "Madison":"AEP Ohio","Mahoning":"Ohio Edison (FirstEnergy)",
+      "Marion":"AEP Ohio","Medina":"Ohio Edison (FirstEnergy)",
+      "Meigs":"AEP Ohio","Mercer":"AES Ohio","Miami":"AES Ohio",
+      "Monroe":"AEP Ohio","Montgomery":"AES Ohio",
+      "Morgan":"AEP Ohio","Morrow":"AEP Ohio","Muskingum":"AEP Ohio",
+      "Noble":"AEP Ohio","Ottawa":"Toledo Edison (FirstEnergy)",
+      "Paulding":"Toledo Edison (FirstEnergy)","Perry":"AEP Ohio",
+      "Pickaway":"AEP Ohio","Pike":"AEP Ohio",
+      "Portage":"Ohio Edison (FirstEnergy)","Preble":"Duke Energy Ohio",
+      "Putnam":"AEP Ohio","Richland":"Ohio Edison (FirstEnergy)",
+      "Ross":"AEP Ohio","Sandusky":"Toledo Edison (FirstEnergy)",
+      "Scioto":"AEP Ohio","Seneca":"Ohio Edison (FirstEnergy)",
+      "Shelby":"AES Ohio","Stark":"Ohio Edison (FirstEnergy)",
+      "Summit":"Ohio Edison (FirstEnergy)","Trumbull":"Ohio Edison (FirstEnergy)",
+      "Tuscarawas":"AEP Ohio","Union":"AEP Ohio",
+      "Van Wert":"AEP Ohio","Vinton":"AEP Ohio","Warren":"Duke Energy Ohio",
+      "Washington":"AEP Ohio","Wayne":"Ohio Edison (FirstEnergy)",
+      "Williams":"Toledo Edison (FirstEnergy)","Wood":"Toledo Edison (FirstEnergy)",
+      "Wyandot":"AEP Ohio"
+    },
+    cityUtility: {
+      "Cleveland":"Cleveland Public Power",
+      "Columbus":"AEP Ohio (Columbus also has small muni service area)",
+      "Hamilton":"City of Hamilton Electric","Bowling Green":"Bowling Green Municipal",
+      "Painesville":"Painesville Electric","Westerville":"Westerville Electric",
+      "Orrville":"Orrville Utilities","Niles":"Niles Electric",
+      "Wadsworth":"Wadsworth Electric","Cuyahoga Falls":"Cuyahoga Falls Electric"
+    },
+    cableByCounty: {
+      "Hamilton":"Xfinity (Comcast)","Butler":"Xfinity (Comcast)",
+      "Warren":"Xfinity (Comcast)","Clermont":"Xfinity (Comcast)",
+      "Brown":"Xfinity (Comcast)","Clinton":"Spectrum (Charter)",
+      "Highland":"Spectrum (Charter)","Adams":"Spectrum (Charter)",
+      "Cuyahoga":"Spectrum (Charter)","Lake":"Spectrum (Charter)",
+      "Geauga":"Spectrum (Charter)","Lorain":"Spectrum (Charter)",
+      "Medina":"Spectrum (Charter)","Summit":"Spectrum (Charter)",
+      "Stark":"Spectrum (Charter)","Portage":"Spectrum (Charter)",
+      "Mahoning":"Spectrum (Charter)","Trumbull":"Spectrum (Charter)",
+      "Ashtabula":"Spectrum (Charter)","Columbiana":"Spectrum (Charter)",
+      "Wayne":"Spectrum (Charter)","Holmes":"Spectrum (Charter)",
+      "Tuscarawas":"Spectrum (Charter)","Carroll":"Spectrum (Charter)",
+      "Franklin":"Spectrum (Charter)","Delaware":"Spectrum (Charter)",
+      "Fairfield":"Spectrum (Charter)","Licking":"Spectrum (Charter)",
+      "Pickaway":"Spectrum (Charter)","Madison":"Spectrum (Charter)",
+      "Union":"Spectrum (Charter)","Knox":"Spectrum (Charter)",
+      "Morrow":"Spectrum (Charter)","Marion":"Spectrum (Charter)",
+      "Crawford":"Spectrum (Charter)","Richland":"Spectrum (Charter)",
+      "Ashland":"Spectrum (Charter)","Lucas":"Buckeye Broadband",
+      "Wood":"Buckeye Broadband","Sandusky":"Buckeye Broadband",
+      "Ottawa":"Buckeye Broadband","Erie":"Buckeye Broadband",
+      "Huron":"Spectrum (Charter)","Seneca":"Spectrum (Charter)",
+      "Hancock":"Spectrum (Charter)","Wyandot":"Spectrum (Charter)",
+      "Allen":"Spectrum (Charter)","Putnam":"Spectrum (Charter)",
+      "Auglaize":"Spectrum (Charter)","Mercer":"Spectrum (Charter)",
+      "Van Wert":"Spectrum (Charter)","Paulding":"Spectrum (Charter)",
+      "Defiance":"Spectrum (Charter)","Williams":"Spectrum (Charter)",
+      "Fulton":"Spectrum (Charter)","Henry":"Spectrum (Charter)",
+      "Montgomery":"Spectrum (Charter)","Greene":"Spectrum (Charter)",
+      "Miami":"Spectrum (Charter)","Clark":"Spectrum (Charter)",
+      "Champaign":"Spectrum (Charter)","Logan":"Spectrum (Charter)",
+      "Shelby":"Spectrum (Charter)","Darke":"Spectrum (Charter)",
+      "Preble":"Spectrum (Charter)","Hardin":"Spectrum (Charter)",
+      "Ross":"Spectrum (Charter)","Pike":"Spectrum (Charter)",
+      "Scioto":"Spectrum (Charter)","Lawrence":"Spectrum (Charter)",
+      "Gallia":"Spectrum (Charter)","Jackson":"Spectrum (Charter)",
+      "Vinton":"Spectrum (Charter)","Hocking":"Spectrum (Charter)",
+      "Athens":"Spectrum (Charter)","Meigs":"Spectrum (Charter)",
+      "Washington":"Spectrum (Charter)","Morgan":"Spectrum (Charter)",
+      "Noble":"Spectrum (Charter)","Monroe":"Spectrum (Charter)",
+      "Belmont":"Spectrum (Charter)","Harrison":"Spectrum (Charter)",
+      "Jefferson":"Spectrum (Charter)","Guernsey":"Spectrum (Charter)",
+      "Coshocton":"Spectrum (Charter)","Muskingum":"Spectrum (Charter)",
+      "Perry":"Spectrum (Charter)","Fayette":"Spectrum (Charter)"
+    },
+    fiberByCity: {
+      "Columbus":["AT&T Fiber","WOW! Fiber","Spectrum Fiber"],
+      "Cleveland":["AT&T Fiber","Spectrum Fiber"],
+      "Cincinnati":["altafiber (Cincinnati Bell)","AT&T Fiber"],
+      "Toledo":["AT&T Fiber","Buckeye Broadband Fiber"],
+      "Akron":["AT&T Fiber","Spectrum Fiber"],
+      "Dayton":["AT&T Fiber","Spectrum Fiber"],
+      "Parma":["AT&T Fiber"],"Canton":["AT&T Fiber","Spectrum Fiber"],
+      "Youngstown":["AT&T Fiber","Spectrum Fiber"],
+      "Lorain":["AT&T Fiber"],"Hamilton":["altafiber","AT&T Fiber"],
+      "Springfield":["AT&T Fiber"],"Kettering":["AT&T Fiber"],
+      "Elyria":["AT&T Fiber"],"Lakewood":["AT&T Fiber"],
+      "Cuyahoga Falls":["AT&T Fiber"],"Middletown":["altafiber","AT&T Fiber"],
+      "Newark":["AT&T Fiber"],"Mentor":["AT&T Fiber"],
+      "Beavercreek":["AT&T Fiber"],"Cleveland Heights":["AT&T Fiber"],
+      "Strongsville":["AT&T Fiber"],"Mansfield":["AT&T Fiber"],
+      "Fairfield":["altafiber","AT&T Fiber"],
+      "Westerville":["AT&T Fiber","WOW! Fiber"],
+      "Findlay":["AT&T Fiber"],"Warren":["AT&T Fiber"],
+      "Lancaster":["AT&T Fiber"],"Lima":["AT&T Fiber"],
+      "Huber Heights":["AT&T Fiber"],"Marion":["AT&T Fiber"],
+      "Grove City":["AT&T Fiber","WOW! Fiber"],
+      "Reynoldsburg":["AT&T Fiber","WOW! Fiber"],
+      "Delaware":["AT&T Fiber"],"Brunswick":["AT&T Fiber"],
+      "Upper Arlington":["AT&T Fiber","WOW! Fiber"],
+      "Gahanna":["AT&T Fiber","WOW! Fiber"],
+      "Dublin":["AT&T Fiber","WOW! Fiber"],
+      "Hilliard":["AT&T Fiber","WOW! Fiber"]
+    },
+    cityToCounty: {
+      "Columbus":"Franklin","Cleveland":"Cuyahoga","Cincinnati":"Hamilton",
+      "Toledo":"Lucas","Akron":"Summit","Dayton":"Montgomery",
+      "Parma":"Cuyahoga","Canton":"Stark","Youngstown":"Mahoning",
+      "Lorain":"Lorain","Hamilton":"Butler","Springfield":"Clark",
+      "Kettering":"Montgomery","Elyria":"Lorain","Lakewood":"Cuyahoga",
+      "Cuyahoga Falls":"Summit","Middletown":"Butler","Newark":"Licking",
+      "Mentor":"Lake","Beavercreek":"Greene","Cleveland Heights":"Cuyahoga",
+      "Strongsville":"Cuyahoga","Mansfield":"Richland","Fairfield":"Butler",
+      "Westerville":"Franklin","Findlay":"Hancock","Warren":"Trumbull",
+      "Lancaster":"Fairfield","Lima":"Allen","Huber Heights":"Montgomery",
+      "Marion":"Marion","Grove City":"Franklin","Reynoldsburg":"Franklin",
+      "Delaware":"Delaware","Brunswick":"Medina","Upper Arlington":"Franklin",
+      "Gahanna":"Franklin","Dublin":"Franklin","Hilliard":"Franklin",
+      "Euclid":"Cuyahoga","North Olmsted":"Cuyahoga","Mentor-on-the-Lake":"Lake",
+      "Bowling Green":"Wood","Sandusky":"Erie","Defiance":"Defiance",
+      "Athens":"Athens","Marietta":"Washington","Zanesville":"Muskingum",
+      "Chillicothe":"Ross","Portsmouth":"Scioto","Steubenville":"Jefferson",
+      "Norwood":"Hamilton","Mason":"Warren","West Chester":"Butler",
+      "Liberty Township":"Butler","Centerville":"Montgomery",
+      "Oakwood":"Montgomery","Riverside":"Montgomery","Trotwood":"Montgomery",
+      "Boardman":"Mahoning","Massillon":"Stark","North Canton":"Stark",
+      "Alliance":"Stark","Wooster":"Wayne","Painesville":"Lake",
+      "Eastlake":"Lake","Willoughby":"Lake","North Royalton":"Cuyahoga",
+      "Solon":"Cuyahoga","Westlake":"Cuyahoga","Rocky River":"Cuyahoga",
+      "Garfield Heights":"Cuyahoga","Maple Heights":"Cuyahoga",
+      "Shaker Heights":"Cuyahoga","South Euclid":"Cuyahoga","Pepper Pike":"Cuyahoga"
+    },
+    cityDistrict: {
+      "Columbus":"Columbus City Schools",
+      "Cleveland":"Cleveland Metropolitan School District",
+      "Cincinnati":"Cincinnati Public Schools",
+      "Toledo":"Toledo Public Schools",
+      "Akron":"Akron Public Schools",
+      "Dayton":"Dayton Public Schools",
+      "Canton":"Canton City Schools",
+      "Youngstown":"Youngstown City Schools",
+      "Parma":"Parma City School District",
+      "Hamilton":"Hamilton City School District",
+      "Springfield":"Springfield City Schools",
+      "Kettering":"Kettering City Schools",
+      "Lorain":"Lorain City Schools",
+      "Lakewood":"Lakewood City School District",
+      "Cuyahoga Falls":"Cuyahoga Falls City Schools",
+      "Middletown":"Middletown City School District",
+      "Newark":"Newark City Schools",
+      "Mentor":"Mentor Public Schools",
+      "Beavercreek":"Beavercreek City Schools",
+      "Cleveland Heights":"Cleveland Heights-University Heights City Schools",
+      "Strongsville":"Strongsville City Schools",
+      "Mansfield":"Mansfield City Schools",
+      "Fairfield":"Fairfield City Schools",
+      "Westerville":"Westerville City School District",
+      "Findlay":"Findlay City Schools",
+      "Warren":"Warren City School District",
+      "Lancaster":"Lancaster City Schools",
+      "Lima":"Lima City Schools",
+      "Huber Heights":"Huber Heights City Schools",
+      "Marion":"Marion City Schools",
+      "Grove City":"South-Western City School District",
+      "Reynoldsburg":"Reynoldsburg City Schools",
+      "Delaware":"Delaware City School District",
+      "Brunswick":"Brunswick City School District",
+      "Upper Arlington":"Upper Arlington City Schools",
+      "Gahanna":"Gahanna-Jefferson City Schools",
+      "Dublin":"Dublin City Schools",
+      "Hilliard":"Hilliard City Schools"
+    }
   }
 };
+
+/* =====================================================================
+   v0.33: Granular state list — drives the "deeper data coming" banner
+   on Utility services + Education when the user's state isn't curated.
+   ===================================================================== */
+const GRANULAR_STATES   = new Set(["CA","FL","IL","NY","OH","PA","TX","WA","NJ"]);
+const COMING_SOON_STATES = new Set(["GA","NC","MI"]);
+function stateCoverageStatus(stateCode) {
+  if (!stateCode) return "unknown";
+  if (GRANULAR_STATES.has(stateCode)) return "granular";
+  if (COMING_SOON_STATES.has(stateCode)) return "coming-soon";
+  return "broad";
+}
+
+/* =====================================================================
+   v0.33: OSM completeness scoring — transparent ranking signal.
+   We rank places that have full contact info higher than bare names, so
+   "Joe's Plumbing" with phone+website+hours beats "Plumbing LLC" with
+   nothing but a name. Score is computed at classify time and threaded
+   through the item shape so render functions can show a "Verified" badge.
+   ===================================================================== */
+function osmScore(t) {
+  if (!t) return 0;
+  let s = 0;
+  if (t.phone || t["contact:phone"])         s += 25;
+  if (t.website || t["contact:website"] || t.url)  s += 25;
+  if (t.opening_hours)                        s += 20;
+  if (t.email || t["contact:email"])         s += 10;
+  if (t["addr:housenumber"] && t["addr:street"]) s += 20;
+  return s;
+}
+function osmReasons(t) {
+  if (!t) return [];
+  const r = [];
+  if (t.phone || t["contact:phone"])         r.push("phone");
+  if (t.website || t["contact:website"] || t.url)  r.push("website");
+  if (t.opening_hours)                        r.push("hours");
+  if (t.email || t["contact:email"])         r.push("email");
+  if (t["addr:housenumber"] && t["addr:street"]) r.push("address");
+  return r;
+}
+function rankByScoreThenDistance(arr) {
+  return arr.slice().sort((a, b) => ((b.score || 0) - (a.score || 0)) || ((a.dist || 0) - (b.dist || 0)));
+}
 
 /* -------- DOM helpers ------------------------------------------------ */
 const $ = id => document.getElementById(id);
@@ -3867,16 +4583,23 @@ function placeIconForSubtype(subtype, category) {
 }
 function placeRow(item, cityKey) {
   const q = `${item.name} ${cityKey || ""}`.trim();
-  const reach = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+  const reach = item.website || `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const map   = mapUrlExact(item.lat, item.lon);
   const distCls = distClass(item.dist);
   const ic = placeIconForSubtype(item.subtype, item.category);
-  return `<div class="school-row">
+  // v0.33: verified-contact badge — businesses with phone+website+hours+address get a checkmark
+  const verifiedBadge = item.verified
+    ? `<span class="osm-verified-tag" title="Verified contact info on OpenStreetMap: ${(item.reasons || []).join(', ')}">✓ Verified</span>`
+    : "";
+  // v0.33: transparent "why ranked here" — tooltip on the row shows ranking signals
+  const whyRanked = `Ranked by: ${item.dist.toFixed(1)} mi away${(item.reasons && item.reasons.length) ? ' · OSM-verified ' + item.reasons.join(', ') : ''}`;
+  return `<div class="school-row" title="${escapeHtml(whyRanked)}">
     <a class="school-badge icon-bubble ${ic.cls}" href="${map}" target="_blank" rel="noopener" aria-label="Open ${escapeHtml(item.name)} on map">${ic.emoji}</a>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag lvl-k12">${escapeHtml(item.subtype)}</span>
       <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
+      ${verifiedBadge}
     </div>
     <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
   </div>`;
@@ -4847,7 +5570,10 @@ function classifyParkItem(el) {
   else if (t.highway === "path")     { category="trail";      subtype="Walking path"; }
   else return null;
 
-  return { name, category, subtype, lat, lon };
+  // v0.33: OSM completeness score for transparent ranking
+  const score = osmScore(t);
+  const reasons = osmReasons(t);
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null };
 }
 
 let lastParksGeo = null;
@@ -4866,8 +5592,10 @@ async function loadNearbyParks(geo) {
       .map(classifyParkItem)
       .filter(Boolean)
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
-      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name))
-      .sort((a, b) => a.dist - b.dist);
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name));
+    // v0.33: rank by OSM completeness score (verified entries float up), tiebreak by distance
+    const sorted = rankByScoreThenDistance(items);
+    items.length = 0; items.push(...sorted);
 
     const grouped = {
       park:        items.filter(i => i.category === "park").slice(0, 6),
@@ -4961,7 +5689,11 @@ function classifyHomeService(el) {
   else if (craft) { category = "other"; subtype = craft.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()); }
   else return null;
 
-  return { name, category, subtype, lat, lon };
+  // v0.33: completeness score (Home services especially benefit from this —
+  // a plumber with a phone+website+hours beats one with just a name).
+  const score = osmScore(t);
+  const reasons = osmReasons(t);
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null };
 }
 
 let lastHsGeo = null;
@@ -4976,12 +5708,14 @@ async function loadNearbyHomeServices(geo) {
   setText("hs-value", "Searching…");
   try {
     const elements = await fetchHomeServices(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
-    const items = elements
+    const itemsRaw = elements
       .map(classifyHomeService)
       .filter(Boolean)
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
-      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name))
-      .sort((a, b) => a.dist - b.dist);
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name));
+    // v0.33: completeness-first ranking — verified businesses (phone+website+hours)
+    // float to the top within each radius. This is the differentiation vs. Yelp.
+    const items = rankByScoreThenDistance(itemsRaw);
 
     const grouped = {
       handyman:    items.filter(i => i.category === "handyman").slice(0, 6),
@@ -5082,7 +5816,10 @@ function classifyPublicService(el) {
   else if (am === "townhall")                         { category = "civic";    subtype = "Town hall"; }
   else return null;
 
-  return { name, category, subtype, lat, lon };
+  // v0.33: completeness score
+  const score = osmScore(t);
+  const reasons = osmReasons(t);
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null };
 }
 
 let lastPsGeo = null;
@@ -5097,12 +5834,15 @@ async function loadNearbyPublicServices(geo) {
   setText("ps-value", "Searching…");
   try {
     const elements = await fetchPublicServices(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
-    const items = elements
+    const itemsRaw = elements
       .map(classifyPublicService)
       .filter(Boolean)
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
-      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name))
-      .sort((a, b) => a.dist - b.dist);
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name));
+    // v0.33: completeness-first ranking. For emergency services, fire/police usually
+    // have full tagging; the ranking mainly helps the doctor/dentist/pharmacy lists
+    // where verified entries with phone+hours dominate over name-only entries.
+    const items = rankByScoreThenDistance(itemsRaw);
 
     const grouped = {
       fire:     items.filter(i => i.category === "fire").slice(0, 4),
@@ -5143,6 +5883,276 @@ function renderPublicServices(grouped, total, cityKey) {
   if (total === 0) {
     $("ps-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius above, or check Google Maps directly.</div>`;
   }
+}
+
+/* =====================================================================
+   v0.33: Civic & gov't deep-link hub — pure URL map, no APIs needed
+   yet. Every link goes to an authoritative free source pre-filtered
+   by state where supported. Inline lookups (Civic Info API, Open
+   States) plug in here in Phase 4 once API keys are configured.
+   ===================================================================== */
+const CIVIC_DEEP_LINKS = {
+  // Voter registration / polling place lookup (free, no auth)
+  voterReg: {
+    "AL":"https://www.alabamavotes.gov/olvr",
+    "AK":"https://voterregistration.alaska.gov/",
+    "AZ":"https://servicearizona.com/voterRegistration",
+    "AR":"https://www.sos.arkansas.gov/elections/voter-information/",
+    "CA":"https://registertovote.ca.gov/",
+    "CO":"https://www.sos.state.co.us/voter/pages/pub/olvr/findVoterReg.xhtml",
+    "CT":"https://voterregistration.ct.gov/",
+    "DE":"https://ivote.de.gov/voterview",
+    "FL":"https://registertovoteflorida.gov/",
+    "GA":"https://registertovote.sos.ga.gov/",
+    "HI":"https://olvr.hawaii.gov/",
+    "ID":"https://elections.sos.idaho.gov/ElectionLink/ElectionLink/ApplicationInstructions.aspx",
+    "IL":"https://ova.elections.il.gov/",
+    "IN":"https://indianavoters.in.gov/",
+    "IA":"https://sos.iowa.gov/elections/voterreg/",
+    "KS":"https://www.kdor.ks.gov/apps/voterreg/",
+    "KY":"https://elect.ky.gov/registertovote/",
+    "LA":"https://voterportal.sos.la.gov/",
+    "ME":"https://www.maine.gov/sos/cec/elec/voter-info/votreg.html",
+    "MD":"https://elections.maryland.gov/voter_registration/online_application.html",
+    "MA":"https://www.sec.state.ma.us/OVR/",
+    "MI":"https://mvic.sos.state.mi.us/registervoter",
+    "MN":"https://mnvotes.sos.state.mn.us/VoterRegistration/VoterRegistrationMain.aspx",
+    "MS":"https://www.sos.ms.gov/voter-registration",
+    "MO":"https://www.sos.mo.gov/elections/goVoteMissouri/register",
+    "MT":"https://sosmt.gov/elections/vote/",
+    "NE":"https://www.nebraska.gov/apps-sos-voter-registration/",
+    "NV":"https://www.registertovotenv.gov/",
+    "NH":"https://www.sos.nh.gov/elections/voters/register-vote",
+    "NJ":"https://voter.svrs.nj.gov/register",
+    "NM":"https://portal.sos.state.nm.us/OVR/WebPages/InstructionsStep1.aspx",
+    "NY":"https://elections.ny.gov/register-vote",
+    "NC":"https://www.ncsbe.gov/registering/how-register",
+    "ND":"https://vip.sos.nd.gov/",
+    "OH":"https://olvr.ohiosos.gov/",
+    "OK":"https://oklahoma.gov/elections/voter-registration.html",
+    "OR":"https://secure.sos.state.or.us/orestar/vr/register.do",
+    "PA":"https://www.pavoterservices.pa.gov/Pages/VoterRegistrationApplication.aspx",
+    "RI":"https://vote.sos.ri.gov/Register",
+    "SC":"https://info.scvotes.sc.gov/eng/ovr/start.aspx",
+    "SD":"https://sdsos.gov/elections-voting/voting/register-to-vote/default.aspx",
+    "TN":"https://ovr.govote.tn.gov/",
+    "TX":"https://www.votetexas.gov/register-to-vote/",
+    "UT":"https://secure.utah.gov/voterreg/",
+    "VT":"https://olvr.vermont.gov/",
+    "VA":"https://www.elections.virginia.gov/registration/how-to-register/",
+    "WA":"https://voter.votewa.gov/WhereToVote.aspx",
+    "WV":"https://ovr.sos.wv.gov/Register",
+    "WI":"https://myvote.wi.gov/en-us/RegistertoVote",
+    "WY":"https://sos.wyo.gov/Elections/State/RegisteringToVote.aspx",
+    "DC":"https://www.vote4dc.com/"
+  },
+  // State legislator lookup
+  stateReps: {
+    "AL":"https://www.legislature.state.al.us/aliswww/findyourlegislator/SponsorSearch.aspx",
+    "AK":"https://www.akleg.gov/findvoterinfo.php",
+    "AZ":"https://www.azleg.gov/MemberRoster/",
+    "AR":"https://www.arkleg.state.ar.us/Home/FindMyLegislator",
+    "CA":"https://findyourrep.legislature.ca.gov/",
+    "CO":"https://leg.colorado.gov/find-my-legislator",
+    "CT":"https://www.cga.ct.gov/asp/menu/cgafindleg.asp",
+    "DE":"https://legis.delaware.gov/FindMyLegislator",
+    "FL":"https://www.flsenate.gov/Senators/Find",
+    "GA":"https://openstates.org/find_your_legislator/",
+    "HI":"https://www.capitol.hawaii.gov/legislator-lookup",
+    "ID":"https://legislature.idaho.gov/legislators/whosmylegislator/",
+    "IL":"https://www.elections.il.gov/ElectionInformation/OfficialsRunningElectedSearchByAddress.aspx",
+    "IN":"https://iga.in.gov/legislative/find-legislators/",
+    "IA":"https://www.legis.iowa.gov/legislators/find",
+    "KS":"https://openstates.org/find_your_legislator/",
+    "KY":"https://apps.legislature.ky.gov/findyourlegislator/findyourlegislator.html",
+    "LA":"https://house.louisiana.gov/H_Reps/findyourlegislators",
+    "MD":"https://mgaleg.maryland.gov/mgawebsite/Members/District",
+    "MA":"https://malegislature.gov/Search/FindMyLegislator",
+    "MI":"https://www.house.mi.gov/MHRPublic/CleanSearch.aspx",
+    "MN":"https://www.gis.leg.mn/iMaps/districts/",
+    "MS":"http://www.legislature.ms.gov/legislators/find-my-legislator/",
+    "MO":"https://house.mo.gov/legislatorlookup.aspx",
+    "MT":"https://leg.mt.gov/legislator-information/",
+    "NE":"https://nebraskalegislature.gov/senators/senator_find.php",
+    "NV":"https://www.leg.state.nv.us/App/AssemblyDistrictMap/",
+    "NH":"https://www.gencourt.state.nh.us/house/members/wml.aspx",
+    "NJ":"https://www.njleg.state.nj.us/members/legsearch.asp",
+    "NM":"https://www.nmlegis.gov/Members/Find_My_Legislator",
+    "NY":"https://www.nysenate.gov/find-my-senator",
+    "NC":"https://www.ncleg.gov/FindYourLegislators",
+    "ND":"https://www.legis.nd.gov/find-your-legislators",
+    "OH":"https://www.ohiosenate.gov/senators/district-map",
+    "OK":"https://oksenate.gov/find-my-senator",
+    "OR":"https://www.oregonlegislature.gov/findyourlegislator/leg-districts.html",
+    "PA":"https://www.legis.state.pa.us/cfdocs/legis/home/findyourlegislator/",
+    "RI":"https://www.rilegislature.gov/representatives/Pages/FindRep.aspx",
+    "SC":"https://www.scstatehouse.gov/legislatorssearch.php",
+    "SD":"https://sdlegislature.gov/Legislators/Find",
+    "TN":"https://www.capitol.tn.gov/legislators/",
+    "TX":"https://wrm.capitol.texas.gov/home",
+    "UT":"https://le.utah.gov/GIS/findDistrict.jsp",
+    "VT":"https://legislature.vermont.gov/people/",
+    "VA":"https://whosmy.virginiageneralassembly.gov/",
+    "WA":"https://app.leg.wa.gov/DistrictFinder/",
+    "WV":"https://www.wvlegislature.gov/Educational/Kids_Page/searchengine.cfm",
+    "WI":"https://maps.legis.wisconsin.gov/",
+    "WY":"https://wyoleg.gov/Legislators/2024",
+    "DC":"https://dccouncil.gov/councilmembers/"
+  },
+  // State DMV / vehicle registration
+  dmv: {
+    "AL":"https://www.alea.gov/dps/driver-license",
+    "AK":"https://doa.alaska.gov/dmv/",
+    "AZ":"https://azdot.gov/mvd",
+    "AR":"https://www.dfa.arkansas.gov/services/category/driver-services",
+    "CA":"https://www.dmv.ca.gov/",
+    "CO":"https://dmv.colorado.gov/",
+    "CT":"https://portal.ct.gov/DMV",
+    "DE":"https://www.dmv.de.gov/",
+    "FL":"https://www.flhsmv.gov/",
+    "GA":"https://dds.georgia.gov/",
+    "HI":"https://dmv.honolulu.gov/",
+    "ID":"https://itd.idaho.gov/dmv/",
+    "IL":"https://www.ilsos.gov/departments/drivers/home.html",
+    "IN":"https://www.in.gov/bmv/",
+    "IA":"https://iowadot.gov/mvd",
+    "KS":"https://www.ksrevenue.gov/dovindex.html",
+    "KY":"https://drive.ky.gov/",
+    "LA":"https://www.expresslane.org/",
+    "ME":"https://www.maine.gov/sos/bmv/",
+    "MD":"https://mva.maryland.gov/",
+    "MA":"https://www.mass.gov/orgs/massachusetts-registry-of-motor-vehicles",
+    "MI":"https://www.michigan.gov/sos",
+    "MN":"https://dps.mn.gov/divisions/dvs",
+    "MS":"https://www.dor.ms.gov/Vehicle/",
+    "MO":"https://dor.mo.gov/motor-vehicle/",
+    "MT":"https://dojmt.gov/driving/",
+    "NE":"https://dmv.nebraska.gov/",
+    "NV":"https://dmv.nv.gov/",
+    "NH":"https://www.dmv.nh.gov/",
+    "NJ":"https://www.state.nj.us/mvc/",
+    "NM":"https://www.mvd.newmexico.gov/",
+    "NY":"https://dmv.ny.gov/",
+    "NC":"https://www.ncdot.gov/dmv/",
+    "ND":"https://www.dot.nd.gov/divisions/mv/",
+    "OH":"https://bmv.ohio.gov/",
+    "OK":"https://oklahoma.gov/service-oklahoma.html",
+    "OR":"https://www.oregon.gov/odot/dmv/",
+    "PA":"https://www.dmv.pa.gov/",
+    "RI":"https://dmv.ri.gov/",
+    "SC":"https://www.scdmvonline.com/",
+    "SD":"https://dps.sd.gov/driver-licensing",
+    "TN":"https://www.tn.gov/safety.html",
+    "TX":"https://www.txdmv.gov/",
+    "UT":"https://dld.utah.gov/",
+    "VT":"https://dmv.vermont.gov/",
+    "VA":"https://www.dmv.virginia.gov/",
+    "WA":"https://dol.wa.gov/",
+    "WV":"https://transportation.wv.gov/dmv/",
+    "WI":"https://wisconsindot.gov/Pages/dmv/default.aspx",
+    "WY":"https://dot.state.wy.us/home/dmv.html",
+    "DC":"https://dmv.dc.gov/"
+  },
+  // Property records / county assessor portal entry-points
+  propertyRecords: {
+    "CA":"https://www.boe.ca.gov/proptaxes/contactus.htm",
+    "FL":"https://floridarevenue.com/property/Pages/LocalOfficials.aspx",
+    "TX":"https://comptroller.texas.gov/taxes/property-tax/county-directory/",
+    "NY":"https://www.tax.ny.gov/research/property/",
+    "PA":"https://www.dced.pa.gov/local-government/local-government-services/local-property-tax-information/",
+    "IL":"https://tax.illinois.gov/research/taxinformation/property/general.html",
+    "OH":"https://tax.ohio.gov/researcher/property-tax-property-tax-rates",
+    "GA":"https://dor.georgia.gov/property-tax",
+    "NC":"https://www.ncdor.gov/taxes-forms/property-tax",
+    "MI":"https://www.michigan.gov/treasury/local/property-tax",
+    "WA":"https://dor.wa.gov/forms-publications/publications-subject/property-tax-publications",
+    "NJ":"https://www.nj.gov/treasury/taxation/lpt/lpt-search.shtml"
+  }
+};
+
+function renderCivicSection(addr) {
+  const stateCode = (typeof getStateCode === "function") ? getStateCode(addr || {}) : "";
+  const stateName = (addr && addr.state) || "your state";
+  $("card-civic").hidden = false;
+  setText("civic-value", stateCode ? `For ${stateName}` : `Civic resources`);
+
+  const card = (icon, title, meta, url, linkText) => {
+    if (!url) {
+      return `<div class="civic-card unavailable">
+        <div class="civic-card-icon">${icon}</div>
+        <div class="civic-card-title">${escapeHtml(title)}</div>
+        <div class="civic-card-meta">${escapeHtml(meta)}</div>
+        <div class="civic-card-link">Coming soon</div>
+      </div>`;
+    }
+    return `<a class="civic-card" href="${url}" target="_blank" rel="noopener">
+      <div class="civic-card-icon">${icon}</div>
+      <div class="civic-card-title">${escapeHtml(title)}</div>
+      <div class="civic-card-meta">${escapeHtml(meta)}</div>
+      <div class="civic-card-link">${escapeHtml(linkText || "Open →")}</div>
+    </a>`;
+  };
+
+  // --- Voting & elections ---
+  const vrUrl = stateCode && CIVIC_DEEP_LINKS.voterReg[stateCode];
+  $("civic-voting-body").innerHTML = [
+    card("🗳️", "Register to vote / update registration", `Official ${stateName} voter portal`, vrUrl, "Register or update →"),
+    card("📍", "Find your polling place", "Vote.org polling-place lookup (no login)", "https://www.vote.org/polling-place-locator/", "Find your polling place →"),
+    card("📅", "Upcoming elections", `${stateName} election calendar from BallotReady`, `https://www.ballotready.org/`, "See what's on the ballot →")
+  ].join("");
+
+  // --- Officials ---
+  const repsUrl = stateCode && CIVIC_DEEP_LINKS.stateReps[stateCode];
+  $("civic-officials-body").innerHTML = [
+    card("🇺🇸", "U.S. Congress (House + Senate)", "Find your federal representatives by ZIP", "https://www.house.gov/representatives/find-your-representative", "Find your representatives →"),
+    card("🏛️", `${stateName} state legislature`, "State senator + state representative lookup", repsUrl, "Find your state reps →"),
+    card("🏘️", "Local elected officials", "Mayor, city council, county officials via USA.gov directory", "https://www.usa.gov/local-governments", "Find local officials →")
+  ].join("");
+
+  // --- Property records ---
+  const prUrl = stateCode && CIVIC_DEEP_LINKS.propertyRecords[stateCode];
+  $("civic-property-body").innerHTML = [
+    card("📜", `${stateName} property records`, "County assessor / treasurer portal directory", prUrl || `https://www.usa.gov/property-tax-real-estate`, "Open assessor directory →"),
+    card("💰", "Property tax estimator", "SmartAsset property-tax tool by address", "https://smartasset.com/taxes/property-taxes", "Estimate property tax →"),
+    card("📊", "Census property data", "Median home value + property characteristics for your tract", "https://data.census.gov/", "Open Census data →")
+  ].join("");
+
+  // --- DMV ---
+  const dmvUrl = stateCode && CIVIC_DEEP_LINKS.dmv[stateCode];
+  $("civic-dmv-body").innerHTML = [
+    card("🚗", `${stateName} DMV`, "Vehicle registration, license renewal, road test scheduling", dmvUrl, "Open DMV →"),
+    card("🪪", "REAL ID information", "TSA REAL ID requirements + state deadline tracker", "https://www.tsa.gov/real-id", "REAL ID info →"),
+    card("📮", "Change address with USPS", "USPS official mail-forwarding service ($1.10 verification)", "https://moversguide.usps.com/", "Change address →")
+  ].join("");
+
+  // --- Permits & courts ---
+  $("civic-permits-body").innerHTML = [
+    card("📋", "Building permits & zoning", `Search ${stateName} city/county building department`, `https://www.google.com/search?q=${encodeURIComponent(stateName + " building permits zoning office")}`, "Find your permit office →"),
+    card("⚖️", "Find your courthouse", "USA.gov court directory by state and case type", "https://www.usa.gov/state-courts", "Find your court →"),
+    card("📑", "Public records request (FOIA)", `${stateName} sunshine-law / public-records portal`, `https://www.google.com/search?q=${encodeURIComponent(stateName + " public records request portal")}`, "Request records →"),
+    card("🗳️", "Census information", "Demographics, income, housing for your tract", "https://data.census.gov/", "Open Census data →")
+  ].join("");
+}
+
+/* =====================================================================
+   v0.33: "Deeper data coming" banner — surfaces above utility services
+   and education when the user's state isn't in the granular list.
+   ===================================================================== */
+function maybeRenderCoverageBanner(addr) {
+  const stateCode = (typeof getStateCode === "function") ? getStateCode(addr || {}) : "";
+  const stateName = (addr && addr.state) || "your state";
+  const status = stateCoverageStatus(stateCode);
+  // Render in two places: utility services card and education card
+  const utilSlot = $("services-coverage-banner");
+  const eduSlot  = $("schools-coverage-banner");
+  let html = "";
+  if (status === "coming-soon") {
+    html = `<div class="coverage-banner coming-soon"><div>You're in <b>${escapeHtml(stateName)}</b>. Granular state data (specific utility/cable/fiber/district) is <b>coming soon</b> — currently scheduled before public launch on June 2. Until then, we're showing nationwide options + the FCC Broadband Map deep-link below.</div></div>`;
+  } else if (status === "broad") {
+    html = `<div class="coverage-banner"><div>You're in <b>${escapeHtml(stateName)}</b>. We're showing <b>nationwide fallbacks</b> for utilities. Granular ${escapeHtml(stateName)} data is on the post-launch roadmap — until then, the FCC Broadband Map link below gives you the most accurate availability.</div></div>`;
+  }
+  if (utilSlot) utilSlot.innerHTML = html;
+  if (eduSlot)  eduSlot.innerHTML  = html;
 }
 
 /* -------- Loading state ---------------------------------------------- */
@@ -5188,6 +6198,10 @@ function renderResults(geo) {
   // v0.27: Home services + Public services (also Overpass-driven, runs in parallel)
   loadNearbyHomeServices(geo);
   loadNearbyPublicServices(geo);
+
+  // v0.33: Civic & gov't deep-link hub + state-coverage banner
+  renderCivicSection(a);
+  maybeRenderCoverageBanner(a);
 }
 
 // v0.25: cache last yard inputs so renderHome() can rerender plants after edits
