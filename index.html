@@ -987,11 +987,12 @@
     .school-section { scroll-margin-top: 72px; }
   }
 
-  /* v0.34.0: Single-view layout — only the active SECTION shows on the page.
-     Click section nav to swap. Yard's inner content can still scroll within
-     itself. Removes whole-page scrolling between sections. */
-  .single-view .section-managed { display: none; }
-  .single-view .section-managed.section-active { display: block; }
+  /* v0.34.0/v0.34.4: Single-view — only active SECTION shows. !important is
+     necessary because subtab-managed rules (defined later) have equal CSS
+     specificity and would otherwise win the source-order tie, causing
+     property-details to leak into Emergency Services view. */
+  .single-view .section-managed:not(.section-active) { display: none !important; }
+  .single-view .section-managed.section-active { display: block !important; }
 
   /* v0.33.1: True-tabbed subsections — only the active subtab's content shows */
   .subtab-managed { display: none; }
@@ -1042,6 +1043,20 @@
     box-shadow: var(--shadow);
   }
   .section-map-noresults-inner b { color: var(--ink); }
+  .section-map-retry-btn {
+    margin-top: 4px;
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s ease;
+  }
+  .section-map-retry-btn:hover { background: var(--primary-2); }
+  .section-map-retry-btn:active { transform: translateY(1px); }
   /* Marker labels */
   .leaflet-marker-icon.home-pin {
     filter: hue-rotate(170deg) saturate(1.5);
@@ -1371,8 +1386,8 @@
     <nav class="section-nav" id="section-nav" aria-label="Sections">
       <div class="radius-filter" role="radiogroup" aria-label="Search radius">
         <span class="radius-filter-label">Searching within</span>
-        <button type="button" class="radius-btn" data-radius="2"  role="radio">2 mi</button>
-        <button type="button" class="radius-btn" data-radius="5"  role="radio" aria-checked="true">5 mi</button>
+        <button type="button" class="radius-btn" data-radius="2"  role="radio" aria-checked="true">2 mi</button>
+        <button type="button" class="radius-btn" data-radius="5"  role="radio">5 mi</button>
         <button type="button" class="radius-btn" data-radius="10" role="radio">10 mi</button>
         <span class="radius-filter-label" style="margin-left:6px;text-transform:none;letter-spacing:0;color:var(--ink-faint);">RADIUS · daily-use range</span>
         <span class="radius-status" id="radius-status"></span>
@@ -1996,7 +2011,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.34.3 · May 2026 · Phase 2 · Single-view bug fix (My Home now hides correctly) · CartoCDN Voyager tiles (free forever, no API key)
+      <b>HomeAtlas</b> &mdash; v0.34.4 · May 2026 · Phase 2 · CSS specificity fix for single-view · default radius 2mi · slimmer civic query · Retry button on empty-state map overlay
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3662,8 +3677,9 @@ window.HOMEATLAS_DEBUG = false;
    triggers re-fetch of every distance-bound section without a page reload.
    ───────────────────────────────────────────────────────────────────── */
 // v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
+// v0.34.4: default 5→2 — matches "daily-use range" framing better
 const RADIUS_OPTIONS = [2, 5, 10];               // miles
-const DEFAULT_RADIUS_MI = 5;
+const DEFAULT_RADIUS_MI = 2;
 const MILES_TO_METERS = 1609.34;
 let CURRENT_RADIUS_MI = DEFAULT_RADIUS_MI;
 let CURRENT_RADIUS_M  = Math.round(DEFAULT_RADIUS_MI * MILES_TO_METERS);
@@ -3763,6 +3779,31 @@ document.addEventListener("click", (e) => {
   if (!btn) return;
   e.preventDefault();
   setRadius(parseInt(btn.dataset.radius, 10));
+});
+
+// v0.34.4: Retry button on map empty-state overlays. Maps each section's
+// map-element id to the load function that re-fires its Overpass query.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".section-map-retry-btn[data-retry-section]");
+  if (!btn) return;
+  e.preventDefault();
+  const sectionMapId = btn.dataset.retrySection;
+  const map = {
+    "schools-map": () => (typeof lastSchoolGeo !== "undefined" && lastSchoolGeo) && loadNearbySchools(lastSchoolGeo),
+    "parks-map":   () => (typeof lastParksGeo  !== "undefined" && lastParksGeo)  && loadNearbyParks(lastParksGeo),
+    "hs-map":      () => (typeof lastHsGeo     !== "undefined" && lastHsGeo)     && loadNearbyHomeServices(lastHsGeo),
+    "ps-map":      () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
+    "civic-map":   () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo)
+  };
+  const fn = map[sectionMapId];
+  if (fn) {
+    btn.disabled = true;
+    btn.textContent = "↻ Retrying…";
+    Promise.resolve().then(fn).finally(() => {
+      btn.disabled = false;
+      btn.textContent = "↻ Retry this section";
+    });
+  }
 });
 loadSavedRadius();
 
@@ -3960,18 +4001,21 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   } else {
     map.setView([centerLat, centerLon], 13);
   }
-  // v0.34.1: explicit "no results" overlay when items=0 so user sees an honest
-  // explanation instead of a sparse grey map. Removes itself when results return.
+  // v0.34.1/v0.34.4: explicit empty-state overlay with a Retry button.
+  // Retry button uses a `data-retry-section` attr; the delegated click handler
+  // (registered once at page load) re-fires the matching load function.
   let overlay = el.querySelector(".section-map-noresults-overlay");
   if (validItems.length === 0) {
+    const retryAttr = el.id ? ` data-retry-section="${el.id}"` : "";
+    const inner = `<b>No matches found here.</b><br>OpenStreetMap may have timed out or this category is genuinely empty within ${CURRENT_RADIUS_MI} mi. Click Retry, widen the radius, or try a different tab.<br><br><button class="section-map-retry-btn" type="button"${retryAttr}>↻ Retry this section</button>`;
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.className = "section-map-noresults-overlay";
-      overlay.innerHTML = `<div class="section-map-noresults-inner"><b>No verified sources found here.</b><br>OpenStreetMap doesn't have any matches in this category within ${CURRENT_RADIUS_MI} mi of your home. Try widening the radius, switching tabs, or checking a different category — coverage varies by area and tag.</div>`;
+      overlay.innerHTML = `<div class="section-map-noresults-inner">${inner}</div>`;
       el.style.position = "relative";
       el.appendChild(overlay);
     } else {
-      overlay.querySelector(".section-map-noresults-inner").innerHTML = `<b>No verified sources found here.</b><br>OpenStreetMap doesn't have any matches in this category within ${CURRENT_RADIUS_MI} mi. Try widening the radius or switching tabs.`;
+      overlay.querySelector(".section-map-noresults-inner").innerHTML = inner;
     }
   } else if (overlay) {
     overlay.remove();
@@ -6295,11 +6339,13 @@ async function fetchPublicServices(lat, lon, radiusMeters) {
   const hcQ = `[out:json][timeout:20];(`
     + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  // v0.34.1: civic add-ons — DMV, government offices, courthouses (for civic map)
-  const civicQ = `[out:json][timeout:20];(`
+  // v0.34.1/v0.34.4: civic add-ons — DMV / government offices.
+  // v0.34.4: dropped `[government]` (matches any value, very slow) and the
+  // regex name search (also slow). Now restricted to specific tag values.
+  const civicQ = `[out:json][timeout:15];(`
     + `nwr["office"="government"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["government"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["name"~"DMV|Department of Motor Vehicles|Motor Vehicle",i](around:${radiusMeters},${lat},${lon});`
+    + `nwr["amenity"="public_building"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["government"~"^(local_authority|administrative|legislative|department)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
   const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ), overpassQuery(civicQ)]);
   const out = [];
