@@ -27,6 +27,10 @@
 <!-- v0.33.2: Leaflet for unified per-section maps (free, OSM tiles, no API key) -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin=""/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="" defer></script>
+<!-- v0.34.2: Leaflet.markercluster — overlapping pins auto-group with a count badge -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.min.css" crossorigin=""/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.min.css" crossorigin=""/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.min.js" crossorigin="" defer></script>
 
 <style>
   /* ---------- Theme (v0.23: Zillow-inspired refresh) ---------- */
@@ -1021,6 +1025,23 @@
     color: var(--ink-faint); font-size: 13px; font-style: italic;
     padding: 20px; text-align: center;
   }
+  /* v0.34.1: explicit "no verified sources" overlay on the map */
+  .section-map-noresults-overlay {
+    position: absolute; inset: 0;
+    background: rgba(255,255,255,0.86);
+    backdrop-filter: blur(2px);
+    display: grid; place-items: center;
+    z-index: 401;
+    padding: 18px;
+  }
+  .section-map-noresults-inner {
+    max-width: 360px; text-align: center;
+    background: var(--surface); border: 1px solid var(--line);
+    padding: 14px 18px; border-radius: 10px;
+    font-size: 13px; line-height: 1.5; color: var(--ink-soft);
+    box-shadow: var(--shadow);
+  }
+  .section-map-noresults-inner b { color: var(--ink); }
   /* Marker labels */
   .leaflet-marker-icon.home-pin {
     filter: hue-rotate(170deg) saturate(1.5);
@@ -1049,6 +1070,45 @@
   .page-section-header.risks      { --psh-accent: #b34d4d; }
   .page-section-header.home-services   { --psh-accent: #c08552; }
   .page-section-header.public-services { --psh-accent: #b34d4d; }
+
+  /* v0.34.2: "Show N more" expansion under each subsection list */
+  .more-listings {
+    margin-top: 12px;
+    border-top: 1px dashed var(--line);
+    padding-top: 8px;
+  }
+  .more-listings > summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 8px 12px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 13px; font-weight: 600;
+    color: var(--primary);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.12s ease;
+  }
+  .more-listings > summary::-webkit-details-marker { display: none; }
+  .more-listings > summary::before { content: "▾"; transition: transform 0.15s ease; font-size: 10px; }
+  .more-listings[open] > summary::before { transform: rotate(180deg); }
+  .more-listings > summary:hover { background: var(--primary-soft); }
+  .more-listings-grid { margin-top: 10px; }
+
+  /* v0.34.2: "Submit a missing place" link below each radial section */
+  .submit-missing {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background: var(--surface-2);
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    font-size: 12.5px; font-weight: 500;
+    color: var(--ink-soft); text-decoration: none;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .submit-missing:hover { background: var(--primary-soft); color: var(--primary); border-style: solid; border-color: rgba(0,106,255,0.3); }
+  .submit-missing::before { content: "📍"; font-size: 14px; }
 
   /* v0.33.4: contact + opening-hours line under the place name */
   .place-contact {
@@ -1273,7 +1333,7 @@
   }
 </style>
 </head>
-<body>
+<body class="single-view">
 <div class="wrap">
 
   <header>
@@ -1441,6 +1501,7 @@
       </div>
       <!-- v0.33.2: Unified map showing all emergency facilities + your home -->
       <div class="section-map" id="ps-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the emergency services above once results load.</div></div>
+      <a class="submit-missing" id="ps-submit-missing" href="#" target="_blank" rel="noopener">Know a place we missed? Submit it on OpenStreetMap</a>
       <div class="source" style="margin-top:14px;">
         Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line. <b>For emergencies, call 911</b> — actual response time depends on dispatch and traffic, not the straight-line distance shown here.
       </div>
@@ -1649,6 +1710,7 @@
 
       <!-- v0.33.2: Unified map showing all schools + your home -->
       <div class="section-map" id="schools-map" style="margin-top:16px;"><div class="section-map-empty">Map shows pins for the schools above once results load.</div></div>
+      <a class="submit-missing" id="schools-submit-missing" href="#" target="_blank" rel="noopener">Know a school we missed? Submit it on OpenStreetMap</a>
 
       <div class="source" style="margin-top:16px;">
         Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>; distances are straight-line ("as the crow flies") from your address. Public-school assignment varies block by block — verify exact attendance with the district. Public/private classification uses tags + name patterns and may occasionally be wrong.
@@ -1704,6 +1766,7 @@
       </div>
       <!-- v0.33.2: Unified map showing all parks/playgrounds/trails + your home -->
       <div class="section-map" id="parks-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the parks above once results load.</div></div>
+      <a class="submit-missing" id="parks-submit-missing" href="#" target="_blank" rel="noopener">Know a park or playground we missed? Submit it on OpenStreetMap</a>
       <div class="source" style="margin-top:14px;">
         Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Distances are straight-line from your address.
       </div>
@@ -1876,6 +1939,7 @@
       </div>
       <!-- v0.33.2: Unified map showing all home-service providers + your home -->
       <div class="section-map" id="hs-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the providers above once results load.</div></div>
+      <a class="submit-missing" id="hs-submit-missing" href="#" target="_blank" rel="noopener">Know a trade we missed? Submit it on OpenStreetMap</a>
       <div class="source" style="margin-top:14px;">
         Listings from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> (<code>craft=*</code>, <code>shop=hardware</code>). Coverage of trades is improving but not exhaustive — a quick Google search for your specific need is still worth doing.
       </div>
@@ -1932,7 +1996,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.34.0 · May 2026 · Phase 2 · Single-view layout (one section at a time) + Civic map · backup of v0.33.4 saved alongside
+      <b>HomeAtlas</b> &mdash; v0.34.3 · May 2026 · Phase 2 · Single-view bug fix (My Home now hides correctly) · CartoCDN Voyager tiles (free forever, no API key)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3709,8 +3773,47 @@ loadSavedRadius();
    reading on the left. Map updates whenever the section re-renders
    (e.g., after a radius change).
    ===================================================================== */
-const _sectionMaps = {};   // id → Leaflet map instance
-const _sectionMarkers = {}; // id → array of L.Marker
+const _sectionMaps = {};      // id → Leaflet map instance
+const _sectionMarkers = {};   // id → array of L.Marker
+const _sectionClusters = {};  // id → L.MarkerClusterGroup (v0.34.2)
+
+// v0.34.2: build a deep-link to the OSM iD editor at the user's coordinates,
+// pre-filtered to a sensible category. Lets verified-residents fix the
+// long-tail OSM coverage gap (small playgrounds, single-shop trades) until
+// our own verified-resident submission system ships in Phase 4.
+function osmEditorUrl(lat, lon, hint) {
+  // map=Z/lat/lon — z=18 is street-block detail
+  return `https://www.openstreetmap.org/edit?editor=id#map=18/${lat}/${lon}` + (hint ? `&hint=${encodeURIComponent(hint)}` : "");
+}
+function refreshSubmitMissingLinks(lat, lon) {
+  const targets = [
+    { id: "ps-submit-missing",      hint: "fire station, police, hospital, clinic, dentist, pharmacy" },
+    { id: "schools-submit-missing", hint: "school, daycare, library" },
+    { id: "parks-submit-missing",   hint: "park, playground, dog park, trail" },
+    { id: "hs-submit-missing",      hint: "plumber, electrician, hardware store" }
+  ];
+  targets.forEach(t => {
+    const el = document.getElementById(t.id);
+    if (el) el.href = osmEditorUrl(lat, lon, t.hint);
+  });
+}
+
+// v0.34.2: render a list with a "show more" expansion. Top N show inline;
+// remainder hides inside a <details> that the user can expand. Avoids
+// flooding the page with 50+ rows while still letting users dig deeper.
+function renderListWithMore(items, cityKey, opts = {}) {
+  const TOP = opts.top || 6;
+  if (!items || !items.length) return "";
+  const top = items.slice(0, TOP);
+  const rest = items.slice(TOP);
+  let html = `<div class="row-grid-2">${top.map(it => placeRow(it, cityKey)).join("")}</div>`;
+  if (rest.length > 0) {
+    html += `<details class="more-listings"><summary>Show ${rest.length} more · ${items.length} total within ${CURRENT_RADIUS_MI} mi</summary>` +
+            `<div class="row-grid-2 more-listings-grid">${rest.map(it => placeRow(it, cityKey)).join("")}</div>` +
+            `</details>`;
+  }
+  return html;
+}
 
 // v0.33.4: per-item map-marker label (letter + color) so schools and parks
 // are visually distinguishable on the map, not just generic blue pins.
@@ -3778,17 +3881,25 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   if (!map) {
     el.innerHTML = "";
     map = L.map(el, { scrollWheelZoom: false, zoomControl: true }).setView([centerLat, centerLon], 12);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution: "© OpenStreetMap contributors",
+    // v0.34.3: CartoCDN Voyager — free forever, no API key, no rate limits.
+    // Cleaner / less-busy style than default OSM. Fallback to OSM if Carto
+    // is ever unreachable (it's behind Fastly so this is rare).
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+      subdomains: "abcd",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank">CARTO</a>',
       maxZoom: 19
     }).addTo(map);
     _sectionMaps[elId] = map;
     _sectionMarkers[elId] = [];
   }
-  // Clear old markers
-  _sectionMarkers[elId].forEach(m => m.remove());
+  // Clear old markers AND any prior cluster group
+  _sectionMarkers[elId].forEach(m => { try { m.remove(); } catch(e){} });
   _sectionMarkers[elId] = [];
-  // Home pin (always green, distinct icon via custom divIcon)
+  if (_sectionClusters && _sectionClusters[elId]) {
+    try { map.removeLayer(_sectionClusters[elId]); } catch(e){}
+    _sectionClusters[elId] = null;
+  }
+  // Home pin (always green, distinct icon via custom divIcon) — added directly to map, NOT clustered
   const homeIcon = L.divIcon({
     className: "home-marker",
     html: '<div style="background:#2d6a4f;color:#fff;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:16px;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.3);">🏠</div>',
@@ -3798,10 +3909,18 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     .bindPopup("<b>Your home</b>")
     .addTo(map);
   _sectionMarkers[elId].push(homeMarker);
-  // Place pins
-  // v0.33.4: schools, education facilities, and parks-by-type get custom letter
-  // markers (E/M/H/K12/DC/MS/Ch for schools; P/Pl/D/T for parks etc).
+  // v0.34.2: Place pins go into a MarkerClusterGroup so overlapping pins auto-collapse
+  // into a count badge. Falls back gracefully if cluster lib hasn't loaded yet.
   const validItems = (items || []).filter(it => it && it.lat != null && it.lon != null);
+  const useClusters = (typeof L.markerClusterGroup === "function") && validItems.length > 1;
+  const clusterGroup = useClusters
+    ? L.markerClusterGroup({
+        showCoverageOnHover: false,
+        spiderfyOnMaxZoom: true,
+        maxClusterRadius: 45,
+        chunkedLoading: true
+      })
+    : null;
   validItems.forEach(item => {
     const labelInfo = markerLabelFor(item);
     let marker;
@@ -3821,15 +3940,41 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
       (item.phone ? `<br>📞 ${(item.phone + "").replace(/[<>]/g, '')}` : "") +
       (item.opening_hours ? `<br>🕐 ${(item.opening_hours.length > 50 ? item.opening_hours.slice(0,50) + '…' : item.opening_hours).replace(/[<>]/g, '')}` : "") +
       (item.verified ? `<br><span style="color:#2d6a4f;">✓ Verified contact info</span>` : "");
-    marker.bindPopup(popupHtml).addTo(map);
+    marker.bindPopup(popupHtml);
+    if (clusterGroup) {
+      clusterGroup.addLayer(marker);
+    } else {
+      marker.addTo(map);
+    }
     _sectionMarkers[elId].push(marker);
   });
+  if (clusterGroup) {
+    map.addLayer(clusterGroup);
+    if (!_sectionClusters) window._sectionClusters = _sectionClusters;
+    _sectionClusters[elId] = clusterGroup;
+  }
   // Fit bounds to all markers (home + places)
   if (validItems.length > 0) {
     const bounds = L.latLngBounds([[centerLat, centerLon], ...validItems.map(it => [it.lat, it.lon])]);
     map.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 });
   } else {
     map.setView([centerLat, centerLon], 13);
+  }
+  // v0.34.1: explicit "no results" overlay when items=0 so user sees an honest
+  // explanation instead of a sparse grey map. Removes itself when results return.
+  let overlay = el.querySelector(".section-map-noresults-overlay");
+  if (validItems.length === 0) {
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.className = "section-map-noresults-overlay";
+      overlay.innerHTML = `<div class="section-map-noresults-inner"><b>No verified sources found here.</b><br>OpenStreetMap doesn't have any matches in this category within ${CURRENT_RADIUS_MI} mi of your home. Try widening the radius, switching tabs, or checking a different category — coverage varies by area and tag.</div>`;
+      el.style.position = "relative";
+      el.appendChild(overlay);
+    } else {
+      overlay.querySelector(".section-map-noresults-inner").innerHTML = `<b>No verified sources found here.</b><br>OpenStreetMap doesn't have any matches in this category within ${CURRENT_RADIUS_MI} mi. Try widening the radius or switching tabs.`;
+    }
+  } else if (overlay) {
+    overlay.remove();
   }
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
@@ -5085,7 +5230,7 @@ function renderSchoolSections(grouped, total, cityKey) {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
   };
   fillSimple("higher-section",     "higher-tbody",     grouped.higher);
   fillSimple("enrichment-section", "enrichment-tbody", grouped.enrichment);
@@ -5954,10 +6099,11 @@ async function loadNearbyParks(geo) {
     items.length = 0; items.push(...sorted);
 
     const grouped = {
-      park:        items.filter(i => i.category === "park").slice(0, 6),
-      dog:         items.filter(i => i.category === "dog").slice(0, 4),
-      playground:  items.filter(i => i.category === "playground").slice(0, 5),
-      trail:       items.filter(i => i.category === "trail").slice(0, 5)
+      // v0.34.2: keep more items per category — render shows top 6 + "+N more" expansion
+      park:        items.filter(i => i.category === "park").slice(0, 60),
+      dog:         items.filter(i => i.category === "dog").slice(0, 60),
+      playground:  items.filter(i => i.category === "playground").slice(0, 60),
+      trail:       items.filter(i => i.category === "trail").slice(0, 60)
     };
     renderParks(grouped, items.length, getCityKey(geo.address || {}));
     // v0.33.3: save state + render map for active subtab only
@@ -5979,7 +6125,7 @@ function renderParks(grouped, total, cityKey) {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
   };
   fillSection("parks-park-section",       "parks-park-tbody",       grouped.park);
   fillSection("parks-dog-section",        "parks-dog-tbody",        grouped.dog);
@@ -6077,18 +6223,19 @@ async function loadNearbyHomeServices(geo) {
     const items = rankByScoreThenDistance(itemsRaw);
 
     const grouped = {
-      handyman:    items.filter(i => i.category === "handyman").slice(0, 6),
-      plumber:     items.filter(i => i.category === "plumber").slice(0, 6),
-      electrician: items.filter(i => i.category === "electrician").slice(0, 6),
-      hvac:        items.filter(i => i.category === "hvac").slice(0, 6),
-      painter:     items.filter(i => i.category === "painter").slice(0, 6),
-      carpenter:   items.filter(i => i.category === "carpenter").slice(0, 6),
-      roofer:      items.filter(i => i.category === "roofer").slice(0, 6),
-      landscaper:  items.filter(i => i.category === "landscaper").slice(0, 6),
-      cleaner:     items.filter(i => i.category === "cleaner").slice(0, 6),
-      locksmith:   items.filter(i => i.category === "locksmith").slice(0, 6),
-      hardware:    items.filter(i => i.category === "hardware").slice(0, 8),
-      other:       items.filter(i => i.category === "other").slice(0, 6),
+      // v0.34.2: keep more items per category — render shows top 6 + "+N more" expansion
+      handyman:    items.filter(i => i.category === "handyman").slice(0, 60),
+      plumber:     items.filter(i => i.category === "plumber").slice(0, 60),
+      electrician: items.filter(i => i.category === "electrician").slice(0, 60),
+      hvac:        items.filter(i => i.category === "hvac").slice(0, 60),
+      painter:     items.filter(i => i.category === "painter").slice(0, 60),
+      carpenter:   items.filter(i => i.category === "carpenter").slice(0, 60),
+      roofer:      items.filter(i => i.category === "roofer").slice(0, 60),
+      landscaper:  items.filter(i => i.category === "landscaper").slice(0, 60),
+      cleaner:     items.filter(i => i.category === "cleaner").slice(0, 60),
+      locksmith:   items.filter(i => i.category === "locksmith").slice(0, 60),
+      hardware:    items.filter(i => i.category === "hardware").slice(0, 60),
+      other:       items.filter(i => i.category === "other").slice(0, 60),
     };
     renderHomeServices(grouped, items.length, getCityKey(geo.address || {}));
     // v0.33.3: save state + render map for active subtab only
@@ -6110,7 +6257,7 @@ function renderHomeServices(grouped, total, cityKey) {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
   };
   fill("hs-handyman-section",   "hs-handyman-tbody",   grouped.handyman);
   fill("hs-plumber-section",    "hs-plumber-tbody",    grouped.plumber);
@@ -6142,13 +6289,19 @@ async function fetchPublicServices(lat, lon, radiusMeters) {
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   // v0.30 fix: split into amenity vs healthcare so a slow query in one doesn't kill both
   const amenQ = `[out:json][timeout:25];(`
-    + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall|courthouse)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["emergency"="fire_station"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
   const hcQ = `[out:json][timeout:20];(`
     + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ)]);
+  // v0.34.1: civic add-ons — DMV, government offices, courthouses (for civic map)
+  const civicQ = `[out:json][timeout:20];(`
+    + `nwr["office"="government"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["government"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["name"~"DMV|Department of Motor Vehicles|Motor Vehicle",i](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ), overpassQuery(civicQ)]);
   const out = [];
   results.forEach(r => { if (r.status === "fulfilled" && Array.isArray(r.value)) out.push(...r.value); });
   return out;
@@ -6176,6 +6329,14 @@ function classifyPublicService(el) {
   else if (am === "pharmacy" || hc === "pharmacy")    { category = "pharmacy"; subtype = "Pharmacy"; }
   else if (am === "post_office")                      { category = "civic";    subtype = "Post office"; }
   else if (am === "townhall")                         { category = "civic";    subtype = "Town hall"; }
+  else if (am === "courthouse")                       { category = "civic";    subtype = "Courthouse"; }
+  // v0.34.1: civic add-ons — DMV, government offices, anything tagged office=government
+  else if ((t.office === "government") || t.government || /\b(DMV|Motor Vehicle|Department of Motor)/i.test(name)) {
+    category = "civic";
+    if (/\b(DMV|Motor Vehicle)/i.test(name)) subtype = "DMV / Vehicle services";
+    else if (t.government) subtype = `Gov't · ${(t.government + "").replace(/_/g, " ")}`;
+    else subtype = "Government office";
+  }
   else return null;
 
   // v0.33: completeness score
@@ -6207,13 +6368,14 @@ async function loadNearbyPublicServices(geo) {
     const items = rankByScoreThenDistance(itemsRaw);
 
     const grouped = {
-      fire:     items.filter(i => i.category === "fire").slice(0, 4),
-      police:   items.filter(i => i.category === "police").slice(0, 4),
-      hospital: items.filter(i => i.category === "hospital").slice(0, 4),
-      clinic:   items.filter(i => i.category === "clinic").slice(0, 6),
-      pharmacy: items.filter(i => i.category === "pharmacy").slice(0, 6),
-      dentist:  items.filter(i => i.category === "dentist").slice(0, 6),
-      civic:    items.filter(i => i.category === "civic").slice(0, 4),
+      // v0.34.2: keep more items per category — render shows top 6 + "+N more" expansion
+      fire:     items.filter(i => i.category === "fire").slice(0, 30),
+      police:   items.filter(i => i.category === "police").slice(0, 30),
+      hospital: items.filter(i => i.category === "hospital").slice(0, 30),
+      clinic:   items.filter(i => i.category === "clinic").slice(0, 60),
+      pharmacy: items.filter(i => i.category === "pharmacy").slice(0, 60),
+      dentist:  items.filter(i => i.category === "dentist").slice(0, 60),
+      civic:    items.filter(i => i.category === "civic").slice(0, 30),
     };
     renderPublicServices(grouped, items.length, getCityKey(geo.address || {}));
     // v0.33.3: save state + render map for active subtab only
@@ -6237,7 +6399,7 @@ function renderPublicServices(grouped, total, cityKey) {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!items.length) { sec.hidden = true; return; }
     sec.hidden = false;
-    tb.innerHTML = `<div class="row-grid-2">${items.map(it => placeRow(it, cityKey)).join("")}</div>`;
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
   };
   fill("ps-emergency-section", "ps-emergency-tbody", grouped.fire);
   fill("ps-police-section",    "ps-police-tbody",    grouped.police);
@@ -6544,7 +6706,8 @@ function maybeRenderCoverageBanner(addr) {
 /* -------- Loading state ---------------------------------------------- */
 function setLoading() {
   $("results").hidden = false;
-  // v0.34.0: enable single-view layout — only one section visible at a time
+  // v0.34.0/v0.34.3: enable single-view layout (also added directly to <body class>
+  // in HTML so it's always on; this is a belt-and-suspenders re-add)
   document.body.classList.add("single-view");
   // v0.28: kick off section-nav observer once results are visible (idempotent)
   setTimeout(initSectionNavObserver, 100);
@@ -6595,6 +6758,9 @@ function renderResults(geo) {
   // v0.33: Civic & gov't deep-link hub + state-coverage banner
   renderCivicSection(a);
   maybeRenderCoverageBanner(a);
+
+  // v0.34.2: wire "Submit a missing place" deep-links to OSM iD editor at user's coords
+  refreshSubmitMissingLinks(lastYardArgs.lat, lastYardArgs.lon);
 }
 
 // v0.25: cache last yard inputs so renderHome() can rerender plants after edits
@@ -6796,24 +6962,27 @@ document.addEventListener("click", (e) => {
   }
 });
 
-// v0.34.0: Single-view layout — group siblings between section headers,
-// mark them with data-section-group, then toggle one group visible at a time.
-// Idempotent — re-walking re-tags but doesn't duplicate.
+// v0.34.0/v0.34.3: Single-view — only the active SECTION is visible; clicking
+// a section nav tab swaps content. Idempotent. Re-runs on every search via
+// setLoading(). Walks ALL children of #results (not just siblings) so the
+// tagging is deterministic regardless of inner DOM mutations.
 function initSingleViewSections() {
-  const headers = Array.from(document.querySelectorAll(".page-section-header[id]"));
+  const results = document.getElementById("results");
+  if (!results) return;
+  const headers = Array.from(results.querySelectorAll(":scope > .page-section-header[id]"));
   if (!headers.length) return;
-  // Walk each header forward to the next page-section-header, tagging siblings
-  headers.forEach((header, i) => {
-    const sectionId = header.id;
-    const next = headers[i + 1] || null;
-    let cursor = header;
-    while (cursor) {
-      cursor.dataset.sectionGroup = sectionId;
-      cursor.classList.add("section-managed");
-      // stop at the element JUST before the next header
-      if (cursor.nextElementSibling === next) break;
-      cursor = cursor.nextElementSibling;
-      if (!cursor) break;
+  // Walk every direct child of #results — anything BEFORE the first header
+  // (like .section-nav, .resolved if it pre-dates myhome) stays unmanaged
+  // (always visible). Once we cross a header, every subsequent child is
+  // tagged with that header's id until we hit the next header.
+  let currentHeaderId = null;
+  Array.from(results.children).forEach(child => {
+    if (child.classList && child.classList.contains("page-section-header") && child.id) {
+      currentHeaderId = child.id;
+    }
+    if (currentHeaderId) {
+      child.dataset.sectionGroup = currentHeaderId;
+      child.classList.add("section-managed");
     }
   });
   // Activate first section by default IF nothing is active yet
