@@ -82,6 +82,18 @@
   .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--accent)); }
   /* v0.35.0: logo SVG in brand area */
   .brand-logo { width: 30px; height: 30px; display: inline-block; vertical-align: middle; }
+  /* v0.35.1: visible version stamp so users can verify they're on the latest build */
+  .brand-version {
+    margin-left: 6px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--primary-soft);
+    color: var(--primary-2);
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.3px;
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    cursor: help;
+  }
   .brand-tag { margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--line); color: var(--ink-soft); font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; font-weight: 600; }
 
   .hero { padding: 32px 0 20px; }
@@ -1371,6 +1383,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.1</span>
     </div>
   </header>
 
@@ -1585,6 +1598,9 @@
       <div class="school-section" id="civic-dmv">
         <h4>🚗 DMV &amp; vehicle services</h4>
         <div id="civic-dmv-body" class="civic-grid"></div>
+        <!-- v0.35.1: DMV locations map — filtered from civic items -->
+        <div style="margin-top:14px;font-size:13px;font-weight:600;color:var(--ink-soft);">📍 DMV offices near you</div>
+        <div class="section-map" id="civic-dmv-map" style="margin-top:8px;"><div class="section-map-empty">DMV office pins appear once your search completes.</div></div>
       </div>
 
       <div class="school-section" id="civic-permits">
@@ -2081,7 +2097,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.35.0 · May 2026 · Phase 2 · New logo · Events section (farmers markets, faith communities, community centers, online aggregators) · Promise.any mirror race for 5x faster fetches · DMV name search restored · radius LS-key bumped
+      <b>HomeAtlas</b> &mdash; v0.35.1 · May 2026 · Phase 2 · DMV map inside DMV subtab · visible version stamp · v0.35.0 carries new logo + Events + Promise.any speed-up
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3868,8 +3884,9 @@ document.addEventListener("click", (e) => {
     "parks-map":   () => (typeof lastParksGeo  !== "undefined" && lastParksGeo)  && loadNearbyParks(lastParksGeo),
     "hs-map":      () => (typeof lastHsGeo     !== "undefined" && lastHsGeo)     && loadNearbyHomeServices(lastHsGeo),
     "ps-map":      () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
-    "civic-map":   () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
-    "events-map":  () => (typeof lastEventsGeo !== "undefined" && lastEventsGeo) && loadNearbyEvents(lastEventsGeo)
+    "civic-map":     () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
+    "civic-dmv-map": () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
+    "events-map":    () => (typeof lastEventsGeo !== "undefined" && lastEventsGeo) && loadNearbyEvents(lastEventsGeo)
   };
   const fn = map[sectionMapId];
   if (fn) {
@@ -6881,6 +6898,16 @@ function refreshCivicMap() {
     items.push(...sch.grouped.enrichment.filter(it => /library/i.test(it.subtype || "")));
   }
   setupSectionMap("civic-map", ps.geo.lat, ps.geo.lon, items);
+  // v0.35.1: also paint the DMV-specific map inside the DMV subtab,
+  // filtered from the same civic items by subtype/name regex.
+  refreshDmvMap();
+}
+function refreshDmvMap() {
+  const ps = sectionState["card-public-services"];
+  if (!ps || !ps.geo) return;
+  const civicItems = (ps.grouped && ps.grouped.civic) || [];
+  const dmvOnly = civicItems.filter(it => /DMV|Motor Vehicle|Vehicle services|RMV|Driver License/i.test(it.subtype || "") || /DMV|Motor Vehicles/i.test(it.name || ""));
+  setupSectionMap("civic-dmv-map", ps.geo.lat, ps.geo.lon, dmvOnly);
 }
 
 function renderCivicSection(addr) {
