@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.5</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.36</span>
     </div>
   </header>
 
@@ -2112,7 +2112,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.35.5 · May 2026 · Phase 2 · Lazy-load sections — only fetch the tab you click. Eliminates parallel-fetch stampede entirely. Each section gets dedicated bandwidth.
+      <b>HomeAtlas</b> &mdash; v0.36 · May 2026 · Phase 2 · Events tab now pulls farmers markets, places of worship, and community centers from OpenStreetMap (lazy-loaded — no stampede). Plus Eventbrite/Meetup/Facebook deep-links.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3876,6 +3876,7 @@ function refetchAllRadialSections() {
       if (sectionLoadedOnce["sec-parks"]           && lastParksGeo)  tasks.push(loadNearbyParks(lastParksGeo));
       if (sectionLoadedOnce["sec-home-services"]   && lastHsGeo)     tasks.push(loadNearbyHomeServices(lastHsGeo));
       if (sectionLoadedOnce["sec-public-services"] && lastPsGeo)     tasks.push(loadNearbyPublicServices(lastPsGeo));
+      if (sectionLoadedOnce["sec-events"]          && lastEventsGeo) tasks.push(loadNearbyEvents(lastEventsGeo));
       // No tasks? Just kick the currently-active section as a one-shot
       if (!tasks.length) {
         const active = document.querySelector(".sec-tab.active");
@@ -6663,13 +6664,18 @@ function renderPublicServices(grouped, total, cityKey) {
    community_centre). Real-time event APIs (Eventbrite, Meetup) deferred to
    Phase 5 with paid integrations.
    ===================================================================== */
-async function fetchEventVenues(lat, lon, radiusMeters) {
-  // v0.35.4: temporarily disabled — adding this 5th concurrent Overpass stream
-  // triggered rate-limit (429) on mirrors, breaking ALL sections. The Events
-  // section still works via the "Find events online" subtab (Eventbrite /
-  // Meetup / Facebook / Google deep-links). Will re-enable in v0.36 with
-  // smarter throttling once we have analytics on real Overpass behavior.
-  return [];
+async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
+  // v0.36: re-enabled. v0.35.4 disabled this because all 5 sections fired in
+  // parallel and 429'd Overpass; v0.35.5 made section loads lazy (one per tab
+  // click), so Events only hits Overpass when the user actually clicks the
+  // Events tab — no stampede. Single combined query keeps it cheap.
+  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
+  const q = `[out:json][timeout:12];(
+    nwr["amenity"="marketplace"](around:${radiusMeters},${lat},${lon});
+    nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});
+    nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon});
+  );out center tags;`;
+  return await overpassQuery(q, onProgress);
 }
 function classifyEventVenue(el) {
   const t = el.tags || {};
@@ -7156,8 +7162,8 @@ const SECTION_LAZY_LOAD = {
   "sec-public-services": () => lastPsGeo     && loadNearbyPublicServices(lastPsGeo),
   "sec-schools":         () => lastSchoolGeo && loadNearbySchools(lastSchoolGeo),
   "sec-parks":           () => lastParksGeo  && loadNearbyParks(lastParksGeo),
-  "sec-home-services":   () => lastHsGeo     && loadNearbyHomeServices(lastHsGeo)
-  // sec-events disabled per v0.35.4 — Events section has only deep-links
+  "sec-home-services":   () => lastHsGeo     && loadNearbyHomeServices(lastHsGeo),
+  "sec-events":          () => lastEventsGeo && loadNearbyEvents(lastEventsGeo)
 };
 const sectionLoadedOnce = {};   // sectionId → true once its load has fired
 
