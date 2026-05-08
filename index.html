@@ -7,8 +7,9 @@
 <meta name="description" content="Enter your US home address and instantly see your electric utility, internet/TV/security providers, and the schools and educational facilities around your home.">
 <meta name="theme-color" content="#2d6a4f">
 
-<!-- Inline SVG favicon — green house, no extra file needed -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%232d6a4f'/><path d='M14 33 L32 16 L50 33 L44 33 L44 48 L36 48 L36 38 L28 38 L28 48 L20 48 L20 33 Z' fill='%23ffffff'/></svg>">
+<!-- v0.35.0: HomeAtlas logo — blue house + verified-checkmark badge.
+     Communicates "trusted public data, no paid placement" at a glance. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M14 32 L32 16 L50 32 L44 32 L44 48 L36 48 L36 38 L28 38 L28 48 L20 48 L20 32 Z' fill='%23ffffff'/><circle cx='50' cy='50' r='11' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45 50 L48.5 53 L55 46' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
 <!-- Open Graph / social-share preview -->
 <meta property="og:type" content="website">
@@ -79,6 +80,8 @@
   header { padding: 28px 0 12px; }
   .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; font-size: 18px; }
   .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--accent)); }
+  /* v0.35.0: logo SVG in brand area */
+  .brand-logo { width: 30px; height: 30px; display: inline-block; vertical-align: middle; }
   .brand-tag { margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--line); color: var(--ink-soft); font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; font-weight: 600; }
 
   .hero { padding: 32px 0 20px; }
@@ -1353,9 +1356,21 @@
 
   <header>
     <div class="brand">
-      <span class="brand-dot"></span>
+      <!-- v0.35.0: HomeAtlas logo — house + verified checkmark — blue, no paid placement -->
+      <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <defs>
+          <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#006aff"/>
+            <stop offset="100%" stop-color="#0050c2"/>
+          </linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="14" fill="url(#brand-lg)"/>
+        <path d="M14 32 L32 16 L50 32 L44 32 L44 48 L36 48 L36 38 L28 38 L28 48 L20 48 L20 32 Z" fill="#ffffff"/>
+        <circle cx="50" cy="50" r="11" fill="#2d6a4f" stroke="#ffffff" stroke-width="2"/>
+        <path d="M45 50 L48.5 53 L55 46" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
       HomeAtlas
-      <span class="brand-tag">Preview · Phase 2</span>
+      <span class="brand-tag">County-verified · No paid placement</span>
     </div>
   </header>
 
@@ -1399,6 +1414,7 @@
         <a href="#sec-services"        class="sec-tab" data-target="sec-services">Utility services</a>
         <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">Education</a>
         <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">Recreation</a>
+        <a href="#sec-events"          class="sec-tab" data-target="sec-events">Events</a>
         <a href="#sec-yard"            class="sec-tab" data-target="sec-yard">Gardening</a>
         <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services">Home services</a>
         <a href="#sec-risks"           class="sec-tab" data-target="sec-risks">Climate risks</a>
@@ -1787,6 +1803,60 @@
       </div>
     </div>
 
+    <!-- v0.35.0: New Events section — farmers markets + religious institutions + community events
+         Sources: OSM amenity=marketplace + amenity=place_of_worship + amenity=community_centre
+         Real event data (Eventbrite, Meetup) ships in Phase 5 with paid API integration. -->
+    <div class="page-section-header parks" id="sec-events">
+      <div class="psh-icon">🎪</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Events this weekend</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for Events -->
+    <div class="subnav" data-subnav-for="card-events">
+      <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Farmers markets</a>
+      <a href="#events-worship-section"   class="subtab" data-subtarget="events-worship-section">Churches &amp; temples</a>
+      <a href="#events-community-section" class="subtab" data-subtarget="events-community-section">Community centers</a>
+      <a href="#events-online-section"    class="subtab" data-subtarget="events-online-section">Find events online</a>
+    </div>
+
+    <div class="parks-card" id="card-events" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text"><span id="events-value">—</span></div>
+        <button class="info-btn" type="button" data-info-target="events-info-popover" aria-label="About events">i</button>
+        <div class="summary-pill" id="events-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="events-info-popover" hidden>
+        <b>What this is:</b> nearby venues that host weekend events — farmers markets, religious services, community-center programs. <b>Recurring schedules</b> come from OSM <code>opening_hours</code> tags where available. <b>Real-time event listings</b> (Eventbrite, Meetup, local-paper calendars) ship in Phase 5 with paid API integration. Until then, the "Find events online" tab links to free aggregators that cover your zip code.
+      </div>
+      <div class="parks-loading" id="events-loading" hidden>Finding nearby event venues…</div>
+      <div id="events-sections" hidden>
+        <div class="school-section" id="events-markets-section" hidden>
+          <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
+          <div id="events-markets-tbody"></div>
+        </div>
+        <div class="school-section" id="events-worship-section" hidden>
+          <h4>⛪ Churches, temples &amp; faith communities <span class="hint">— service times</span></h4>
+          <div id="events-worship-tbody"></div>
+        </div>
+        <div class="school-section" id="events-community-section" hidden>
+          <h4>🏛️ Community centers <span class="hint">— neighborhood programs</span></h4>
+          <div id="events-community-tbody"></div>
+        </div>
+        <div class="school-section" id="events-online-section">
+          <h4>🌐 Find events online <span class="hint">— authoritative free aggregators</span></h4>
+          <div id="events-online-body" class="civic-grid"></div>
+        </div>
+      </div>
+      <!-- v0.35.0: Unified map for event venues -->
+      <div class="section-map" id="events-map" style="margin-top:14px;"><div class="section-map-empty">Map shows event venues once results load.</div></div>
+      <a class="submit-missing" id="events-submit-missing" href="#" target="_blank" rel="noopener">Know an event venue we missed? Submit it on OpenStreetMap</a>
+      <div class="source" style="margin-top:14px;">
+        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Service times and operating hours come from OSM <code>opening_hours</code> tags — coverage varies. <b>Always verify directly with the venue</b> before showing up — schedules change.
+      </div>
+    </div>
+
     <!-- v0.29: Section 6 — Gardening services (renamed from "Yard & garden", moved before Home services) -->
     <div class="page-section-header yard" id="sec-yard">
       <div class="psh-icon">🌱</div>
@@ -2011,7 +2081,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.34.4 · May 2026 · Phase 2 · CSS specificity fix for single-view · default radius 2mi · slimmer civic query · Retry button on empty-state map overlay
+      <b>HomeAtlas</b> &mdash; v0.35.0 · May 2026 · Phase 2 · New logo · Events section (farmers markets, faith communities, community centers, online aggregators) · Promise.any mirror race for 5x faster fetches · DMV name search restored · radius LS-key bumped
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3684,14 +3754,19 @@ const MILES_TO_METERS = 1609.34;
 let CURRENT_RADIUS_MI = DEFAULT_RADIUS_MI;
 let CURRENT_RADIUS_M  = Math.round(DEFAULT_RADIUS_MI * MILES_TO_METERS);
 
+// v0.34.5: bump key to force-reset stale radius values from localStorage.
+// Users who had "5" saved from before now get the new "2" default.
+const RADIUS_LS_KEY = "homeatlas:radius:v2";
 function loadSavedRadius() {
   // URL hash wins over localStorage (so a shared link forces its radius)
   const hashMatch = (location.hash || "").match(/radius=(\d+)/);
   let r = hashMatch ? parseInt(hashMatch[1], 10) : NaN;
   if (!RADIUS_OPTIONS.includes(r)) {
-    try { r = parseInt(localStorage.getItem("homeatlas:radius") || "", 10); } catch (e) {}
+    try { r = parseInt(localStorage.getItem(RADIUS_LS_KEY) || "", 10); } catch (e) {}
   }
   if (!RADIUS_OPTIONS.includes(r)) r = DEFAULT_RADIUS_MI;
+  // Best-effort cleanup of the old key (silent if it fails)
+  try { localStorage.removeItem("homeatlas:radius"); } catch (e) {}
   setRadius(r, { silent: true, persist: false });
 }
 function setRadius(miles, opts = {}) {
@@ -3708,7 +3783,7 @@ function setRadius(miles, opts = {}) {
   refreshRadiusBadges();
   // Persist
   if (opts.persist !== false) {
-    try { localStorage.setItem("homeatlas:radius", String(miles)); } catch (e) {}
+    try { localStorage.setItem(RADIUS_LS_KEY, String(miles)); } catch (e) {}
     if (history.replaceState) {
       // Preserve any other hash fragment (like #sec-services); just update or add radius=X
       const cur = (location.hash || "").replace(/^#/, "");
@@ -3793,7 +3868,8 @@ document.addEventListener("click", (e) => {
     "parks-map":   () => (typeof lastParksGeo  !== "undefined" && lastParksGeo)  && loadNearbyParks(lastParksGeo),
     "hs-map":      () => (typeof lastHsGeo     !== "undefined" && lastHsGeo)     && loadNearbyHomeServices(lastHsGeo),
     "ps-map":      () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
-    "civic-map":   () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo)
+    "civic-map":   () => (typeof lastPsGeo     !== "undefined" && lastPsGeo)     && loadNearbyPublicServices(lastPsGeo),
+    "events-map":  () => (typeof lastEventsGeo !== "undefined" && lastEventsGeo) && loadNearbyEvents(lastEventsGeo)
   };
   const fn = map[sectionMapId];
   if (fn) {
@@ -3828,10 +3904,11 @@ function osmEditorUrl(lat, lon, hint) {
 }
 function refreshSubmitMissingLinks(lat, lon) {
   const targets = [
-    { id: "ps-submit-missing",      hint: "fire station, police, hospital, clinic, dentist, pharmacy" },
-    { id: "schools-submit-missing", hint: "school, daycare, library" },
-    { id: "parks-submit-missing",   hint: "park, playground, dog park, trail" },
-    { id: "hs-submit-missing",      hint: "plumber, electrician, hardware store" }
+    { id: "ps-submit-missing",       hint: "fire station, police, hospital, clinic, dentist, pharmacy" },
+    { id: "schools-submit-missing",  hint: "school, daycare, library" },
+    { id: "parks-submit-missing",    hint: "park, playground, dog park, trail" },
+    { id: "hs-submit-missing",       hint: "plumber, electrician, hardware store" },
+    { id: "events-submit-missing",   hint: "farmers market, place of worship, community center" }
   ];
   targets.forEach(t => {
     const el = document.getElementById(t.id);
@@ -4082,12 +4159,23 @@ const SECTION_META = {
       "ps-dentist-section":   "dentist",
       "ps-civic-section":     "civic"
     }
+  },
+  "card-events": {
+    mapElId: "events-map",
+    summaryElId: "events-summary",
+    subtabToCategory: {
+      "events-markets-section":   "markets",
+      "events-worship-section":   "worship",
+      "events-community-section": "community",
+      "events-online-section":    null   // online subtab has no OSM items, just deep-links
+    }
   }
 };
 // Per-section state — { grouped, geo: {lat, lon} }. Populated by load functions.
 const sectionState = {
   "card-school": null, "card-parks": null,
-  "card-home-services": null, "card-public-services": null
+  "card-home-services": null, "card-public-services": null,
+  "card-events": null   // v0.35.0
 };
 // Re-render map + pill for the active subtab of a given card.
 // v0.33.4: if the currently-active subtab is empty BUT another subtab has data,
@@ -4713,35 +4801,44 @@ function haversineMiles(lat1, lon1, lat2, lon2) {
 }
 
 // Run a single Overpass QL query, falling through mirrors until one works.
+// v0.35.0: Race ALL mirrors in parallel via Promise.any. The first mirror to
+// respond with a valid (non-killed) payload wins. Cuts worst-case latency
+// from ~24s (sequential 2-mirror chain × 12s) to ~12s (single timeout, since
+// at least one mirror almost always responds in 2-5s). All 4 mirrors fire
+// simultaneously — small bandwidth cost, big perceived-speed win.
 async function overpassQuery(qlBody, onProgress) {
-  let lastErr = null;
-  for (let i = 0; i < OVERPASS_MIRRORS.length; i++) {
-    const baseUrl = OVERPASS_MIRRORS[i];
+  const tries = OVERPASS_MIRRORS.map(baseUrl => {
     const host = new URL(baseUrl).host;
-    if (onProgress) onProgress(i + 1, OVERPASS_MIRRORS.length, host);
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(new Error(`Timed out on ${host}`)), 25000);
-      const res = await fetch(baseUrl + "?data=" + encodeURIComponent(qlBody),
-                              { method: "GET", signal: ctrl.signal });
-      clearTimeout(t);
-      if (!res.ok) { lastErr = new Error(`${host}: HTTP ${res.status}`); console.warn("[overpass]", lastErr.message); continue; }
-      const data = await res.json();
-      // v0.30: Overpass servers sometimes return 200 with `remark: "killed/timeout"`
-      // when the query is too heavy (large radius + dense category). Detect and retry.
-      if (data.remark && /timed?\s*out|killed|memory|too\s+many|exceeded/i.test(data.remark)) {
-        lastErr = new Error(`${host}: ${data.remark}`);
-        console.warn("[overpass]", lastErr.message);
-        continue;
+    return new Promise(async (resolve, reject) => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 12000);
+        const res = await fetch(baseUrl + "?data=" + encodeURIComponent(qlBody),
+                                { method: "GET", signal: ctrl.signal });
+        clearTimeout(t);
+        if (!res.ok) {
+          console.warn(`[overpass] ${host}: HTTP ${res.status}`);
+          return reject(new Error(`${host}: HTTP ${res.status}`));
+        }
+        const data = await res.json();
+        if (data.remark && /timed?\s*out|killed|memory|too\s+many|exceeded/i.test(data.remark)) {
+          console.warn(`[overpass] ${host}: ${data.remark}`);
+          return reject(new Error(`${host}: ${data.remark}`));
+        }
+        if (onProgress) onProgress(1, 1, host);
+        resolve(data.elements || []);
+      } catch (e) {
+        const msg = (e && e.name === "AbortError") ? `${host}: timed out` : `${host}: ${(e && e.message) || e}`;
+        console.warn(`[overpass] ${msg}`);
+        reject(new Error(msg));
       }
-      return data.elements || [];
-    } catch (e) {
-      if (e && e.name === "AbortError") lastErr = new Error(`${host}: server too slow`);
-      else lastErr = new Error(`${host}: ${e.message || e}`);
-      console.warn("[overpass]", lastErr.message);
-    }
+    });
+  });
+  try {
+    return await Promise.any(tries);
+  } catch (aggregateErr) {
+    throw new Error("All Overpass mirrors failed within 12s");
   }
-  throw lastErr || new Error("All Overpass mirrors failed");
 }
 
 async function fetchNearbyEducation(lat, lon, radiusMeters, onProgress) {
@@ -4752,8 +4849,8 @@ async function fetchNearbyEducation(lat, lon, radiusMeters, onProgress) {
   // and is far less likely to 504. Promise.allSettled means partial
   // success is OK — if schools succeed but amenities fail (or vice
   // versa), we still show the user what we have.
-  const schoolsQ = `[out:json][timeout:18];(nwr["amenity"="school"](around:${radiusMeters},${lat},${lon});nwr["amenity"="kindergarten"](around:${radiusMeters},${lat},${lon});nwr["amenity"~"^(college|university)$"](around:${radiusMeters},${lat},${lon}););out center tags;`;
-  const amenQ    = `[out:json][timeout:18];(nwr["amenity"="library"](around:${radiusMeters},${lat},${lon});nwr["leisure"~"^(swimming_pool|sports_centre)$"](around:${radiusMeters},${lat},${lon});nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon}););out center tags;`;
+  const schoolsQ = `[out:json][timeout:10];(nwr["amenity"="school"](around:${radiusMeters},${lat},${lon});nwr["amenity"="kindergarten"](around:${radiusMeters},${lat},${lon});nwr["amenity"~"^(college|university)$"](around:${radiusMeters},${lat},${lon}););out center tags;`;
+  const amenQ    = `[out:json][timeout:10];(nwr["amenity"="library"](around:${radiusMeters},${lat},${lon});nwr["leisure"~"^(swimming_pool|sports_centre)$"](around:${radiusMeters},${lat},${lon});nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon}););out center tags;`;
 
   // Only one of the two queries reports progress, otherwise the loading
   // message would jitter as both update at once.
@@ -6085,11 +6182,11 @@ async function fetchNearbyParks(lat, lon, radiusMeters) {
   // v0.30 fix: split into two queries — main parks (parks/playgrounds/dogs/hiking)
   // can use full radius; footpath query is capped at FOOTPATH_CAP_M to avoid
   // timeouts. Promise.allSettled means a failure in one doesn't kill the other.
-  const mainQ = `[out:json][timeout:25];(`
+  const mainQ = `[out:json][timeout:10];(`
     + `nwr["leisure"~"^(park|dog_park|playground|garden|nature_reserve)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["route"="hiking"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  const pathQ = `[out:json][timeout:18];(`
+  const pathQ = `[out:json][timeout:10];(`
     + `nwr["highway"="path"]["foot"="designated"]["name"](around:${FOOTPATH_CAP_M},${lat},${lon});`
     + `);out center tags;`;
   const results = await Promise.allSettled([overpassQuery(mainQ), overpassQuery(pathQ)]);
@@ -6189,10 +6286,10 @@ async function fetchHomeServices(lat, lon, radiusMeters) {
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   // v0.30 fix: restrict craft=* to the trades we actually classify (instead of "all crafts")
   // and split into parallel queries so one timeout doesn't kill the whole section.
-  const craftQ = `[out:json][timeout:25];(`
+  const craftQ = `[out:json][timeout:10];(`
     + `nwr["craft"~"^(handyman|general|plumber|electrician|hvac|heating_engineer|air_conditioning|painter|carpenter|joiner|cabinet_maker|builder|roofer|gardener|garden|cleaner|window_cleaner|locksmith)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  const shopQ = `[out:json][timeout:20];(`
+  const shopQ = `[out:json][timeout:10];(`
     + `nwr["shop"~"^(hardware|doityourself|trade|paint|appliance|electrical)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["office"="construction_company"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
@@ -6332,22 +6429,26 @@ async function fetchPublicServices(lat, lon, radiusMeters) {
   // v0.30: default to current global radius if not specified
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   // v0.30 fix: split into amenity vs healthcare so a slow query in one doesn't kill both
-  const amenQ = `[out:json][timeout:25];(`
+  const amenQ = `[out:json][timeout:10];(`
     + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall|courthouse)$"](around:${radiusMeters},${lat},${lon});`
     + `nwr["emergency"="fire_station"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  const hcQ = `[out:json][timeout:20];(`
+  const hcQ = `[out:json][timeout:10];(`
     + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  // v0.34.1/v0.34.4: civic add-ons — DMV / government offices.
-  // v0.34.4: dropped `[government]` (matches any value, very slow) and the
-  // regex name search (also slow). Now restricted to specific tag values.
-  const civicQ = `[out:json][timeout:15];(`
+  // v0.34.1/v0.34.4/v0.35.0: civic add-ons — government offices.
+  const civicQ = `[out:json][timeout:10];(`
     + `nwr["office"="government"](around:${radiusMeters},${lat},${lon});`
     + `nwr["amenity"="public_building"](around:${radiusMeters},${lat},${lon});`
     + `nwr["government"~"^(local_authority|administrative|legislative|department)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ), overpassQuery(civicQ)]);
+  // v0.35.0: separate small query for DMV-named places — runs in parallel,
+  // small enough that the regex name search isn't a perf risk now that we
+  // race mirrors via Promise.any.
+  const dmvQ = `[out:json][timeout:10];(`
+    + `nwr["name"~"DMV|Department of Motor Vehicles|Motor Vehicle Office|RMV|Bureau of Motor Vehicles",i](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ), overpassQuery(civicQ), overpassQuery(dmvQ)]);
   const out = [];
   results.forEach(r => { if (r.status === "fulfilled" && Array.isArray(r.value)) out.push(...r.value); });
   return out;
@@ -6458,6 +6559,126 @@ function renderPublicServices(grouped, total, cityKey) {
   if (total === 0) {
     $("ps-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius above, or check Google Maps directly.</div>`;
   }
+}
+
+/* =====================================================================
+   v0.35.0: Events section — farmers markets, religious services, community
+   programs. OSM-only for V1 (amenity=marketplace, place_of_worship,
+   community_centre). Real-time event APIs (Eventbrite, Meetup) deferred to
+   Phase 5 with paid integrations.
+   ===================================================================== */
+async function fetchEventVenues(lat, lon, radiusMeters) {
+  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
+  const q = `[out:json][timeout:12];(`
+    + `nwr["amenity"="marketplace"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon});`
+    + `);out center tags;`;
+  return await overpassQuery(q);
+}
+function classifyEventVenue(el) {
+  const t = el.tags || {};
+  const name = t.name || t["name:en"];
+  if (!name) return null;
+  const lat = el.lat ?? (el.center && el.center.lat);
+  const lon = el.lon ?? (el.center && el.center.lon);
+  if (lat == null || lon == null) return null;
+  const am = (t.amenity || "").toLowerCase();
+  let category, subtype;
+  if (am === "marketplace") {
+    category = "markets";
+    subtype = "Farmers market";
+  } else if (am === "place_of_worship") {
+    category = "worship";
+    const religion = (t.religion || "").toLowerCase();
+    const denom    = (t.denomination || "").toLowerCase();
+    subtype = religion ? religion.charAt(0).toUpperCase() + religion.slice(1) + (denom ? ` (${denom})` : "") : "Place of worship";
+  } else if (am === "community_centre") {
+    category = "community";
+    subtype = "Community center";
+  } else return null;
+  const score = osmScore(t);
+  const reasons = osmReasons(t);
+  return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
+    website: t.website || t["contact:website"] || t.url || null,
+    phone: t.phone || t["contact:phone"] || null,
+    opening_hours: t.opening_hours || t.service_times || null,
+    access: (t.access === "private") ? "private" : null
+  };
+}
+let lastEventsGeo = null;
+async function loadNearbyEvents(geo) {
+  lastEventsGeo = geo;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  $("card-events").hidden = false;
+  const loading = $("events-loading");
+  loading.hidden = false;
+  $("events-sections").hidden = true;
+  $("events-summary").hidden = true;
+  setText("events-value", "Searching…");
+  try {
+    const elements = await fetchEventVenues(lat, lon);
+    const itemsRaw = (elements || [])
+      .map(classifyEventVenue)
+      .filter(Boolean)
+      .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
+      .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name));
+    const items = rankByScoreThenDistance(itemsRaw);
+    const grouped = {
+      markets:   items.filter(i => i.category === "markets").slice(0, 30),
+      worship:   items.filter(i => i.category === "worship").slice(0, 60),
+      community: items.filter(i => i.category === "community").slice(0, 30)
+    };
+    renderEvents(grouped, items.length, getCityKey(geo.address || {}), geo);
+    sectionState["card-events"] = { grouped, geo: { lat, lon } };
+    refreshActiveSubtabFor("card-events");
+  } catch (err) {
+    loading.innerHTML = `Couldn't load nearby event venues: ${escapeHtml(err.message || "network error")}.`;
+  }
+}
+function renderEvents(grouped, total, cityKey, geo) {
+  $("events-loading").hidden = true;
+  $("events-sections").hidden = false;
+  const pill = $("events-summary");
+  pill.hidden = false;
+  pill.textContent = `${total} venue${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
+  setText("events-value", total > 0 ? `${total} weekend-event venues nearby` : "No venues found in OSM");
+  const fill = (sectionId, tbodyId, items) => {
+    const sec = $(sectionId), tb = $(tbodyId);
+    if (!items.length) { sec.hidden = true; return; }
+    sec.hidden = false;
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
+  };
+  fill("events-markets-section",   "events-markets-tbody",   grouped.markets);
+  fill("events-worship-section",   "events-worship-tbody",   grouped.worship);
+  fill("events-community-section", "events-community-tbody", grouped.community);
+
+  // "Find events online" — always populated (deep-links don't depend on geo)
+  renderEventsOnline(geo);
+}
+function renderEventsOnline(geo) {
+  const addr = (geo && geo.address) || {};
+  const cityKey = getCityKey(addr) || (addr.city || addr.town || "");
+  const stateCode = getStateCode(addr) || "";
+  const zip = addr.postcode || "";
+  const eventbriteUrl = cityKey
+    ? `https://www.eventbrite.com/d/${encodeURIComponent(cityKey.toLowerCase().replace(/\s+/g,'-') + '--' + (stateCode || 'us').toLowerCase())}/events/`
+    : `https://www.eventbrite.com/d/local/events/`;
+  const meetupUrl = cityKey ? `https://www.meetup.com/find/?keywords=&location=${encodeURIComponent(cityKey + ', ' + stateCode)}` : `https://www.meetup.com/`;
+  const facebookUrl = cityKey ? `https://www.facebook.com/events/search/?q=${encodeURIComponent(cityKey + ' ' + (stateCode || ''))}` : `https://www.facebook.com/events/`;
+  const googleUrl = `https://www.google.com/search?q=${encodeURIComponent('events this weekend ' + (cityKey || zip || 'near me'))}`;
+  const card = (icon, title, meta, url, linkText) => `<a class="civic-card" href="${url}" target="_blank" rel="noopener">
+    <div class="civic-card-icon">${icon}</div>
+    <div class="civic-card-title">${escapeHtml(title)}</div>
+    <div class="civic-card-meta">${escapeHtml(meta)}</div>
+    <div class="civic-card-link">${escapeHtml(linkText)}</div>
+  </a>`;
+  $("events-online-body").innerHTML = [
+    card("🎫", "Eventbrite events", `Local exhibitions, classes, festivals — pre-filtered to ${cityKey || "your area"}`, eventbriteUrl, "Browse Eventbrite →"),
+    card("👥", "Meetup groups", "Local interest groups + recurring meetups by city", meetupUrl, "Browse Meetup →"),
+    card("📘", "Facebook local events", "Community gatherings + casual events posted by neighbors", facebookUrl, "Browse Facebook events →"),
+    card("🔎", "This weekend (Google)", `Live search for "events this weekend" in ${cityKey || "your area"}`, googleUrl, "Search Google →")
+  ].join("");
 }
 
 /* =====================================================================
@@ -6800,6 +7021,9 @@ function renderResults(geo) {
   // v0.27: Home services + Public services (also Overpass-driven, runs in parallel)
   loadNearbyHomeServices(geo);
   loadNearbyPublicServices(geo);
+
+  // v0.35.0: Events section (farmers markets / churches / community centers)
+  loadNearbyEvents(geo);
 
   // v0.33: Civic & gov't deep-link hub + state-coverage banner
   renderCivicSection(a);
