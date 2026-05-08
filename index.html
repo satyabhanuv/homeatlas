@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.2</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.3</span>
     </div>
   </header>
 
@@ -2112,7 +2112,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.35.2 · May 2026 · Phase 2 · Empty-state Google Maps fallback button · broader DMV detection (Driver Services, Tag Office, RMV, BMV variants)
+      <b>HomeAtlas</b> &mdash; v0.35.3 · May 2026 · Phase 2 · CRITICAL FIX — empty-states no longer destroy subtab targets; sections stay visible so tabs can navigate even when OSM is empty
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -5392,13 +5392,16 @@ function renderSchoolSections(grouped, total, cityKey) {
   const pill = $("school-summary"); pill.hidden = false;
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
 
-  // v0.26: render the 3 levels in a 2-per-row grid (E + M side-by-side, H alone on row 2)
+  // v0.35.3: keep sections visible even when empty so subtab navigation works.
+  // Empty sections show a placeholder; non-empty sections render their cards.
+  const emptyMsg = `<div class="schools-empty" style="padding:10px;">No matches in this category within ${CURRENT_RADIUS_MI} mi.</div>`;
   const fill3x = (sectionId, tbodyId, pool) => {
     const sec = $(sectionId), tb = $(tbodyId);
-    if (!pool || !pool.length) { sec.hidden = true; return; }
+    if (!sec || !tb) return;
+    sec.hidden = false;  // always visible — subtabs need their target
+    if (!pool || !pool.length) { tb.innerHTML = emptyMsg; return; }
     const picks = pickThreeLevels(pool);
-    if (!picks.Elementary && !picks.Middle && !picks.High) { sec.hidden = true; return; }
-    sec.hidden = false;
+    if (!picks.Elementary && !picks.Middle && !picks.High) { tb.innerHTML = emptyMsg; return; }
     const rows = [
       levelRow("Elementary", picks.Elementary, cityKey),
       levelRow("Middle",     picks.Middle,     cityKey),
@@ -5412,19 +5415,27 @@ function renderSchoolSections(grouped, total, cityKey) {
   fill3x("private-section", "private-tbody", grouped.private);
   fill3x("other-section",   "other-tbody",   grouped.other || []);
 
-  // v0.26: Higher Ed and enrichment also render 2-per-row
+  // v0.26/v0.35.3: Higher Ed and enrichment — keep visible on empty too
   const fillSimple = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
-    if (!items.length) { sec.hidden = true; return; }
+    if (!sec || !tb) return;
     sec.hidden = false;
-    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
+    if (!items.length) { tb.innerHTML = emptyMsg; return; }
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fillSimple("higher-section",     "higher-tbody",     grouped.higher);
   fillSimple("enrichment-section", "enrichment-tbody", grouped.enrichment);
 
+  // v0.35.3: don't destroy subsection structure on empty — subtab navigation
+  // depends on those IDs existing. Show a placeholder in each tbody instead.
   if (total === 0) {
-    $("school-sections").innerHTML =
-      `<div class="schools-empty">No schools or educational facilities found within ${CURRENT_RADIUS_MI} miles. Try a wider radius above, a more central address, or check the school district directly.</div>`;
+    const placeholder = `<div class="schools-empty" style="padding:14px;">No schools or educational facilities found within ${CURRENT_RADIUS_MI} miles. Try a wider radius, a more central address, or use the Google Maps button on the map below.</div>`;
+    ["public-tbody", "private-tbody", "other-tbody", "higher-tbody", "enrichment-tbody"].forEach(id => {
+      const tb = $(id); if (tb) tb.innerHTML = placeholder;
+    });
+    ["public-section", "private-section", "other-section", "higher-section", "enrichment-section"].forEach(id => {
+      const sec = $(id); if (sec) sec.hidden = false;
+    });
   }
 }
 
@@ -6307,11 +6318,13 @@ function renderParks(grouped, total, cityKey) {
   $("parks-summary").hidden = false;
   $("parks-summary").textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("parks-value", total > 0 ? `${total} places to explore` : "Nothing nearby in OpenStreetMap");
-  // v0.26: 2-per-row layout for park lists
+  // v0.26/v0.35.3: 2-per-row layout; sections always visible so subtabs can navigate
+  const emptyMsg = `<div class="schools-empty" style="padding:10px;">No matches in this category within ${CURRENT_RADIUS_MI} mi.</div>`;
   const fillSection = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
-    if (!items.length) { sec.hidden = true; return; }
+    if (!sec || !tb) return;
     sec.hidden = false;
+    if (!items.length) { tb.innerHTML = emptyMsg; return; }
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
   };
   fillSection("parks-park-section",       "parks-park-tbody",       grouped.park);
@@ -6440,10 +6453,13 @@ function renderHomeServices(grouped, total, cityKey) {
   pill.textContent = `${total} listing${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("hs-value", total > 0 ? `${total} listings` : "No registered trades nearby in OSM");
 
+  // v0.35.3: keep sections visible on empty so subtabs can navigate
+  const hsEmptyMsg = `<div class="schools-empty" style="padding:10px;">No matches in this trade within ${CURRENT_RADIUS_MI} mi.</div>`;
   const fill = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
-    if (!items.length) { sec.hidden = true; return; }
+    if (!sec || !tb) return;
     sec.hidden = false;
+    if (!items.length) { tb.innerHTML = hsEmptyMsg; return; }
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
   };
   fill("hs-handyman-section",   "hs-handyman-tbody",   grouped.handyman);
@@ -6461,7 +6477,14 @@ function renderHomeServices(grouped, total, cityKey) {
 
   if (total === 0) {
     setText("hs-value", "No registered trades nearby in OpenStreetMap");
-    $("hs-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">OpenStreetMap has no <code>craft=*</code> tagged trades within ${CURRENT_RADIUS_MI} mi of your home. Try widening the radius above, or this is common in suburbs and rural areas where OSM coverage is improving — search Google or Yelp for "[trade] near me" for now.</div>`;
+    // v0.35.3: keep subsection structure — populate each tbody with placeholder
+    const placeholder = `<div class="schools-empty" style="padding:14px;">OpenStreetMap has no <code>craft=*</code> tagged trades within ${CURRENT_RADIUS_MI} mi of your home. Try widening the radius, or use the Google Maps button on the map below.</div>`;
+    ["hs-handyman-tbody","hs-plumber-tbody","hs-electrician-tbody","hs-hvac-tbody","hs-painter-tbody","hs-carpenter-tbody","hs-roofer-tbody","hs-landscaper-tbody","hs-cleaner-tbody","hs-locksmith-tbody","hs-hardware-tbody","hs-other-tbody"].forEach(id => {
+      const tb = $(id); if (tb) tb.innerHTML = placeholder;
+    });
+    ["hs-handyman-section","hs-plumber-section","hs-electrician-section","hs-hvac-section","hs-painter-section","hs-carpenter-section","hs-roofer-section","hs-landscaper-section","hs-cleaner-section","hs-locksmith-section","hs-hardware-section","hs-other-section"].forEach(id => {
+      const sec = $(id); if (sec) sec.hidden = false;
+    });
   }
 }
 
@@ -6589,11 +6612,14 @@ function renderPublicServices(grouped, total, cityKey) {
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("ps-value", total > 0 ? `${total} services nearby` : "No public services found in OSM");
 
+  // v0.35.3: keep sections visible on empty so subtabs can navigate
+  const psEmptyMsg = `<div class="schools-empty" style="padding:10px;">No matches in this category within ${CURRENT_RADIUS_MI} mi.</div>`;
   const fill = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
-    if (!items.length) { sec.hidden = true; return; }
+    if (!sec || !tb) return;
     sec.hidden = false;
-    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });  // v0.34.2: top 6 + "+N more" expansion
+    if (!items.length) { tb.innerHTML = psEmptyMsg; return; }
+    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("ps-emergency-section", "ps-emergency-tbody", grouped.fire);
   fill("ps-police-section",    "ps-police-tbody",    grouped.police);
@@ -6603,8 +6629,15 @@ function renderPublicServices(grouped, total, cityKey) {
   fill("ps-dentist-section",   "ps-dentist-tbody",   grouped.dentist);
   fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic);
 
+  // v0.35.3: keep subsection structure intact when empty — subtab navigation depends on it
   if (total === 0) {
-    $("ps-sections").innerHTML = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius above, or check Google Maps directly.</div>`;
+    const placeholder = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius, or use the Google Maps button on the map below.</div>`;
+    ["ps-emergency-tbody","ps-police-tbody","ps-hospital-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody","ps-civic-tbody"].forEach(id => {
+      const tb = $(id); if (tb) tb.innerHTML = placeholder;
+    });
+    ["ps-emergency-section","ps-police-section","ps-hospital-section","ps-clinic-section","ps-pharmacy-section","ps-dentist-section","ps-civic-section"].forEach(id => {
+      const sec = $(id); if (sec) sec.hidden = false;
+    });
   }
 }
 
@@ -6690,10 +6723,13 @@ function renderEvents(grouped, total, cityKey, geo) {
   pill.hidden = false;
   pill.textContent = `${total} venue${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("events-value", total > 0 ? `${total} weekend-event venues nearby` : "No venues found in OSM");
+  // v0.35.3: keep sections visible on empty so subtabs can navigate
+  const evEmptyMsg = `<div class="schools-empty" style="padding:10px;">No venues in this category within ${CURRENT_RADIUS_MI} mi. Try the "Find events online" tab for Eventbrite/Meetup/Facebook listings.</div>`;
   const fill = (sectionId, tbodyId, items) => {
     const sec = $(sectionId), tb = $(tbodyId);
-    if (!items.length) { sec.hidden = true; return; }
+    if (!sec || !tb) return;
     sec.hidden = false;
+    if (!items.length) { tb.innerHTML = evEmptyMsg; return; }
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("events-markets-section",   "events-markets-tbody",   grouped.markets);
