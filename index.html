@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.4</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.5</span>
     </div>
   </header>
 
@@ -2112,7 +2112,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.35.4 · May 2026 · Phase 2 · Disabled Events Overpass fetch + halved mirror parallelism (2 not 4) to escape Overpass rate-limit that broke all sections
+      <b>HomeAtlas</b> &mdash; v0.35.5 · May 2026 · Phase 2 · Lazy-load sections — only fetch the tab you click. Eliminates parallel-fetch stampede entirely. Each section gets dedicated bandwidth.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3866,11 +3866,26 @@ function refetchAllRadialSections() {
     const el = $(id); if (el) el.hidden = true;
   });
   radiusRefetchTimer = setTimeout(async () => {
+    // v0.35.5: only refire sections the user has actually loaded — eliminates
+    // the parallel-fetch stampede on radius change. Other sections will lazy-
+    // load on next click. Clear the loaded cache so currently-active section
+    // can refetch with the new radius.
     const tasks = [];
-    if (typeof lastSchoolGeo !== "undefined" && lastSchoolGeo)   tasks.push(loadNearbySchools(lastSchoolGeo));
-    if (typeof lastParksGeo  !== "undefined" && lastParksGeo)    tasks.push(loadNearbyParks(lastParksGeo));
-    if (typeof lastHsGeo     !== "undefined" && lastHsGeo)       tasks.push(loadNearbyHomeServices(lastHsGeo));
-    if (typeof lastPsGeo     !== "undefined" && lastPsGeo)       tasks.push(loadNearbyPublicServices(lastPsGeo));
+    if (typeof sectionLoadedOnce !== "undefined") {
+      if (sectionLoadedOnce["sec-schools"]         && lastSchoolGeo) tasks.push(loadNearbySchools(lastSchoolGeo));
+      if (sectionLoadedOnce["sec-parks"]           && lastParksGeo)  tasks.push(loadNearbyParks(lastParksGeo));
+      if (sectionLoadedOnce["sec-home-services"]   && lastHsGeo)     tasks.push(loadNearbyHomeServices(lastHsGeo));
+      if (sectionLoadedOnce["sec-public-services"] && lastPsGeo)     tasks.push(loadNearbyPublicServices(lastPsGeo));
+      // No tasks? Just kick the currently-active section as a one-shot
+      if (!tasks.length) {
+        const active = document.querySelector(".sec-tab.active");
+        const aid = active && active.dataset.target;
+        if (aid) {
+          delete sectionLoadedOnce[aid];
+          if (typeof maybeLoadSection === "function") maybeLoadSection(aid);
+        }
+      }
+    }
     try { await Promise.allSettled(tasks); }
     catch (e) { console.error("[radius refetch]", e); }
     finally {
@@ -7097,7 +7112,6 @@ function renderResults(geo) {
   const t = resolveTV(cableForTV); renderTV(t);
   const sec = resolveSecurity(); renderSecurity(sec);
   const sc = resolveDistrict(a); renderDistrictHeader(sc);
-  loadNearbySchools(geo);
 
   // v0.25: stash addr + lat/lon so editing home details can re-resolve yard
   lastYardArgs = { addr: a, lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) };
@@ -7107,25 +7121,53 @@ function renderResults(geo) {
   const yard = resolveYard(a, lastYardArgs.lat, lastYardArgs.lon, ctx);
   renderYard(yard);
 
-  // v0.19: Home details, Climate risks, Parks
+  // v0.19: Home details, Climate risks (synchronous — no Overpass)
   renderHome(a);
   const risks = resolveRisks(a, lastYardArgs.lat, lastYardArgs.lon, yard.zone);
   renderRisks(risks);
-  loadNearbyParks(geo);   // async via Overpass
 
-  // v0.27: Home services + Public services (also Overpass-driven, runs in parallel)
-  loadNearbyHomeServices(geo);
-  loadNearbyPublicServices(geo);
-
-  // v0.35.0: Events section (farmers markets / churches / community centers)
-  loadNearbyEvents(geo);
-
-  // v0.33: Civic & gov't deep-link hub + state-coverage banner
+  // v0.33: Civic & gov't deep-link hub + state-coverage banner (synchronous)
   renderCivicSection(a);
   maybeRenderCoverageBanner(a);
 
   // v0.34.2: wire "Submit a missing place" deep-links to OSM iD editor at user's coords
   refreshSubmitMissingLinks(lastYardArgs.lat, lastYardArgs.lon);
+
+  // v0.35.5: LAZY LOAD — stash geo for Overpass-driven sections; don't fire them.
+  // The load function fires when the user clicks the section's tab. This
+  // eliminates the parallel-fetch stampede that was rate-limiting Overpass.
+  // Exception: My Home is always-active by default and needs nothing.
+  lastSchoolGeo = geo;
+  lastParksGeo  = geo;
+  lastHsGeo     = geo;
+  lastPsGeo     = geo;
+  lastEventsGeo = geo;
+  // Reset loaded flags so any new search starts fresh
+  for (const k of Object.keys(sectionLoadedOnce)) delete sectionLoadedOnce[k];
+  // If a non-default section is already active (deep-link via URL hash), kick its load
+  const active = document.querySelector(".sec-tab.active");
+  if (active && active.dataset.target) maybeLoadSection(active.dataset.target);
+}
+
+// v0.35.5: lazy-load registry — section header id → load fn that needs the
+// stashed geo. Only sections that hit Overpass appear here. Civic, Utility
+// services, Yard, Risks, My Home all use synchronous data and don't need it.
+const SECTION_LAZY_LOAD = {
+  "sec-public-services": () => lastPsGeo     && loadNearbyPublicServices(lastPsGeo),
+  "sec-schools":         () => lastSchoolGeo && loadNearbySchools(lastSchoolGeo),
+  "sec-parks":           () => lastParksGeo  && loadNearbyParks(lastParksGeo),
+  "sec-home-services":   () => lastHsGeo     && loadNearbyHomeServices(lastHsGeo)
+  // sec-events disabled per v0.35.4 — Events section has only deep-links
+};
+const sectionLoadedOnce = {};   // sectionId → true once its load has fired
+
+function maybeLoadSection(sectionId) {
+  if (!sectionId) return;
+  if (sectionLoadedOnce[sectionId]) return;          // already loaded this radius
+  const fn = SECTION_LAZY_LOAD[sectionId];
+  if (!fn) return;                                   // synchronous section, nothing to do
+  sectionLoadedOnce[sectionId] = true;
+  try { fn(); } catch (e) { console.warn("[lazy-load]", e); sectionLoadedOnce[sectionId] = false; }
 }
 
 // v0.25: cache last yard inputs so renderHome() can rerender plants after edits
@@ -7365,6 +7407,8 @@ function activateSingleViewSection(sectionId) {
   // Hide all managed siblings, show only the matching group
   document.querySelectorAll(".section-managed").forEach(el => el.classList.remove("section-active"));
   document.querySelectorAll(`.section-managed[data-section-group="${sectionId}"]`).forEach(el => el.classList.add("section-active"));
+  // v0.35.5: lazy-load this section's data if it hasn't fetched yet
+  if (typeof maybeLoadSection === "function") maybeLoadSection(sectionId);
   // Re-trigger any Leaflet maps in the newly-visible section so they redraw correctly
   // (Leaflet doesn't render properly when its container was display:none)
   setTimeout(() => {
