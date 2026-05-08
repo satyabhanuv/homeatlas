@@ -1072,6 +1072,21 @@
   }
   .section-map-retry-btn:hover { background: var(--primary-2); }
   .section-map-retry-btn:active { transform: translateY(1px); }
+  /* v0.35.2: action row holds Retry + Google Maps fallback */
+  .section-map-actions {
+    display: flex; gap: 8px; justify-content: center; flex-wrap: wrap;
+  }
+  .section-map-gmaps-btn {
+    padding: 7px 14px;
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    border: 1px solid var(--line);
+    font-size: 13px; font-weight: 600;
+    text-decoration: none;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .section-map-gmaps-btn:hover { background: var(--surface-2); border-color: #d6dbe3; }
   /* Marker labels */
   .leaflet-marker-icon.home-pin {
     filter: hue-rotate(170deg) saturate(1.5);
@@ -1383,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.2</span>
     </div>
   </header>
 
@@ -2097,7 +2112,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.35.1 · May 2026 · Phase 2 · DMV map inside DMV subtab · visible version stamp · v0.35.0 carries new logo + Events + Promise.any speed-up
+      <b>HomeAtlas</b> &mdash; v0.35.2 · May 2026 · Phase 2 · Empty-state Google Maps fallback button · broader DMV detection (Driver Services, Tag Office, RMV, BMV variants)
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3911,6 +3926,18 @@ const _sectionMaps = {};      // id → Leaflet map instance
 const _sectionMarkers = {};   // id → array of L.Marker
 const _sectionClusters = {};  // id → L.MarkerClusterGroup (v0.34.2)
 
+// v0.35.2: empty-state fallback queries — what to search on Google Maps if
+// OSM has no matches in this category at the user's address.
+const MAP_GOOGLE_QUERY = {
+  "schools-map":   "schools",
+  "parks-map":     "parks",
+  "hs-map":        "home services",
+  "ps-map":        "emergency services",
+  "civic-map":     "government offices",
+  "civic-dmv-map": "DMV office",
+  "events-map":    "weekend events"
+};
+
 // v0.34.2: build a deep-link to the OSM iD editor at the user's coordinates,
 // pre-filtered to a sensible category. Lets verified-residents fix the
 // long-tail OSM coverage gap (small playgrounds, single-shop trades) until
@@ -4095,13 +4122,15 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   } else {
     map.setView([centerLat, centerLon], 13);
   }
-  // v0.34.1/v0.34.4: explicit empty-state overlay with a Retry button.
-  // Retry button uses a `data-retry-section` attr; the delegated click handler
-  // (registered once at page load) re-fires the matching load function.
+  // v0.34.1/v0.34.4/v0.35.2: empty-state overlay with Retry + Google Maps fallback.
+  // OSM coverage is inevitably uneven — Google Maps is the user's escape hatch.
+  // The Google search URL embeds the user's lat/lon + a category-specific query.
   let overlay = el.querySelector(".section-map-noresults-overlay");
   if (validItems.length === 0) {
     const retryAttr = el.id ? ` data-retry-section="${el.id}"` : "";
-    const inner = `<b>No matches found here.</b><br>OpenStreetMap may have timed out or this category is genuinely empty within ${CURRENT_RADIUS_MI} mi. Click Retry, widen the radius, or try a different tab.<br><br><button class="section-map-retry-btn" type="button"${retryAttr}>↻ Retry this section</button>`;
+    const gmapsQuery = MAP_GOOGLE_QUERY[el.id] || "places";
+    const gmapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(gmapsQuery)}/@${centerLat.toFixed(5)},${centerLon.toFixed(5)},14z`;
+    const inner = `<b>No matches found here.</b><br>OpenStreetMap doesn't have "${gmapsQuery}" tagged within ${CURRENT_RADIUS_MI} mi of your home, or the query timed out. Try the Retry button, widen the radius, or fall back to Google Maps below — Google has more coverage but isn't ad-free.<br><br><div class="section-map-actions"><button class="section-map-retry-btn" type="button"${retryAttr}>↻ Retry</button><a class="section-map-gmaps-btn" href="${gmapsUrl}" target="_blank" rel="noopener">🔎 Search Google Maps</a></div>`;
     if (!overlay) {
       overlay = document.createElement("div");
       overlay.className = "section-map-noresults-overlay";
@@ -6459,11 +6488,12 @@ async function fetchPublicServices(lat, lon, radiusMeters) {
     + `nwr["amenity"="public_building"](around:${radiusMeters},${lat},${lon});`
     + `nwr["government"~"^(local_authority|administrative|legislative|department)$"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
-  // v0.35.0: separate small query for DMV-named places — runs in parallel,
-  // small enough that the regex name search isn't a perf risk now that we
-  // race mirrors via Promise.any.
+  // v0.35.0/v0.35.2: separate query for DMV-named places — broadened regex
+  // to catch CA's "Driver Services", state-by-state variants like "Secretary
+  // of State", "Tag Office", "License Office", and government=motor_vehicle.
   const dmvQ = `[out:json][timeout:10];(`
-    + `nwr["name"~"DMV|Department of Motor Vehicles|Motor Vehicle Office|RMV|Bureau of Motor Vehicles",i](around:${radiusMeters},${lat},${lon});`
+    + `nwr["name"~"DMV|Motor Vehicle|Driver License|Driver Services|Secretary of State|Tag Office|License Office|Title Office|RMV|BMV",i](around:${radiusMeters},${lat},${lon});`
+    + `nwr["government"="motor_vehicle"](around:${radiusMeters},${lat},${lon});`
     + `);out center tags;`;
   const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ), overpassQuery(civicQ), overpassQuery(dmvQ)]);
   const out = [];
@@ -6494,10 +6524,10 @@ function classifyPublicService(el) {
   else if (am === "post_office")                      { category = "civic";    subtype = "Post office"; }
   else if (am === "townhall")                         { category = "civic";    subtype = "Town hall"; }
   else if (am === "courthouse")                       { category = "civic";    subtype = "Courthouse"; }
-  // v0.34.1: civic add-ons — DMV, government offices, anything tagged office=government
-  else if ((t.office === "government") || t.government || /\b(DMV|Motor Vehicle|Department of Motor)/i.test(name)) {
+  // v0.34.1/v0.35.2: civic add-ons — DMV, government offices, motor-vehicle bureaus.
+  else if ((t.office === "government") || t.government || /\b(DMV|Motor Vehicle|Department of Motor|Driver License|Driver Services|Secretary of State|Tag Office|License Office|RMV|BMV)/i.test(name)) {
     category = "civic";
-    if (/\b(DMV|Motor Vehicle)/i.test(name)) subtype = "DMV / Vehicle services";
+    if (/\b(DMV|Motor Vehicle|Driver License|Driver Services|Tag Office|RMV|BMV)/i.test(name) || t.government === "motor_vehicle") subtype = "DMV / Vehicle services";
     else if (t.government) subtype = `Gov't · ${(t.government + "").replace(/_/g, " ")}`;
     else subtype = "Government office";
   }
@@ -6906,7 +6936,9 @@ function refreshDmvMap() {
   const ps = sectionState["card-public-services"];
   if (!ps || !ps.geo) return;
   const civicItems = (ps.grouped && ps.grouped.civic) || [];
-  const dmvOnly = civicItems.filter(it => /DMV|Motor Vehicle|Vehicle services|RMV|Driver License/i.test(it.subtype || "") || /DMV|Motor Vehicles/i.test(it.name || ""));
+  // v0.35.2: broader filter — match common DMV variants across states
+  const dmvRe = /DMV|Motor Vehicle|Driver License|Driver Services|Vehicle services|Tag Office|License Office|RMV|BMV/i;
+  const dmvOnly = civicItems.filter(it => dmvRe.test(it.subtype || "") || dmvRe.test(it.name || ""));
   setupSectionMap("civic-dmv-map", ps.geo.lat, ps.geo.lon, dmvOnly);
 }
 
