@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.3</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.35.4</span>
     </div>
   </header>
 
@@ -2112,7 +2112,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.35.3 · May 2026 · Phase 2 · CRITICAL FIX — empty-states no longer destroy subtab targets; sections stay visible so tabs can navigate even when OSM is empty
+      <b>HomeAtlas</b> &mdash; v0.35.4 · May 2026 · Phase 2 · Disabled Events Overpass fetch + halved mirror parallelism (2 not 4) to escape Overpass rate-limit that broke all sections
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -4847,13 +4847,14 @@ function haversineMiles(lat1, lon1, lat2, lon2) {
 }
 
 // Run a single Overpass QL query, falling through mirrors until one works.
-// v0.35.0: Race ALL mirrors in parallel via Promise.any. The first mirror to
-// respond with a valid (non-killed) payload wins. Cuts worst-case latency
-// from ~24s (sequential 2-mirror chain × 12s) to ~12s (single timeout, since
-// at least one mirror almost always responds in 2-5s). All 4 mirrors fire
-// simultaneously — small bandwidth cost, big perceived-speed win.
+// v0.35.0/v0.35.4: Race mirrors in parallel via Promise.any. v0.35.4 cap the
+// race at the FIRST 2 mirrors instead of all 4 — across 4-5 concurrent
+// sections × 3-4 subqueries each, hitting all 4 mirrors caused Overpass to
+// rate-limit (429), making ALL sections fail in ~2 seconds. With 2 mirrors,
+// peak concurrent requests drop from ~64 to ~32 — within Overpass's tolerance.
 async function overpassQuery(qlBody, onProgress) {
-  const tries = OVERPASS_MIRRORS.map(baseUrl => {
+  const MIRROR_COUNT = 2;
+  const tries = OVERPASS_MIRRORS.slice(0, MIRROR_COUNT).map(baseUrl => {
     const host = new URL(baseUrl).host;
     return new Promise(async (resolve, reject) => {
       try {
@@ -6648,13 +6649,12 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters) {
-  if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
-  const q = `[out:json][timeout:12];(`
-    + `nwr["amenity"="marketplace"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon});`
-    + `);out center tags;`;
-  return await overpassQuery(q);
+  // v0.35.4: temporarily disabled — adding this 5th concurrent Overpass stream
+  // triggered rate-limit (429) on mirrors, breaking ALL sections. The Events
+  // section still works via the "Find events online" subtab (Eventbrite /
+  // Meetup / Facebook / Google deep-links). Will re-enable in v0.36 with
+  // smarter throttling once we have analytics on real Overpass behavior.
+  return [];
 }
 function classifyEventVenue(el) {
   const t = el.tags || {};
