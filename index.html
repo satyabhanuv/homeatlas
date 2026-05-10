@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.40</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.40.1</span>
     </div>
   </header>
 
@@ -6788,12 +6788,28 @@ async function loadNearbyEvents(geo) {
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
       .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name));
     const items = rankByScoreThenDistance(itemsRaw);
+    // v0.40.1: merge curated PCFMA / Urban Village markets into the OSM
+    // venue list. OSM coverage of farmers markets is unreliable (Evergreen,
+    // Berryessa, etc. aren't tagged), so we prepend the curated venues —
+    // they sort to the top by score=100 and show their recurring schedule
+    // as opening_hours. Deduped by name (case-insensitive) to avoid showing
+    // the same market twice if OSM did happen to tag it.
+    const curatedMarkets = getCuratedFarmersMarketVenues(geo);
+    const osmMarkets = items.filter(i => i.category === "markets");
+    const seenMarketNames = new Set(curatedMarkets.map(m => m.name.toLowerCase()));
+    const mergedMarkets = [
+      ...curatedMarkets,
+      ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
+    ].slice(0, 40);
+    const totalCount = mergedMarkets.length
+      + items.filter(i => i.category === "worship").length
+      + items.filter(i => i.category === "community").length;
     const grouped = {
-      markets:   items.filter(i => i.category === "markets").slice(0, 30),
+      markets:   mergedMarkets,
       worship:   items.filter(i => i.category === "worship").slice(0, 60),
       community: items.filter(i => i.category === "community").slice(0, 30)
     };
-    renderEvents(grouped, items.length, getCityKey(geo.address || {}), geo);
+    renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
     // v0.38: also stash curated listings so refreshActiveSubtabFor can size
     // the per-subtab pill correctly when "Happening this month" is active.
     sectionState["card-events"] = { grouped: { ...grouped, listings: cityListings }, geo: { lat, lon } };
@@ -6908,22 +6924,96 @@ const HOMEATLAS_EVENTS_SEED = {
 const HOMEATLAS_EVENTS_RECURRING = {
   events: [
     // ---- San Jose (PCFMA) ----
-    { "city": "san jose", "state": "CA", "title": "Evergreen Farmers' Market", "venue": "4055 Evergreen Village Sq, San Jose 95121", "lat": 37.3140392, "lon": -121.773445, "category": "market", "recurring": { "days": [0, 3], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/evergreen-farmers-market", "source": "PCFMA — Evergreen", "verified": true, "free": true },
-    { "city": "san jose", "state": "CA", "title": "Berryessa Farmers' Market", "venue": "Berryessa Community Center, 1310 Mabury Rd, San Jose", "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/berryessa-farmers-market", "source": "PCFMA — Berryessa", "verified": true, "free": true },
-    { "city": "san jose", "state": "CA", "title": "Alum Rock Village Farmers' Market", "venue": "Alum Rock Ave (downtown Alum Rock), San Jose", "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "12:00" }, "url": "https://www.pcfma.org/market/alum-rock-village-farmers-market", "source": "PCFMA — Alum Rock", "verified": true, "free": true },
-    { "city": "san jose", "state": "CA", "title": "Kaiser Permanente San Jose Farmers' Market", "venue": "250 Hospital Pkwy, San Jose", "category": "market", "recurring": { "days": [2], "start": "09:30", "end": "13:30" }, "url": "https://www.pcfma.org/market/kaiser-permanente-san-jose-farmers-market", "source": "PCFMA — Kaiser SJ", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Evergreen Farmers' Market", "venue": "4055 Evergreen Village Sq, San Jose 95121", "lat": 37.3140, "lon": -121.7734, "category": "market", "recurring": { "days": [0, 3], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/evergreen-farmers-market", "source": "PCFMA — Evergreen", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Berryessa Farmers' Market", "venue": "Berryessa Community Center, 1310 Mabury Rd, San Jose", "lat": 37.3805, "lon": -121.8662, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/berryessa-farmers-market", "source": "PCFMA — Berryessa", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Alum Rock Village Farmers' Market", "venue": "Alum Rock Ave (downtown Alum Rock), San Jose", "lat": 37.3724, "lon": -121.8284, "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "12:00" }, "url": "https://www.pcfma.org/market/alum-rock-village-farmers-market", "source": "PCFMA — Alum Rock", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Kaiser Permanente San Jose Farmers' Market", "venue": "250 Hospital Pkwy, San Jose", "lat": 37.2769, "lon": -121.7945, "category": "market", "recurring": { "days": [2], "start": "09:30", "end": "13:30" }, "url": "https://www.pcfma.org/market/kaiser-permanente-san-jose-farmers-market", "source": "PCFMA — Kaiser SJ", "verified": true, "free": true },
     // ---- Milpitas (PCFMA) ----
-    { "city": "milpitas", "state": "CA", "title": "Milpitas Farmers' Market", "venue": "1100 S Park Victoria Dr (India Community Center), Milpitas", "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/milpitas-farmers-market", "source": "PCFMA — Milpitas", "verified": true, "free": true },
+    { "city": "milpitas", "state": "CA", "title": "Milpitas Farmers' Market", "venue": "1100 S Park Victoria Dr (India Community Center), Milpitas", "lat": 37.4255, "lon": -121.8843, "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/milpitas-farmers-market", "source": "PCFMA — Milpitas", "verified": true, "free": true },
     // ---- Sunnyvale (Urban Village) — replaces the manually-listed weekly instances ----
-    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village — Sunnyvale", "verified": true, "free": true },
+    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "lat": 37.3776, "lon": -122.0309, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village — Sunnyvale", "verified": true, "free": true },
     // ---- San Francisco (PCFMA + CUESA) ----
-    { "city": "san francisco", "state": "CA", "title": "Castro Farmers' Market", "venue": "Noe St between Market & 18th, San Francisco", "category": "market", "recurring": { "days": [3], "start": "15:00", "end": "19:00" }, "url": "https://www.pcfma.org/market/castro-farmers-market", "source": "PCFMA — Castro", "verified": true, "free": true },
-    { "city": "san francisco", "state": "CA", "title": "Divisadero Farmers' Market", "venue": "Divisadero between Hayes & Grove, San Francisco", "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/divisadero-farmers-market", "source": "PCFMA — Divisadero", "verified": true, "free": true },
-    { "city": "san francisco", "state": "CA", "title": "Fillmore Farmers' Market", "venue": "O'Farrell between Fillmore & Webster, San Francisco", "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/fillmore-farmers-market", "source": "PCFMA — Fillmore", "verified": true, "free": true },
-    { "city": "san francisco", "state": "CA", "title": "Inner Sunset Farmers' Market", "venue": "8th Ave between Irving & Judah, San Francisco", "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/inner-sunset-farmers-market", "source": "PCFMA — Inner Sunset", "verified": true, "free": true },
-    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Tuesday/Thursday", "venue": "1 Ferry Building, Embarcadero", "category": "market", "recurring": { "days": [2, 4], "start": "10:00", "end": "14:00" }, "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true }
+    { "city": "san francisco", "state": "CA", "title": "Castro Farmers' Market", "venue": "Noe St between Market & 18th, San Francisco", "lat": 37.7619, "lon": -122.4316, "category": "market", "recurring": { "days": [3], "start": "15:00", "end": "19:00" }, "url": "https://www.pcfma.org/market/castro-farmers-market", "source": "PCFMA — Castro", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Divisadero Farmers' Market", "venue": "Divisadero between Hayes & Grove, San Francisco", "lat": 37.7766, "lon": -122.4378, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/divisadero-farmers-market", "source": "PCFMA — Divisadero", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Fillmore Farmers' Market", "venue": "O'Farrell between Fillmore & Webster, San Francisco", "lat": 37.7847, "lon": -122.4322, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/fillmore-farmers-market", "source": "PCFMA — Fillmore", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Inner Sunset Farmers' Market", "venue": "8th Ave between Irving & Judah, San Francisco", "lat": 37.7639, "lon": -122.4664, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/inner-sunset-farmers-market", "source": "PCFMA — Inner Sunset", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Tuesday/Thursday", "venue": "1 Ferry Building, Embarcadero", "lat": 37.7956, "lon": -122.3935, "category": "market", "recurring": { "days": [2, 4], "start": "10:00", "end": "14:00" }, "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true }
   ]
 };
+
+// v0.40.1: render a recurring schedule as an OSM-style opening_hours string
+// so curated farmers markets can sit alongside OSM venues in the Farmers
+// markets subtab without a custom row renderer.
+const OSM_DAY_CODES = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+function humanizeRecurringForOsmHours(rec) {
+  if (!rec) return null;
+  const days = (rec.days || []).map(d => OSM_DAY_CODES[d]).filter(Boolean);
+  if (!days.length) return null;
+  const span = `${rec.start || ""}${rec.end ? "-" + rec.end : ""}`;
+  return `${days.join(",")} ${span}`.trim();
+}
+
+// v0.40.1: convert a recurring curated market to an OSM-shape venue so it
+// can render in the Farmers markets subtab next to OSM-tagged venues.
+// Returns null if the market lacks lat/lon (can't be plotted or distanced).
+function curatedMarketToVenueShape(m, originLat, originLon, radiusMi) {
+  if (!m || m.category !== "market") return null;
+  if (m.lat == null || m.lon == null) return null;
+  const dist = haversineMiles(originLat, originLon, m.lat, m.lon);
+  if (dist > radiusMi) return null;
+  return {
+    name: m.title,
+    category: "markets",            // matches SECTION_META["card-events"].subtabToCategory
+    subtype: "Farmers market",
+    lat: m.lat, lon: m.lon, dist,
+    score: 100,                     // top of the heap — these are verified
+    reasons: ["curated · " + (m.source || "PCFMA")],
+    verified: true,
+    website: m.url || null,
+    phone: null,
+    opening_hours: humanizeRecurringForOsmHours(m.recurring),
+    access: null,
+    _curated: true
+  };
+}
+
+// Build the list of curated farmers markets as OSM-shape venues, filtered to
+// the resolved candidates + current radius. Deduped by title.
+function getCuratedFarmersMarketVenues(geo) {
+  if (!geo) return [];
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  if (!isFinite(lat) || !isFinite(lon)) return [];
+  // Reuse the candidate-resolution machinery so user's typed city + ZIP
+  // matter for the Farmers markets subtab too (otherwise typing "Milpitas"
+  // wouldn't surface Milpitas Farmers' Market when geocoder says SJ).
+  const addr = geo.address || {};
+  const candidates = new Set();
+  ["city","town","village","borough","hamlet","municipality","suburb","neighbourhood","county"]
+    .forEach(k => { if (addr[k]) candidates.add(normalizeCityKey(addr[k])); });
+  try { if (typeof getCityKey === "function") {
+    const k = getCityKey(addr); if (k) candidates.add(normalizeCityKey(k));
+  } } catch(e) {}
+  (geo.display_name || "").split(/,\s*/).forEach(part => { if (part) candidates.add(normalizeCityKey(part)); });
+  try {
+    const typed = (document.getElementById("addr")?.value || "");
+    typed.split(/,\s*/).forEach(part => { if (part) candidates.add(normalizeCityKey(part)); });
+  } catch(e) {}
+  const zip = (addr.postcode || "").toString().match(/\d{5}/)?.[0];
+  if (zip && ZIP_TO_SEED_CITIES[zip]) ZIP_TO_SEED_CITIES[zip].forEach(c => candidates.add(c));
+
+  const seenTitles = new Set();
+  const out = [];
+  for (const m of HOMEATLAS_EVENTS_RECURRING.events) {
+    if (m.category !== "market") continue;
+    if (!candidates.has(normalizeCityKey(m.city))) continue;
+    if (seenTitles.has(m.title)) continue;
+    const v = curatedMarketToVenueShape(m, lat, lon, CURRENT_RADIUS_MI);
+    if (v) { out.push(v); seenTitles.add(m.title); }
+  }
+  // Sort by distance asc
+  out.sort((a, b) => a.dist - b.dist);
+  return out;
+}
 
 // Expand a recurring event into concrete date instances in [now, horizon].
 function expandRecurringEvent(ev, now, horizon) {
