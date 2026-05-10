@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.37.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.38</span>
     </div>
   </header>
 
@@ -1840,7 +1840,7 @@
     <div class="page-section-header parks" id="sec-events">
       <div class="psh-icon">🎪</div>
       <div class="psh-text">
-        <h2 class="psh-title">Events this weekend</h2>
+        <h2 class="psh-title">Events near you</h2>
       </div>
     </div>
 
@@ -2117,7 +2117,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.37.1 · May 2026 · Phase 2 · Curated event listings now refresh synchronously the moment the address changes — no more stale data from the previous city if Overpass is slow.
+      <b>HomeAtlas</b> &mdash; v0.38 · May 2026 · Phase 2 · Events tab now lands on "Happening this month" by default. Headline simplified to a clear single-number answer. Address change always resets to the curated view.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -4231,6 +4231,7 @@ const SECTION_META = {
     mapElId: "events-map",
     summaryElId: "events-summary",
     subtabToCategory: {
+      "events-listings-section":  "listings",  // v0.38: curated events feed
       "events-markets-section":   "markets",
       "events-worship-section":   "worship",
       "events-community-section": "community",
@@ -4257,14 +4258,45 @@ function refreshActiveSubtabFor(cardId) {
   let activeSubtab = subnav.querySelector(".subtab.active") || subnav.querySelector(".subtab");
   if (!activeSubtab) return;
   const allSubtabs = Array.from(subnav.querySelectorAll(".subtab[data-subtarget]"));
+
+  // v0.38: special-case the Events "Happening this month" tab. It uses curated
+  // listings (no lat/lon → no map) and we don't want the auto-switch logic to
+  // jump away from it just because state.grouped.listings is short.
+  const isCuratedListings = cardId === "card-events"
+    && activeSubtab.dataset.subtarget === "events-listings-section";
+  if (isCuratedListings) {
+    const listings = state.grouped.listings || [];
+    const pill = document.getElementById(meta.summaryElId);
+    if (pill) {
+      pill.hidden = false;
+      pill.textContent = `${listings.length} curated event${listings.length === 1 ? "" : "s"} · this month`;
+    }
+    // Hide the OSM venue map — irrelevant on the curated tab
+    const mapEl = document.getElementById(meta.mapElId);
+    if (mapEl) mapEl.style.display = "none";
+    return;
+  }
+
+  // Make sure the OSM map is visible for venue subtabs (in case we hid it on listings)
+  if (cardId === "card-events") {
+    const mapEl = document.getElementById(meta.mapElId);
+    if (mapEl) mapEl.style.display = "";
+  }
+
   const itemsFor = (subtab) => {
     const cat = meta.subtabToCategory[subtab.dataset.subtarget];
     return (cat && state.grouped[cat]) || [];
   };
   // If active subtab is empty but at least one peer has data, switch to the first non-empty.
   // Skip when user has explicitly clicked active (track via dataset.userPicked).
+  // v0.38: also skip if the would-be target is the curated listings tab — its
+  // auto-switch logic is special (handled above) and we don't want venue
+  // emptiness to bounce us back there mid-flow.
   if (!activeSubtab.dataset.userPicked && itemsFor(activeSubtab).length === 0) {
-    const firstWithData = allSubtabs.find(t => itemsFor(t).length > 0);
+    const firstWithData = allSubtabs.find(t => {
+      if (t.dataset.subtarget === "events-listings-section") return false;
+      return itemsFor(t).length > 0;
+    });
     if (firstWithData && firstWithData !== activeSubtab) {
       allSubtabs.forEach(t => t.classList.remove("active"));
       firstWithData.classList.add("active");
@@ -4283,6 +4315,7 @@ function refreshActiveSubtabFor(cardId) {
   const pill = document.getElementById(meta.summaryElId);
   if (pill) {
     const label = activeSubtab.textContent.trim();
+    pill.hidden = false;
     pill.textContent = `${items.length} ${label.toLowerCase()} · within ${CURRENT_RADIUS_MI} mi`;
   }
 }
@@ -6737,9 +6770,13 @@ async function loadNearbyEvents(geo) {
   });
 
   $("events-summary").hidden = true;
+  // v0.38: simplified headline — only mention curated count, drop the
+  // confusing venue total. Per-subtab pill ("1 farmers markets · within 2 mi")
+  // already shows venue counts when the user is on a venue subtab.
+  const cityName = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || "this area";
   setText("events-value", cityListings.length
-    ? `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} this month · loading nearby venues…`
-    : "Loading nearby event venues…");
+    ? `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} for ${cityName} this month`
+    : `Curated listings coming soon for ${cityName} — see venue tabs below`);
 
   try {
     const elements = await fetchEventVenues(lat, lon);
@@ -6755,7 +6792,9 @@ async function loadNearbyEvents(geo) {
       community: items.filter(i => i.category === "community").slice(0, 30)
     };
     renderEvents(grouped, items.length, getCityKey(geo.address || {}), geo);
-    sectionState["card-events"] = { grouped, geo: { lat, lon } };
+    // v0.38: also stash curated listings so refreshActiveSubtabFor can size
+    // the per-subtab pill correctly when "Happening this month" is active.
+    sectionState["card-events"] = { grouped: { ...grouped, listings: cityListings }, geo: { lat, lon } };
     refreshActiveSubtabFor("card-events");
   } catch (err) {
     // v0.37.1: OSM failure — show inline error in OSM-dependent subtabs only.
@@ -6775,12 +6814,17 @@ function renderEvents(grouped, total, cityKey, geo) {
   const pill = $("events-summary");
   pill.hidden = false;
   pill.textContent = `${total} venue${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
-  // v0.37: pull a curated count for the resolved city to enrich the headline
+  // v0.38: simplified headline. Curated count + city is the headline answer.
+  // Per-subtab pills already carry venue counts where they matter; combining
+  // both numbers in the headline was confusing ("4 + 29? what's the 29?").
   const cityListings = filterCuratedEventsForCity(geo);
+  const cityName = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || "this area";
   if (cityListings.length) {
-    setText("events-value", `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} this month + ${total} venue${total === 1 ? "" : "s"} nearby`);
+    setText("events-value", `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} for ${cityName} this month`);
+  } else if (total > 0) {
+    setText("events-value", `Curated listings coming soon for ${cityName} — ${total} venue${total === 1 ? "" : "s"} nearby in OSM`);
   } else {
-    setText("events-value", total > 0 ? `${total} event venues nearby` : "No venues found in OSM");
+    setText("events-value", `No data for ${cityName} yet — try the Find events online tab`);
   }
   // v0.35.3: keep sections visible on empty so subtabs can navigate
   const evEmptyMsg = `<div class="schools-empty" style="padding:10px;">No venues in this category within ${CURRENT_RADIUS_MI} mi. Try the "Find events online" tab for Eventbrite/Meetup/Facebook listings.</div>`;
@@ -7353,6 +7397,22 @@ function renderResults(geo) {
   lastEventsGeo = geo;
   // Reset loaded flags so any new search starts fresh
   for (const k of Object.keys(sectionLoadedOnce)) delete sectionLoadedOnce[k];
+
+  // v0.38: Force Events subtab back to "Happening this month" on every new
+  // search. Otherwise the user's previous subtab choice (e.g., Farmers markets)
+  // sticks across address changes and hides the curated answer behind a click.
+  // This way every new address lands on the most-informative tab.
+  const eventsSubnav = document.querySelector('.subnav[data-subnav-for="card-events"]');
+  if (eventsSubnav) {
+    eventsSubnav.querySelectorAll('.subtab.active').forEach(t => t.classList.remove('active'));
+    ["events-listings-section","events-markets-section","events-worship-section","events-community-section","events-online-section"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.classList.remove("subtab-active"); });
+    const listingsTab = eventsSubnav.querySelector('.subtab[data-subtarget="events-listings-section"]');
+    const listingsTarget = document.getElementById("events-listings-section");
+    if (listingsTab) listingsTab.classList.add("active");
+    if (listingsTarget) listingsTarget.classList.add("subtab-active");
+  }
+
   // If a non-default section is already active (deep-link via URL hash), kick its load
   const active = document.querySelector(".sec-tab.active");
   if (active && active.dataset.target) maybeLoadSection(active.dataset.target);
