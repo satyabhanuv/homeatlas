@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.39</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.40</span>
     </div>
   </header>
 
@@ -2117,7 +2117,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.39 · May 2026 · Phase 2 · Curated city resolution now reads the address bar, the geocoder, and a ZIP→cities map — so typing "Milpitas" wins over USPS-flavored "San Jose" for the 95134 ZIP.
+      <b>HomeAtlas</b> &mdash; v0.40 · May 2026 · Phase 2 · Added 11 PCFMA + CUESA farmers markets as recurring entries (Evergreen, Berryessa, Alum Rock, Kaiser SJ, Milpitas, Sunnyvale, Castro, Divisadero, Fillmore, Inner Sunset, Ferry Plaza Tue/Thu). Each market is one seed entry; the runtime expander emits all weekly instances in the next 30 days.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -6899,10 +6899,72 @@ const HOMEATLAS_EVENTS_SEED = {
   ]
 };
 
-// Cities that have curated coverage. Used to decide whether to show
-// "coming soon" vs. a real listing in the Happening-this-month tab.
+// =====================================================================
+// v0.40: Recurring events — Bay Area Farmers Markets from pcfma.org.
+// Each entry is ONE market; the recurrence expander emits all weekly
+// instances inside the active 30-day window. Days use JS Date#getDay
+// convention (0 = Sun, 1 = Mon, ..., 6 = Sat).
+// =====================================================================
+const HOMEATLAS_EVENTS_RECURRING = {
+  events: [
+    // ---- San Jose (PCFMA) ----
+    { "city": "san jose", "state": "CA", "title": "Evergreen Farmers' Market", "venue": "4055 Evergreen Village Sq, San Jose 95121", "lat": 37.3140392, "lon": -121.773445, "category": "market", "recurring": { "days": [0, 3], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/evergreen-farmers-market", "source": "PCFMA — Evergreen", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Berryessa Farmers' Market", "venue": "Berryessa Community Center, 1310 Mabury Rd, San Jose", "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/berryessa-farmers-market", "source": "PCFMA — Berryessa", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Alum Rock Village Farmers' Market", "venue": "Alum Rock Ave (downtown Alum Rock), San Jose", "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "12:00" }, "url": "https://www.pcfma.org/market/alum-rock-village-farmers-market", "source": "PCFMA — Alum Rock", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Kaiser Permanente San Jose Farmers' Market", "venue": "250 Hospital Pkwy, San Jose", "category": "market", "recurring": { "days": [2], "start": "09:30", "end": "13:30" }, "url": "https://www.pcfma.org/market/kaiser-permanente-san-jose-farmers-market", "source": "PCFMA — Kaiser SJ", "verified": true, "free": true },
+    // ---- Milpitas (PCFMA) ----
+    { "city": "milpitas", "state": "CA", "title": "Milpitas Farmers' Market", "venue": "1100 S Park Victoria Dr (India Community Center), Milpitas", "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/milpitas-farmers-market", "source": "PCFMA — Milpitas", "verified": true, "free": true },
+    // ---- Sunnyvale (Urban Village) — replaces the manually-listed weekly instances ----
+    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village — Sunnyvale", "verified": true, "free": true },
+    // ---- San Francisco (PCFMA + CUESA) ----
+    { "city": "san francisco", "state": "CA", "title": "Castro Farmers' Market", "venue": "Noe St between Market & 18th, San Francisco", "category": "market", "recurring": { "days": [3], "start": "15:00", "end": "19:00" }, "url": "https://www.pcfma.org/market/castro-farmers-market", "source": "PCFMA — Castro", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Divisadero Farmers' Market", "venue": "Divisadero between Hayes & Grove, San Francisco", "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/divisadero-farmers-market", "source": "PCFMA — Divisadero", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Fillmore Farmers' Market", "venue": "O'Farrell between Fillmore & Webster, San Francisco", "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/fillmore-farmers-market", "source": "PCFMA — Fillmore", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Inner Sunset Farmers' Market", "venue": "8th Ave between Irving & Judah, San Francisco", "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/inner-sunset-farmers-market", "source": "PCFMA — Inner Sunset", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Tuesday/Thursday", "venue": "1 Ferry Building, Embarcadero", "category": "market", "recurring": { "days": [2, 4], "start": "10:00", "end": "14:00" }, "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true }
+  ]
+};
+
+// Expand a recurring event into concrete date instances in [now, horizon].
+function expandRecurringEvent(ev, now, horizon) {
+  if (!ev || !ev.recurring) return [ev];
+  const days = ev.recurring.days || (ev.recurring.day != null ? [ev.recurring.day] : []);
+  const start = ev.recurring.start || "00:00";
+  const end   = ev.recurring.end || null;
+  const from  = ev.recurring.from ? new Date(ev.recurring.from) : now;
+  const until = ev.recurring.until ? new Date(ev.recurring.until) : horizon;
+  const cursor = new Date(Math.max(from.getTime(), now.getTime()));
+  // Walk to start of day to avoid time-of-day skipping today
+  cursor.setHours(0, 0, 0, 0);
+  const stop = new Date(Math.min(until.getTime(), horizon.getTime()));
+  const out = [];
+  for (let d = new Date(cursor); d <= stop; d.setDate(d.getDate() + 1)) {
+    if (!days.includes(d.getDay())) continue;
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const starts = `${yyyy}-${mm}-${dd}T${start}`;
+    const ends   = end ? `${yyyy}-${mm}-${dd}T${end}` : null;
+    // Skip instances whose end time has already passed today
+    const startDate = new Date(starts);
+    const endDate   = ends ? new Date(ends) : null;
+    if (endDate && endDate < now) continue;
+    if (!endDate && startDate < now) continue;
+    out.push({
+      city: ev.city, state: ev.state, title: ev.title, venue: ev.venue,
+      lat: ev.lat, lon: ev.lon, category: ev.category, url: ev.url,
+      source: ev.source, verified: !!ev.verified, free: !!ev.free,
+      starts, ends
+    });
+  }
+  return out;
+}
+
+// Cities that have curated coverage (both one-off + recurring). Used to decide
+// whether to show "coming soon" vs. a real listing in Happening-this-month.
 const CURATED_EVENT_CITIES = new Set(
   HOMEATLAS_EVENTS_SEED.events.map(e => e.city.toLowerCase())
+  .concat(HOMEATLAS_EVENTS_RECURRING.events.map(e => e.city.toLowerCase()))
 );
 
 // v0.39: ZIP → seed-cities-likely-relevant fallback. ZIPs span multiple
@@ -7004,16 +7066,34 @@ function filterCuratedEventsForCity(geo) {
 
   const now = new Date();
   const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
-  const matched = HOMEATLAS_EVENTS_SEED.events
+
+  // One-off events
+  const oneOffs = HOMEATLAS_EVENTS_SEED.events
     .filter(ev => candidates.has(normalizeCityKey(ev.city)))
     .filter(ev => {
       const t = new Date(ev.starts);
       return !isNaN(t) && t >= now && t <= horizon;
+    });
+
+  // v0.40: recurring events — expand once per matching market
+  const recurringInstances = HOMEATLAS_EVENTS_RECURRING.events
+    .filter(ev => candidates.has(normalizeCityKey(ev.city)))
+    .flatMap(ev => expandRecurringEvent(ev, now, horizon));
+
+  // Dedupe by (city, title, starts) in case a one-off duplicates a recurring instance
+  const seen = new Set();
+  const matched = [...oneOffs, ...recurringInstances]
+    .filter(ev => {
+      const key = `${ev.city}|${ev.title}|${ev.starts}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
     })
     .sort((a, b) => a.starts.localeCompare(b.starts));
 
   if (window.HOMEATLAS_DEBUG) {
-    console.log("[curated] candidates =", [...candidates], "→", matched.length, "events");
+    console.log("[curated] candidates =", [...candidates],
+                "→", oneOffs.length, "one-offs +", recurringInstances.length, "recurring instances =", matched.length);
   }
   return matched;
 }
