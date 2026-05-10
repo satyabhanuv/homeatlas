@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.37</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.37.1</span>
     </div>
   </header>
 
@@ -2117,7 +2117,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.37 · May 2026 · Phase 2 · Curated event listings shipped for Bay Area (San Jose · Milpitas · Sunnyvale · San Francisco) and Philadelphia metro (Phoenixville · King of Prussia · Philadelphia). Other cities will follow as the scrape pipeline rolls out.
+      <b>HomeAtlas</b> &mdash; v0.37.1 · May 2026 · Phase 2 · Curated event listings now refresh synchronously the moment the address changes — no more stale data from the previous city if Overpass is slow.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -6718,10 +6718,29 @@ async function loadNearbyEvents(geo) {
   const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
   $("card-events").hidden = false;
   const loading = $("events-loading");
-  loading.hidden = false;
-  $("events-sections").hidden = true;
+
+  // v0.37.1: render curated listings + deep-links SYNCHRONOUSLY up front.
+  // They don't depend on OSM, so the user should see the new city's data
+  // the instant the address changes — even if Overpass fails or hangs.
+  // Previously these lived only inside renderEvents() which only fires on
+  // OSM success, so stale data from the prior city would linger.
+  $("events-sections").hidden = false;
+  loading.hidden = true;
+  const cityListings = filterCuratedEventsForCity(geo);
+  renderEventsListings(geo, cityListings);
+  renderEventsOnline(geo);
+
+  // OSM-dependent subtabs: clear stale content while we wait for Overpass
+  const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
+  ["events-markets-tbody", "events-worship-tbody", "events-community-tbody"].forEach(id => {
+    const el = $(id); if (el) el.innerHTML = osmLoadingMsg;
+  });
+
   $("events-summary").hidden = true;
-  setText("events-value", "Searching…");
+  setText("events-value", cityListings.length
+    ? `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} this month · loading nearby venues…`
+    : "Loading nearby event venues…");
+
   try {
     const elements = await fetchEventVenues(lat, lon);
     const itemsRaw = (elements || [])
@@ -6739,7 +6758,15 @@ async function loadNearbyEvents(geo) {
     sectionState["card-events"] = { grouped, geo: { lat, lon } };
     refreshActiveSubtabFor("card-events");
   } catch (err) {
-    loading.innerHTML = `Couldn't load nearby event venues: ${escapeHtml(err.message || "network error")}.`;
+    // v0.37.1: OSM failure — show inline error in OSM-dependent subtabs only.
+    // Curated + deep-links are already rendered up front, so they stay valid.
+    const evErr = `<div class="schools-empty" style="padding:14px;line-height:1.55;">Couldn't load OSM venues for this address: ${escapeHtml(err.message || "network error")}.<br>The <b>Happening this month</b> tab still has curated events, and <b>Find events online</b> works as well.</div>`;
+    ["events-markets-tbody", "events-worship-tbody", "events-community-tbody"].forEach(id => {
+      const el = $(id); if (el) el.innerHTML = evErr;
+    });
+    setText("events-value", cityListings.length
+      ? `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} this month`
+      : "Couldn't load OSM event venues");
   }
 }
 function renderEvents(grouped, total, cityKey, geo) {
