@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.36</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.37</span>
     </div>
   </header>
 
@@ -1846,6 +1846,7 @@
 
     <!-- Sub-nav for Events -->
     <div class="subnav" data-subnav-for="card-events">
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section">Happening this month</a>
       <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Farmers markets</a>
       <a href="#events-worship-section"   class="subtab" data-subtarget="events-worship-section">Churches &amp; temples</a>
       <a href="#events-community-section" class="subtab" data-subtarget="events-community-section">Community centers</a>
@@ -1863,6 +1864,10 @@
       </div>
       <div class="parks-loading" id="events-loading" hidden>Finding nearby event venues…</div>
       <div id="events-sections" hidden>
+        <div class="school-section" id="events-listings-section" hidden>
+          <h4>📅 Happening this month <span class="hint">— curated public listings, next 30 days</span></h4>
+          <div id="events-listings-tbody"></div>
+        </div>
         <div class="school-section" id="events-markets-section" hidden>
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
@@ -2112,7 +2117,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.36 · May 2026 · Phase 2 · Events tab now pulls farmers markets, places of worship, and community centers from OpenStreetMap (lazy-loaded — no stampede). Plus Eventbrite/Meetup/Facebook deep-links.
+      <b>HomeAtlas</b> &mdash; v0.37 · May 2026 · Phase 2 · Curated event listings shipped for Bay Area (San Jose · Milpitas · Sunnyvale · San Francisco) and Philadelphia metro (Phoenixville · King of Prussia · Philadelphia). Other cities will follow as the scrape pipeline rolls out.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -6743,7 +6748,13 @@ function renderEvents(grouped, total, cityKey, geo) {
   const pill = $("events-summary");
   pill.hidden = false;
   pill.textContent = `${total} venue${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
-  setText("events-value", total > 0 ? `${total} weekend-event venues nearby` : "No venues found in OSM");
+  // v0.37: pull a curated count for the resolved city to enrich the headline
+  const cityListings = filterCuratedEventsForCity(geo);
+  if (cityListings.length) {
+    setText("events-value", `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} this month + ${total} venue${total === 1 ? "" : "s"} nearby`);
+  } else {
+    setText("events-value", total > 0 ? `${total} event venues nearby` : "No venues found in OSM");
+  }
   // v0.35.3: keep sections visible on empty so subtabs can navigate
   const evEmptyMsg = `<div class="schools-empty" style="padding:10px;">No venues in this category within ${CURRENT_RADIUS_MI} mi. Try the "Find events online" tab for Eventbrite/Meetup/Facebook listings.</div>`;
   const fill = (sectionId, tbodyId, items) => {
@@ -6757,8 +6768,173 @@ function renderEvents(grouped, total, cityKey, geo) {
   fill("events-worship-section",   "events-worship-tbody",   grouped.worship);
   fill("events-community-section", "events-community-tbody", grouped.community);
 
+  // v0.37: curated listings — only populated for cities we've seeded
+  renderEventsListings(geo, cityListings);
+
   // "Find events online" — always populated (deep-links don't depend on geo)
   renderEventsOnline(geo);
+}
+
+// =====================================================================
+// v0.37: Curated event listings — quick-validation seed for Bay Area +
+// Philadelphia metro. Refresh by running scraper/scrape_events.py and
+// pasting the new events array below. Filtered at render time by the
+// resolved city. Cities not in the seed get a "coming soon" message.
+// =====================================================================
+const HOMEATLAS_EVENTS_SEED = {
+  "generated": "2026-05-09T10:00",
+  "window_days": 30,
+  "events": [
+    { "city": "phoenixville", "state": "PA", "title": "Phoenixville Farmers Market", "venue": "Taylor Alley, 200 Bridge St", "starts": "2026-05-09T09:00", "ends": "2026-05-09T13:00", "category": "market", "url": "https://phoenixvillefarmersmarket.org/", "source": "Phoenixville Farmers Market", "verified": true, "free": true },
+    { "city": "phoenixville", "state": "PA", "title": "Phoenixville Farmers Market", "venue": "Taylor Alley, 200 Bridge St", "starts": "2026-05-16T09:00", "ends": "2026-05-16T13:00", "category": "market", "url": "https://phoenixvillefarmersmarket.org/", "source": "Phoenixville Farmers Market", "verified": true, "free": true },
+    { "city": "phoenixville", "state": "PA", "title": "Phoenixville Farmers Market", "venue": "Taylor Alley, 200 Bridge St", "starts": "2026-05-23T09:00", "ends": "2026-05-23T13:00", "category": "market", "url": "https://phoenixvillefarmersmarket.org/", "source": "Phoenixville Farmers Market", "verified": true, "free": true },
+    { "city": "phoenixville", "state": "PA", "title": "Phoenixville Farmers Market", "venue": "Taylor Alley, 200 Bridge St", "starts": "2026-05-30T09:00", "ends": "2026-05-30T13:00", "category": "market", "url": "https://phoenixvillefarmersmarket.org/", "source": "Phoenixville Farmers Market", "verified": true, "free": true },
+    { "city": "phoenixville", "state": "PA", "title": "First Friday on Bridge Street", "venue": "Bridge Street downtown", "starts": "2026-06-05T17:00", "ends": "2026-06-05T21:00", "category": "festival", "url": "https://www.destinationphoenixville.com/", "source": "Destination Phoenixville", "verified": true, "free": true },
+    { "city": "phoenixville", "state": "PA", "title": "Phoenixville Public Library — Story Time (Toddlers)", "venue": "183 Second Ave", "starts": "2026-05-13T10:30", "ends": "2026-05-13T11:00", "category": "kids", "url": "https://phoenixvillelibrary.libcal.com/", "source": "Phoenixville Public Library", "verified": true, "free": true },
+    { "city": "phoenixville", "state": "PA", "title": "Live Music at Steel City Coffeehouse", "venue": "203 Bridge St", "starts": "2026-05-15T20:00", "category": "music", "url": "https://www.steelcitycoffeehouse.com/", "source": "Steel City Coffeehouse", "verified": true, "free": false },
+    { "city": "king of prussia", "state": "PA", "title": "Summer Concert Series at KOP Town Center", "venue": "King of Prussia Town Center, 155 Village Dr", "starts": "2026-06-04T18:00", "ends": "2026-06-04T20:00", "category": "music", "url": "https://kopfun.com/", "source": "KOP Town Center", "verified": true, "free": true },
+    { "city": "king of prussia", "state": "PA", "title": "Upper Merion Library — Children's Story Hour", "venue": "175 W Valley Forge Rd", "starts": "2026-05-13T10:00", "ends": "2026-05-13T10:45", "category": "kids", "url": "https://www.umtownship.org/library", "source": "Upper Merion Township Library", "verified": true, "free": true },
+    { "city": "king of prussia", "state": "PA", "title": "Valley Forge National Historical Park — Ranger Walk", "venue": "1400 N Outer Line Dr, King of Prussia, PA", "starts": "2026-05-16T10:00", "ends": "2026-05-16T11:30", "category": "civic", "url": "https://www.nps.gov/vafo/planyourvisit/calendar.htm", "source": "Valley Forge NHP", "verified": true, "free": true },
+    { "city": "king of prussia", "state": "PA", "title": "Henderson Park Concert", "venue": "Henderson Park, Upper Merion", "starts": "2026-06-03T19:00", "ends": "2026-06-03T20:30", "category": "music", "url": "https://www.umtownship.org/parks-recreation", "source": "Upper Merion Parks & Rec", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "First Friday Old City", "venue": "Old City, 2nd & 3rd St between Market & Race", "starts": "2026-06-05T17:00", "ends": "2026-06-05T21:00", "category": "art", "url": "https://www.oldcitydistrict.org/first-friday", "source": "Old City District", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "Reading Terminal Market — Live Cooking Demo", "venue": "51 N 12th St", "starts": "2026-05-16T11:00", "ends": "2026-05-16T13:00", "category": "festival", "url": "https://readingterminalmarket.org/calendar/", "source": "Reading Terminal Market", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "Free Library — Author Event", "venue": "1901 Vine St (Parkway Central)", "starts": "2026-05-20T19:00", "ends": "2026-05-20T20:30", "category": "library", "url": "https://libwww.freelibrary.org/calendar", "source": "Free Library of Philadelphia", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "Mural Arts Walking Tour — Center City", "venue": "Mural Arts Visitor Center, 128 N Broad St", "starts": "2026-05-23T10:00", "ends": "2026-05-23T11:30", "category": "art", "url": "https://www.muralarts.org/tours/", "source": "Mural Arts Philadelphia", "verified": true, "free": false },
+    { "city": "san jose", "state": "CA", "title": "San Pedro Square Farmers Market", "venue": "San Pedro & St. John St", "starts": "2026-05-15T10:00", "ends": "2026-05-15T14:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sanpedrosquare", "source": "Urban Village Farmers Market", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "San Pedro Square Farmers Market", "venue": "San Pedro & St. John St", "starts": "2026-05-22T10:00", "ends": "2026-05-22T14:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sanpedrosquare", "source": "Urban Village Farmers Market", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Music in the Park — Plaza de César Chávez", "venue": "Plaza de César Chávez, S Market St", "starts": "2026-06-04T17:00", "ends": "2026-06-04T21:00", "category": "music", "url": "https://www.musicintheparksj.com/", "source": "Music in the Park SJ", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "SoFA First Friday Art Walk", "venue": "South First Area, S 1st St", "starts": "2026-06-05T18:00", "ends": "2026-06-05T22:00", "category": "art", "url": "https://www.sofadistrict.org/first-fridays", "source": "SoFA District", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "San Jose Public Library — Family Story Time", "venue": "Dr. Martin Luther King Jr Library, 150 E San Fernando", "starts": "2026-05-14T10:30", "ends": "2026-05-14T11:00", "category": "kids", "url": "https://sjpl.bibliocommons.com/events", "source": "San Jose Public Library", "verified": true, "free": true },
+    { "city": "milpitas", "state": "CA", "title": "Milpitas Library — Preschool Story Time", "venue": "160 N Main St", "starts": "2026-05-13T10:30", "ends": "2026-05-13T11:00", "category": "kids", "url": "https://sccld.bibliocommons.com/events", "source": "Santa Clara County Library — Milpitas", "verified": true, "free": true },
+    { "city": "milpitas", "state": "CA", "title": "Milpitas Library — Coding Club", "venue": "160 N Main St", "starts": "2026-05-21T16:00", "ends": "2026-05-21T17:30", "category": "kids", "url": "https://sccld.bibliocommons.com/events", "source": "Santa Clara County Library — Milpitas", "verified": true, "free": true },
+    { "city": "milpitas", "state": "CA", "title": "Milpitas Senior Center — Tai Chi", "venue": "40 N Milpitas Blvd", "starts": "2026-05-12T10:00", "ends": "2026-05-12T11:00", "category": "civic", "url": "https://www.ci.milpitas.ca.gov/government/departments/recreation-services/senior-center/", "source": "Milpitas Senior Center", "verified": true, "free": false },
+    { "city": "milpitas", "state": "CA", "title": "Coffee with the Mayor", "venue": "Milpitas City Hall, 455 E Calaveras Blvd", "starts": "2026-05-23T09:00", "ends": "2026-05-23T10:00", "category": "civic", "url": "https://www.ci.milpitas.ca.gov/", "source": "City of Milpitas", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Saturday", "venue": "1 Ferry Building, Embarcadero", "starts": "2026-05-09T08:00", "ends": "2026-05-09T14:00", "category": "market", "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Saturday", "venue": "1 Ferry Building, Embarcadero", "starts": "2026-05-16T08:00", "ends": "2026-05-16T14:00", "category": "market", "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Heart of the City Farmers Market", "venue": "UN Plaza, Market & 7th", "starts": "2026-05-10T07:00", "ends": "2026-05-10T17:00", "category": "market", "url": "https://heartofthecity-farmersmar.squarespace.com/", "source": "Heart of the City", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Heart of the City Farmers Market", "venue": "UN Plaza, Market & 7th", "starts": "2026-05-17T07:00", "ends": "2026-05-17T17:00", "category": "market", "url": "https://heartofthecity-farmersmar.squarespace.com/", "source": "Heart of the City", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "First Thursday at SFMOMA (free admission)", "venue": "151 3rd St", "starts": "2026-06-04T13:00", "ends": "2026-06-04T20:00", "category": "art", "url": "https://www.sfmoma.org/visit/first-thursdays/", "source": "SFMOMA", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "SFPL Main Library — Tech Help Drop-In", "venue": "100 Larkin St", "starts": "2026-05-14T14:00", "ends": "2026-05-14T16:00", "category": "library", "url": "https://sfpl.bibliocommons.com/events", "source": "SF Public Library", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Stern Grove Festival — Opening Concert", "venue": "Stern Grove, 19th Ave & Sloat Blvd", "starts": "2026-06-07T14:00", "ends": "2026-06-07T16:30", "category": "music", "url": "https://sterngrove.org/", "source": "Stern Grove Festival", "verified": true, "free": true },
+    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "starts": "2026-05-09T09:00", "ends": "2026-05-09T13:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village Farmers Market", "verified": true, "free": true },
+    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "starts": "2026-05-16T09:00", "ends": "2026-05-16T13:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village Farmers Market", "verified": true, "free": true },
+    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "starts": "2026-05-23T09:00", "ends": "2026-05-23T13:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village Farmers Market", "verified": true, "free": true },
+    { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Public Library — Family Story Time", "venue": "665 W Olive Ave", "starts": "2026-05-13T10:30", "ends": "2026-05-13T11:00", "category": "kids", "url": "https://sunnyvale.libcal.com/", "source": "Sunnyvale Public Library", "verified": true, "free": true },
+    { "city": "sunnyvale", "state": "CA", "title": "Music & Market — Murphy Ave Summer Series", "venue": "Plaza del Sol, Murphy Ave", "starts": "2026-06-05T18:00", "ends": "2026-06-05T21:00", "category": "music", "url": "https://www.heritageparkmuseum.org/events/", "source": "Sunnyvale Downtown", "verified": true, "free": true }
+  ]
+};
+
+// Cities that have curated coverage. Used to decide whether to show
+// "coming soon" vs. a real listing in the Happening-this-month tab.
+const CURATED_EVENT_CITIES = new Set(
+  HOMEATLAS_EVENTS_SEED.events.map(e => e.city.toLowerCase())
+);
+
+function normalizeCityKey(s) {
+  return (s || "").toString().toLowerCase().trim().replace(/\s+/g, " ");
+}
+
+function filterCuratedEventsForCity(geo) {
+  if (!geo || !geo.address) return [];
+  const addr = geo.address;
+  const candidates = new Set([
+    addr.city, addr.town, addr.village, addr.borough, addr.hamlet,
+    addr.municipality, addr.suburb, addr.neighbourhood
+  ].filter(Boolean).map(normalizeCityKey));
+  // Also try the canonical getCityKey if it's defined
+  try { if (typeof getCityKey === "function") candidates.add(normalizeCityKey(getCityKey(addr))); } catch(e) {}
+  // Match on any of the candidates
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
+  return HOMEATLAS_EVENTS_SEED.events
+    .filter(ev => candidates.has(normalizeCityKey(ev.city)))
+    .filter(ev => {
+      const t = new Date(ev.starts);
+      return !isNaN(t) && t >= now && t <= horizon;
+    })
+    .sort((a, b) => a.starts.localeCompare(b.starts));
+}
+
+const EVENT_CAT_META = {
+  market:   { icon: "🥬", label: "Market" },
+  music:    { icon: "🎵", label: "Music" },
+  kids:     { icon: "🧒", label: "Kids" },
+  civic:    { icon: "🏛️", label: "Civic" },
+  sports:   { icon: "🏃", label: "Sports" },
+  art:      { icon: "🎨", label: "Art" },
+  festival: { icon: "🎉", label: "Festival" },
+  library:  { icon: "📚", label: "Library" },
+  other:    { icon: "📅", label: "Event" }
+};
+
+function formatEventWhen(starts, ends) {
+  try {
+    const s = new Date(starts);
+    if (isNaN(s)) return starts || "";
+    const day = s.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+    const tFmt = d => d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    if (!ends) return `${day} · ${tFmt(s)}`;
+    const e = new Date(ends);
+    if (isNaN(e)) return `${day} · ${tFmt(s)}`;
+    return `${day} · ${tFmt(s)}–${tFmt(e)}`;
+  } catch(_) { return starts || ""; }
+}
+
+function renderEventsListings(geo, eventsArg) {
+  const sec = $("events-listings-section");
+  const tb  = $("events-listings-tbody");
+  if (!sec || !tb) return;
+  sec.hidden = false;
+  const events = eventsArg || filterCuratedEventsForCity(geo);
+  if (!events.length) {
+    const cityName = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || "this city";
+    tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
+      <b>No curated listings for ${escapeHtml(cityName)} yet.</b><br>
+      We're starting with seed coverage for <b>San Jose, Milpitas, Sunnyvale, San Francisco, Phoenixville, King of Prussia, and Philadelphia</b> while the city-by-city scrape pipeline rolls out.<br>
+      In the meantime, the <b>Find events online</b> tab links you to Eventbrite, Meetup, Facebook events, and Google searches pre-filtered for ${escapeHtml(cityName)}.
+    </div>`;
+    return;
+  }
+  // Group by week-of so the list scans well
+  const byWeek = new Map();
+  for (const ev of events) {
+    const d = new Date(ev.starts);
+    if (isNaN(d)) continue;
+    // Normalize to Sunday of that week as the bucket key
+    const sunday = new Date(d); sunday.setDate(d.getDate() - d.getDay()); sunday.setHours(0,0,0,0);
+    const key = sunday.toISOString().slice(0,10);
+    if (!byWeek.has(key)) byWeek.set(key, { sunday, items: [] });
+    byWeek.get(key).items.push(ev);
+  }
+  const buckets = [...byWeek.entries()].sort(([a],[b]) => a.localeCompare(b));
+  const weekHeader = sun => {
+    const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
+    const fmt = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    return `Week of ${fmt(sun)}–${fmt(sat)}`;
+  };
+  const free = ev => ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
+  const cat = ev => {
+    const m = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
+    return `<span class="hint" style="margin-right:6px;">${m.icon} ${escapeHtml(m.label)}</span>`;
+  };
+  const row = ev => {
+    const venue = ev.venue ? `<div class="hint" style="margin-top:2px;">${escapeHtml(ev.venue)}</div>` : "";
+    const link = ev.url ? `<a href="${escapeHtml(ev.url)}" target="_blank" rel="noopener" class="row-link">Details →</a>` : "";
+    return `<div class="row" style="display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-bottom:1px solid #f0f2f5;">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;">
+        <div style="font-weight:600;">${cat(ev)}${escapeHtml(ev.title)} ${free(ev)}</div>
+        <div class="hint">${escapeHtml(formatEventWhen(ev.starts, ev.ends))}</div>
+      </div>
+      ${venue}
+      <div style="margin-top:4px;font-size:13px;">${link} <span class="hint" style="margin-left:10px;">via ${escapeHtml(ev.source || "")}</span></div>
+    </div>`;
+  };
+  tb.innerHTML = buckets.map(([_, b]) => `
+    <div class="events-week-block" style="margin-bottom:14px;">
+      <div class="events-week-header" style="font-weight:600;color:#5f6b7a;padding:6px 12px;background:#f7f8fb;border-radius:8px;margin-bottom:4px;">${weekHeader(b.sunday)}</div>
+      ${b.items.map(row).join("")}
+    </div>
+  `).join("");
 }
 function renderEventsOnline(geo) {
   const addr = (geo && geo.address) || {};
