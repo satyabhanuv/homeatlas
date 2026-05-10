@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.38</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.39</span>
     </div>
   </header>
 
@@ -2117,7 +2117,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.38 · May 2026 · Phase 2 · Events tab now lands on "Happening this month" by default. Headline simplified to a clear single-number answer. Address change always resets to the curated view.
+      <b>HomeAtlas</b> &mdash; v0.39 · May 2026 · Phase 2 · Curated city resolution now reads the address bar, the geocoder, and a ZIP→cities map — so typing "Milpitas" wins over USPS-flavored "San Jose" for the 95134 ZIP.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -6773,7 +6773,9 @@ async function loadNearbyEvents(geo) {
   // v0.38: simplified headline — only mention curated count, drop the
   // confusing venue total. Per-subtab pill ("1 farmers markets · within 2 mi")
   // already shows venue counts when the user is on a venue subtab.
-  const cityName = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || "this area";
+  // v0.39: display-city respects what the user typed (Milpitas wins over
+  // USPS-flavored "San Jose" if they typed Milpitas).
+  const cityName = getDisplayCityForHeadline(geo);
   setText("events-value", cityListings.length
     ? `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} for ${cityName} this month`
     : `Curated listings coming soon for ${cityName} — see venue tabs below`);
@@ -6817,8 +6819,10 @@ function renderEvents(grouped, total, cityKey, geo) {
   // v0.38: simplified headline. Curated count + city is the headline answer.
   // Per-subtab pills already carry venue counts where they matter; combining
   // both numbers in the headline was confusing ("4 + 29? what's the 29?").
+  // v0.39: cityName uses getDisplayCityForHeadline — respects user-typed
+  // text + ZIP map so "Milpitas" wins when user typed it.
   const cityListings = filterCuratedEventsForCity(geo);
-  const cityName = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || "this area";
+  const cityName = getDisplayCityForHeadline(geo);
   if (cityListings.length) {
     setText("events-value", `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} for ${cityName} this month`);
   } else if (total > 0) {
@@ -6901,29 +6905,144 @@ const CURATED_EVENT_CITIES = new Set(
   HOMEATLAS_EVENTS_SEED.events.map(e => e.city.toLowerCase())
 );
 
+// v0.39: ZIP → seed-cities-likely-relevant fallback. ZIPs span multiple
+// physical cities (95134 = north San Jose + Milpitas border; 19460 covers
+// Phoenixville + nearby boroughs), and Nominatim picks ONE per address based
+// on USPS conventions, which doesn't always match what the user typed. Map
+// the ZIPs we know about to all seed cities a user there might care about.
+const ZIP_TO_SEED_CITIES = {
+  // San Jose zips (most of them) — show SJ + Milpitas + Sunnyvale events
+  "95110":["san jose","milpitas","sunnyvale"],"95111":["san jose"],"95112":["san jose"],
+  "95113":["san jose"],"95116":["san jose"],"95117":["san jose","sunnyvale"],
+  "95118":["san jose"],"95119":["san jose"],"95120":["san jose"],"95121":["san jose"],
+  "95122":["san jose"],"95123":["san jose"],"95124":["san jose"],"95125":["san jose"],
+  "95126":["san jose"],"95127":["san jose"],"95128":["san jose"],"95129":["san jose","sunnyvale"],
+  "95130":["san jose"],"95131":["san jose","milpitas"],"95132":["san jose","milpitas"],
+  "95133":["san jose","milpitas"],"95134":["san jose","milpitas"],"95135":["san jose"],
+  "95136":["san jose"],"95138":["san jose"],"95139":["san jose"],"95140":["san jose"],
+  "95141":["san jose"],"95148":["san jose"],
+  // Milpitas
+  "95035":["milpitas","san jose"],"95036":["milpitas","san jose"],"95038":["milpitas","san jose"],
+  // Sunnyvale
+  "94085":["sunnyvale","san jose"],"94086":["sunnyvale","san jose"],"94087":["sunnyvale","san jose"],
+  "94088":["sunnyvale","san jose"],"94089":["sunnyvale","san jose","milpitas"],
+  // San Francisco — all SF zips → SF only (geographically distinct from Bay Area south)
+  "94102":["san francisco"],"94103":["san francisco"],"94104":["san francisco"],"94105":["san francisco"],
+  "94107":["san francisco"],"94108":["san francisco"],"94109":["san francisco"],"94110":["san francisco"],
+  "94111":["san francisco"],"94112":["san francisco"],"94114":["san francisco"],"94115":["san francisco"],
+  "94116":["san francisco"],"94117":["san francisco"],"94118":["san francisco"],"94121":["san francisco"],
+  "94122":["san francisco"],"94123":["san francisco"],"94124":["san francisco"],"94127":["san francisco"],
+  "94129":["san francisco"],"94130":["san francisco"],"94131":["san francisco"],"94132":["san francisco"],
+  "94133":["san francisco"],"94134":["san francisco"],"94158":["san francisco"],
+  // Philadelphia (city) zips → Philadelphia only
+  "19102":["philadelphia"],"19103":["philadelphia"],"19104":["philadelphia"],"19106":["philadelphia"],
+  "19107":["philadelphia"],"19111":["philadelphia"],"19114":["philadelphia"],"19115":["philadelphia"],
+  "19116":["philadelphia"],"19118":["philadelphia"],"19119":["philadelphia"],"19120":["philadelphia"],
+  "19121":["philadelphia"],"19122":["philadelphia"],"19123":["philadelphia"],"19124":["philadelphia"],
+  "19125":["philadelphia"],"19126":["philadelphia"],"19127":["philadelphia"],"19128":["philadelphia"],
+  "19129":["philadelphia"],"19130":["philadelphia"],"19131":["philadelphia"],"19132":["philadelphia"],
+  "19133":["philadelphia"],"19134":["philadelphia"],"19135":["philadelphia"],"19136":["philadelphia"],
+  "19137":["philadelphia"],"19138":["philadelphia"],"19139":["philadelphia"],"19140":["philadelphia"],
+  "19141":["philadelphia"],"19142":["philadelphia"],"19143":["philadelphia"],"19144":["philadelphia"],
+  "19145":["philadelphia"],"19146":["philadelphia"],"19147":["philadelphia"],"19148":["philadelphia"],
+  "19149":["philadelphia"],"19150":["philadelphia"],"19151":["philadelphia"],"19152":["philadelphia"],
+  "19153":["philadelphia"],"19154":["philadelphia"],
+  // Phoenixville + Chester County area
+  "19460":["phoenixville","king of prussia","philadelphia"],
+  "19425":["phoenixville","king of prussia"],"19475":["phoenixville"],
+  // King of Prussia + Upper Merion
+  "19406":["king of prussia","phoenixville","philadelphia"],"19479":["king of prussia"],
+  "19481":["king of prussia"],"19482":["king of prussia"],"19495":["king of prussia"]
+};
+
 function normalizeCityKey(s) {
   return (s || "").toString().toLowerCase().trim().replace(/\s+/g, " ");
 }
 
+// v0.39: candidate-city resolution is now multi-source. Geocoder fields are
+// only one signal; the user's typed text and the ZIP→cities map are equally
+// authoritative. Whoever names a seed city wins.
 function filterCuratedEventsForCity(geo) {
-  if (!geo || !geo.address) return [];
-  const addr = geo.address;
-  const candidates = new Set([
-    addr.city, addr.town, addr.village, addr.borough, addr.hamlet,
-    addr.municipality, addr.suburb, addr.neighbourhood
-  ].filter(Boolean).map(normalizeCityKey));
-  // Also try the canonical getCityKey if it's defined
-  try { if (typeof getCityKey === "function") candidates.add(normalizeCityKey(getCityKey(addr))); } catch(e) {}
-  // Match on any of the candidates
+  if (!geo) return [];
+  const addr = geo.address || {};
+  const candidates = new Set();
+
+  // Source 1: Nominatim address fields
+  ["city","town","village","borough","hamlet","municipality","suburb","neighbourhood","county"]
+    .forEach(k => { if (addr[k]) candidates.add(normalizeCityKey(addr[k])); });
+
+  // Source 2: HomeAtlas's own city-key resolver (handles NYC boroughs etc.)
+  try {
+    if (typeof getCityKey === "function") {
+      const k = getCityKey(addr); if (k) candidates.add(normalizeCityKey(k));
+    }
+  } catch (e) { /* getCityKey not yet defined */ }
+
+  // Source 3: parse the geocoder's display_name into comma-separated tokens
+  const dn = geo.display_name || "";
+  dn.split(/,\s*/).forEach(part => {
+    if (part) candidates.add(normalizeCityKey(part));
+  });
+
+  // Source 4: parse the search-bar text the user typed/picked
+  try {
+    const inputEl = document.getElementById("addr");
+    const typed = inputEl && inputEl.value;
+    if (typed) {
+      typed.split(/,\s*/).forEach(part => {
+        if (part) candidates.add(normalizeCityKey(part));
+      });
+    }
+  } catch (e) {}
+
+  // Source 5: ZIP → likely-relevant seed cities (handles ambiguous zips like
+  // 95134 which is San Jose per USPS but physically borders Milpitas).
+  const zip = (addr.postcode || "").toString().match(/\d{5}/)?.[0];
+  if (zip && ZIP_TO_SEED_CITIES[zip]) {
+    ZIP_TO_SEED_CITIES[zip].forEach(c => candidates.add(c));
+  }
+
   const now = new Date();
   const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
-  return HOMEATLAS_EVENTS_SEED.events
+  const matched = HOMEATLAS_EVENTS_SEED.events
     .filter(ev => candidates.has(normalizeCityKey(ev.city)))
     .filter(ev => {
       const t = new Date(ev.starts);
       return !isNaN(t) && t >= now && t <= horizon;
     })
     .sort((a, b) => a.starts.localeCompare(b.starts));
+
+  if (window.HOMEATLAS_DEBUG) {
+    console.log("[curated] candidates =", [...candidates], "→", matched.length, "events");
+  }
+  return matched;
+}
+
+// v0.39: pick the best city-label for the headline. Prefers the typed text's
+// seed-city mention, then ZIP-mapped seed city, then geocoded city.
+function getDisplayCityForHeadline(geo) {
+  if (!geo) return "this area";
+  const addr = geo.address || {};
+
+  // 1. Did the user type a seed-city name?
+  try {
+    const typed = (document.getElementById("addr")?.value || "").toLowerCase();
+    for (const c of CURATED_EVENT_CITIES) {
+      if (typed.includes(c)) {
+        return c.replace(/\b\w/g, ch => ch.toUpperCase());  // title case
+      }
+    }
+  } catch (e) {}
+
+  // 2. ZIP map — pick the first seed city in the list (best guess for that zip)
+  const zip = (addr.postcode || "").toString().match(/\d{5}/)?.[0];
+  if (zip && ZIP_TO_SEED_CITIES[zip]?.length) {
+    const c = ZIP_TO_SEED_CITIES[zip][0];
+    return c.replace(/\b\w/g, ch => ch.toUpperCase());
+  }
+
+  // 3. Fallback to geocoded city
+  return addr.city || addr.town || addr.village || "this area";
 }
 
 const EVENT_CAT_META = {
@@ -6958,7 +7077,7 @@ function renderEventsListings(geo, eventsArg) {
   sec.hidden = false;
   const events = eventsArg || filterCuratedEventsForCity(geo);
   if (!events.length) {
-    const cityName = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || "this city";
+    const cityName = getDisplayCityForHeadline(geo);
     tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
       <b>No curated listings for ${escapeHtml(cityName)} yet.</b><br>
       We're starting with seed coverage for <b>San Jose, Milpitas, Sunnyvale, San Francisco, Phoenixville, King of Prussia, and Philadelphia</b> while the city-by-city scrape pipeline rolls out.<br>
