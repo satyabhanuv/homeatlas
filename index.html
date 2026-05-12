@@ -113,6 +113,15 @@
   .searchbar button { border: none; background: var(--primary); color: #fff; border-radius: 10px; padding: 0 22px; cursor: pointer; font-weight: 600; font-size: 15px; letter-spacing: 0.2px; transition: background 0.15s ease; }
   .searchbar button:hover { background: var(--primary-2); }
   .searchbar button:disabled { opacity: 0.6; cursor: progress; }
+  /* v0.42: Near-me button — secondary style, sits between the input and Search */
+  .searchbar button.near-me-btn { background: transparent; color: var(--primary); border: 1px solid var(--line); padding: 0 14px; font-weight: 600; }
+  .searchbar button.near-me-btn:hover:not(:disabled) { background: rgba(0,80,194,0.06); border-color: var(--primary); }
+  .searchbar button.near-me-btn .nm-emoji { margin-right: 6px; }
+  @media (max-width: 560px) {
+    .searchbar button.near-me-btn { padding: 0 10px; font-size: 13px; }
+    .searchbar button.near-me-btn .nm-label { display: none; }
+    .searchbar button.near-me-btn .nm-emoji { margin-right: 0; }
+  }
 
   .suggestions { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--line); border-top: none; border-radius: 0 0 var(--radius) var(--radius); box-shadow: var(--shadow); max-height: 360px; overflow-y: auto; z-index: 5; margin-top: -1px; }
   .suggestion { padding: 12px 18px; cursor: pointer; font-size: 14px; border-bottom: 1px solid var(--line); }
@@ -1398,7 +1407,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.41</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.42</span>
     </div>
   </header>
 
@@ -1413,11 +1422,18 @@
         <input id="addr" type="text" required
           placeholder="Start typing your address…  e.g. 123 Main St, Berkeley"
           aria-label="Home address" aria-autocomplete="list" aria-controls="suggestions" />
+        <!-- v0.42: Near me — uses browser geolocation so users don't need to type an address.
+             Useful when visiting a new area or needing urgent help (food, clinic, shelter). -->
+        <button type="button" id="nearMeBtn" class="near-me-btn"
+                title="Use my current location"
+                aria-label="Use my current location">
+          <span class="nm-emoji" aria-hidden="true">📍</span><span class="nm-label">Near me</span>
+        </button>
         <button type="submit" id="searchBtn">Search</button>
       </form>
       <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
-    <p class="hint"><b>Tip:</b> Suggestions appear after 3 characters. US addresses for now. Granular state data (electric utility, cable, fiber, school district) is loaded for <b>CA, FL, IL, NY, OH, PA, TX</b> — plus WA, NJ. <b>Coming soon:</b> GA, NC, MI. Other states show nationwide options + helpful fallback links.</p>
+    <p class="hint"><b>Tip:</b> Type an address, or tap <b>📍 Near me</b> to use your current location (browser will ask permission — nothing is stored). Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> GA, NC, MI.</p>
     <div id="status"></div>
   </section>
 
@@ -2117,7 +2133,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.41 · May 2026 · Phase 2 · 10 more Bay Area markets added (Willow Glen, Blossom Hill, Campbell, Santa Clara, Saratoga, Mountain View, Palo Alto, Stonestown SF, Mission Community SF, Alemany SF). Distance-based filter for Farmers markets — neighboring cities now appear if inside radius. Honest "broader search" CTA points to Google Maps + Yelp.
+      <b>HomeAtlas</b> &mdash; v0.42 · May 2026 · Phase 2 · 📍 Near me. Tap the new button next to the search bar and the page resolves your current location via the browser's geolocation API — no typing required. Useful when visiting a new city, on mobile, or needing urgent help (food, clinic, shelter). Nothing is stored.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -7802,6 +7818,15 @@ async function runLookupFromFeature(feature) {
       return;
     }
     geo.lat = lat; geo.lon = lon;
+    // v0.42: if the address bar still shows the Near-me placeholder, replace
+    // it with the resolved address now that reverse-geocoding succeeded.
+    // We detect by leading 📍 (set in the Near-me click handler).
+    try {
+      const a = $("addr");
+      if (a && typeof a.value === "string" && a.value.trim().startsWith("📍") && geo.display_name) {
+        a.value = geo.display_name;
+      }
+    } catch(_) {}
     renderResults(geo);
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
@@ -7891,6 +7916,63 @@ $("resetBtn").addEventListener("click", () => {
   addrEl.value = ""; addrEl.focus();
   clearStatus();
 });
+
+// v0.42: Near me — browser geolocation. Useful when the user is in a new
+// area (visiting, just moved, on mobile, needs urgent help) and doesn't
+// want to type a full address. Permission prompt is browser-driven; we
+// handle denial gracefully and never store the location.
+const nearMeBtn = $("nearMeBtn");
+if (nearMeBtn) {
+  nearMeBtn.addEventListener("click", async () => {
+    if (!("geolocation" in navigator)) {
+      showStatus("Your browser doesn't support geolocation. Type an address above instead.", "error");
+      return;
+    }
+    if (location.protocol !== "https:" && location.hostname !== "localhost") {
+      showStatus("Near me requires HTTPS. Open the live site at <code>homeatlas.satyabhanuv.workers.dev</code> instead.", "error");
+      return;
+    }
+    const originalLabel = nearMeBtn.innerHTML;
+    nearMeBtn.disabled = true;
+    nearMeBtn.innerHTML = `<span class="nm-emoji">📍</span><span class="nm-label">Locating…</span>`;
+    clearStatus();
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 12000,
+          maximumAge: 60_000   // accept up to 1-min-old fix for instant repeats
+        });
+      });
+      const lat = pos.coords.latitude, lon = pos.coords.longitude;
+      const acc = Math.round(pos.coords.accuracy || 0);
+      dlog("[near-me]", lat, lon, "±" + acc + "m");
+
+      // Build a minimal feature; runLookupFromFeature() reverse-geocodes
+      // internally to populate the address bar + resolve city/zip.
+      const feature = { geometry: { coordinates: [lon, lat] }, properties: {} };
+
+      // Pre-fill the address bar so the user has something to look at while
+      // we resolve. Final value is set after reverseGeocode succeeds inside
+      // runLookupFromFeature.
+      addrEl.value = `📍 Current location (±${acc}m)`;
+      hideSuggestions();
+      await runLookupFromFeature(feature);
+    } catch (err) {
+      const msg = err && err.code === 1
+        ? `Location permission denied. Click the 🔒 in your address bar to allow location for this site, or type an address above.`
+        : err && err.code === 2
+        ? `Your device couldn't determine its location. Try again outdoors, or type an address.`
+        : err && err.code === 3
+        ? `Location lookup timed out. Try again — or type an address.`
+        : `Couldn't get your location: ${escapeHtml((err && err.message) || "unknown error")}`;
+      showStatus(msg, "error");
+    } finally {
+      nearMeBtn.disabled = false;
+      nearMeBtn.innerHTML = originalLabel;
+    }
+  });
+}
 
 // v0.22: Info-button popovers (delegated handler for any [data-info-target])
 document.addEventListener("click", (e) => {
