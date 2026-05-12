@@ -1398,7 +1398,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.40.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.41</span>
     </div>
   </header>
 
@@ -2117,7 +2117,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.40 · May 2026 · Phase 2 · Added 11 PCFMA + CUESA farmers markets as recurring entries (Evergreen, Berryessa, Alum Rock, Kaiser SJ, Milpitas, Sunnyvale, Castro, Divisadero, Fillmore, Inner Sunset, Ferry Plaza Tue/Thu). Each market is one seed entry; the runtime expander emits all weekly instances in the next 30 days.
+      <b>HomeAtlas</b> &mdash; v0.41 · May 2026 · Phase 2 · 10 more Bay Area markets added (Willow Glen, Blossom Hill, Campbell, Santa Clara, Saratoga, Mountain View, Palo Alto, Stonestown SF, Mission Community SF, Alemany SF). Distance-based filter for Farmers markets — neighboring cities now appear if inside radius. Honest "broader search" CTA points to Google Maps + Yelp.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -6859,6 +6859,28 @@ function renderEvents(grouped, total, cityKey, geo) {
   fill("events-worship-section",   "events-worship-tbody",   grouped.worship);
   fill("events-community-section", "events-community-tbody", grouped.community);
 
+  // v0.41: append a "broader search" CTA to the Farmers markets subtab. When
+  // our list is short OR even when it's full, users may want to compare with
+  // Google Maps / Yelp. Better to offer the escape hatch ourselves than have
+  // users wonder if we missed something.
+  const marketsTb = $("events-markets-tbody");
+  if (marketsTb) {
+    const cityForQuery = (geo && geo.address && (geo.address.city || geo.address.town || geo.address.village)) || cityKey || "near me";
+    const gmapsUrl = `https://www.google.com/maps/search/farmers+markets+near+${encodeURIComponent(cityForQuery)}`;
+    const yelpUrl  = `https://www.yelp.com/search?find_desc=farmers+market&find_loc=${encodeURIComponent(cityForQuery)}`;
+    const sparse = grouped.markets.length < 5;
+    const headline = sparse
+      ? `Showing ${grouped.markets.length} verified market${grouped.markets.length === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi. Looking for more?`
+      : `Want to see every farmers market + produce stand in the area?`;
+    marketsTb.insertAdjacentHTML("beforeend", `
+      <div class="markets-broader-search" style="margin-top:14px;padding:12px 14px;background:#f7f9fc;border-radius:10px;font-size:14px;line-height:1.55;">
+        <div style="margin-bottom:8px;color:#5f6b7a;">${escapeHtml(headline)}</div>
+        <a href="${gmapsUrl}" target="_blank" rel="noopener" style="display:inline-block;margin-right:14px;color:#0050c2;text-decoration:none;font-weight:600;">🗺️ Google Maps — farmers markets near ${escapeHtml(cityForQuery)}</a>
+        <a href="${yelpUrl}" target="_blank" rel="noopener" style="display:inline-block;color:#0050c2;text-decoration:none;font-weight:600;">⭐ Yelp — farmers markets in ${escapeHtml(cityForQuery)}</a>
+      </div>
+    `);
+  }
+
   // v0.37: curated listings — only populated for cities we've seeded
   renderEventsListings(geo, cityListings);
 
@@ -6937,7 +6959,21 @@ const HOMEATLAS_EVENTS_RECURRING = {
     { "city": "san francisco", "state": "CA", "title": "Divisadero Farmers' Market", "venue": "Divisadero between Hayes & Grove, San Francisco", "lat": 37.7766, "lon": -122.4378, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/divisadero-farmers-market", "source": "PCFMA — Divisadero", "verified": true, "free": true },
     { "city": "san francisco", "state": "CA", "title": "Fillmore Farmers' Market", "venue": "O'Farrell between Fillmore & Webster, San Francisco", "lat": 37.7847, "lon": -122.4322, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/fillmore-farmers-market", "source": "PCFMA — Fillmore", "verified": true, "free": true },
     { "city": "san francisco", "state": "CA", "title": "Inner Sunset Farmers' Market", "venue": "8th Ave between Irving & Judah, San Francisco", "lat": 37.7639, "lon": -122.4664, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/inner-sunset-farmers-market", "source": "PCFMA — Inner Sunset", "verified": true, "free": true },
-    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Tuesday/Thursday", "venue": "1 Ferry Building, Embarcadero", "lat": 37.7956, "lon": -122.3935, "category": "market", "recurring": { "days": [2, 4], "start": "10:00", "end": "14:00" }, "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true }
+    { "city": "san francisco", "state": "CA", "title": "Ferry Plaza Farmers Market — Tuesday/Thursday", "venue": "1 Ferry Building, Embarcadero", "lat": 37.7956, "lon": -122.3935, "category": "market", "recurring": { "days": [2, 4], "start": "10:00", "end": "14:00" }, "url": "https://www.cuesa.org/markets/ferry-plaza-farmers-market", "source": "CUESA — Ferry Plaza", "verified": true, "free": true },
+
+    // ---- v0.41: more Bay Area farmers markets (CFMA + Foodwise + independent) ----
+    // South Bay
+    { "city": "san jose", "state": "CA", "title": "Willow Glen Farmers' Market", "venue": "Lincoln Ave between Minnesota & Willow, Willow Glen", "lat": 37.3017, "lon": -121.8990, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.willowglencfm.com/", "source": "CFMA — Willow Glen", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Blossom Hill Farmers' Market", "venue": "Princeton Plaza, 1375 Blossom Hill Rd, San Jose", "lat": 37.2549, "lon": -121.8779, "category": "market", "recurring": { "days": [0], "start": "10:00", "end": "14:00" }, "url": "https://cafarmersmkts.com/blossom-hill-farmers-market", "source": "CFMA — Blossom Hill", "verified": true, "free": true },
+    { "city": "campbell", "state": "CA", "title": "Campbell Farmers' Market", "venue": "Campbell Ave between Central & 3rd, downtown Campbell", "lat": 37.2872, "lon": -121.9437, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://cafarmersmkts.com/campbell-farmers-market", "source": "CFMA — Campbell", "verified": true, "free": true },
+    { "city": "santa clara", "state": "CA", "title": "Santa Clara Farmers' Market", "venue": "Jackson St near Civic Center Dr, Santa Clara", "lat": 37.3541, "lon": -121.9552, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://cafarmersmkts.com/santa-clara-farmers-market", "source": "CFMA — Santa Clara", "verified": true, "free": true },
+    { "city": "saratoga", "state": "CA", "title": "Saratoga Farmers' Market", "venue": "West Valley College, 14000 Fruitvale Ave, Saratoga", "lat": 37.2545, "lon": -122.0144, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://cafarmersmkts.com/saratoga-farmers-market", "source": "CFMA — Saratoga", "verified": true, "free": true },
+    { "city": "mountain view", "state": "CA", "title": "Mountain View Farmers' Market", "venue": "Caltrain parking lot, 600 W Evelyn Ave, Mountain View", "lat": 37.3942, "lon": -122.0769, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://cafarmersmkts.com/mountain-view-farmers-market", "source": "CFMA — Mountain View", "verified": true, "free": true },
+    { "city": "palo alto", "state": "CA", "title": "California Avenue Farmers' Market", "venue": "California Ave at El Camino Real, Palo Alto", "lat": 37.4262, "lon": -122.1430, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://urbanvillageonline.com/markets/california-avenue", "source": "Urban Village — California Ave", "verified": true, "free": true },
+    // SF additional (Foodwise + independent)
+    { "city": "san francisco", "state": "CA", "title": "Stonestown Farmers' Market", "venue": "Stonestown Galleria, 3251 20th Ave, San Francisco", "lat": 37.7283, "lon": -122.4763, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "13:00" }, "url": "https://foodwise.org/markets/stonestown-farmers-market/", "source": "Foodwise — Stonestown", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Mission Community Market", "venue": "22nd St between Bartlett & Mission, San Francisco", "lat": 37.7553, "lon": -122.4196, "category": "market", "recurring": { "days": [4], "start": "16:00", "end": "20:00" }, "url": "https://missioncommunitymarket.org/", "source": "Mission Community Market", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Alemany Farmers' Market", "venue": "100 Alemany Blvd, San Francisco", "lat": 37.7321, "lon": -122.4106, "category": "market", "recurring": { "days": [6], "start": "06:00", "end": "14:00" }, "url": "https://sfgov.org/realestate/alemany-farmers-market", "source": "SF Gov — Alemany", "verified": true, "free": true }
   ]
 };
 
@@ -6977,35 +7013,22 @@ function curatedMarketToVenueShape(m, originLat, originLon, radiusMi) {
   };
 }
 
-// Build the list of curated farmers markets as OSM-shape venues, filtered to
-// the resolved candidates + current radius. Deduped by title.
+// Build the list of curated farmers markets as OSM-shape venues, filtered
+// strictly by current radius. Deduped by title.
+// v0.41: changed from city-filter + distance to distance-only. For the
+// Farmers markets subtab, the user's question is "what's near me to shop
+// for produce?" — neighboring cities count if they're inside the radius.
+// (Curated *events* tab still uses city-based filtering because non-market
+// events like Story Time are bound to a specific city's library system.)
 function getCuratedFarmersMarketVenues(geo) {
   if (!geo) return [];
   const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // Reuse the candidate-resolution machinery so user's typed city + ZIP
-  // matter for the Farmers markets subtab too (otherwise typing "Milpitas"
-  // wouldn't surface Milpitas Farmers' Market when geocoder says SJ).
-  const addr = geo.address || {};
-  const candidates = new Set();
-  ["city","town","village","borough","hamlet","municipality","suburb","neighbourhood","county"]
-    .forEach(k => { if (addr[k]) candidates.add(normalizeCityKey(addr[k])); });
-  try { if (typeof getCityKey === "function") {
-    const k = getCityKey(addr); if (k) candidates.add(normalizeCityKey(k));
-  } } catch(e) {}
-  (geo.display_name || "").split(/,\s*/).forEach(part => { if (part) candidates.add(normalizeCityKey(part)); });
-  try {
-    const typed = (document.getElementById("addr")?.value || "");
-    typed.split(/,\s*/).forEach(part => { if (part) candidates.add(normalizeCityKey(part)); });
-  } catch(e) {}
-  const zip = (addr.postcode || "").toString().match(/\d{5}/)?.[0];
-  if (zip && ZIP_TO_SEED_CITIES[zip]) ZIP_TO_SEED_CITIES[zip].forEach(c => candidates.add(c));
 
   const seenTitles = new Set();
   const out = [];
   for (const m of HOMEATLAS_EVENTS_RECURRING.events) {
     if (m.category !== "market") continue;
-    if (!candidates.has(normalizeCityKey(m.city))) continue;
     if (seenTitles.has(m.title)) continue;
     const v = curatedMarketToVenueShape(m, lat, lon, CURRENT_RADIUS_MI);
     if (v) { out.push(v); seenTitles.add(m.title); }
