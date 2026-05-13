@@ -1124,6 +1124,21 @@
   .page-section-header.risks      { --psh-accent: #b34d4d; }
   .page-section-header.home-services   { --psh-accent: #c08552; }
   .page-section-header.public-services { --psh-accent: #b34d4d; }
+  /* v0.42 */
+  .page-section-header.community-help  { --psh-accent: #7c3aed; }
+  /* v0.45 */
+  .page-section-header.health          { --psh-accent: #0891b2; }
+  /* v0.46: quality-tier badges */
+  .tier-badge {
+    display: inline-block; margin-left: 8px; padding: 2px 8px;
+    font-size: 11px; font-weight: 600; border-radius: 999px;
+    vertical-align: middle; letter-spacing: 0.2px;
+  }
+  .tier-badge.tier-verified { background: rgba(16,124,16,0.10); color: #107c10; border: 1px solid rgba(16,124,16,0.25); }
+  .tier-badge.tier-osm      { background: rgba(0,80,194,0.10);  color: #0050c2; border: 1px solid rgba(0,80,194,0.25); }
+  .tier-badge.tier-fallback { background: rgba(74,82,99,0.10);  color: #4a5263; border: 1px solid rgba(74,82,99,0.25); }
+  .row-link { color: #0050c2; text-decoration: none; font-weight: 600; }
+  .row-link:hover { text-decoration: underline; }
 
   /* v0.34.2: "Show N more" expansion under each subsection list */
   .more-listings {
@@ -1407,7 +1422,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.42</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.46</span>
     </div>
   </header>
 
@@ -1459,6 +1474,8 @@
         <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">Education</a>
         <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">Recreation</a>
         <a href="#sec-events"          class="sec-tab" data-target="sec-events">Events</a>
+        <a href="#sec-community-help"  class="sec-tab" data-target="sec-community-help">Community help</a>
+        <a href="#sec-health"          class="sec-tab" data-target="sec-health">Health &amp; wellness</a>
         <a href="#sec-yard"            class="sec-tab" data-target="sec-yard">Gardening</a>
         <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services">Home services</a>
         <a href="#sec-risks"           class="sec-tab" data-target="sec-risks">Climate risks</a>
@@ -1909,6 +1926,99 @@
       </div>
     </div>
 
+    <!-- v0.42: Community help — 211 / 988 / SAMHSA + curated city resources -->
+    <div class="page-section-header community-help" id="sec-community-help">
+      <div class="psh-icon">🤝</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Community help</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for Community help -->
+    <div class="subnav" data-subnav-for="card-community-help">
+      <a href="#ch-helplines-section"  class="subtab" data-subtarget="ch-helplines-section">Helplines</a>
+      <a href="#ch-food-section"       class="subtab" data-subtarget="ch-food-section">Food assistance</a>
+      <a href="#ch-housing-section"    class="subtab" data-subtarget="ch-housing-section">Housing &amp; utility</a>
+      <a href="#ch-financial-section"  class="subtab" data-subtarget="ch-financial-section">Financial &amp; legal</a>
+    </div>
+
+    <div class="parks-card" id="card-community-help" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text"><span id="ch-value">—</span></div>
+        <button class="info-btn" type="button" data-info-target="ch-info-popover" aria-label="About community help">i</button>
+        <div class="summary-pill" id="ch-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="ch-info-popover" hidden>
+        <b>What this is:</b> free or sliding-scale resources for residents who need help with food, housing, utilities, healthcare, or financial/legal matters. Universal helplines (<b>211</b> for social services, <b>988</b> for mental health crisis, <b>SAMHSA</b> for substance use) work anywhere in the US. City-specific resources are curated for our coverage cities. <b>For comprehensive search:</b> use the official lookups linked at the bottom of each tab.
+      </div>
+      <div class="parks-loading" id="ch-loading" hidden>Loading community resources…</div>
+      <div id="ch-sections" hidden>
+        <div class="school-section" id="ch-helplines-section" hidden>
+          <h4>📞 Universal helplines <span class="hint">— work anywhere in the US, 24/7</span></h4>
+          <div id="ch-helplines-tbody"></div>
+        </div>
+        <div class="school-section" id="ch-food-section" hidden>
+          <h4>🥫 Food assistance <span class="hint">— pantries, soup kitchens, SNAP enrollment</span></h4>
+          <div id="ch-food-tbody"></div>
+        </div>
+        <div class="school-section" id="ch-housing-section" hidden>
+          <h4>🏠 Housing &amp; utility help <span class="hint">— rent assistance, LIHEAP, shelters</span></h4>
+          <div id="ch-housing-tbody"></div>
+        </div>
+        <div class="school-section" id="ch-financial-section" hidden>
+          <h4>💵 Financial &amp; legal help <span class="hint">— free tax help (VITA), legal aid, benefits enrollment</span></h4>
+          <div id="ch-financial-tbody"></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Helplines from <a href="https://www.211.org/" target="_blank" rel="noopener">211.org</a>, <a href="https://988lifeline.org/" target="_blank" rel="noopener">988 Lifeline</a>, <a href="https://www.samhsa.gov/find-help" target="_blank" rel="noopener">SAMHSA</a>. City-specific resources are independently verified — <b>always confirm hours/eligibility directly</b> before relying on a specific location.
+      </div>
+    </div>
+
+    <!-- v0.45: Health & wellness — HRSA Find a Health Center + curated clinics -->
+    <div class="page-section-header health" id="sec-health">
+      <div class="psh-icon">🏥</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Health &amp; wellness</h2>
+      </div>
+    </div>
+
+    <!-- Sub-nav for Health -->
+    <div class="subnav" data-subnav-for="card-health">
+      <a href="#health-clinics-section"     class="subtab" data-subtarget="health-clinics-section">Free clinics &amp; FQHCs</a>
+      <a href="#health-mental-section"      class="subtab" data-subtarget="health-mental-section">Mental health</a>
+      <a href="#health-substance-section"   class="subtab" data-subtarget="health-substance-section">Substance use support</a>
+    </div>
+
+    <div class="parks-card" id="card-health" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text"><span id="health-value">—</span></div>
+        <button class="info-btn" type="button" data-info-target="health-info-popover" aria-label="About health resources">i</button>
+        <div class="summary-pill" id="health-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="health-info-popover" hidden>
+        <b>What this is:</b> hardship-aware healthcare resources — free / sliding-scale primary care, mental health crisis support, addiction recovery. <b>Free clinics &amp; FQHCs</b> queries the federal HRSA Find a Health Center API at runtime for federally qualified health centers near your address. <b>Mental health</b> includes the 988 Suicide &amp; Crisis Lifeline and the SAMHSA Treatment Locator. Hospitals, regular pharmacies, and urgent care are in the <b>Emergency services</b> section.
+      </div>
+      <div class="parks-loading" id="health-loading" hidden>Looking up nearby clinics…</div>
+      <div id="health-sections" hidden>
+        <div class="school-section" id="health-clinics-section" hidden>
+          <h4>🏥 Free clinics &amp; Federally Qualified Health Centers <span class="hint">— sliding-scale primary care</span></h4>
+          <div id="health-clinics-tbody"></div>
+        </div>
+        <div class="school-section" id="health-mental-section" hidden>
+          <h4>🧠 Mental health <span class="hint">— crisis lines, counseling, support groups</span></h4>
+          <div id="health-mental-tbody"></div>
+        </div>
+        <div class="school-section" id="health-substance-section" hidden>
+          <h4>💊 Substance use support <span class="hint">— SAMHSA-listed treatment facilities</span></h4>
+          <div id="health-substance-tbody"></div>
+        </div>
+      </div>
+      <div class="source" style="margin-top:14px;">
+        Federally Qualified Health Centers (FQHCs) from <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener">HRSA</a>. Mental health crisis from <a href="https://988lifeline.org/" target="_blank" rel="noopener">988 Lifeline</a>. Substance use from <a href="https://findtreatment.gov/" target="_blank" rel="noopener">SAMHSA findtreatment.gov</a>. These are all federal-government data sources — comprehensive but verify specific clinic hours directly.
+      </div>
+    </div>
+
     <!-- v0.29: Section 6 — Gardening services (renamed from "Yard & garden", moved before Home services) -->
     <div class="page-section-header yard" id="sec-yard">
       <div class="psh-icon">🌱</div>
@@ -2133,7 +2243,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.42 · May 2026 · Phase 2 · 📍 Near me. Tap the new button next to the search bar and the page resolves your current location via the browser's geolocation API — no typing required. Useful when visiting a new city, on mobile, or needing urgent help (food, clinic, shelter). Nothing is stored.
+      <b>HomeAtlas</b> &mdash; v0.46 · May 2026 · Phase 2 · New <b>Community help</b> section (211 / 988 / SAMHSA + curated food/housing/legal resources) and <b>Health &amp; wellness</b> section (HRSA Find a Health Center API + Mental health + Substance use). Plus quality-tier badges (✓ Verified · 🔵 OSM · ⚫ Fallback) so users know exactly what they're looking at.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -3898,6 +4008,8 @@ function refetchAllRadialSections() {
       if (sectionLoadedOnce["sec-home-services"]   && lastHsGeo)     tasks.push(loadNearbyHomeServices(lastHsGeo));
       if (sectionLoadedOnce["sec-public-services"] && lastPsGeo)     tasks.push(loadNearbyPublicServices(lastPsGeo));
       if (sectionLoadedOnce["sec-events"]          && lastEventsGeo) tasks.push(loadNearbyEvents(lastEventsGeo));
+      if (sectionLoadedOnce["sec-community-help"]  && lastChGeo)     tasks.push(loadCommunityHelp(lastChGeo));
+      if (sectionLoadedOnce["sec-health"]          && lastHealthGeo) tasks.push(loadHealthWellness(lastHealthGeo));
       // No tasks? Just kick the currently-active section as a one-shot
       if (!tasks.length) {
         const active = document.querySelector(".sec-tab.active");
@@ -4253,6 +4365,18 @@ const SECTION_META = {
       "events-community-section": "community",
       "events-online-section":    null   // online subtab has no OSM items, just deep-links
     }
+  },
+  // v0.42: Community help — purely curated, no OSM venue map.
+  "card-community-help": {
+    mapElId: null,             // no OSM map for this section
+    summaryElId: "ch-summary",
+    subtabToCategory: {}       // pill text is set in renderCommunityHelp directly
+  },
+  // v0.45: Health — clinics are fetched from HRSA at runtime; no OSM map.
+  "card-health": {
+    mapElId: null,
+    summaryElId: "health-summary",
+    subtabToCategory: {}
   }
 };
 // Per-section state — { grouped, geo: {lat, lon} }. Populated by load functions.
@@ -4267,8 +4391,12 @@ const sectionState = {
 // Handyman is empty" when "Hardware" has 8 results.
 function refreshActiveSubtabFor(cardId) {
   const meta = SECTION_META[cardId];
+  if (!meta) return;
+  // v0.42/v0.45: Community help + Health don't use state.grouped — their
+  // pill/headline are set inside their own render functions. Bail early.
+  if (cardId === "card-community-help" || cardId === "card-health") return;
   const state = sectionState[cardId];
-  if (!meta || !state || !state.grouped) return;
+  if (!state || !state.grouped) return;
   const subnav = document.querySelector(`.subnav[data-subnav-for="${cardId}"]`);
   if (!subnav) return;
   let activeSubtab = subnav.querySelector(".subtab.active") || subnav.querySelector(".subtab");
@@ -7361,6 +7489,384 @@ function renderEventsOnline(geo) {
 }
 
 /* =====================================================================
+   v0.42: Community help — universal helplines + curated city resources.
+   "Verified" tier sources only (211, 988, SAMHSA, established nonprofits).
+   For the long tail we deep-link to 211.org / FindHelp / Feeding America.
+   ===================================================================== */
+
+// Universal helplines — relevant for every address in the US.
+const COMMUNITY_HELPLINES = [
+  { name: "211 — Social services hotline",
+    what: "Connects you to local food, housing, utility, mental-health, and crisis resources. Free, 24/7, multilingual.",
+    phone: "211", url: "https://www.211.org/", tier: "verified",
+    when: "24/7", scope: "US nationwide" },
+  { name: "988 — Suicide & Crisis Lifeline",
+    what: "Free, confidential support for anyone in suicidal crisis or emotional distress. Call, text, or chat.",
+    phone: "988", url: "https://988lifeline.org/", tier: "verified",
+    when: "24/7", scope: "US nationwide" },
+  { name: "SAMHSA National Helpline",
+    what: "Treatment referral for mental and/or substance use disorders. Confidential, free, multilingual.",
+    phone: "1-800-662-4357", url: "https://www.samhsa.gov/find-help/national-helpline", tier: "verified",
+    when: "24/7", scope: "US nationwide" },
+  { name: "National Domestic Violence Hotline",
+    what: "Confidential support for anyone affected by domestic violence. Call, text 'START' to 88788, or chat online.",
+    phone: "1-800-799-7233", url: "https://www.thehotline.org/", tier: "verified",
+    when: "24/7", scope: "US nationwide" },
+  { name: "Veterans Crisis Line",
+    what: "Connects veterans, service members, and their families with caring, qualified responders. Press 1 after dialing 988.",
+    phone: "988 (press 1)", url: "https://www.veteranscrisisline.net/", tier: "verified",
+    when: "24/7", scope: "US nationwide" },
+  { name: "Trevor Project (LGBTQ+ youth)",
+    what: "Crisis intervention and suicide prevention for LGBTQ young people under 25. Call, text, or chat.",
+    phone: "1-866-488-7386", url: "https://www.thetrevorproject.org/", tier: "verified",
+    when: "24/7", scope: "US nationwide" },
+  { name: "NAMI Helpline (mental health support)",
+    what: "Information and referral for anyone dealing with mental health conditions or supporting a loved one. Not a crisis line — call 988 for crisis.",
+    phone: "1-800-950-6264", url: "https://www.nami.org/help", tier: "verified",
+    when: "M-F 10am-10pm ET", scope: "US nationwide" },
+  { name: "National Sexual Assault Hotline (RAINN)",
+    what: "Confidential, anonymous support for survivors of sexual assault. Free, 24/7, in English and Spanish.",
+    phone: "1-800-656-4673", url: "https://www.rainn.org/", tier: "verified",
+    when: "24/7", scope: "US nationwide" }
+];
+
+// Curated city/region resources. `serves` = lowercased city or region keys
+// that should see this entry. Conservative seed — only verifiable orgs.
+const COMMUNITY_RESOURCES = [
+  // ---- Bay Area: Food ----
+  { name: "Second Harvest of Silicon Valley",
+    serves: ["san jose","milpitas","sunnyvale","santa clara","mountain view","palo alto","los gatos","saratoga","campbell","cupertino"],
+    state: "CA", category: "food",
+    what: "Free food for anyone — no proof of income required. 1,000+ partner distribution sites across Santa Clara & San Mateo counties.",
+    phone: "(800) 984-3663", url: "https://www.shfb.org/get-food/",
+    tier: "verified" },
+  { name: "SF-Marin Food Bank",
+    serves: ["san francisco"], state: "CA", category: "food",
+    what: "Free groceries through 200+ pantries in San Francisco and Marin. No paperwork required.",
+    phone: "(415) 282-1900", url: "https://www.sfmfoodbank.org/find-food/",
+    tier: "verified" },
+  { name: "Catholic Charities CYO — Food Pantries",
+    serves: ["san francisco","san mateo"], state: "CA", category: "food",
+    what: "Multiple food pantry locations across SF + San Mateo county.",
+    url: "https://www.catholiccharitiessf.org/", tier: "verified" },
+
+  // ---- Bay Area: Housing & utility ----
+  { name: "Sacred Heart Community Service",
+    serves: ["san jose","milpitas","sunnyvale","santa clara","campbell"], state: "CA",
+    category: "housing",
+    what: "Food, rent assistance, immigration legal services, free tax help, clothing closet — all in one SJ location.",
+    address: "1381 S 1st St, San Jose, CA 95110",
+    lat: 37.3145, lon: -121.8757,
+    phone: "(408) 278-2160", url: "https://sacredheartcs.org/",
+    tier: "verified" },
+  { name: "LifeMoves",
+    serves: ["sunnyvale","san jose","mountain view","palo alto","san mateo","redwood city"], state: "CA",
+    category: "housing",
+    what: "Shelter + transitional housing for families and adults experiencing homelessness across the South Bay & Peninsula.",
+    phone: "(650) 685-5880", url: "https://lifemoves.org/",
+    tier: "verified" },
+  { name: "Compass Family Services",
+    serves: ["san francisco"], state: "CA", category: "housing",
+    what: "Emergency shelter, rental assistance, and homelessness prevention for families with children in SF.",
+    phone: "(415) 644-0504", url: "https://www.compass-sf.org/",
+    tier: "verified" },
+  { name: "PG&E CARE / FERA discount program",
+    serves: ["san francisco","san jose","milpitas","sunnyvale","santa clara","campbell","saratoga","mountain view","palo alto","los gatos","cupertino"], state: "CA",
+    category: "housing",
+    what: "20-35% discount on PG&E utility bill for income-qualified households. Apply online; auto-enrollment available.",
+    phone: "(866) 743-2273", url: "https://www.pge.com/en_US/residential/save-energy-money/help-paying-your-bill/longer-term-assistance/care/care.page",
+    tier: "verified" },
+
+  // ---- Bay Area: Financial & legal ----
+  { name: "Bay Area Legal Aid",
+    serves: ["san francisco","san jose","milpitas","sunnyvale","santa clara","campbell","mountain view","palo alto","oakland"], state: "CA",
+    category: "financial",
+    what: "Free civil legal help — housing, public benefits, family law, consumer rights, immigration. Income-eligible.",
+    phone: "(800) 551-5554", url: "https://baylegal.org/",
+    tier: "verified" },
+  { name: "Earn It! Keep It! Save It! — Free tax help (VITA)",
+    serves: ["san francisco","san jose","milpitas","sunnyvale","santa clara","oakland"], state: "CA",
+    category: "financial",
+    what: "Free tax prep + e-filing for households earning under $66,000. Multiple Bay Area sites. Run by United Way Bay Area + IRS VITA.",
+    phone: "211", url: "https://www.earnitkeepitsaveit.org/",
+    tier: "verified" },
+
+  // ---- Philadelphia metro: Food ----
+  { name: "Philabundance",
+    serves: ["philadelphia","king of prussia","phoenixville"], state: "PA",
+    category: "food",
+    what: "Largest food bank in PA + South Jersey. Find a partner pantry near you via their locator.",
+    phone: "(215) 339-0900", url: "https://www.philabundance.org/find-food/",
+    tier: "verified" },
+  { name: "Phoenixville Area Community Services",
+    serves: ["phoenixville","king of prussia"], state: "PA", category: "food",
+    what: "Local food pantry serving Phoenixville + surrounding boroughs.",
+    url: "https://pacsphx.org/", tier: "verified" },
+
+  // ---- Philadelphia metro: Housing ----
+  { name: "Project HOME",
+    serves: ["philadelphia"], state: "PA", category: "housing",
+    what: "Outreach to people living on the streets, plus permanent supportive housing, healthcare, and adult learning in Philly.",
+    phone: "(215) 232-7272", url: "https://projecthome.org/",
+    tier: "verified" },
+  { name: "Bethesda Project",
+    serves: ["philadelphia"], state: "PA", category: "housing",
+    what: "Emergency shelter + permanent housing for men experiencing chronic homelessness in Philly.",
+    phone: "(215) 985-1600", url: "https://bethesdaproject.org/",
+    tier: "verified" },
+  { name: "LIHEAP — Pennsylvania utility assistance",
+    serves: ["philadelphia","king of prussia","phoenixville"], state: "PA", category: "housing",
+    what: "Federal home-energy bill help. Apply through PA Compass during heating season (Nov-Apr).",
+    phone: "1-866-857-7095", url: "https://www.dhs.pa.gov/Services/Assistance/Pages/LIHEAP.aspx",
+    tier: "verified" },
+
+  // ---- Philadelphia metro: Financial & legal ----
+  { name: "Community Legal Services Philadelphia",
+    serves: ["philadelphia"], state: "PA", category: "financial",
+    what: "Free civil legal services for low-income Philadelphians. Housing, benefits, employment, consumer, education.",
+    phone: "(215) 981-3700", url: "https://clsphila.org/",
+    tier: "verified" },
+  { name: "Philadelphia VITA (free tax help)",
+    serves: ["philadelphia","king of prussia"], state: "PA", category: "financial",
+    what: "Free tax preparation + e-filing for households earning under $66,000. Many neighborhood sites. Find one via 211.",
+    phone: "211", url: "https://www.unitedforimpact.org/programs-and-services/financial-empowerment/",
+    tier: "verified" }
+];
+
+// Pick resources whose `serves` overlaps with our city candidates.
+function getCommunityResourcesForGeo(geo, categoryFilter) {
+  if (!geo) return [];
+  const addr = geo.address || {};
+  const candidates = new Set();
+  ["city","town","village","borough","hamlet","municipality","suburb","neighbourhood","county"]
+    .forEach(k => { if (addr[k]) candidates.add(normalizeCityKey(addr[k])); });
+  (geo.display_name || "").split(/,\s*/).forEach(p => { if (p) candidates.add(normalizeCityKey(p)); });
+  try {
+    const typed = (document.getElementById("addr")?.value || "");
+    typed.split(/,\s*/).forEach(p => { if (p) candidates.add(normalizeCityKey(p)); });
+  } catch(e) {}
+  const zip = (addr.postcode || "").toString().match(/\d{5}/)?.[0];
+  if (zip && ZIP_TO_SEED_CITIES[zip]) ZIP_TO_SEED_CITIES[zip].forEach(c => candidates.add(c));
+
+  return COMMUNITY_RESOURCES.filter(r => {
+    if (categoryFilter && r.category !== categoryFilter) return false;
+    return r.serves.some(s => candidates.has(normalizeCityKey(s)));
+  });
+}
+
+let lastChGeo = null;
+async function loadCommunityHelp(geo) {
+  lastChGeo = geo;
+  $("card-community-help").hidden = false;
+  $("ch-loading").hidden = true;
+  $("ch-sections").hidden = false;
+  $("ch-summary").hidden = true;
+  renderCommunityHelp(geo);
+}
+
+function communityResourceRow(r, tierBadge) {
+  const phone = r.phone ? `<a class="place-phone" href="tel:${escapeHtml(r.phone.replace(/[^\d+]/g, ''))}">📞 ${escapeHtml(r.phone)}</a>` : "";
+  const addr = r.address ? `<span class="hint" style="margin-left:8px;">📍 ${escapeHtml(r.address)}</span>` : "";
+  const contact = (phone || addr) ? `<div class="place-contact" style="margin-top:4px;">${phone}${phone && addr ? ' · ' : ''}${addr}</div>` : "";
+  const reach = r.url ? `<a class="row-link" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">Visit site →</a>` : "";
+  const when = r.when ? `<span class="hint" style="margin-left:8px;">🕐 ${escapeHtml(r.when)}</span>` : "";
+  const scope = r.scope ? `<span class="hint" style="margin-left:8px;">${escapeHtml(r.scope)}</span>` : "";
+  return `<div class="school-row" style="display:block;padding:12px 14px;">
+    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;">
+      <div style="font-weight:600;">${escapeHtml(r.name)} ${tierBadge || ""}</div>
+      <div>${when}${scope}</div>
+    </div>
+    <div style="margin-top:4px;font-size:14px;line-height:1.45;">${escapeHtml(r.what || "")}</div>
+    ${contact}
+    <div style="margin-top:6px;font-size:13px;">${reach}</div>
+  </div>`;
+}
+
+function tierBadgeHtml(tier) {
+  if (tier === "verified") return `<span class="tier-badge tier-verified" title="Curated from an authoritative source (211, 988, SAMHSA, named nonprofit, federal data)">✓ Verified</span>`;
+  if (tier === "osm")      return `<span class="tier-badge tier-osm" title="From OpenStreetMap — community-edited, accuracy varies">🔵 OSM</span>`;
+  if (tier === "fallback") return `<span class="tier-badge tier-fallback" title="Deep-link to an external search — we don't have a curated entry here">⚫ Fallback</span>`;
+  return "";
+}
+
+function renderCommunityHelp(geo) {
+  const cityName = getDisplayCityForHeadline(geo) || "this area";
+  // Helplines — always populated
+  const helplinesTb = $("ch-helplines-tbody");
+  if (helplinesTb) {
+    helplinesTb.innerHTML = COMMUNITY_HELPLINES.map(h => communityResourceRow(h, tierBadgeHtml("verified"))).join("");
+  }
+  // Per-category fills
+  const cats = [
+    { id: "ch-food-tbody",      cat: "food",      label: "food assistance",     official: { url: "https://www.feedingamerica.org/find-your-local-foodbank", text: "🥫 Search Feeding America for food banks" } },
+    { id: "ch-housing-tbody",   cat: "housing",   label: "housing & utility help", official: { url: "https://www.211.org/", text: "🏠 Search 211 for housing/utility help" } },
+    { id: "ch-financial-tbody", cat: "financial", label: "financial & legal help", official: { url: "https://www.lsc.gov/about-lsc/what-legal-aid/find-legal-aid", text: "💵 Find your local Legal Aid office" } }
+  ];
+  const total = { count: 0 };
+  for (const { id, cat, label, official } of cats) {
+    const tb = $(id);
+    if (!tb) continue;
+    const items = getCommunityResourcesForGeo(geo, cat);
+    total.count += items.length;
+    let html = "";
+    if (items.length) {
+      html += items.map(r => communityResourceRow(r, tierBadgeHtml(r.tier || "verified"))).join("");
+    } else {
+      html += `<div class="schools-empty" style="padding:14px;">No curated <b>${escapeHtml(label)}</b> entries for ${escapeHtml(cityName)} yet. The official lookups below cover anywhere in the US.</div>`;
+    }
+    html += `<div class="markets-broader-search" style="margin-top:14px;padding:12px 14px;background:#f7f9fc;border-radius:10px;font-size:14px;">
+      <div style="color:#5f6b7a;margin-bottom:6px;">Need more options or live in a city we haven't curated yet? Call <b>211</b> or use the official lookup:</div>
+      <a href="${official.url}" target="_blank" rel="noopener" style="color:#0050c2;text-decoration:none;font-weight:600;">${escapeHtml(official.text)} →</a>
+      <span style="margin-left:14px;">${tierBadgeHtml("fallback")}</span>
+    </div>`;
+    tb.innerHTML = html;
+  }
+  // Headline
+  setText("ch-value", total.count > 0
+    ? `${total.count} curated resource${total.count === 1 ? "" : "s"} for ${cityName} + ${COMMUNITY_HELPLINES.length} universal helplines`
+    : `${COMMUNITY_HELPLINES.length} universal helplines work anywhere · curated city resources coming soon for ${cityName}`);
+}
+
+/* =====================================================================
+   v0.45: Health & wellness — HRSA FQHCs (live fetch), 988, SAMHSA.
+   For free clinics, queries HRSA Find a Health Center JSON endpoint at
+   runtime — federal data, no auth needed. Falls back gracefully when
+   the API is slow/blocked, with a direct link to the official search.
+   ===================================================================== */
+
+const HRSA_FIND_URL = (lat, lon, radiusMi) =>
+  `https://findahealthcenter.hrsa.gov/api/centers/?latitude=${lat}&longitude=${lon}&radius=${radiusMi}`;
+
+let lastHealthGeo = null;
+async function loadHealthWellness(geo) {
+  lastHealthGeo = geo;
+  $("card-health").hidden = false;
+  $("health-sections").hidden = false;
+  $("health-summary").hidden = true;
+  $("health-loading").hidden = true;
+  renderHealthStatic(geo);                // mental + substance — synchronous
+  await renderHealthClinics(geo);         // FQHCs — fetches HRSA
+}
+
+function renderHealthStatic(geo) {
+  const cityName = getDisplayCityForHeadline(geo) || "this area";
+  const state = (geo && geo.address && (getStateCode(geo.address) || "")) || "";
+  // Mental health subtab — universal resources + state-specific link
+  const mentalRows = [
+    { name: "988 — Suicide & Crisis Lifeline",
+      what: "Free, confidential support for anyone in suicidal crisis or emotional distress. Call, text, or chat.",
+      phone: "988", url: "https://988lifeline.org/", tier: "verified",
+      when: "24/7", scope: "US nationwide" },
+    { name: "SAMHSA Mental Health Treatment Locator",
+      what: `Find local mental-health treatment facilities by service type, insurance, and sliding scale. Pre-filtered for ${cityName} when you click.`,
+      url: state
+        ? `https://findtreatment.samhsa.gov/locator?searchTerm=${encodeURIComponent(cityName)}&searchType=facility&serviceType=mental`
+        : "https://findtreatment.samhsa.gov/locator",
+      tier: "verified", when: "Official federal locator", scope: "US nationwide" },
+    { name: "NAMI Helpline",
+      what: "Information and referral for anyone dealing with mental-health conditions or supporting a loved one. Not a crisis line — use 988 for crisis.",
+      phone: "1-800-950-6264", url: "https://www.nami.org/help",
+      tier: "verified", when: "M-F 10am-10pm ET", scope: "US nationwide" },
+    { name: "Crisis Text Line",
+      what: "Free 24/7 text-based mental-health support. Text HOME to 741741.",
+      phone: "Text HOME to 741741", url: "https://www.crisistextline.org/",
+      tier: "verified", when: "24/7", scope: "US nationwide" }
+  ];
+  $("health-mental-tbody").innerHTML = mentalRows.map(r => communityResourceRow(r, tierBadgeHtml(r.tier))).join("");
+
+  // Substance use subtab — SAMHSA findtreatment + universal lines
+  const substanceRows = [
+    { name: "SAMHSA findtreatment.gov",
+      what: `Federal locator for substance-use treatment facilities. Filter by detox, residential, outpatient, MAT, insurance accepted. Pre-filtered for ${cityName} when you click.`,
+      url: state
+        ? `https://findtreatment.gov/locator?searchTerm=${encodeURIComponent(cityName)}&searchType=facility&serviceType=substance`
+        : "https://findtreatment.gov/locator",
+      tier: "verified", when: "Official federal locator", scope: "US nationwide" },
+    { name: "SAMHSA National Helpline",
+      what: "24/7 free, confidential treatment referral and information for individuals and families facing mental or substance-use disorders.",
+      phone: "1-800-662-4357", url: "https://www.samhsa.gov/find-help/national-helpline",
+      tier: "verified", when: "24/7", scope: "US nationwide" },
+    { name: "Narcotics Anonymous — meeting finder",
+      what: "Free recovery community + meeting finder. Both in-person and virtual meetings.",
+      url: "https://www.na.org/meetingsearch/", tier: "verified",
+      when: "24/7 online", scope: "Worldwide" },
+    { name: "SMART Recovery (secular alternative to 12-step)",
+      what: "Science-based recovery support groups using cognitive behavioral techniques.",
+      url: "https://meetings.smartrecovery.org/", tier: "verified",
+      when: "24/7 online", scope: "Worldwide" }
+  ];
+  $("health-substance-tbody").innerHTML = substanceRows.map(r => communityResourceRow(r, tierBadgeHtml(r.tier))).join("");
+}
+
+async function renderHealthClinics(geo) {
+  const tb = $("health-clinics-tbody");
+  if (!tb || !geo) return;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  const cityName = getDisplayCityForHeadline(geo) || "this area";
+  tb.innerHTML = `<div class="schools-empty" style="padding:14px;">Looking up Federally Qualified Health Centers within ${CURRENT_RADIUS_MI} mi…</div>`;
+
+  let centers = [];
+  let fetchError = null;
+  try {
+    const url = HRSA_FIND_URL(lat, lon, CURRENT_RADIUS_MI);
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (res.ok) {
+      const data = await res.json();
+      const list = Array.isArray(data) ? data : (data.results || data.features || data.centers || []);
+      centers = list.map(c => normalizeHrsaCenter(c)).filter(Boolean);
+    } else {
+      fetchError = `HRSA returned HTTP ${res.status}`;
+    }
+  } catch (e) {
+    fetchError = (e && e.name === "AbortError") ? "HRSA fetch timed out" : (e && e.message) || "HRSA fetch failed";
+  }
+
+  let html = "";
+  if (centers.length) {
+    setText("health-value", `${centers.length} federally-qualified health center${centers.length === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi of ${cityName}`);
+    html += centers.slice(0, 12).map(c => communityResourceRow(c, tierBadgeHtml("verified"))).join("");
+  } else {
+    setText("health-value", `Free clinic search ${fetchError ? "blocked" : "returned no results"} — try the official HRSA locator`);
+    html += `<div class="schools-empty" style="padding:14px;line-height:1.55;">
+      ${fetchError
+        ? `<b>Couldn't reach HRSA from the browser:</b> ${escapeHtml(fetchError)}. The federal API doesn't always allow direct browser fetches — use the official search below.<br><br>`
+        : `No FQHCs returned for this exact location. Try a larger radius or use the official search:<br><br>`}
+      <a href="https://findahealthcenter.hrsa.gov/?zip=${encodeURIComponent((geo.address && geo.address.postcode) || cityName)}" target="_blank" rel="noopener" style="color:#0050c2;text-decoration:none;font-weight:600;">🏥 Search HRSA Find a Health Center for ${escapeHtml(cityName)} →</a>
+    </div>`;
+  }
+
+  // Always-on official-source CTA at the bottom
+  html += `<div class="markets-broader-search" style="margin-top:14px;padding:12px 14px;background:#f7f9fc;border-radius:10px;font-size:14px;">
+    <div style="color:#5f6b7a;margin-bottom:6px;">Federally Qualified Health Centers (FQHCs) offer sliding-scale primary care + dental + mental health regardless of insurance status. Income-based fees. Always call ahead to confirm hours + insurance:</div>
+    <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener" style="color:#0050c2;text-decoration:none;font-weight:600;">🏥 HRSA Find a Health Center (official) →</a>
+    <span style="margin-left:14px;">${tierBadgeHtml("verified")}</span>
+  </div>`;
+  tb.innerHTML = html;
+}
+
+function normalizeHrsaCenter(c) {
+  // HRSA API response shapes vary; try common fields
+  if (!c) return null;
+  const name = c.SiteName || c.site_name || c.name || c.organizationName || c.OrganizationName;
+  if (!name) return null;
+  const addrParts = [c.Address || c.address, c.City || c.city, c.State || c.state, c.PostalCode || c.zip || c.postal_code]
+    .filter(Boolean).join(", ");
+  const lat = c.Latitude || c.latitude || c.lat;
+  const lon = c.Longitude || c.longitude || c.lon || c.lng;
+  const phone = c.Phone || c.phone || c.SitePhone || "";
+  const url = c.Website || c.website || c.URL || "";
+  return {
+    name, what: c.SiteType || c.site_type || "Federally Qualified Health Center",
+    address: addrParts, lat, lon, phone, url,
+    when: c.OperatingHours || c.hours || "Call to confirm hours",
+    scope: c.City || c.city || ""
+  };
+}
+
+/* =====================================================================
    v0.33: Civic & gov't deep-link hub — pure URL map, no APIs needed
    yet. Every link goes to an authoritative free source pre-filtered
    by state where supported. Inline lookups (Civic Info API, Open
@@ -7723,6 +8229,8 @@ function renderResults(geo) {
   lastHsGeo     = geo;
   lastPsGeo     = geo;
   lastEventsGeo = geo;
+  lastChGeo     = geo;   // v0.42
+  lastHealthGeo = geo;   // v0.45
   // Reset loaded flags so any new search starts fresh
   for (const k of Object.keys(sectionLoadedOnce)) delete sectionLoadedOnce[k];
 
@@ -7754,7 +8262,11 @@ const SECTION_LAZY_LOAD = {
   "sec-schools":         () => lastSchoolGeo && loadNearbySchools(lastSchoolGeo),
   "sec-parks":           () => lastParksGeo  && loadNearbyParks(lastParksGeo),
   "sec-home-services":   () => lastHsGeo     && loadNearbyHomeServices(lastHsGeo),
-  "sec-events":          () => lastEventsGeo && loadNearbyEvents(lastEventsGeo)
+  "sec-events":          () => lastEventsGeo && loadNearbyEvents(lastEventsGeo),
+  // v0.42 / v0.45 — curated, no Overpass dependency; we still lazy-load to
+  // avoid running the city-filter + HRSA fetch on pages users don't visit.
+  "sec-community-help":  () => lastChGeo     && loadCommunityHelp(lastChGeo),
+  "sec-health":          () => lastHealthGeo && loadHealthWellness(lastHealthGeo)
 };
 const sectionLoadedOnce = {};   // sectionId → true once its load has fired
 
