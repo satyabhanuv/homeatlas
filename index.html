@@ -862,10 +862,89 @@
   }
   .pgroup-popular::before { content: "★"; font-size: 9px; }
 
+  /* ─── v0.47: persistent emergency strip — always at the top of the page,
+     sticky above the section nav. Two colors total: red urgency + neutral. ── */
+  .emergency-strip {
+    position: sticky; top: 0; z-index: 30;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 18px -24px 0;            /* break to viewport edges, sits flush */
+    padding: 10px 24px;
+    background: #FCEBEB;
+    border-top: 1px solid #F09595;
+    border-bottom: 1px solid #F09595;
+  }
+  .emergency-strip-label {
+    font-size: 14px; font-weight: 600; color: #791F1F;
+    margin-right: 4px;
+  }
+  .emergency-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    background: #A32D2D;
+    color: #fff !important;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 14px; font-weight: 600;
+    transition: background 0.12s ease;
+  }
+  .emergency-btn:hover { background: #791F1F; }
+  .emergency-btn.alt { background: #fff; color: #791F1F !important; border: 1px solid #F09595; }
+  .emergency-btn.alt:hover { background: #FCEBEB; }
+  @media (max-width: 700px) {
+    .emergency-strip { padding: 8px 16px; gap: 6px; }
+    .emergency-strip-label { width: 100%; margin-right: 0; }
+    .emergency-btn { font-size: 13px; padding: 6px 12px; }
+  }
+
+  /* ─── v0.47: Level-1 category nav — 5 tabs filter the section nav below
+     and provide a single blue accent for the active state. No category-
+     specific colors — keeps the page visually calm. ── */
+  .cat-nav {
+    display: flex; gap: 2px; flex-wrap: wrap;
+    margin: 0 -24px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+    position: sticky; top: 52px; z-index: 25;
+  }
+  .cat-tab {
+    flex: 0 0 auto;
+    padding: 14px 20px;
+    font-size: 15px; font-weight: 500;
+    color: var(--ink-soft);
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: inherit;
+    text-decoration: none;
+    margin-bottom: -1px;          /* overlap container border */
+    transition: color 0.12s ease, border-color 0.12s ease;
+    letter-spacing: -0.005em;
+  }
+  .cat-tab:hover { color: var(--ink); }
+  /* v0.47: per-category active accent — semantic colors per the mockup. */
+  .cat-tab.active { font-weight: 600; }
+  .cat-tab.active[data-cat="around-me"] { color: #0F6E56; border-bottom-color: #0F6E56; }
+  .cat-tab.active[data-cat="my-home"]   { color: #185FA5; border-bottom-color: #185FA5; }
+  .cat-tab.active[data-cat="help"]      { color: #A32D2D; border-bottom-color: #A32D2D; }
+  .cat-tab.active[data-cat="civic"]     { color: #3C3489; border-bottom-color: #3C3489; }
+  .cat-tab.active[data-cat="safety"]    { color: #854F0B; border-bottom-color: #854F0B; }
+  @media (max-width: 700px) {
+    .cat-tab { padding: 12px 14px; font-size: 14px; }
+  }
+  /* v0.47: sec-tab active state takes the parent category's tint so the
+     visual lineage is unmistakable. Subtle background, bold border. */
+  .sec-tab[data-category="around-me"].active { background: #0F6E56; border-color: #0F6E56; box-shadow: 0 2px 8px rgba(15,110,86,0.22); }
+  .sec-tab[data-category="my-home"].active   { background: #185FA5; border-color: #185FA5; box-shadow: 0 2px 8px rgba(24,95,165,0.22); }
+  .sec-tab[data-category="help"].active      { background: #A32D2D; border-color: #A32D2D; box-shadow: 0 2px 8px rgba(163,45,45,0.22); }
+  .sec-tab[data-category="civic"].active     { background: #3C3489; border-color: #3C3489; box-shadow: 0 2px 8px rgba(60,52,137,0.22); }
+  .sec-tab[data-category="safety"].active    { background: #854F0B; border-color: #854F0B; box-shadow: 0 2px 8px rgba(133,79,11,0.22); }
+
   /* ─── v0.29/v0.30: Sticky section-nav tabs + radius filter row ── */
   .section-nav {
-    position: sticky; top: 0; z-index: 20;
-    margin: 20px -24px 18px;          /* break out to viewport edges */
+    position: sticky; top: 96px; z-index: 20;
+    margin: 0 -24px 18px;             /* sits under emergency strip + cat nav */
     padding: 10px 24px;
     border-bottom: 1px solid var(--line);
     backdrop-filter: blur(10px);
@@ -1128,17 +1207,59 @@
   .page-section-header.community-help  { --psh-accent: #7c3aed; }
   /* v0.45 */
   .page-section-header.health          { --psh-accent: #0891b2; }
-  /* v0.46: quality-tier badges */
+  /* v0.46 → v0.47: tier indicators became compact colored dots so they
+     don't compete with row content for attention. Tooltip carries semantics. */
   .tier-badge {
-    display: inline-block; margin-left: 8px; padding: 2px 8px;
-    font-size: 11px; font-weight: 600; border-radius: 999px;
-    vertical-align: middle; letter-spacing: 0.2px;
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    vertical-align: middle;
+    margin-right: 6px;
+    flex-shrink: 0;
   }
-  .tier-badge.tier-verified { background: rgba(16,124,16,0.10); color: #107c10; border: 1px solid rgba(16,124,16,0.25); }
-  .tier-badge.tier-osm      { background: rgba(0,80,194,0.10);  color: #0050c2; border: 1px solid rgba(0,80,194,0.25); }
-  .tier-badge.tier-fallback { background: rgba(74,82,99,0.10);  color: #4a5263; border: 1px solid rgba(74,82,99,0.25); }
+  .tier-badge.tier-verified { background: #3B6D11; }
+  .tier-badge.tier-osm      { background: #185FA5; }
+  .tier-badge.tier-fallback { background: #888780; }
   .row-link { color: #0050c2; text-decoration: none; font-weight: 600; }
   .row-link:hover { text-decoration: underline; }
+
+  /* v0.47: primary action buttons. Three contexts — Call (red, urgency),
+     Directions (blue, brand), Open (green, "go visit a portal"). Same shape,
+     different intent. Secondary icon-only buttons sit next to them. */
+  .act-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 14px; font-weight: 600;
+    color: #fff !important;
+    white-space: nowrap;
+    border: none;
+    cursor: pointer;
+    transition: background 0.12s ease, transform 0.08s ease;
+  }
+  .act-btn.call { background: #A32D2D; }
+  .act-btn.call:hover { background: #791F1F; }
+  .act-btn.dir  { background: #0050c2; }
+  .act-btn.dir:hover  { background: #003e99; }
+  .act-btn.web  { background: #3B6D11; }
+  .act-btn.web:hover  { background: #27500A; }
+  .act-btn:active { transform: translateY(1px); }
+  .act-secondary {
+    display: inline-flex; gap: 6px; margin-left: 8px;
+  }
+  .act-secondary a {
+    width: 32px; height: 32px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--ink-soft);
+    text-decoration: none;
+    font-size: 15px;
+    background: var(--surface);
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .act-secondary a:hover { background: var(--surface-2); border-color: #d6dbe3; color: var(--ink); }
 
   /* v0.34.2: "Show N more" expansion under each subsection list */
   .more-listings {
@@ -1422,7 +1543,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.46</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.47</span>
     </div>
   </header>
 
@@ -1455,8 +1576,29 @@
   <!-- Results -->
   <section class="results" id="results" hidden>
 
+    <!-- v0.47: Persistent emergency strip — always visible, sticky on top.
+         tel: links call directly on mobile; on desktop the browser asks. -->
+    <div class="emergency-strip" id="emergency-strip" role="region" aria-label="Emergency helplines">
+      <span class="emergency-strip-label">Need help right now?</span>
+      <a class="emergency-btn" href="tel:911" aria-label="Call 911">911</a>
+      <a class="emergency-btn" href="tel:988" aria-label="Call 988 Suicide and Crisis Lifeline">988 Crisis</a>
+      <a class="emergency-btn" href="tel:211" aria-label="Call 211 Social Services">211 Help</a>
+    </div>
+
+    <!-- v0.47: Level-1 category nav. Filters the section-nav below to show
+         only the services in the active category. Single blue accent for
+         active state — no per-category colors. -->
+    <nav class="cat-nav" id="cat-nav" aria-label="Categories">
+      <a href="#cat-around-me"  class="cat-tab"            data-cat="around-me">Around me</a>
+      <a href="#cat-my-home"    class="cat-tab"            data-cat="my-home">My home</a>
+      <a href="#cat-help"       class="cat-tab"            data-cat="help">Help</a>
+      <a href="#cat-civic"      class="cat-tab"            data-cat="civic">Civic</a>
+      <a href="#cat-safety"     class="cat-tab"            data-cat="safety">Safety &amp; risks</a>
+    </nav>
+
     <!-- v0.28/v0.29: Section nav — sticky text-only tabs in user-requested order -->
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
+    <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
       <div class="radius-filter" role="radiogroup" aria-label="Search radius">
         <span class="radius-filter-label">Searching within</span>
@@ -1467,18 +1609,18 @@
         <span class="radius-status" id="radius-status"></span>
       </div>
       <div class="section-nav-inner">
-        <a href="#sec-myhome"          class="sec-tab" data-target="sec-myhome">My home</a>
-        <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services">Emergency services</a>
-        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic">Civic &amp; gov't</a>
-        <a href="#sec-services"        class="sec-tab" data-target="sec-services">Utility services</a>
-        <a href="#sec-schools"         class="sec-tab" data-target="sec-schools">Education</a>
-        <a href="#sec-parks"           class="sec-tab" data-target="sec-parks">Recreation</a>
-        <a href="#sec-events"          class="sec-tab" data-target="sec-events">Events</a>
-        <a href="#sec-community-help"  class="sec-tab" data-target="sec-community-help">Community help</a>
-        <a href="#sec-health"          class="sec-tab" data-target="sec-health">Health &amp; wellness</a>
-        <a href="#sec-yard"            class="sec-tab" data-target="sec-yard">Gardening</a>
-        <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services">Home services</a>
-        <a href="#sec-risks"           class="sec-tab" data-target="sec-risks">Climate risks</a>
+        <a href="#sec-events"          class="sec-tab" data-target="sec-events"          data-category="around-me">Events</a>
+        <a href="#sec-schools"         class="sec-tab" data-target="sec-schools"         data-category="around-me">Schools</a>
+        <a href="#sec-parks"           class="sec-tab" data-target="sec-parks"           data-category="around-me">Parks &amp; rec</a>
+        <a href="#sec-myhome"          class="sec-tab" data-target="sec-myhome"          data-category="my-home">Property</a>
+        <a href="#sec-services"        class="sec-tab" data-target="sec-services"        data-category="my-home">Utilities &amp; internet</a>
+        <a href="#sec-yard"            class="sec-tab" data-target="sec-yard"            data-category="my-home">Gardening</a>
+        <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services"   data-category="my-home">Home services</a>
+        <a href="#sec-community-help"  class="sec-tab" data-target="sec-community-help"  data-category="help">Community help</a>
+        <a href="#sec-health"          class="sec-tab" data-target="sec-health"          data-category="help">Health &amp; wellness</a>
+        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic"           data-category="civic">Civic &amp; gov't</a>
+        <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services" data-category="safety">Emergency services</a>
+        <a href="#sec-risks"           class="sec-tab" data-target="sec-risks"           data-category="safety">Climate risks</a>
       </div>
     </nav>
 
@@ -2243,7 +2385,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.46 · May 2026 · Phase 2 · New <b>Community help</b> section (211 / 988 / SAMHSA + curated food/housing/legal resources) and <b>Health &amp; wellness</b> section (HRSA Find a Health Center API + Mental health + Substance use). Plus quality-tier badges (✓ Verified · 🔵 OSM · ⚫ Fallback) so users know exactly what they're looking at.
+      <b>HomeAtlas</b> &mdash; v0.47 · May 2026 · Phase 2 · IA restructure: persistent 911 / 988 / 211 emergency strip + 5-category navigation (Around me · My home · Help · Civic · Safety &amp; risks). Each row now has one prominent primary action — Call / Directions / Open — chosen by context.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -7664,29 +7806,66 @@ async function loadCommunityHelp(geo) {
   renderCommunityHelp(geo);
 }
 
-function communityResourceRow(r, tierBadge) {
-  const phone = r.phone ? `<a class="place-phone" href="tel:${escapeHtml(r.phone.replace(/[^\d+]/g, ''))}">📞 ${escapeHtml(r.phone)}</a>` : "";
-  const addr = r.address ? `<span class="hint" style="margin-left:8px;">📍 ${escapeHtml(r.address)}</span>` : "";
-  const contact = (phone || addr) ? `<div class="place-contact" style="margin-top:4px;">${phone}${phone && addr ? ' · ' : ''}${addr}</div>` : "";
-  const reach = r.url ? `<a class="row-link" href="${escapeHtml(r.url)}" target="_blank" rel="noopener">Visit site →</a>` : "";
-  const when = r.when ? `<span class="hint" style="margin-left:8px;">🕐 ${escapeHtml(r.when)}</span>` : "";
-  const scope = r.scope ? `<span class="hint" style="margin-left:8px;">${escapeHtml(r.scope)}</span>` : "";
-  return `<div class="school-row" style="display:block;padding:12px 14px;">
-    <div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline;">
-      <div style="font-weight:600;">${escapeHtml(r.name)} ${tierBadge || ""}</div>
-      <div>${when}${scope}</div>
-    </div>
-    <div style="margin-top:4px;font-size:14px;line-height:1.45;">${escapeHtml(r.what || "")}</div>
-    ${contact}
-    <div style="margin-top:6px;font-size:13px;">${reach}</div>
-  </div>`;
+// v0.47: tier badges are now compact colored dots (8px). Tooltip carries
+// the semantics. Visual weight drops dramatically so row content can breathe.
+function tierBadgeHtml(tier) {
+  if (tier === "verified") return `<span class="tier-badge tier-verified" title="Verified — curated from an authoritative source (211, 988, SAMHSA, named nonprofit, federal data)"></span>`;
+  if (tier === "osm")      return `<span class="tier-badge tier-osm" title="OSM — from OpenStreetMap, community-edited"></span>`;
+  if (tier === "fallback") return `<span class="tier-badge tier-fallback" title="Fallback — deep-link to an external search"></span>`;
+  return "";
 }
 
-function tierBadgeHtml(tier) {
-  if (tier === "verified") return `<span class="tier-badge tier-verified" title="Curated from an authoritative source (211, 988, SAMHSA, named nonprofit, federal data)">✓ Verified</span>`;
-  if (tier === "osm")      return `<span class="tier-badge tier-osm" title="From OpenStreetMap — community-edited, accuracy varies">🔵 OSM</span>`;
-  if (tier === "fallback") return `<span class="tier-badge tier-fallback" title="Deep-link to an external search — we don't have a curated entry here">⚫ Fallback</span>`;
-  return "";
+// v0.47: Decide the primary action for a row. Hotlines/helplines call;
+// places get directions; URL-only entries get Open. An explicit r._primary
+// overrides. The other actions become small secondary icons.
+function pickRowPrimary(r) {
+  if (r && r._primary) return r._primary;
+  if (r.phone && !r.lat && !r.address) return "call";
+  if (r.lat || r.address)              return "dir";
+  if (r.url)                           return "open";
+  if (r.phone)                         return "call";
+  return null;
+}
+
+function rowActionsHtml(r) {
+  const primary = pickRowPrimary(r);
+  const ph = r.phone ? r.phone.replace(/[^\d+]/g, "") : null;
+  // Prefer exact coords; otherwise build a maps search from the address; else null
+  let mapUrl = null;
+  if (r.lat != null && r.lon != null) {
+    mapUrl = `https://www.openstreetmap.org/?mlat=${r.lat}&mlon=${r.lon}#map=17/${r.lat}/${r.lon}`;
+  } else if (r.address) {
+    mapUrl = `https://www.google.com/maps/search/${encodeURIComponent(r.address)}`;
+  }
+  let primaryHtml = "";
+  const secondary = [];
+  if (primary === "call" && ph) {
+    primaryHtml = `<a class="act-btn call" href="tel:${escapeHtml(ph)}" aria-label="Call ${escapeHtml(r.phone)}">📞 Call ${escapeHtml(r.phone)}</a>`;
+    if (mapUrl) secondary.push(`<a href="${mapUrl}" target="_blank" rel="noopener" title="Directions" aria-label="Get directions">📍</a>`);
+    if (r.url)  secondary.push(`<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener" title="Website" aria-label="Visit website">↗</a>`);
+  } else if (primary === "dir" && mapUrl) {
+    primaryHtml = `<a class="act-btn dir" href="${mapUrl}" target="_blank" rel="noopener" aria-label="Get directions">📍 Directions</a>`;
+    if (ph)    secondary.push(`<a href="tel:${escapeHtml(ph)}" title="Call ${escapeHtml(r.phone)}" aria-label="Call">📞</a>`);
+    if (r.url) secondary.push(`<a href="${escapeHtml(r.url)}" target="_blank" rel="noopener" title="Website" aria-label="Visit website">↗</a>`);
+  } else if (primary === "open" && r.url) {
+    primaryHtml = `<a class="act-btn web" href="${escapeHtml(r.url)}" target="_blank" rel="noopener" aria-label="Open website">↗ Open</a>`;
+    if (ph) secondary.push(`<a href="tel:${escapeHtml(ph)}" title="Call ${escapeHtml(r.phone)}" aria-label="Call">📞</a>`);
+  }
+  const secHtml = secondary.length ? `<span class="act-secondary">${secondary.join("")}</span>` : "";
+  return primaryHtml + secHtml;
+}
+
+function communityResourceRow(r, tierBadge) {
+  const meta = [r.when, r.scope, r.address].filter(Boolean).map(escapeHtml).join(" · ");
+  const actions = rowActionsHtml(r);
+  return `<div class="school-row" style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:260px;">
+      <div style="display:flex;align-items:center;font-weight:600;font-size:15px;">${tierBadge || ""}<span>${escapeHtml(r.name)}</span></div>
+      ${meta ? `<div class="hint" style="margin-top:4px;font-size:14px;">${meta}</div>` : ""}
+      ${r.what ? `<div style="margin-top:6px;font-size:14px;line-height:1.5;color:var(--ink-soft);">${escapeHtml(r.what)}</div>` : ""}
+    </div>
+    <div style="display:flex;align-items:center;flex-shrink:0;">${actions}</div>
+  </div>`;
 }
 
 function renderCommunityHelp(geo) {
@@ -8180,6 +8359,9 @@ function setLoading() {
   setTimeout(initSubtabs, 50);
   // v0.34.0: group siblings between section headers + activate the first section
   setTimeout(initSingleViewSections, 75);
+  // v0.47: default category = "around-me" → activates sec-events as the first
+  // visible service. Slightly delayed so initSingleViewSections finishes first.
+  setTimeout(() => { if (typeof applyCategoryFilter === "function") applyCategoryFilter("around-me"); }, 120);
   ["electric","internet","tv","security"].forEach(k => {
     setHTML(`${k}-value`, '<div class="skeleton" style="width:60%;height:22px;"></div>');
     const meta = $(`${k}-meta`); if (meta) meta.textContent = "";
@@ -8495,6 +8677,47 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   target.hidden = !target.hidden;
   btn.setAttribute("aria-expanded", String(!target.hidden));
+});
+
+// v0.47: Level-1 category nav. Clicking a category filters the section-nav
+// to only show services under that parent + activates the first visible one.
+// Single blue accent everywhere — no per-category color variations.
+const CATEGORY_MAP = {
+  "around-me": ["sec-events", "sec-schools", "sec-parks"],
+  "my-home":   ["sec-myhome", "sec-services", "sec-yard", "sec-home-services"],
+  "help":      ["sec-community-help", "sec-health"],
+  "civic":     ["sec-civic"],
+  "safety":    ["sec-public-services", "sec-risks"]
+};
+function applyCategoryFilter(cat, opts) {
+  opts = opts || {};
+  const allowed = new Set(CATEGORY_MAP[cat] || []);
+  // Show / hide sec-tabs based on category
+  document.querySelectorAll(".sec-tab[data-target]").forEach(tab => {
+    tab.style.display = allowed.has(tab.dataset.target) ? "" : "none";
+  });
+  // Mark the active cat-tab
+  document.querySelectorAll(".cat-tab").forEach(t => {
+    t.classList.toggle("active", t.dataset.cat === cat);
+  });
+  // If the currently-active sec-tab isn't in this category, click the first one in the category
+  if (opts.activateFirst !== false) {
+    const active = document.querySelector(".sec-tab.active");
+    const activeOk = active && allowed.has(active.dataset.target);
+    if (!activeOk) {
+      const first = document.querySelector(`.sec-tab[data-target="${[...allowed][0]}"]`);
+      if (first) first.click();
+    }
+  }
+}
+
+// Click handler for cat-tabs — single delegated handler.
+document.addEventListener("click", (e) => {
+  const catTab = e.target.closest(".cat-tab[data-cat]");
+  if (!catTab) return;
+  e.preventDefault();
+  applyCategoryFilter(catTab.dataset.cat);
+  if (history.replaceState) history.replaceState(null, "", "#cat-" + catTab.dataset.cat);
 });
 
 // v0.28/v0.29: Section-nav (.sec-tab) — smooth-scroll to a section.
