@@ -979,6 +979,156 @@
   @media (max-width: 700px) {
     .cat-tab { padding: 12px 14px; font-size: 14px; }
   }
+  /* v0.48: Calendar view for Happening this month. Around-me teal accent. */
+  .cal-wrap {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 14px 10px;
+    margin-bottom: 16px;
+  }
+  .cal-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px;
+    padding: 0 4px 12px;
+  }
+  .cal-month-label {
+    font-size: 16px; font-weight: 600; color: var(--ink);
+    flex: 1; text-align: center;
+  }
+  .cal-nav-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink-soft);
+    cursor: pointer;
+    font-size: 16px; line-height: 1;
+    font-family: inherit;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+  .cal-nav-btn:hover { background: var(--surface-2); border-color: #d6dbe3; color: var(--ink); }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  .cal-dow {
+    text-align: center;
+    font-size: 11px; font-weight: 600;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 0 8px;
+  }
+  .cal-day {
+    aspect-ratio: 1;
+    min-height: 44px;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-size: 14px;
+    border-radius: 8px;
+    color: var(--ink-faint);
+    position: relative;
+    user-select: none;
+  }
+  .cal-day.empty { visibility: hidden; }
+  .cal-day.in-month { color: var(--ink); }
+  .cal-day.has-events {
+    cursor: pointer;
+    background: rgba(15,110,86,0.08);
+    color: #0F6E56;
+    font-weight: 600;
+    transition: background 0.12s ease;
+  }
+  .cal-day.has-events:hover { background: rgba(15,110,86,0.18); }
+  .cal-day.today {
+    outline: 2px solid #0F6E56;
+    outline-offset: -2px;
+  }
+  .cal-day.selected {
+    background: #0F6E56 !important;
+    color: #fff !important;
+  }
+  .cal-num { font-size: 14px; line-height: 1; }
+  .cal-dot {
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: currentColor;
+    margin-top: 4px;
+    opacity: 0.85;
+  }
+  .cal-day.selected .cal-dot { background: #fff; }
+  .cal-count-badge {
+    position: absolute;
+    top: 3px; right: 4px;
+    font-size: 9px; font-weight: 700;
+    line-height: 1;
+    padding: 2px 4px;
+    border-radius: 6px;
+    background: rgba(15,110,86,0.18);
+    color: #0F6E56;
+  }
+  .cal-day.selected .cal-count-badge { background: rgba(255,255,255,0.28); color: #fff; }
+  @media (max-width: 560px) {
+    .cal-day { min-height: 38px; font-size: 13px; }
+    .cal-count-badge { font-size: 8px; padding: 1px 3px; }
+  }
+
+  .cal-agenda-header {
+    margin: 16px 0 8px;
+    font-size: 15px; font-weight: 600;
+    color: var(--ink);
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  }
+  .cal-agenda-header .cal-agenda-count {
+    font-size: 13px; font-weight: 500;
+    color: var(--ink-faint);
+  }
+  .cal-event {
+    display: flex; gap: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border-left: 3px solid #0F6E56;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left-width: 3px;
+    border-left-color: #0F6E56;
+    margin-bottom: 8px;
+  }
+  .cal-event-time {
+    font-size: 13px; font-weight: 600;
+    white-space: nowrap;
+    color: var(--ink-soft);
+    min-width: 64px;
+    padding-top: 2px;
+  }
+  .cal-event-body { flex: 1; min-width: 0; }
+  .cal-event-title {
+    font-weight: 600; font-size: 15px;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 6px;
+    flex-wrap: wrap;
+  }
+  .cal-event-meta {
+    margin-top: 4px;
+    font-size: 13px;
+    color: var(--ink-faint);
+  }
+  .cal-event-actions {
+    margin-top: 6px;
+    display: flex; gap: 8px; align-items: center;
+    font-size: 13px;
+  }
+  .cal-empty {
+    padding: 18px 14px;
+    color: var(--ink-faint);
+    font-size: 14px;
+    text-align: center;
+    background: var(--surface-2);
+    border-radius: 8px;
+  }
+
   /* v0.47: sec-tab active state takes the parent category's tint so the
      visual lineage is unmistakable. Subtle background, bold border. */
   .sec-tab[data-category="around-me"].active { background: #0F6E56; border-color: #0F6E56; box-shadow: 0 2px 8px rgba(15,110,86,0.22); }
@@ -1589,7 +1739,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.47.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.48</span>
     </div>
   </header>
 
@@ -2436,7 +2586,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.47 · May 2026 · Phase 2 · IA restructure: persistent 911 / 988 / 211 emergency strip + 5-category navigation (Around me · My home · Help · Civic · Safety &amp; risks). Each row now has one prominent primary action — Call / Directions / Open — chosen by context.
+      <b>HomeAtlas</b> &mdash; v0.48 · May 2026 · Phase 2 · Happening this month is now a real calendar grid. Dots/counts show which days have events; click a date to see that day's agenda. Today is highlighted; month-nav arrows handle 30-day windows that cross month boundaries.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -7600,6 +7750,22 @@ function formatEventWhen(starts, ends) {
   } catch(_) { return starts || ""; }
 }
 
+// v0.48: dateKey helper — YYYY-MM-DD in LOCAL time (not UTC, so users don't
+// see events shifted by their TZ offset).
+function _calDateKey(d) {
+  return d.getFullYear() + "-" +
+         String(d.getMonth() + 1).padStart(2, "0") + "-" +
+         String(d.getDate()).padStart(2, "0");
+}
+function _calShiftMonth(ym, delta) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(y, m - 1 + delta, 1);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+}
+
+// v0.48: Calendar view replaces the week-grouped list. Month grid with
+// dots/counts on dates that have events; click a date to see that day's
+// agenda below. Defaults to today (or the next date with events).
 function renderEventsListings(geo, eventsArg) {
   const sec = $("events-listings-section");
   const tb  = $("events-listings-tbody");
@@ -7615,46 +7781,126 @@ function renderEventsListings(geo, eventsArg) {
     </div>`;
     return;
   }
-  // Group by week-of so the list scans well
-  const byWeek = new Map();
+
+  // Bucket events by local date key
+  const byDate = new Map();
   for (const ev of events) {
     const d = new Date(ev.starts);
     if (isNaN(d)) continue;
-    // Normalize to Sunday of that week as the bucket key
-    const sunday = new Date(d); sunday.setDate(d.getDate() - d.getDay()); sunday.setHours(0,0,0,0);
-    const key = sunday.toISOString().slice(0,10);
-    if (!byWeek.has(key)) byWeek.set(key, { sunday, items: [] });
-    byWeek.get(key).items.push(ev);
+    const key = _calDateKey(d);
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key).push(ev);
   }
-  const buckets = [...byWeek.entries()].sort(([a],[b]) => a.localeCompare(b));
-  const weekHeader = sun => {
-    const sat = new Date(sun); sat.setDate(sun.getDate() + 6);
-    const fmt = d => d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-    return `Week of ${fmt(sun)}–${fmt(sat)}`;
+  // Sort events within each date by start time
+  for (const arr of byDate.values()) {
+    arr.sort((a, b) => a.starts.localeCompare(b.starts));
+  }
+
+  const today = new Date();
+  const todayKey = _calDateKey(today);
+  const upcomingKeys = [...byDate.keys()].sort();
+
+  // State: which date is selected, and which month is on screen
+  let selectedDate = byDate.has(todayKey)
+    ? todayKey
+    : (upcomingKeys.find(k => k >= todayKey) || upcomingKeys[0]);
+  let viewMonth = selectedDate.slice(0, 7);   // "YYYY-MM"
+
+  const render = () => {
+    tb.innerHTML = _renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey) +
+                   _renderCalendarAgenda(byDate, selectedDate, todayKey);
+    // Wire date clicks
+    tb.querySelectorAll("[data-cal-date]").forEach(el => {
+      el.addEventListener("click", () => {
+        selectedDate = el.dataset.calDate;
+        viewMonth = selectedDate.slice(0, 7);
+        render();
+      });
+    });
+    // Wire month nav arrows
+    tb.querySelectorAll("[data-cal-month-nav]").forEach(el => {
+      el.addEventListener("click", () => {
+        viewMonth = _calShiftMonth(viewMonth, parseInt(el.dataset.calMonthNav, 10));
+        render();
+      });
+    });
   };
-  const free = ev => ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
-  const cat = ev => {
-    const m = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
-    return `<span class="hint" style="margin-right:6px;">${m.icon} ${escapeHtml(m.label)}</span>`;
-  };
-  const row = ev => {
-    const venue = ev.venue ? `<div class="hint" style="margin-top:2px;">${escapeHtml(ev.venue)}</div>` : "";
-    const link = ev.url ? `<a href="${escapeHtml(ev.url)}" target="_blank" rel="noopener" class="row-link">Details →</a>` : "";
-    return `<div class="row" style="display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-bottom:1px solid #f0f2f5;">
-      <div style="display:flex;justify-content:space-between;gap:10px;align-items:baseline;flex-wrap:wrap;">
-        <div style="font-weight:600;">${cat(ev)}${escapeHtml(ev.title)} ${free(ev)}</div>
-        <div class="hint">${escapeHtml(formatEventWhen(ev.starts, ev.ends))}</div>
-      </div>
-      ${venue}
-      <div style="margin-top:4px;font-size:13px;">${link} <span class="hint" style="margin-left:10px;">via ${escapeHtml(ev.source || "")}</span></div>
-    </div>`;
-  };
-  tb.innerHTML = buckets.map(([_, b]) => `
-    <div class="events-week-block" style="margin-bottom:14px;">
-      <div class="events-week-header" style="font-weight:600;color:#5f6b7a;padding:6px 12px;background:#f7f8fb;border-radius:8px;margin-bottom:4px;">${weekHeader(b.sunday)}</div>
-      ${b.items.map(row).join("")}
+  render();
+}
+
+function _renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey) {
+  const [y, m] = viewMonth.split("-").map(Number);
+  const firstDay = new Date(y, m - 1, 1);
+  const monthName = firstDay.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const startDow = firstDay.getDay();
+  const daysInMonth = new Date(y, m, 0).getDate();
+  const dows = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+  let html = `<div class="cal-wrap" role="grid" aria-label="Event calendar">
+    <div class="cal-header">
+      <button class="cal-nav-btn" type="button" data-cal-month-nav="-1" aria-label="Previous month">‹</button>
+      <span class="cal-month-label">${escapeHtml(monthName)}</span>
+      <button class="cal-nav-btn" type="button" data-cal-month-nav="1" aria-label="Next month">›</button>
     </div>
-  `).join("");
+    <div class="cal-grid">`;
+
+  for (const dow of dows) html += `<div class="cal-dow">${dow}</div>`;
+  // Leading blanks
+  for (let i = 0; i < startDow; i++) html += `<div class="cal-day empty"></div>`;
+  // Days of month
+  for (let day = 1; day <= daysInMonth; day++) {
+    const key = `${y}-${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const has = byDate.has(key);
+    const count = has ? byDate.get(key).length : 0;
+    const cls = ["cal-day","in-month"];
+    if (has) cls.push("has-events");
+    if (key === todayKey) cls.push("today");
+    if (key === selectedDate) cls.push("selected");
+    html += `<div class="${cls.join(" ")}" ${has ? `data-cal-date="${key}" role="gridcell" tabindex="0" aria-label="${count} event${count===1?"":"s"} on ${key}"` : ""}>
+      <span class="cal-num">${day}</span>
+      ${has ? (count > 1
+        ? `<span class="cal-count-badge">${count}</span>`
+        : `<span class="cal-dot"></span>`) : ""}
+    </div>`;
+  }
+  html += `</div></div>`;
+  return html;
+}
+
+function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
+  const evs = byDate.get(selectedDate) || [];
+  const d = new Date(selectedDate + "T00:00:00");
+  const dayName = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+  const isToday = selectedDate === todayKey;
+  const title = isToday ? `Today · ${dayName}` : dayName;
+  const tFmt = (s) => {
+    const dd = new Date(s);
+    return dd.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  };
+  let html = `<div class="cal-agenda-header">
+    <span>${escapeHtml(title)}</span>
+    <span class="cal-agenda-count">${evs.length} event${evs.length === 1 ? "" : "s"}</span>
+  </div>`;
+  if (!evs.length) {
+    html += `<div class="cal-empty">Nothing scheduled. Pick another date from the calendar.</div>`;
+    return html;
+  }
+  for (const ev of evs) {
+    const when = ev.ends ? `${tFmt(ev.starts)}–${tFmt(ev.ends)}` : tFmt(ev.starts);
+    const meta = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
+    const free = ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
+    const venue = ev.venue ? `<div class="cal-event-meta">${escapeHtml(ev.venue)}</div>` : "";
+    const link = ev.url ? `<a class="row-link" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">Details →</a>` : "";
+    html += `<div class="cal-event">
+      <div class="cal-event-time">${escapeHtml(when)}</div>
+      <div class="cal-event-body">
+        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}</div>
+        ${venue}
+        <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")}</span></div>
+      </div>
+    </div>`;
+  }
+  return html;
 }
 function renderEventsOnline(geo) {
   const addr = (geo && geo.address) || {};
