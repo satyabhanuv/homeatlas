@@ -82,7 +82,9 @@
   .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--accent)); }
   /* v0.35.0: logo SVG in brand area */
   .brand-logo { width: 30px; height: 30px; display: inline-block; vertical-align: middle; }
-  /* v0.35.1: visible version stamp so users can verify they're on the latest build */
+  /* v0.47.1: version stamp hidden from the main view by default. Reveals
+     only on hover over the logo (kept in DOM for debugging — version is
+     also in the footer). Don't compete with the search for attention. */
   .brand-version {
     margin-left: 6px;
     padding: 2px 7px;
@@ -93,13 +95,57 @@
     letter-spacing: 0.3px;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     cursor: help;
+    display: none;     /* hidden by default — footer carries the version */
   }
-  .brand-tag { margin-left: 8px; padding: 3px 8px; border-radius: 999px; background: var(--line); color: var(--ink-soft); font-size: 11px; letter-spacing: 0.4px; text-transform: uppercase; font-weight: 600; }
+  .brand-area:hover .brand-version { display: inline-block; }
+  /* v0.47.1: county-verified tag is now a subtle text accent, not a big pill */
+  .brand-tag {
+    margin-left: 10px;
+    color: var(--ink-faint);
+    font-size: 11.5px;
+    letter-spacing: 0.2px;
+    font-weight: 500;
+    background: transparent;
+    padding: 0;
+    text-transform: none;
+  }
+  @media (max-width: 560px) {
+    .brand-tag { display: none; }   /* save horizontal room on mobile */
+  }
 
-  .hero { padding: 32px 0 20px; }
-  .hero h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.05; margin: 0 0 10px; letter-spacing: -0.03em; font-weight: 800; }
+  .hero { padding: 32px 0 20px; transition: padding 0.18s ease; }
+  .hero h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.05; margin: 0 0 10px; letter-spacing: -0.03em; font-weight: 800; transition: font-size 0.18s ease, margin 0.18s ease; }
   .hero h1 em { color: var(--primary); font-style: normal; }
   .hero p.lead { margin: 0 0 22px; max-width: 600px; font-size: clamp(15px, 1.8vw, 17px); color: var(--ink-soft); line-height: 1.5; }
+
+  /* v0.47.1: compact hero once results are showing. Shrinks the headline,
+     hides the lead paragraph and the collapsed "What's covered" disclosure,
+     so search bar + emergency strip sit close to the top. */
+  body.results-shown .hero { padding: 14px 0 8px; }
+  body.results-shown .hero h1 { font-size: 22px; margin: 0 0 4px; }
+  body.results-shown .hero p.lead { display: none; }
+  body.results-shown .hero-disclosure { display: none; }
+
+  /* v0.47.1: "What's covered?" collapsed disclosure replaces the long hint
+     paragraph. Single small line by default; expands to show coverage info. */
+  .hero-disclosure { margin: 8px 0 0; font-size: 13px; color: var(--ink-faint); }
+  .hero-disclosure summary {
+    cursor: pointer;
+    list-style: none;
+    display: inline-block;
+    color: var(--ink-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    font-size: 12.5px;
+    font-weight: 500;
+    user-select: none;
+  }
+  .hero-disclosure summary::-webkit-details-marker { display: none; }
+  .hero-disclosure summary::before { content: "ⓘ "; opacity: 0.65; }
+  .hero-disclosure[open] summary { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-2); }
+  .hero-disclosure-body { margin-top: 10px; max-width: 640px; line-height: 1.55; }
 
   .search-wrap { position: relative; max-width: 720px; }
   .searchbar {
@@ -1543,7 +1589,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.47</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.47.1</span>
     </div>
   </header>
 
@@ -1569,7 +1615,12 @@
       </form>
       <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
-    <p class="hint"><b>Tip:</b> Type an address, or tap <b>📍 Near me</b> to use your current location (browser will ask permission — nothing is stored). Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> GA, NC, MI.</p>
+    <details class="hero-disclosure">
+      <summary>What's covered &amp; how it works</summary>
+      <div class="hero-disclosure-body">
+        Type an address, or tap <b>📍 Near me</b> to use your current location (browser will ask permission — nothing is stored). Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> GA, NC, MI.
+      </div>
+    </details>
     <div id="status"></div>
   </section>
 
@@ -8352,6 +8403,8 @@ function setLoading() {
   // v0.34.0/v0.34.3: enable single-view layout (also added directly to <body class>
   // in HTML so it's always on; this is a belt-and-suspenders re-add)
   document.body.classList.add("single-view");
+  // v0.47.1: collapse the hero once a search has fired
+  document.body.classList.add("results-shown");
   // v0.28: kick off section-nav observer once results are visible (idempotent)
   setTimeout(initSectionNavObserver, 100);
   // v0.33.1: ensure subtabs are wired up (idempotent — re-applies subtab-managed
@@ -8607,6 +8660,7 @@ formEl.addEventListener("submit", async (e) => {
 });
 $("resetBtn").addEventListener("click", () => {
   $("results").hidden = true;
+  document.body.classList.remove("results-shown");   // v0.47.1: restore full hero
   addrEl.value = ""; addrEl.focus();
   clearStatus();
 });
