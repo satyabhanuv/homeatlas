@@ -1085,14 +1085,17 @@
 
   /* ─── v0.47: Level-1 category nav — 5 tabs filter the section nav below
      and provide a single blue accent for the active state. No category-
-     specific colors — keeps the page visually calm. ── */
+     specific colors — keeps the page visually calm.
+     v0.49.7: top:0 (was 52px) — the persistent emergency strip was retired
+     in v0.49, the rail is in the sidebar now. Solid white background so
+     scrolled content can't bleed through. ── */
   .cat-nav {
     display: flex; gap: 2px; flex-wrap: wrap;
     margin: 0 -24px;
     padding: 0 24px;
     border-bottom: 1px solid var(--line);
     background: var(--surface);
-    position: sticky; top: 52px; z-index: 25;
+    position: sticky; top: 0; z-index: 25;
   }
   .cat-tab {
     flex: 0 0 auto;
@@ -1301,14 +1304,15 @@
   .sec-tab[data-category="civic"].active     { background: #3C3489; border-color: #3C3489; box-shadow: 0 2px 8px rgba(60,52,137,0.22); }
   .sec-tab[data-category="safety"].active    { background: #854F0B; border-color: #854F0B; box-shadow: 0 2px 8px rgba(133,79,11,0.22); }
 
-  /* ─── v0.29/v0.30: Sticky section-nav tabs + radius filter row ── */
+  /* ─── v0.29/v0.30: Sticky section-nav tabs + radius filter row
+     v0.49.7: top:52px (was 96px — assumed persistent emergency strip above).
+     Background now fully opaque so scrolled content stays masked. ── */
   .section-nav {
-    position: sticky; top: 96px; z-index: 20;
-    margin: 0 -24px 18px;             /* sits under emergency strip + cat nav */
+    position: sticky; top: 52px; z-index: 20;
+    margin: 0 -24px 18px;
     padding: 10px 24px;
     border-bottom: 1px solid var(--line);
-    backdrop-filter: blur(10px);
-    background: rgba(250,250,250,0.92);
+    background: var(--surface);
   }
 
   /* v0.30: Radius filter row — sits on top of the section-nav inner */
@@ -1406,7 +1410,8 @@
   }
   .sec-tab.active:hover { background: var(--primary-2); }
   /* Section headers: leave room above for the sticky nav so they don't hide under it */
-  .page-section-header { scroll-margin-top: 84px; }
+  /* v0.49.7: cat-nav (~52px) + section-nav (~96px stacked) = 148px ceiling */
+  .page-section-header { scroll-margin-top: 156px; }
   @media (max-width: 700px) {
     .section-nav { margin: 14px -16px 14px; padding: 8px 16px; }
     .sec-tab { padding: 9px 14px; font-size: 14px; }
@@ -1483,6 +1488,13 @@
     border: 1px solid var(--line);
     overflow: hidden;
     background: var(--surface-2);
+    /* v0.49.7: contain Leaflet's internal z-index stack. Leaflet panes
+       run up to z-index 700, which was rendering OVER the sticky nav.
+       isolation:isolate creates a new stacking context so the map's
+       internals can't escape past z-index 1 relative to its surroundings. */
+    position: relative;
+    z-index: 1;
+    isolation: isolate;
   }
   .section-map-empty {
     height: 100%; display: grid; place-items: center;
@@ -1904,7 +1916,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.6</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.7</span>
     </div>
   </header>
 
