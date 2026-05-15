@@ -1859,7 +1859,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.2</span>
     </div>
   </header>
 
@@ -9462,14 +9462,19 @@ document.addEventListener("click", (e) => {
 function initSingleViewSections() {
   const results = document.getElementById("results");
   if (!results) return;
-  const headers = Array.from(results.querySelectorAll(":scope > .page-section-header[id]"));
+  // v0.49.2: v0.49 wrapped sections in .results-grid > .results-main. The
+  // section-headers used to be direct children of #results; now they're
+  // direct children of #results-main. Prefer the inner container; fall back
+  // to #results so the function still works if the wrap is removed later.
+  const container = document.getElementById("results-main") || results;
+  const headers = Array.from(container.querySelectorAll(":scope > .page-section-header[id]"));
   if (!headers.length) return;
-  // Walk every direct child of #results — anything BEFORE the first header
-  // (like .section-nav, .resolved if it pre-dates myhome) stays unmanaged
-  // (always visible). Once we cross a header, every subsequent child is
-  // tagged with that header's id until we hit the next header.
+  // Walk every direct child of the container — anything BEFORE the first
+  // header (like .section-nav, .resolved if it pre-dates myhome) stays
+  // unmanaged (always visible). Once we cross a header, every subsequent
+  // child is tagged with that header's id until we hit the next header.
   let currentHeaderId = null;
-  Array.from(results.children).forEach(child => {
+  Array.from(container.children).forEach(child => {
     if (child.classList && child.classList.contains("page-section-header") && child.id) {
       currentHeaderId = child.id;
     }
