@@ -1101,15 +1101,16 @@
   @media (max-width: 700px) {
     .cat-tab { padding: 12px 14px; font-size: 14px; }
   }
-  /* v0.49.3: side-by-side layout — calendar (left) + agenda (right) so the
-     agenda is visible without scrolling past the calendar. Stacks on mobile. */
+  /* v0.49.3 → v0.49.4: calendar + agenda layout. Stacks below 1100px so the
+     calendar gets enough horizontal room when the left emergency rail is
+     also showing — otherwise the 7-column grid overflows into the agenda. */
   .cal-layout {
     display: grid;
-    grid-template-columns: minmax(280px, 1fr) 1.2fr;
-    gap: 16px;
+    grid-template-columns: minmax(320px, 1fr) minmax(0, 1.2fr);
+    gap: 18px;
     align-items: start;
   }
-  @media (max-width: 720px) {
+  @media (max-width: 1100px) {
     .cal-layout { grid-template-columns: 1fr; }
   }
 
@@ -1120,11 +1121,12 @@
     border-radius: 12px;
     padding: 14px 14px 10px;
     margin-bottom: 0;
-    /* In side-by-side layout, the calendar sits sticky so it stays visible
-       as the user scans long agendas on the right. */
+    /* Sticky only when side-by-side. When stacked, sticky causes the
+       calendar to chase the user up the page — undesirable. */
     position: sticky; top: 12px;
+    min-width: 0;
   }
-  @media (max-width: 720px) {
+  @media (max-width: 1100px) {
     .cal-wrap { position: relative; top: 0; margin-bottom: 14px; }
   }
   .cal-header {
@@ -1150,7 +1152,10 @@
   .cal-nav-btn:hover { background: var(--surface-2); border-color: #d6dbe3; color: var(--ink); }
   .cal-grid {
     display: grid;
-    grid-template-columns: repeat(7, 1fr);
+    /* v0.49.4: minmax(0, 1fr) lets cells shrink below their min-content size
+       so the 7-column grid never overflows its container. Without this, the
+       Saturday column was getting pushed under the agenda card. */
+    grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 4px;
   }
   .cal-dow {
@@ -1880,7 +1885,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.3</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.5</span>
     </div>
   </header>
 
@@ -7820,63 +7825,73 @@ function normalizeCityKey(s) {
 // v0.39: candidate-city resolution is now multi-source. Geocoder fields are
 // only one signal; the user's typed text and the ZIP→cities map are equally
 // authoritative. Whoever names a seed city wins.
+// v0.49.5: approximate city-center coordinates for the cities in our seed.
+// Used as a fallback for events that don't have their own lat/lon so the
+// distance filter still works. Numbers are accurate to ~0.5 mi (city hall /
+// downtown center for each city).
+const CITY_CENTERS = {
+  "san jose":         { lat: 37.3382, lon: -121.8863 },
+  "milpitas":         { lat: 37.4337, lon: -121.8910 },
+  "sunnyvale":        { lat: 37.3688, lon: -122.0363 },
+  "santa clara":      { lat: 37.3541, lon: -121.9552 },
+  "campbell":         { lat: 37.2872, lon: -121.9437 },
+  "saratoga":         { lat: 37.2638, lon: -122.0230 },
+  "mountain view":    { lat: 37.3861, lon: -122.0839 },
+  "palo alto":        { lat: 37.4419, lon: -122.1430 },
+  "san francisco":    { lat: 37.7749, lon: -122.4194 },
+  "phoenixville":     { lat: 40.1304, lon: -75.5149 },
+  "king of prussia":  { lat: 40.0892, lon: -75.3963 },
+  "philadelphia":     { lat: 39.9526, lon: -75.1652 }
+};
+
+function _eventEffectiveCoords(ev) {
+  if (ev && ev.lat != null && ev.lon != null) return { lat: ev.lat, lon: ev.lon };
+  const c = ev && CITY_CENTERS[normalizeCityKey(ev.city || "")];
+  return c || null;
+}
+
+// v0.49.5: distance-based filter, consistent with getCuratedFarmersMarketVenues.
+// Previously this was city-candidate based, so at Milpitas 95035 the ZIP map
+// expanded candidates to ["milpitas","san jose"] and the calendar showed
+// San-Jose-city events (Berryessa, Willow Glen) that were 4-6 mi away —
+// while the Farmers-markets subtab correctly excluded them by distance.
+// Now both views show the same set at any given radius.
 function filterCuratedEventsForCity(geo) {
   if (!geo) return [];
-  const addr = geo.address || {};
-  const candidates = new Set();
-
-  // Source 1: Nominatim address fields
-  ["city","town","village","borough","hamlet","municipality","suburb","neighbourhood","county"]
-    .forEach(k => { if (addr[k]) candidates.add(normalizeCityKey(addr[k])); });
-
-  // Source 2: HomeAtlas's own city-key resolver (handles NYC boroughs etc.)
-  try {
-    if (typeof getCityKey === "function") {
-      const k = getCityKey(addr); if (k) candidates.add(normalizeCityKey(k));
-    }
-  } catch (e) { /* getCityKey not yet defined */ }
-
-  // Source 3: parse the geocoder's display_name into comma-separated tokens
-  const dn = geo.display_name || "";
-  dn.split(/,\s*/).forEach(part => {
-    if (part) candidates.add(normalizeCityKey(part));
-  });
-
-  // Source 4: parse the search-bar text the user typed/picked
-  try {
-    const inputEl = document.getElementById("addr");
-    const typed = inputEl && inputEl.value;
-    if (typed) {
-      typed.split(/,\s*/).forEach(part => {
-        if (part) candidates.add(normalizeCityKey(part));
-      });
-    }
-  } catch (e) {}
-
-  // Source 5: ZIP → likely-relevant seed cities (handles ambiguous zips like
-  // 95134 which is San Jose per USPS but physically borders Milpitas).
-  const zip = (addr.postcode || "").toString().match(/\d{5}/)?.[0];
-  if (zip && ZIP_TO_SEED_CITIES[zip]) {
-    ZIP_TO_SEED_CITIES[zip].forEach(c => candidates.add(c));
-  }
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  const haveOrigin = isFinite(lat) && isFinite(lon);
+  const radius = (typeof CURRENT_RADIUS_MI === "number") ? CURRENT_RADIUS_MI : 5;
 
   const now = new Date();
   const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
 
+  // Inline helper — keep / drop an event by distance vs the user's location.
+  // If we can't compute a distance (no origin AND no city center), keep it
+  // (degrade gracefully — better something than nothing).
+  const withinRadius = (ev) => {
+    if (!haveOrigin) return true;
+    const c = _eventEffectiveCoords(ev);
+    if (!c) return false;   // no coords and unknown city → drop
+    const d = haversineMiles(lat, lon, c.lat, c.lon);
+    return d <= radius;
+  };
+
   // One-off events
   const oneOffs = HOMEATLAS_EVENTS_SEED.events
-    .filter(ev => candidates.has(normalizeCityKey(ev.city)))
     .filter(ev => {
       const t = new Date(ev.starts);
       return !isNaN(t) && t >= now && t <= horizon;
-    });
+    })
+    .filter(withinRadius);
 
-  // v0.40: recurring events — expand once per matching market
+  // Recurring events — expand within window, then filter by distance.
+  // (We keep recurrence expansion before distance filter so a market's
+  // weekly instances all get evaluated.)
   const recurringInstances = HOMEATLAS_EVENTS_RECURRING.events
-    .filter(ev => candidates.has(normalizeCityKey(ev.city)))
+    .filter(withinRadius)
     .flatMap(ev => expandRecurringEvent(ev, now, horizon));
 
-  // Dedupe by (city, title, starts) in case a one-off duplicates a recurring instance
+  // Dedupe by (city, title, starts)
   const seen = new Set();
   const matched = [...oneOffs, ...recurringInstances]
     .filter(ev => {
@@ -7888,8 +7903,8 @@ function filterCuratedEventsForCity(geo) {
     .sort((a, b) => a.starts.localeCompare(b.starts));
 
   if (window.HOMEATLAS_DEBUG) {
-    console.log("[curated] candidates =", [...candidates],
-                "→", oneOffs.length, "one-offs +", recurringInstances.length, "recurring instances =", matched.length);
+    console.log("[curated] distance filter @", lat, lon, "r=" + radius + "mi →",
+                oneOffs.length, "one-offs +", recurringInstances.length, "recurring =", matched.length);
   }
   return matched;
 }
