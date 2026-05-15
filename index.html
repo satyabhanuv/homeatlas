@@ -986,43 +986,62 @@
     .emergency-card { flex: 1 1 240px; }
   }
 
-  /* v0.49.1: focus mode — when a service query matches, hide the category
-     nav, section nav, and the resolved-address header. Only the matched
-     section's content is visible, so users see their answer immediately. */
+  /* v0.49.1 → v0.49.6: focus mode — when a service query matches, hide the
+     category nav, the section-tab row, and the resolved-address header.
+     Keep the radius filter visible so users can still change the radius
+     (was previously hidden behind the .section-nav block). */
   body.focus-mode .cat-nav { display: none; }
-  body.focus-mode .section-nav { display: none; }
-  body.focus-mode .resolved { display: none; }   /* hide the "Address resolved" header in focus mode */
-  body.focus-mode .page-section-header { display: none !important; }   /* section title is redundant when we tell user via banner */
+  body.focus-mode .section-nav-inner { display: none; }   /* the row of section pill tabs */
+  body.focus-mode .resolved { display: none; }            /* "Address resolved" header */
+  body.focus-mode .page-section-header { display: none !important; }   /* section title — banner already names it */
   body.focus-mode .emergency-rail { /* keep rail visible — emergency is always relevant */ }
+  /* Slim the section-nav box when only the radius is showing, so the
+     "Showing" banner sits closer to the content. */
+  body.focus-mode .section-nav {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    background: transparent;
+    backdrop-filter: none;
+  }
+  body.focus-mode .section-nav .radius-filter {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
   /* When focus mode is on, ONLY the active managed section's content shows.
      single-view CSS already handles hiding non-active section content; this
      adds the chrome-hiding on top. */
 
-  /* v0.49: search-focus banner — appears at the top of the main column
-     when the user submitted a service query. Tells them what they're seeing. */
+  /* v0.49 → v0.49.6: search-focus banner. Tells the user what they're
+     looking at and provides a prominent way out to the full browse view. */
   .search-focus {
     display: flex; align-items: center; justify-content: space-between;
-    gap: 12px; flex-wrap: wrap;
-    padding: 10px 14px;
+    gap: 14px; flex-wrap: wrap;
+    padding: 12px 16px;
     margin-bottom: 14px;
     background: var(--primary-soft);
     border: 1px solid rgba(0,80,194,0.25);
     border-radius: 10px;
     color: var(--primary-2);
-    font-size: 14px;
+    font-size: 15px;
   }
   .search-focus b { color: var(--ink); }
+  /* The exit button is now a primary-action button (clearer affordance).
+     Was a small text-link before — easy to miss, easy to misinterpret. */
   .search-focus-clear {
-    color: var(--primary-2);
-    background: transparent;
-    border: 1px solid rgba(0,80,194,0.25);
-    padding: 4px 10px;
+    color: #fff !important;
+    background: var(--primary);
+    border: none;
+    padding: 8px 16px;
     border-radius: 999px;
     cursor: pointer;
-    font-size: 12px; font-weight: 600;
+    font-size: 14px; font-weight: 600;
     font-family: inherit;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: background 0.12s ease;
   }
-  .search-focus-clear:hover { background: rgba(0,80,194,0.06); }
+  .search-focus-clear:hover { background: var(--primary-2); }
 
   /* v0.49: q-suggestions (service autocomplete) — same look as address ones */
   .q-suggestions .suggestion .top { font-weight: 600; }
@@ -1885,7 +1904,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.5</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.6</span>
     </div>
   </header>
 
@@ -9234,8 +9253,8 @@ document.addEventListener("click", (e) => {
   formEl.dispatchEvent(new Event("submit", { cancelable: true }));
 });
 
-// v0.49.1: Show the focus banner + "Show everything" button. The banner
-// sits at the top of the main column; the button exits focus mode.
+// v0.49.6: Show the focus banner. The exit button is now a primary-style
+// "Browse all near you" CTA — clearer affordance than the old text link.
 function showSearchFocus(svc) {
   const main = document.getElementById("results-main");
   if (!main) return;
@@ -9247,7 +9266,9 @@ function showSearchFocus(svc) {
     main.insertBefore(panel, main.firstChild);
   }
   panel.innerHTML = `<span><b>Showing:</b> ${escapeHtml(svc.q)} — ${escapeHtml(svc.desc)}</span>
-    <button class="search-focus-clear" type="button" id="search-focus-clear">Show everything</button>`;
+    <button class="search-focus-clear" type="button" id="search-focus-clear" title="Exit this filtered view and browse all categories near your location">
+      ← Browse all near you
+    </button>`;
   const clearBtn = panel.querySelector("#search-focus-clear");
   if (clearBtn) clearBtn.addEventListener("click", exitFocusMode);
 }
@@ -9303,6 +9324,10 @@ function activateServiceSection(svc) {
 }
 
 // v0.49: unified search — service query + location. Location empty = Near me.
+// v0.49.6: track whether the current submit is from browser navigation
+// (popstate) so we don't push duplicate history entries.
+let _isHistoryRestore = false;
+
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();
   const rawAddr = addrEl.value.trim();
@@ -9351,6 +9376,19 @@ formEl.addEventListener("submit", async (e) => {
       // Typed something but no match — keep OG browse but tell the user
       setTimeout(() => showSearchNoMatch(rawQ), 250);
     }
+    // v0.49.6: push to browser history so back/forward navigation restores
+    // the previous search. Skip if we're already restoring from popstate.
+    if (!_isHistoryRestore) {
+      try {
+        const params = new URLSearchParams();
+        if (rawQ) params.set("q", rawQ);
+        // We don't want to persist the "📍 Current location" placeholder.
+        const persistAddr = addrEl.value && !addrEl.value.startsWith("📍") ? addrEl.value : (rawAddr || "");
+        if (persistAddr) params.set("where", persistAddr);
+        const newUrl = location.pathname + (params.toString() ? "?" + params.toString() : "");
+        history.pushState({ q: rawQ, where: persistAddr }, "", newUrl);
+      } catch (_) {}
+    }
   } catch (err) {
     showStatus(`Search failed: ${escapeHtml(err.message)}`, "error");
   } finally {
@@ -9395,6 +9433,46 @@ if (_brandReset) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fullReset(); }
   });
 }
+
+// v0.49.6: handle browser back/forward to restore previous searches.
+// We push a history entry on every submit; popstate replays the search.
+window.addEventListener("popstate", (e) => {
+  const state = e.state;
+  if (!state) {
+    // Back to landing — clear everything
+    if (qInputEl) qInputEl.value = "";
+    if (addrEl)   addrEl.value   = "";
+    const r = $("results"); if (r) r.hidden = true;
+    document.body.classList.remove("results-shown");
+    document.body.classList.remove("focus-mode");
+    const panel = document.getElementById("search-focus"); if (panel) panel.remove();
+    return;
+  }
+  // Restore the inputs and re-run the search (without pushing a new entry)
+  if (qInputEl && typeof state.q === "string")     qInputEl.value = state.q;
+  if (addrEl   && typeof state.where === "string") addrEl.value   = state.where;
+  _isHistoryRestore = true;
+  try { formEl.dispatchEvent(new Event("submit", { cancelable: true })); }
+  finally { setTimeout(() => { _isHistoryRestore = false; }, 100); }
+});
+
+// On initial load, if the URL already has ?q= or ?where=, populate the
+// inputs and auto-submit so deep-links work and the first history entry
+// is consistent with the current view.
+(function _restoreFromUrl(){
+  const params = new URLSearchParams(location.search);
+  const q = params.get("q");
+  const where = params.get("where");
+  if (!q && !where) return;
+  if (qInputEl && q) qInputEl.value = q;
+  if (addrEl && where) addrEl.value = where;
+  // Defer so all event listeners are wired up before we trigger submit
+  setTimeout(() => {
+    _isHistoryRestore = true;
+    try { formEl.dispatchEvent(new Event("submit", { cancelable: true })); }
+    finally { setTimeout(() => { _isHistoryRestore = false; }, 100); }
+  }, 50);
+})();
 
 // v0.42: Near me — browser geolocation. Useful when the user is in a new
 // area (visiting, just moved, on mobile, needs urgent help) and doesn't
