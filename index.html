@@ -147,18 +147,52 @@
   .hero-disclosure[open] summary { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-2); }
   .hero-disclosure-body { margin-top: 10px; max-width: 640px; line-height: 1.55; }
 
-  .search-wrap { position: relative; max-width: 720px; }
+  .search-wrap { position: relative; max-width: 860px; }
   .searchbar {
     background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius); padding: 8px;
-    display: flex; gap: 8px; align-items: stretch;
+    border-radius: var(--radius); padding: 6px;
+    display: flex; gap: 4px; align-items: stretch;
     box-shadow: var(--shadow); position: relative; z-index: 2;
   }
   .searchbar.open { border-radius: var(--radius) var(--radius) 0 0; }
-  .searchbar input { flex: 1; border: none; outline: none; background: transparent; padding: 14px 12px; font-size: 16px; color: var(--ink); font-family: inherit; }
+  .searchbar input { flex: 1; border: none; outline: none; background: transparent; padding: 10px 12px 4px; font-size: 16px; color: var(--ink); font-family: inherit; width: 100%; }
   .searchbar button { border: none; background: var(--primary); color: #fff; border-radius: 10px; padding: 0 22px; cursor: pointer; font-weight: 600; font-size: 15px; letter-spacing: 0.2px; transition: background 0.15s ease; }
   .searchbar button:hover { background: var(--primary-2); }
   .searchbar button:disabled { opacity: 0.6; cursor: progress; }
+
+  /* v0.49: dual search — service + location. The two fields share the bar
+     but each is its own positioned wrap so its autocomplete can drop below. */
+  .searchbar.dual-search { padding: 4px; gap: 0; }
+  .search-field {
+    position: relative;
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+    padding: 4px 12px;
+    border-radius: 10px;
+    transition: background 0.12s ease;
+  }
+  .search-field + .search-field { border-left: 1px solid var(--line); }
+  .search-field:focus-within { background: rgba(0,80,194,0.04); }
+  .search-field-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--ink-faint);
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 6px 0 0;
+    pointer-events: none;
+  }
+  .search-field input {
+    padding: 2px 0 8px !important;
+    font-size: 15px !important;
+    font-weight: 500;
+  }
+  .search-q { flex: 1.3; }    /* "Looking for" gets a bit more room */
+  .search-where { flex: 1; }
+  @media (max-width: 720px) {
+    .searchbar.dual-search { flex-wrap: wrap; }
+    .search-field { flex: 1 1 100%; }
+    .search-field + .search-field { border-left: none; border-top: 1px solid var(--line); }
+  }
   /* v0.42: Near-me button — secondary style, sits between the input and Search */
   .searchbar button.near-me-btn { background: transparent; color: var(--primary); border: 1px solid var(--line); padding: 0 14px; font-weight: 600; }
   .searchbar button.near-me-btn:hover:not(:disabled) { background: rgba(0,80,194,0.06); border-color: var(--primary); }
@@ -912,12 +946,82 @@
   }
   .pgroup-popular::before { content: "★"; font-size: 9px; }
 
-  /* ─── v0.47: persistent emergency strip — always at the top of the page,
-     sticky above the section nav. Two colors total: red urgency + neutral. ── */
+  /* v0.49: 2-column results grid — emergency rail (left) + main content (right).
+     Stacks on mobile. The emergency rail sits sticky inside its column so it
+     stays visible as the user scrolls the main column. */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 22px;
+    align-items: start;
+    margin-top: 18px;
+  }
+  @media (max-width: 920px) {
+    .results-grid { grid-template-columns: 1fr; gap: 14px; }
+  }
+  .emergency-rail {
+    position: sticky; top: 12px;
+    display: flex; flex-direction: column; gap: 10px;
+    align-self: start;
+  }
+  @media (max-width: 920px) {
+    .emergency-rail { position: relative; top: 0; flex-direction: row; flex-wrap: wrap; }
+  }
+  .emergency-card {
+    background: #FCEBEB;
+    border: 1px solid #F09595;
+    border-radius: 12px;
+    padding: 14px 14px 12px;
+  }
+  .emergency-card .act-btn { margin-bottom: 8px; }
+  .emergency-card-when {
+    font-size: 13.5px;
+    color: #4A1B0C;
+    line-height: 1.5;
+  }
+  .emergency-card-when b { color: #791F1F; font-weight: 600; }
+  @media (max-width: 920px) {
+    .emergency-card { flex: 1 1 240px; }
+  }
+
+  /* v0.49: search-focus banner — appears at the top of the main column
+     when the user submitted a service query. Tells them what they're seeing. */
+  .search-focus {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    background: var(--primary-soft);
+    border: 1px solid rgba(0,80,194,0.25);
+    border-radius: 10px;
+    color: var(--primary-2);
+    font-size: 14px;
+  }
+  .search-focus b { color: var(--ink); }
+  .search-focus-clear {
+    color: var(--primary-2);
+    background: transparent;
+    border: 1px solid rgba(0,80,194,0.25);
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 12px; font-weight: 600;
+    font-family: inherit;
+  }
+  .search-focus-clear:hover { background: rgba(0,80,194,0.06); }
+
+  /* v0.49: q-suggestions (service autocomplete) — same look as address ones */
+  .q-suggestions .suggestion .top { font-weight: 600; }
+  .q-suggestions .suggestion .sub { color: var(--ink-faint); font-size: 12.5px; margin-top: 2px; }
+
+  /* ─── v0.47: persistent emergency strip — DEPRECATED in v0.49, kept for
+     backward-compat if any markup references it. The new emergency-rail
+     replaces it. ── */
   .emergency-strip {
+    display: none;   /* v0.49: hidden — replaced by .emergency-rail */
     position: sticky; top: 0; z-index: 30;
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    margin: 18px -24px 0;            /* break to viewport edges, sits flush */
+    align-items: center; gap: 10px; flex-wrap: wrap;
+    margin: 18px -24px 0;
     padding: 10px 24px;
     background: #FCEBEB;
     border-top: 1px solid #F09595;
@@ -1743,23 +1847,35 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.48.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49</span>
     </div>
   </header>
 
   <section class="hero">
-    <h1>Everything about <em>your home</em>.</h1>
+    <h1>What do you need <em>near you</em>?</h1>
     <p class="lead">
-      Enter an address. See your utilities, internet, TV, security, schools, parks, and yard zone — all in one view.
+      Search for a service — farmers market, free clinic, hospital, food bank, library — and we'll find it near you.
     </p>
 
+    <!-- v0.49: dual search. Service query + location. Location defaults to Near me. -->
     <div class="search-wrap">
-      <form class="searchbar" id="searchForm" autocomplete="off">
-        <input id="addr" type="text" required
-          placeholder="Start typing your address…  e.g. 123 Main St, Berkeley"
-          aria-label="Home address" aria-autocomplete="list" aria-controls="suggestions" />
-        <!-- v0.42: Near me — uses browser geolocation so users don't need to type an address.
-             Useful when visiting a new area or needing urgent help (food, clinic, shelter). -->
+      <form class="searchbar dual-search" id="searchForm" autocomplete="off">
+        <div class="search-field search-q">
+          <label for="q-input" class="search-field-label">Looking for</label>
+          <input id="q-input" type="text"
+                 placeholder="farmers market, hospital, food bank, library…"
+                 aria-label="What are you looking for"
+                 aria-autocomplete="list" aria-controls="q-suggestions" />
+          <div id="q-suggestions" class="suggestions q-suggestions" hidden role="listbox"></div>
+        </div>
+        <div class="search-field search-where">
+          <label for="addr" class="search-field-label">Near</label>
+          <input id="addr" type="text"
+                 placeholder="📍 Near me — or type a city, ZIP, or address"
+                 aria-label="Location" aria-autocomplete="list" aria-controls="suggestions" />
+          <div id="suggestions" class="suggestions addr-suggestions" hidden role="listbox"></div>
+        </div>
+        <!-- Near me convenience — still here even though the location input auto-uses geolocation when blank -->
         <button type="button" id="nearMeBtn" class="near-me-btn"
                 title="Use my current location"
                 aria-label="Use my current location">
@@ -1767,12 +1883,11 @@
         </button>
         <button type="submit" id="searchBtn">Search</button>
       </form>
-      <div id="suggestions" class="suggestions" hidden role="listbox"></div>
     </div>
     <details class="hero-disclosure">
       <summary>What's covered &amp; how it works</summary>
       <div class="hero-disclosure-body">
-        Type an address, or tap <b>📍 Near me</b> to use your current location (browser will ask permission — nothing is stored). Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> GA, NC, MI.
+        Type a service (farmers market, free clinic, school...) in the first box, then tap Search. Leave the location box empty (or type "Near me") and your browser will share your location when you submit. You can also type a city, ZIP, or full address there. Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> GA, NC, MI.
       </div>
     </details>
     <div id="status"></div>
@@ -1781,14 +1896,31 @@
   <!-- Results -->
   <section class="results" id="results" hidden>
 
-    <!-- v0.47: Persistent emergency strip — always visible, sticky on top.
-         tel: links call directly on mobile; on desktop the browser asks. -->
-    <div class="emergency-strip" id="emergency-strip" role="region" aria-label="Emergency helplines">
-      <span class="emergency-strip-label">Need help right now?</span>
-      <a class="emergency-btn" href="tel:911" aria-label="Call 911">911</a>
-      <a class="emergency-btn" href="tel:988" aria-label="Call 988 Suicide and Crisis Lifeline">988 Crisis</a>
-      <a class="emergency-btn" href="tel:211" aria-label="Call 211 Social Services">211 Help</a>
-    </div>
+    <!-- v0.49: 2-column results layout. Emergency rail (LEFT) is sticky and
+         always visible while the user explores the main column on the right.
+         Each emergency card explains what to call the number for. -->
+    <div class="results-grid">
+      <aside class="emergency-rail" id="emergency-rail" aria-label="Emergency helplines">
+        <div class="emergency-card">
+          <a class="act-btn call" href="tel:911" aria-label="Call 911">📞 Call 911</a>
+          <div class="emergency-card-when">
+            <b>Call for:</b> any life-threatening emergency — fire, crime in progress, medical crisis, severe injury.
+          </div>
+        </div>
+        <div class="emergency-card">
+          <a class="act-btn call" href="tel:988" aria-label="Call 988 Suicide and Crisis Lifeline">📞 Call 988</a>
+          <div class="emergency-card-when">
+            <b>Call for:</b> suicidal crisis, severe emotional distress, mental-health emergency. Free, confidential, 24/7. Press 1 if you're a veteran.
+          </div>
+        </div>
+        <div class="emergency-card">
+          <a class="act-btn call" href="tel:211" aria-label="Call 211 Social Services">📞 Call 211</a>
+          <div class="emergency-card-when">
+            <b>Call for:</b> food, shelter, utility shutoff, rent help, free clinics, mental-health referral, free tax help, senior services.
+          </div>
+        </div>
+      </aside>
+      <div class="results-main" id="results-main">
 
     <!-- v0.47: Level-1 category nav. Filters the section-nav below to show
          only the services in the active category. Single blue accent for
@@ -2565,6 +2697,8 @@
       </div>
     </div>
 
+      </div><!-- /.results-main -->
+    </div><!-- /.results-grid -->
   </section>
 
   <!-- Coming Soon -->
@@ -2590,7 +2724,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.48 · May 2026 · Phase 2 · Happening this month is now a real calendar grid. Dots/counts show which days have events; click a date to see that day's agenda. Today is highlighted; month-nav arrows handle 30-day windows that cross month boundaries.
+      <b>HomeAtlas</b> &mdash; v0.49 · May 2026 · Phase 2 · Search by service, not address. Dual search bar (what + where); location defaults to Near me. Emergency rail on the left with descriptions of when to call each number. After a service search, the page auto-navigates to the matching section.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -8892,21 +9026,205 @@ sugEl.addEventListener("click", (e) => {
   pickAndLookup(f);
 });
 document.addEventListener("click", (e) => {
-  if (!e.target.closest(".search-wrap")) hideSuggestions();
+  if (!e.target.closest(".search-wrap")) {
+    hideSuggestions();
+    if (typeof hideQSuggestions === "function") hideQSuggestions();
+  }
 });
+// v0.49: Service-query autocomplete map. User types a service ("farmers market",
+// "free clinic", "DMV"), we route them to the right section after results load.
+// Each entry: q = phrase, target = section id, subtab = optional subtab id,
+// desc = one-line hint.
+const SERVICE_QUERIES = [
+  { q: "farmers market",        target: "sec-events",           subtab: "events-markets-section",    desc: "Local farmers markets + farm stands" },
+  { q: "events",                target: "sec-events",           subtab: "events-listings-section",   desc: "What's happening this month" },
+  { q: "what's happening",      target: "sec-events",           subtab: "events-listings-section",   desc: "Calendar of curated events" },
+  { q: "church",                target: "sec-events",           subtab: "events-worship-section",    desc: "Churches, temples, mosques" },
+  { q: "community center",      target: "sec-events",           subtab: "events-community-section",  desc: "Community centers + programs" },
+  { q: "school",                target: "sec-schools",          subtab: null,                        desc: "Schools — public, private, charter" },
+  { q: "elementary school",     target: "sec-schools",          subtab: null,                        desc: "Elementary schools" },
+  { q: "high school",           target: "sec-schools",          subtab: null,                        desc: "High schools" },
+  { q: "library",               target: "sec-public-services", subtab: "ps-civic-section",          desc: "Public libraries" },
+  { q: "park",                  target: "sec-parks",            subtab: null,                        desc: "Parks, trails, playgrounds" },
+  { q: "playground",            target: "sec-parks",            subtab: null,                        desc: "Playgrounds" },
+  { q: "hospital",              target: "sec-public-services", subtab: "ps-hospital-section",       desc: "Hospitals" },
+  { q: "urgent care",           target: "sec-public-services", subtab: "ps-clinic-section",         desc: "Urgent care + walk-in clinics" },
+  { q: "ER",                    target: "sec-public-services", subtab: "ps-hospital-section",       desc: "Emergency rooms" },
+  { q: "fire station",          target: "sec-public-services", subtab: "ps-emergency-section",      desc: "Fire stations" },
+  { q: "police station",        target: "sec-public-services", subtab: "ps-police-section",         desc: "Police stations" },
+  { q: "pharmacy",              target: "sec-public-services", subtab: "ps-pharmacy-section",       desc: "Pharmacies" },
+  { q: "dentist",               target: "sec-public-services", subtab: "ps-dentist-section",        desc: "Dental offices" },
+  { q: "DMV",                   target: "sec-civic",            subtab: null,                        desc: "DMV, permits, courts" },
+  { q: "voter registration",    target: "sec-civic",            subtab: null,                        desc: "Register to vote in your state" },
+  { q: "vote",                  target: "sec-civic",            subtab: null,                        desc: "Voting + elected officials" },
+  { q: "elected officials",     target: "sec-civic",            subtab: null,                        desc: "Who represents you" },
+  { q: "food bank",             target: "sec-community-help",  subtab: "ch-food-section",           desc: "Food pantries + SNAP enrollment" },
+  { q: "food pantry",           target: "sec-community-help",  subtab: "ch-food-section",           desc: "Food pantries" },
+  { q: "shelter",               target: "sec-community-help",  subtab: "ch-housing-section",        desc: "Homeless shelters + transitional housing" },
+  { q: "rent assistance",       target: "sec-community-help",  subtab: "ch-housing-section",        desc: "Rent + utility help" },
+  { q: "utility assistance",    target: "sec-community-help",  subtab: "ch-housing-section",        desc: "LIHEAP + utility discount programs" },
+  { q: "legal aid",             target: "sec-community-help",  subtab: "ch-financial-section",      desc: "Free civil legal help" },
+  { q: "free tax help",         target: "sec-community-help",  subtab: "ch-financial-section",      desc: "VITA + IRS Free File" },
+  { q: "free clinic",           target: "sec-health",           subtab: "health-clinics-section",    desc: "Free / sliding-scale clinics (FQHCs)" },
+  { q: "FQHC",                  target: "sec-health",           subtab: "health-clinics-section",    desc: "Federally Qualified Health Centers" },
+  { q: "mental health",         target: "sec-health",           subtab: "health-mental-section",     desc: "Mental-health resources" },
+  { q: "substance use",         target: "sec-health",           subtab: "health-substance-section",  desc: "Substance-use treatment + recovery" },
+  { q: "addiction recovery",    target: "sec-health",           subtab: "health-substance-section",  desc: "Recovery resources" },
+  { q: "handyman",              target: "sec-home-services",   subtab: null,                        desc: "Handyman services" },
+  { q: "plumber",               target: "sec-home-services",   subtab: null,                        desc: "Plumbers" },
+  { q: "electrician",           target: "sec-home-services",   subtab: null,                        desc: "Electricians" },
+  { q: "HVAC",                  target: "sec-home-services",   subtab: null,                        desc: "Heating + air conditioning" },
+  { q: "internet provider",     target: "sec-services",         subtab: null,                        desc: "Internet/ISP options" },
+  { q: "electric utility",      target: "sec-services",         subtab: null,                        desc: "Power company for this address" },
+  { q: "gardening",             target: "sec-yard",             subtab: null,                        desc: "Plant zone + soil + watering" },
+  { q: "plants",                target: "sec-yard",             subtab: null,                        desc: "Plant recommendations by zone" },
+  { q: "climate risks",         target: "sec-risks",            subtab: null,                        desc: "Wildfire / flood / quake zones" },
+  { q: "wildfire risk",         target: "sec-risks",            subtab: null,                        desc: "Wildfire risk for this address" },
+  { q: "flood zone",            target: "sec-risks",            subtab: null,                        desc: "FEMA flood zone" }
+];
+
+function pickService(rawQuery) {
+  if (!rawQuery) return null;
+  const q = rawQuery.toLowerCase().trim();
+  let exact = SERVICE_QUERIES.find(s => s.q.toLowerCase() === q);
+  if (exact) return exact;
+  let starts = SERVICE_QUERIES.find(s => s.q.toLowerCase().startsWith(q));
+  if (starts) return starts;
+  let includes = SERVICE_QUERIES.find(s => s.q.toLowerCase().includes(q));
+  if (includes) return includes;
+  // Fuzzy: any service whose words overlap with the query
+  const words = q.split(/\s+/);
+  return SERVICE_QUERIES.find(s => {
+    const sq = s.q.toLowerCase();
+    return words.every(w => sq.includes(w));
+  });
+}
+
+// Hook up the service-query autocomplete dropdown
+const qInputEl = document.getElementById("q-input");
+const qSugEl   = document.getElementById("q-suggestions");
+function renderQSuggestions(items) {
+  if (!qSugEl) return;
+  if (!items.length) { qSugEl.hidden = true; qSugEl.innerHTML = ""; return; }
+  qSugEl.hidden = false;
+  qSugEl.innerHTML = items.map((s, i) =>
+    `<div class="suggestion" role="option" data-q="${escapeHtml(s.q)}" data-idx="${i}">
+       <div class="top">${escapeHtml(s.q.charAt(0).toUpperCase() + s.q.slice(1))}</div>
+       <div class="sub">${escapeHtml(s.desc)}</div>
+     </div>`
+  ).join("");
+}
+function hideQSuggestions() { if (qSugEl) { qSugEl.hidden = true; qSugEl.innerHTML = ""; } }
+if (qInputEl) {
+  qInputEl.addEventListener("input", () => {
+    const v = qInputEl.value.toLowerCase().trim();
+    if (!v) { hideQSuggestions(); return; }
+    const matches = SERVICE_QUERIES
+      .filter(s => s.q.toLowerCase().includes(v))
+      .slice(0, 8);
+    renderQSuggestions(matches);
+  });
+  qInputEl.addEventListener("focus", () => {
+    if (qInputEl.value.trim()) qInputEl.dispatchEvent(new Event("input"));
+  });
+  qInputEl.addEventListener("blur", () => {
+    setTimeout(hideQSuggestions, 150);   // delay so click registers
+  });
+}
+document.addEventListener("click", (e) => {
+  const sug = e.target.closest(".q-suggestions .suggestion");
+  if (!sug) return;
+  qInputEl.value = sug.dataset.q;
+  hideQSuggestions();
+  // If location is filled (or geolocation is OK), submit immediately
+  formEl.dispatchEvent(new Event("submit", { cancelable: true }));
+});
+
+// v0.49: Show the "Showing X" focus banner at the top of the main column
+function showSearchFocus(svc) {
+  const main = document.getElementById("results-main");
+  if (!main) return;
+  let panel = document.getElementById("search-focus");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "search-focus";
+    panel.className = "search-focus";
+    main.insertBefore(panel, main.firstChild);
+  }
+  panel.innerHTML = `<span><b>Showing:</b> ${escapeHtml(svc.q)} — ${escapeHtml(svc.desc)}</span>
+    <button class="search-focus-clear" type="button" id="search-focus-clear">Show everything</button>`;
+  const clearBtn = panel.querySelector("#search-focus-clear");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      panel.remove();
+      if (qInputEl) qInputEl.value = "";
+    });
+  }
+}
+
+// v0.49: After results render, navigate to the requested service's section.
+function activateServiceSection(svc) {
+  if (!svc) return;
+  const secTab = document.querySelector(`.sec-tab[data-target="${svc.target}"]`);
+  if (!secTab) return;
+  const catId = secTab.dataset.category;
+  if (catId && typeof applyCategoryFilter === "function") {
+    applyCategoryFilter(catId, { activateFirst: false });
+  }
+  secTab.click();
+  if (svc.subtab) {
+    setTimeout(() => {
+      const subtab = document.querySelector(`.subtab[data-subtarget="${svc.subtab}"]`);
+      if (subtab) subtab.click();
+    }, 120);
+  }
+  showSearchFocus(svc);
+}
+
+// v0.49: unified search — service query + location. Location empty = Near me.
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();
-  const raw = addrEl.value.trim(); if (!raw) return;
+  const rawAddr = addrEl.value.trim();
+  const rawQ    = qInputEl ? qInputEl.value.trim() : "";
   hideSuggestions();
+  hideQSuggestions();
   $("searchBtn").disabled = true; $("searchBtn").textContent = "Searching…";
   try {
-    // v0.14: aggressive submit-time search — tries multiple geocoders to
-    // find exact house number, falls back to street-level if necessary.
-    const feature = await geocodeForSubmit(raw);
-    if (!feature) { showStatus(`Could not find that address. Try including the city &amp; ZIP.`, "error"); return; }
-    runLookupFromFeature(feature);
-  } catch (err) { showStatus(`Search failed: ${escapeHtml(err.message)}`, "error"); }
-  finally { $("searchBtn").disabled = false; $("searchBtn").textContent = "Find my zones"; }
+    let feature;
+    const wantsNearMe = !rawAddr || /^near me$/i.test(rawAddr) || /^📍/.test(rawAddr);
+    if (wantsNearMe) {
+      if (!("geolocation" in navigator)) {
+        showStatus("Your browser doesn't support geolocation. Type a city or address in the second box.", "error");
+        return;
+      }
+      try {
+        const pos = await new Promise((resolve, reject) => {
+          navigator.geolocation.getCurrentPosition(resolve, reject, {
+            enableHighAccuracy: true, timeout: 12000, maximumAge: 60000
+          });
+        });
+        feature = { geometry: { coordinates: [pos.coords.longitude, pos.coords.latitude] }, properties: {} };
+        addrEl.value = `📍 Current location`;
+      } catch (geoErr) {
+        const msg = geoErr && geoErr.code === 1
+          ? "Location permission denied. Type a city or address in the second box."
+          : "Couldn't get your location. Try again or type a city / address.";
+        showStatus(msg, "error");
+        return;
+      }
+    } else {
+      feature = await geocodeForSubmit(rawAddr);
+      if (!feature) { showStatus(`Could not find that location. Try a city, ZIP, or full address.`, "error"); return; }
+    }
+    // Resolve the service intent before running the lookup
+    const svc = pickService(rawQ);
+    await runLookupFromFeature(feature);
+    if (svc) setTimeout(() => activateServiceSection(svc), 250);
+  } catch (err) {
+    showStatus(`Search failed: ${escapeHtml(err.message)}`, "error");
+  } finally {
+    $("searchBtn").disabled = false; $("searchBtn").textContent = "Search";
+  }
 });
 $("resetBtn").addEventListener("click", () => {
   $("results").hidden = true;
