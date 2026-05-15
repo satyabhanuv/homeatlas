@@ -78,7 +78,9 @@
   a { color: var(--primary); }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
   header { padding: 28px 0 12px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; font-size: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; font-size: 18px; cursor: pointer; user-select: none; }
+  .brand:hover { opacity: 0.85; }
+  .brand:focus { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 6px; }
   .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--accent)); }
   /* v0.35.0: logo SVG in brand area */
   .brand-logo { width: 30px; height: 30px; display: inline-block; vertical-align: middle; }
@@ -1099,13 +1101,31 @@
   @media (max-width: 700px) {
     .cat-tab { padding: 12px 14px; font-size: 14px; }
   }
+  /* v0.49.3: side-by-side layout — calendar (left) + agenda (right) so the
+     agenda is visible without scrolling past the calendar. Stacks on mobile. */
+  .cal-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) 1.2fr;
+    gap: 16px;
+    align-items: start;
+  }
+  @media (max-width: 720px) {
+    .cal-layout { grid-template-columns: 1fr; }
+  }
+
   /* v0.48: Calendar view for Happening this month. Around-me teal accent. */
   .cal-wrap {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: 12px;
     padding: 14px 14px 10px;
-    margin-bottom: 16px;
+    margin-bottom: 0;
+    /* In side-by-side layout, the calendar sits sticky so it stays visible
+       as the user scans long agendas on the right. */
+    position: sticky; top: 12px;
+  }
+  @media (max-width: 720px) {
+    .cal-wrap { position: relative; top: 0; margin-bottom: 14px; }
   }
   .cal-header {
     display: flex; align-items: center; justify-content: space-between;
@@ -1843,7 +1863,8 @@
 <div class="wrap">
 
   <header>
-    <div class="brand">
+    <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
+    <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
       <!-- v0.35.0: HomeAtlas logo — house + verified checkmark — blue, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
@@ -1859,7 +1880,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.2</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.3</span>
     </div>
   </header>
 
@@ -2736,7 +2757,7 @@
 
   <footer>
     <p>
-      <b>HomeAtlas</b> &mdash; v0.49 · May 2026 · Phase 2 · Search by service, not address. Dual search bar (what + where); location defaults to Near me. Emergency rail on the left with descriptions of when to call each number. After a service search, the page auto-navigates to the matching section.
+      <b>HomeAtlas</b> &mdash; v0.49.3 · May 2026 · Phase 2 · Click the logo to reset and return to the landing page. Calendar + agenda now sit side-by-side. Event seed expanded with fairs, festivals, concerts, art walks, and museum events — not just farmers markets.
       &nbsp;·&nbsp;
       <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
     </p>
@@ -7570,7 +7591,32 @@ const HOMEATLAS_EVENTS_SEED = {
     { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "starts": "2026-05-16T09:00", "ends": "2026-05-16T13:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village Farmers Market", "verified": true, "free": true },
     { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "starts": "2026-05-23T09:00", "ends": "2026-05-23T13:00", "category": "market", "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village Farmers Market", "verified": true, "free": true },
     { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Public Library — Family Story Time", "venue": "665 W Olive Ave", "starts": "2026-05-13T10:30", "ends": "2026-05-13T11:00", "category": "kids", "url": "https://sunnyvale.libcal.com/", "source": "Sunnyvale Public Library", "verified": true, "free": true },
-    { "city": "sunnyvale", "state": "CA", "title": "Music & Market — Murphy Ave Summer Series", "venue": "Plaza del Sol, Murphy Ave", "starts": "2026-06-05T18:00", "ends": "2026-06-05T21:00", "category": "music", "url": "https://www.heritageparkmuseum.org/events/", "source": "Sunnyvale Downtown", "verified": true, "free": true }
+    { "city": "sunnyvale", "state": "CA", "title": "Music & Market — Murphy Ave Summer Series", "venue": "Plaza del Sol, Murphy Ave", "starts": "2026-06-05T18:00", "ends": "2026-06-05T21:00", "category": "music", "url": "https://www.heritageparkmuseum.org/events/", "source": "Sunnyvale Downtown", "verified": true, "free": true },
+
+    // ---- v0.49.3: broadened event coverage — fairs, festivals, concerts, art walks ----
+    // San Jose
+    { "city": "san jose", "state": "CA", "title": "Children's Discovery Museum — Free First Sunday", "venue": "180 Woz Way, San Jose", "starts": "2026-06-07T10:00", "ends": "2026-06-07T17:00", "category": "kids", "url": "https://www.cdm.org/", "source": "Children's Discovery Museum", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Japantown Friday Night Concert", "venue": "Japantown, N 5th St, San Jose", "starts": "2026-05-15T18:00", "ends": "2026-05-15T21:00", "category": "music", "url": "https://www.japantownsanjose.org/events", "source": "Japantown SJ", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Willow Glen Wine Walk", "venue": "Lincoln Ave, Willow Glen", "starts": "2026-05-30T16:00", "ends": "2026-05-30T20:00", "category": "festival", "url": "https://www.willowglencfm.com/wine-walk", "source": "Willow Glen Business Assoc", "verified": true, "free": false },
+    { "city": "san jose", "state": "CA", "title": "Santana Row Live Music", "venue": "Santana Row, Park Valencia stage", "starts": "2026-05-22T18:00", "ends": "2026-05-22T20:00", "category": "music", "url": "https://www.santanarow.com/events/", "source": "Santana Row", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Cinco de Mayo Festival", "venue": "Plaza de César Chávez", "starts": "2026-05-17T11:00", "ends": "2026-05-17T19:00", "category": "festival", "url": "https://www.sjdowntown.com/events/", "source": "Downtown SJ", "verified": true, "free": true },
+    { "city": "san jose", "state": "CA", "title": "Greek Festival", "venue": "1260 Davis St (St. Nicholas), San Jose", "starts": "2026-05-30T11:00", "ends": "2026-05-30T22:00", "category": "festival", "url": "https://sanjosegreekfestival.com/", "source": "Greek Festival SJ", "verified": true, "free": false },
+    { "city": "san jose", "state": "CA", "title": "The Tech Interactive — Family Robotics Day", "venue": "201 S Market St", "starts": "2026-05-24T10:00", "ends": "2026-05-24T17:00", "category": "kids", "url": "https://www.thetech.org/visit/calendar", "source": "The Tech Interactive", "verified": true, "free": false },
+    { "city": "san jose", "state": "CA", "title": "Movies on the Square (outdoor)", "venue": "Plaza de César Chávez", "starts": "2026-06-04T20:00", "ends": "2026-06-04T22:30", "category": "art", "url": "https://www.sjdowntown.com/events/", "source": "Downtown SJ", "verified": true, "free": true },
+    // San Francisco
+    { "city": "san francisco", "state": "CA", "title": "Bay Area Book Festival", "venue": "Civic Center / Berkeley overflow", "starts": "2026-05-30T10:00", "ends": "2026-05-31T18:00", "category": "festival", "url": "https://www.baybookfest.org/", "source": "Bay Area Book Festival", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Carnaval San Francisco", "venue": "Mission District, Harrison St", "starts": "2026-05-24T10:00", "ends": "2026-05-24T18:00", "category": "festival", "url": "https://carnavalsanfrancisco.org/", "source": "Carnaval SF", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Golden Gate Park — Free Concert in the Bandshell", "venue": "Golden Gate Park Music Concourse", "starts": "2026-05-17T13:00", "ends": "2026-05-17T15:00", "category": "music", "url": "https://sfrecpark.org/calendar/", "source": "SF Rec & Park", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Free Day at de Young Museum", "venue": "50 Hagiwara Tea Garden Dr", "starts": "2026-06-06T09:30", "ends": "2026-06-06T17:15", "category": "art", "url": "https://www.famsf.org/visit/de-young", "source": "FAMSF — de Young", "verified": true, "free": true },
+    { "city": "san francisco", "state": "CA", "title": "Off the Grid: Picnic at the Presidio", "venue": "Presidio Main Post lawn", "starts": "2026-05-17T11:00", "ends": "2026-05-17T16:00", "category": "festival", "url": "https://offthegrid.com/", "source": "Off the Grid", "verified": true, "free": true },
+    // Philadelphia metro
+    { "city": "philadelphia", "state": "PA", "title": "Spruce Street Harbor Park (opens for season)", "venue": "121 N Columbus Blvd", "starts": "2026-05-22T17:00", "ends": "2026-05-22T22:00", "category": "festival", "url": "https://delawareriverwaterfront.com/places/spruce-street-harbor-park", "source": "Delaware River Waterfront", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "Italian Market Festival", "venue": "9th St between Christian & Washington", "starts": "2026-05-17T11:00", "ends": "2026-05-17T18:00", "category": "festival", "url": "https://www.italianmarketphilly.org/festival", "source": "Italian Market Philly", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "Penn's Landing — Free Outdoor Movie", "venue": "Great Plaza at Penn's Landing", "starts": "2026-05-29T20:30", "ends": "2026-05-29T22:30", "category": "art", "url": "https://delawareriverwaterfront.com/", "source": "Delaware River Waterfront", "verified": true, "free": true },
+    { "city": "philadelphia", "state": "PA", "title": "Roots Picnic", "venue": "Mann Center, 5201 Parkside Ave", "starts": "2026-05-30T12:00", "ends": "2026-05-30T22:00", "category": "music", "url": "https://www.rootspicnic.com/", "source": "Roots Picnic", "verified": true, "free": false },
+    { "city": "phoenixville", "state": "PA", "title": "Blobfest (annual)", "venue": "Colonial Theatre, 227 Bridge St", "starts": "2026-06-05T19:00", "ends": "2026-06-05T22:00", "category": "festival", "url": "https://thecolonialtheatre.com/blobfest/", "source": "Colonial Theatre", "verified": true, "free": false },
+    { "city": "phoenixville", "state": "PA", "title": "Phoenixville Dogwood Festival", "venue": "Reeves Park", "starts": "2026-05-17T10:00", "ends": "2026-05-17T17:00", "category": "festival", "url": "https://www.dogwoodfestival.org/", "source": "Phoenixville Dogwood Festival", "verified": true, "free": true },
+    { "city": "king of prussia", "state": "PA", "title": "KOP BeerFest Royale", "venue": "King of Prussia Town Center", "starts": "2026-06-06T13:00", "ends": "2026-06-06T17:00", "category": "festival", "url": "https://kopfun.com/events/", "source": "KOP Town Center", "verified": true, "free": false }
   ]
 };
 
@@ -7957,8 +8003,12 @@ function renderEventsListings(geo, eventsArg) {
   let viewMonth = selectedDate.slice(0, 7);   // "YYYY-MM"
 
   const render = () => {
-    tb.innerHTML = _renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey) +
-                   _renderCalendarAgenda(byDate, selectedDate, todayKey);
+    // v0.49.3: wrap calendar + agenda in a 2-col layout so the agenda
+    // is visible without scrolling. On mobile this collapses to stacked.
+    tb.innerHTML = `<div class="cal-layout">
+        <div>${_renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey)}</div>
+        <div>${_renderCalendarAgenda(byDate, selectedDate, todayKey)}</div>
+      </div>`;
     // Wire date clicks
     tb.querySelectorAll("[data-cal-date]").forEach(el => {
       el.addEventListener("click", () => {
@@ -9298,6 +9348,38 @@ $("resetBtn").addEventListener("click", () => {
   addrEl.value = ""; addrEl.focus();
   clearStatus();
 });
+
+// v0.49.3: clicking the HomeAtlas logo resets the page to the landing state
+// (clears both search fields, hides results, exits focus mode, resets URL hash)
+function fullReset() {
+  // Inputs
+  if (qInputEl) qInputEl.value = "";
+  if (addrEl)   addrEl.value   = "";
+  // Hide suggestions
+  hideSuggestions();
+  if (typeof hideQSuggestions === "function") hideQSuggestions();
+  // Hide results
+  const r = $("results"); if (r) r.hidden = true;
+  // Body classes
+  document.body.classList.remove("results-shown");
+  document.body.classList.remove("focus-mode");
+  // Focus banner
+  const panel = document.getElementById("search-focus"); if (panel) panel.remove();
+  // Status / errors
+  clearStatus();
+  // URL hash
+  if (history.replaceState) history.replaceState(null, "", location.pathname + location.search);
+  // Scroll to top + focus first input
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  if (qInputEl) setTimeout(() => qInputEl.focus(), 200);
+}
+const _brandReset = document.getElementById("brandReset");
+if (_brandReset) {
+  _brandReset.addEventListener("click", fullReset);
+  _brandReset.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fullReset(); }
+  });
+}
 
 // v0.42: Near me — browser geolocation. Useful when the user is in a new
 // area (visiting, just moved, on mobile, needs urgent help) and doesn't
