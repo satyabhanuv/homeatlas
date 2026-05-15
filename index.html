@@ -984,6 +984,18 @@
     .emergency-card { flex: 1 1 240px; }
   }
 
+  /* v0.49.1: focus mode — when a service query matches, hide the category
+     nav, section nav, and the resolved-address header. Only the matched
+     section's content is visible, so users see their answer immediately. */
+  body.focus-mode .cat-nav { display: none; }
+  body.focus-mode .section-nav { display: none; }
+  body.focus-mode .resolved { display: none; }   /* hide the "Address resolved" header in focus mode */
+  body.focus-mode .page-section-header { display: none !important; }   /* section title is redundant when we tell user via banner */
+  body.focus-mode .emergency-rail { /* keep rail visible — emergency is always relevant */ }
+  /* When focus mode is on, ONLY the active managed section's content shows.
+     single-view CSS already handles hiding non-active section content; this
+     adds the chrome-hiding on top. */
+
   /* v0.49: search-focus banner — appears at the top of the main column
      when the user submitted a service query. Tells them what they're seeing. */
   .search-focus {
@@ -1847,7 +1859,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.1</span>
     </div>
   </header>
 
@@ -9083,21 +9095,38 @@ const SERVICE_QUERIES = [
   { q: "flood zone",            target: "sec-risks",            subtab: null,                        desc: "FEMA flood zone" }
 ];
 
+// v0.49.1: improved service-query matching. Now handles both directions
+// (typed extends service phrase AND service phrase contained in typed text)
+// plus word-level matching so "kids events" routes to "events".
 function pickService(rawQuery) {
   if (!rawQuery) return null;
   const q = rawQuery.toLowerCase().trim();
-  let exact = SERVICE_QUERIES.find(s => s.q.toLowerCase() === q);
-  if (exact) return exact;
-  let starts = SERVICE_QUERIES.find(s => s.q.toLowerCase().startsWith(q));
-  if (starts) return starts;
-  let includes = SERVICE_QUERIES.find(s => s.q.toLowerCase().includes(q));
-  if (includes) return includes;
-  // Fuzzy: any service whose words overlap with the query
-  const words = q.split(/\s+/);
-  return SERVICE_QUERIES.find(s => {
-    const sq = s.q.toLowerCase();
-    return words.every(w => sq.includes(w));
+  if (!q) return null;
+  // 1) Exact match
+  let m = SERVICE_QUERIES.find(s => s.q.toLowerCase() === q);
+  if (m) return m;
+  // 2) Service phrase is a prefix of typed query (e.g. typed="events near me" → "events")
+  m = SERVICE_QUERIES.find(s => q.startsWith(s.q.toLowerCase() + " ") || q.startsWith(s.q.toLowerCase()));
+  if (m) return m;
+  // 3) Service phrase appears anywhere in typed (e.g. typed="kids events" → "events")
+  //    Sort by length desc so "farmers market" wins over "park" when "farmers" present.
+  m = [...SERVICE_QUERIES]
+        .sort((a, b) => b.q.length - a.q.length)
+        .find(s => q.includes(s.q.toLowerCase()));
+  if (m) return m;
+  // 4) Typed query is a prefix of service phrase (partial typing — "farm" → "farmers market")
+  m = SERVICE_QUERIES.find(s => s.q.toLowerCase().startsWith(q));
+  if (m) return m;
+  // 5) Typed query is contained in service phrase
+  m = SERVICE_QUERIES.find(s => s.q.toLowerCase().includes(q));
+  if (m) return m;
+  // 6) Word-set: every typed word must appear in some service phrase
+  const qWords = q.split(/\s+/).filter(Boolean);
+  m = SERVICE_QUERIES.find(s => {
+    const sw = s.q.toLowerCase().split(/\s+/);
+    return qWords.every(qw => sw.some(w => w.includes(qw) || qw.includes(w)));
   });
+  return m;
 }
 
 // Hook up the service-query autocomplete dropdown
@@ -9140,7 +9169,8 @@ document.addEventListener("click", (e) => {
   formEl.dispatchEvent(new Event("submit", { cancelable: true }));
 });
 
-// v0.49: Show the "Showing X" focus banner at the top of the main column
+// v0.49.1: Show the focus banner + "Show everything" button. The banner
+// sits at the top of the main column; the button exits focus mode.
 function showSearchFocus(svc) {
   const main = document.getElementById("results-main");
   if (!main) return;
@@ -9154,15 +9184,40 @@ function showSearchFocus(svc) {
   panel.innerHTML = `<span><b>Showing:</b> ${escapeHtml(svc.q)} — ${escapeHtml(svc.desc)}</span>
     <button class="search-focus-clear" type="button" id="search-focus-clear">Show everything</button>`;
   const clearBtn = panel.querySelector("#search-focus-clear");
-  if (clearBtn) {
-    clearBtn.addEventListener("click", () => {
-      panel.remove();
-      if (qInputEl) qInputEl.value = "";
-    });
-  }
+  if (clearBtn) clearBtn.addEventListener("click", exitFocusMode);
 }
 
-// v0.49: After results render, navigate to the requested service's section.
+// v0.49.1: Exit focus mode → show the full browse-all (OG) experience.
+function exitFocusMode() {
+  document.body.classList.remove("focus-mode");
+  const panel = document.getElementById("search-focus");
+  if (panel) panel.remove();
+  if (qInputEl) qInputEl.value = "";
+  // Re-apply default category so user lands somewhere sensible
+  if (typeof applyCategoryFilter === "function") applyCategoryFilter("around-me");
+}
+
+// v0.49.1: When no service matched but a query was typed, show a "no-match"
+// hint above the OG so user knows the query didn't filter anything.
+function showSearchNoMatch(query) {
+  const main = document.getElementById("results-main");
+  if (!main) return;
+  let panel = document.getElementById("search-focus");
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.id = "search-focus";
+    panel.className = "search-focus";
+    main.insertBefore(panel, main.firstChild);
+  }
+  panel.innerHTML = `<span>We don't have a direct match for <b>"${escapeHtml(query)}"</b> yet — showing everything near you. Try terms like <i>farmers market, free clinic, school, food bank, hospital, DMV, library</i>.</span>
+    <button class="search-focus-clear" type="button" id="search-focus-clear">Dismiss</button>`;
+  const clearBtn = panel.querySelector("#search-focus-clear");
+  if (clearBtn) clearBtn.addEventListener("click", () => { panel.remove(); if (qInputEl) qInputEl.value = ""; });
+}
+
+// v0.49 → v0.49.1: After results render, navigate to the requested service's
+// section AND enable focus mode (which hides the cat-nav, sec-nav, and other
+// sections so the user sees only their search result).
 function activateServiceSection(svc) {
   if (!svc) return;
   const secTab = document.querySelector(`.sec-tab[data-target="${svc.target}"]`);
@@ -9178,6 +9233,7 @@ function activateServiceSection(svc) {
       if (subtab) subtab.click();
     }, 120);
   }
+  document.body.classList.add("focus-mode");   // v0.49.1
   showSearchFocus(svc);
 }
 
@@ -9218,8 +9274,18 @@ formEl.addEventListener("submit", async (e) => {
     }
     // Resolve the service intent before running the lookup
     const svc = pickService(rawQ);
+    // v0.49.1: clear any prior focus mode so a fresh search starts clean.
+    // If this search matches a service, activateServiceSection re-enables it.
+    document.body.classList.remove("focus-mode");
+    const oldFocus = document.getElementById("search-focus");
+    if (oldFocus) oldFocus.remove();
     await runLookupFromFeature(feature);
-    if (svc) setTimeout(() => activateServiceSection(svc), 250);
+    if (svc) {
+      setTimeout(() => activateServiceSection(svc), 250);
+    } else if (rawQ) {
+      // Typed something but no match — keep OG browse but tell the user
+      setTimeout(() => showSearchNoMatch(rawQ), 250);
+    }
   } catch (err) {
     showStatus(`Search failed: ${escapeHtml(err.message)}`, "error");
   } finally {
