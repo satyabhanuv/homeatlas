@@ -1916,7 +1916,7 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.7</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.8</span>
     </div>
   </header>
 
@@ -9336,12 +9336,19 @@ function activateServiceSection(svc) {
 }
 
 // v0.49: unified search — service query + location. Location empty = Near me.
-// v0.49.6: track whether the current submit is from browser navigation
-// (popstate) so we don't push duplicate history entries.
+// v0.49.6 → v0.49.8: track whether the current submit is from browser
+// navigation (popstate) so we don't push duplicate history entries.
+// CRITICAL: capture this flag at the START of the submit handler. The
+// submit is async (geocode + render ~500ms+); if we read the flag at the
+// end, a setTimeout reset will have flipped it back already, and Back
+// will push a new entry that wipes the Forward stack.
 let _isHistoryRestore = false;
 
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();
+  // Capture restore intent before any await so async timing can't reset it
+  const isRestore = _isHistoryRestore;
+  _isHistoryRestore = false;
   const rawAddr = addrEl.value.trim();
   const rawQ    = qInputEl ? qInputEl.value.trim() : "";
   hideSuggestions();
@@ -9388,9 +9395,11 @@ formEl.addEventListener("submit", async (e) => {
       // Typed something but no match — keep OG browse but tell the user
       setTimeout(() => showSearchNoMatch(rawQ), 250);
     }
-    // v0.49.6: push to browser history so back/forward navigation restores
-    // the previous search. Skip if we're already restoring from popstate.
-    if (!_isHistoryRestore) {
+    // v0.49.8: push to browser history so back/forward navigation restores
+    // the previous search. Use the flag captured at the START of this
+    // handler (NOT the live _isHistoryRestore which may have been reset
+    // by the popstate timeout by the time we get here).
+    if (!isRestore) {
       try {
         const params = new URLSearchParams();
         if (rawQ) params.set("q", rawQ);
@@ -9446,8 +9455,11 @@ if (_brandReset) {
   });
 }
 
-// v0.49.6: handle browser back/forward to restore previous searches.
+// v0.49.6 → v0.49.8: browser back/forward restores previous searches.
 // We push a history entry on every submit; popstate replays the search.
+// No setTimeout reset of _isHistoryRestore is needed because the submit
+// handler captures the flag synchronously at its start (see above) and
+// resets it itself.
 window.addEventListener("popstate", (e) => {
   const state = e.state;
   if (!state) {
@@ -9464,13 +9476,11 @@ window.addEventListener("popstate", (e) => {
   if (qInputEl && typeof state.q === "string")     qInputEl.value = state.q;
   if (addrEl   && typeof state.where === "string") addrEl.value   = state.where;
   _isHistoryRestore = true;
-  try { formEl.dispatchEvent(new Event("submit", { cancelable: true })); }
-  finally { setTimeout(() => { _isHistoryRestore = false; }, 100); }
+  formEl.dispatchEvent(new Event("submit", { cancelable: true }));
 });
 
 // On initial load, if the URL already has ?q= or ?where=, populate the
-// inputs and auto-submit so deep-links work and the first history entry
-// is consistent with the current view.
+// inputs and auto-submit so deep-links work.
 (function _restoreFromUrl(){
   const params = new URLSearchParams(location.search);
   const q = params.get("q");
@@ -9481,8 +9491,7 @@ window.addEventListener("popstate", (e) => {
   // Defer so all event listeners are wired up before we trigger submit
   setTimeout(() => {
     _isHistoryRestore = true;
-    try { formEl.dispatchEvent(new Event("submit", { cancelable: true })); }
-    finally { setTimeout(() => { _isHistoryRestore = false; }, 100); }
+    formEl.dispatchEvent(new Event("submit", { cancelable: true }));
   }, 50);
 })();
 
