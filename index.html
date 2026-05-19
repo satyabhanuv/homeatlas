@@ -115,18 +115,44 @@
     .brand-tag { display: none; }   /* save horizontal room on mobile */
   }
 
-  .hero { padding: 32px 0 20px; transition: padding 0.18s ease; }
-  .hero h1 { font-size: clamp(28px, 5vw, 42px); line-height: 1.05; margin: 0 0 10px; letter-spacing: -0.03em; font-weight: 800; transition: font-size 0.18s ease, margin 0.18s ease; }
+  /* v0.50: knotapi-style hero — confident scale, eyebrow label, subhead. */
+  .hero { padding: 48px 0 28px; transition: padding 0.18s ease; max-width: 920px; }
+  .hero-eyebrow {
+    display: inline-block;
+    font-size: 13px; font-weight: 600;
+    color: var(--primary);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin: 0 0 16px;
+    padding: 6px 12px;
+    background: var(--primary-soft);
+    border-radius: 999px;
+  }
+  .hero h1 {
+    font-size: clamp(34px, 6vw, 60px);
+    line-height: 1.02;
+    margin: 0 0 18px;
+    letter-spacing: -0.035em;
+    font-weight: 700;
+    transition: font-size 0.18s ease, margin 0.18s ease;
+  }
   .hero h1 em { color: var(--primary); font-style: normal; }
-  .hero p.lead { margin: 0 0 22px; max-width: 600px; font-size: clamp(15px, 1.8vw, 17px); color: var(--ink-soft); line-height: 1.5; }
+  .hero p.lead {
+    margin: 0 0 28px;
+    max-width: 640px;
+    font-size: clamp(16px, 1.8vw, 19px);
+    color: var(--ink-soft);
+    line-height: 1.55;
+    font-weight: 400;
+  }
 
-  /* v0.47.1: compact hero once results are showing. Shrinks the headline,
-     hides the lead paragraph and the collapsed "What's covered" disclosure,
-     so search bar + emergency strip sit close to the top. */
+  /* v0.47.1 → v0.50: compact hero once results are showing. */
   body.results-shown .hero { padding: 14px 0 8px; }
   body.results-shown .hero h1 { font-size: 22px; margin: 0 0 4px; }
   body.results-shown .hero p.lead { display: none; }
+  body.results-shown .hero-eyebrow { display: none; }
   body.results-shown .hero-disclosure { display: none; }
+  body.results-shown .landing-extras { display: none; }   /* hide product cards + trust strip */
 
   /* v0.47.1: "What's covered?" collapsed disclosure replaces the long hint
      paragraph. Single small line by default; expands to show coverage info. */
@@ -148,6 +174,165 @@
   .hero-disclosure summary::before { content: "ⓘ "; opacity: 0.65; }
   .hero-disclosure[open] summary { background: var(--primary-soft); border-color: var(--primary); color: var(--primary-2); }
   .hero-disclosure-body { margin-top: 10px; max-width: 640px; line-height: 1.55; }
+
+  /* ──────────────────────────────────────────────────────────────────────
+     v0.50: knotapi-style landing extras — product showcase + trust strip
+     + expanded footer. Visible only when no search has been submitted
+     (body without .results-shown). Sets the product up as something
+     substantial, not just a form. */
+  .landing-extras { margin-top: 56px; }
+  .landing-section { margin: 0 0 64px; }
+  .landing-section-label {
+    display: block;
+    font-size: 12.5px; font-weight: 600;
+    color: var(--ink-soft);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+  }
+  .landing-section h2 {
+    font-size: clamp(24px, 3.5vw, 32px);
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    margin: 0 0 14px;
+    color: var(--ink);
+  }
+  .landing-section p.section-lead {
+    font-size: 16px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0 0 28px;
+    max-width: 640px;
+  }
+
+  /* Product showcase — knotapi-style cards with title + description + arrow */
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+  }
+  .product-card {
+    display: flex; flex-direction: column;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 22px 22px 20px;
+    text-decoration: none;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+    position: relative;
+  }
+  .product-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,80,194,0.08);
+  }
+  .product-card-eyebrow {
+    font-size: 11.5px; font-weight: 600;
+    color: var(--ink-faint);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .product-card-title {
+    font-size: 19px; font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 8px;
+    color: var(--ink);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .product-card-desc {
+    font-size: 14.5px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+    margin: 0 0 16px;
+    flex: 1;
+  }
+  .product-card-cta {
+    font-size: 14px; font-weight: 600;
+    color: var(--primary);
+    display: inline-flex; align-items: center; gap: 4px;
+    transition: gap 0.15s ease;
+  }
+  .product-card:hover .product-card-cta { gap: 8px; }
+  .product-card-cta::after { content: "→"; }
+
+  /* Trust strip — small inline data-source attribution row */
+  .trust-strip {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .trust-label {
+    font-size: 12px; font-weight: 600;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-right: 6px;
+  }
+  .trust-item {
+    font-size: 13.5px; font-weight: 500;
+    color: var(--ink-soft);
+  }
+  .trust-item b { color: var(--ink); font-weight: 600; }
+  .trust-sep { color: var(--line); }
+  @media (max-width: 600px) {
+    .trust-strip { gap: 8px 12px; padding: 14px 0; }
+    .trust-label { width: 100%; margin-bottom: 4px; }
+  }
+
+  /* Expanded footer — multi-column layout */
+  .site-footer {
+    margin-top: 80px;
+    padding: 44px 0 28px;
+    border-top: 1px solid var(--line);
+  }
+  .site-footer-grid {
+    display: grid;
+    grid-template-columns: 1.4fr repeat(auto-fit, minmax(150px, 1fr));
+    gap: 32px;
+    margin-bottom: 36px;
+  }
+  .site-footer-brand-col h3 {
+    font-size: 18px; font-weight: 700;
+    margin: 0 0 8px; letter-spacing: -0.015em;
+  }
+  .site-footer-brand-col p {
+    font-size: 14px; color: var(--ink-soft);
+    line-height: 1.55;
+    margin: 0 0 12px; max-width: 320px;
+  }
+  .site-footer-col-label {
+    font-size: 12.5px; font-weight: 700;
+    color: var(--ink);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    margin: 0 0 14px;
+  }
+  .site-footer-col ul { list-style: none; padding: 0; margin: 0; }
+  .site-footer-col li { margin: 0 0 8px; }
+  .site-footer-col a {
+    font-size: 14px;
+    color: var(--ink-soft);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  .site-footer-col a:hover { color: var(--primary); }
+  .site-footer-baseline {
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+    font-size: 13px; color: var(--ink-faint);
+  }
+  .site-footer-baseline a { color: var(--ink-soft); text-decoration: none; }
+  .site-footer-baseline a:hover { color: var(--primary); }
+  @media (max-width: 680px) {
+    .site-footer-grid { grid-template-columns: 1fr 1fr; }
+    .site-footer-brand-col { grid-column: 1 / -1; }
+  }
 
   .search-wrap { position: relative; max-width: 860px; }
   .searchbar {
@@ -1916,14 +2101,15 @@
       </svg>
       HomeAtlas
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.49.8</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.50</span>
     </div>
   </header>
 
   <section class="hero">
-    <h1>What do you need <em>near you</em>?</h1>
+    <span class="hero-eyebrow">HomeAtlas · County-verified, no paid placement</span>
+    <h1>Everything about your<br><em>neighborhood</em>, in one tab.</h1>
     <p class="lead">
-      Search for a service — farmers market, free clinic, hospital, food bank, library — and we'll find it near you.
+      Search a service — farmers market, free clinic, hospital, food bank, library, DMV — and we'll surface the verified options near you. No accounts. No tracking. No paid placement.
     </p>
 
     <!-- v0.49: dual search. Service query + location. Location defaults to Near me. -->
@@ -1960,6 +2146,65 @@
       </div>
     </details>
     <div id="status"></div>
+  </section>
+
+  <!-- v0.50: Landing extras — product showcase + trust strip. Hidden once
+       a search has run via `body.results-shown` CSS rule. -->
+  <section class="landing-extras" id="landingExtras">
+    <div class="landing-section">
+      <span class="landing-section-label">What's inside</span>
+      <h2>Five clear answers for your address.</h2>
+      <p class="section-lead">No login. No tracking. Just public, county-verified data organized the way residents actually look for it.</p>
+      <div class="product-grid">
+        <a class="product-card" data-cat="around-me" tabindex="0">
+          <div class="product-card-eyebrow">Around me</div>
+          <div class="product-card-title">Events, schools &amp; parks</div>
+          <div class="product-card-desc">Farmers markets, this-month events calendar, schools (public/private/charter), libraries, parks &amp; trails — distance-filtered to your radius.</div>
+          <span class="product-card-cta">Explore</span>
+        </a>
+        <a class="product-card" data-cat="my-home" tabindex="0">
+          <div class="product-card-eyebrow">My home</div>
+          <div class="product-card-title">Utilities, internet &amp; services</div>
+          <div class="product-card-desc">Electric / gas / water provider lookup, internet &amp; TV options, USDA gardening zone, and a handyman / plumber / electrician directory for your area.</div>
+          <span class="product-card-cta">Explore</span>
+        </a>
+        <a class="product-card" data-cat="help" tabindex="0">
+          <div class="product-card-eyebrow">Help &amp; wellness</div>
+          <div class="product-card-title">Free clinics, food &amp; crisis lines</div>
+          <div class="product-card-desc">FQHC clinics from the federal HRSA registry, food banks, rent &amp; utility assistance, legal aid, mental-health resources, and 211 / 988 always at the top of the page.</div>
+          <span class="product-card-cta">Explore</span>
+        </a>
+        <a class="product-card" data-cat="civic" tabindex="0">
+          <div class="product-card-eyebrow">Civic &amp; gov't</div>
+          <div class="product-card-title">Vote, DMV, officials</div>
+          <div class="product-card-desc">Voter registration with the right state portal, DMV / permits / courts for your jurisdiction, and direct links to elected officials. Updated quarterly.</div>
+          <span class="product-card-cta">Explore</span>
+        </a>
+        <a class="product-card" data-cat="safety" tabindex="0">
+          <div class="product-card-eyebrow">Safety &amp; risks</div>
+          <div class="product-card-title">Emergency services + climate</div>
+          <div class="product-card-desc">Closest fire / police / hospital / pharmacy, plus wildfire / flood / earthquake risk zones for your specific address — sourced from FEMA, Cal Fire, NOAA.</div>
+          <span class="product-card-cta">Explore</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="trust-strip">
+      <span class="trust-label">Powered by free public data from</span>
+      <span class="trust-item"><b>USDA</b> Local Food Directory</span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item"><b>HRSA</b> Health Centers</span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item"><b>211</b> &amp; <b>988</b></span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item"><b>OpenStreetMap</b></span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item"><b>Cal Fire</b> &amp; <b>FEMA</b></span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item"><b>Census Bureau</b></span>
+      <span class="trust-sep">·</span>
+      <span class="trust-item"><b>PCFMA</b>, <b>CFMA</b>, <b>Foodwise</b></span>
+    </div>
   </section>
 
   <!-- Results -->
@@ -2791,14 +3036,48 @@
     </div>
   </section>
 
-  <footer>
-    <p>
-      <b>HomeAtlas</b> &mdash; v0.49.3 · May 2026 · Phase 2 · Click the logo to reset and return to the landing page. Calendar + agenda now sit side-by-side. Event seed expanded with fairs, festivals, concerts, art walks, and museum events — not just farmers markets.
-      &nbsp;·&nbsp;
-      <a href="mailto:CHANGE-ME@example.com?subject=HomeAtlas%20feedback" style="color:var(--primary); font-weight:600;">📬 Report an issue or suggest a feature</a>
-    </p>
-    <p>Sources: <a href="https://cecgis-caenergy.opendata.arcgis.com/" target="_blank" rel="noopener">CEC GIS</a> · <a href="https://broadbandmap.fcc.gov/" target="_blank" rel="noopener">FCC Broadband Map</a> · <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap (ODbL)</a> · <a href="https://overpass-api.de/" target="_blank" rel="noopener">Overpass API</a> · <a href="https://geocoding.geo.census.gov/" target="_blank" rel="noopener">U.S. Census Bureau Geocoder</a> · <a href="https://planthardiness.ars.usda.gov/" target="_blank" rel="noopener">USDA PHZM</a></p>
-    <p>Internet speeds shown are typical max residential plans — actual speeds at your address may differ. Always verify exact availability with the provider or via the FCC report link.</p>
+  <!-- v0.50: knotapi-style expanded multi-column footer -->
+  <footer class="site-footer">
+    <div class="site-footer-grid">
+      <div class="site-footer-brand-col">
+        <h3>HomeAtlas</h3>
+        <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 HomeAtlas. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.50</span></p>
+      </div>
+      <div class="site-footer-col">
+        <div class="site-footer-col-label">Explore</div>
+        <ul>
+          <li><a href="#" data-cat-link="around-me">Around me</a></li>
+          <li><a href="#" data-cat-link="my-home">My home</a></li>
+          <li><a href="#" data-cat-link="help">Help &amp; wellness</a></li>
+          <li><a href="#" data-cat-link="civic">Civic &amp; gov't</a></li>
+          <li><a href="#" data-cat-link="safety">Safety &amp; risks</a></li>
+        </ul>
+      </div>
+      <div class="site-footer-col">
+        <div class="site-footer-col-label">Data sources</div>
+        <ul>
+          <li><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap (ODbL)</a></li>
+          <li><a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener">HRSA Health Centers</a></li>
+          <li><a href="https://www.usdalocalfoodportal.com/" target="_blank" rel="noopener">USDA Local Food Portal</a></li>
+          <li><a href="https://www.211.org/" target="_blank" rel="noopener">211.org</a></li>
+          <li><a href="https://broadbandmap.fcc.gov/" target="_blank" rel="noopener">FCC Broadband Map</a></li>
+          <li><a href="https://geocoding.geo.census.gov/" target="_blank" rel="noopener">Census Geocoder</a></li>
+        </ul>
+      </div>
+      <div class="site-footer-col">
+        <div class="site-footer-col-label">Project</div>
+        <ul>
+          <li><a href="mailto:feedback@homeatlas.io?subject=HomeAtlas%20feedback">Send feedback</a></li>
+          <li><a href="#" id="footer-privacy-link">Privacy posture</a></li>
+          <li><a href="#" id="footer-coverage-link">Coverage roadmap</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="site-footer-baseline">
+      <span>Public-data tool · No paid placement · Free for residents</span>
+      <span>Internet speeds shown are typical residential max — verify exact availability with the provider.</span>
+    </div>
   </footer>
 </div>
 
@@ -9454,6 +9733,36 @@ if (_brandReset) {
     if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fullReset(); }
   });
 }
+
+// v0.50: product showcase cards on the landing — clicking one runs a
+// search with no query, just the user's current location, and pre-activates
+// that category. So users can "explore" without typing a service.
+document.addEventListener("click", (e) => {
+  const card = e.target.closest(".product-card[data-cat], [data-cat-link]");
+  if (!card) return;
+  e.preventDefault();
+  const cat = card.dataset.cat || card.dataset.catLink;
+  // Clear the looking-for input so this is a pure browse, no service filter
+  if (qInputEl) qInputEl.value = "";
+  // If no location, rely on Near-me on submit
+  formEl.dispatchEvent(new Event("submit", { cancelable: true }));
+  // After results render, activate the requested category
+  setTimeout(() => {
+    if (typeof applyCategoryFilter === "function") applyCategoryFilter(cat);
+  }, 400);
+});
+
+// v0.50: tiny inline popovers for the footer "Privacy posture" + "Coverage roadmap" links
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("#footer-privacy-link, #footer-coverage-link");
+  if (!a) return;
+  e.preventDefault();
+  const isPrivacy = a.id === "footer-privacy-link";
+  const msg = isPrivacy
+    ? "HomeAtlas runs entirely in your browser. Your address text and (if you tap Near Me) geolocation are sent to OpenStreetMap-based services to look up nearby places. Nothing is saved on our side. No accounts. No cookies (except a single localStorage key for your preferred radius). Federal data (HRSA, USDA) is fetched fresh on each visit."
+    : "Live: granular utility / internet / school-district data for CA, FL, IL, NY, OH, PA, TX + WA, NJ. Curated event listings for Bay Area + Philadelphia metro. Coming: GA, NC, MI; USDA Local Food Directory (nationwide farmers markets); Google Civic Information API (elected officials); state-by-state expansion via free public sources only.";
+  alert(msg);
+});
 
 // v0.49.6 → v0.49.8: browser back/forward restores previous searches.
 // We push a history entry on every submit; popstate replays the search.
