@@ -3,22 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HomeAtlas — Everything about your home, in one place</title>
-<meta name="description" content="Enter your US home address and instantly see your electric utility, internet/TV/security providers, and the schools and educational facilities around your home.">
+<title>Nearnity — Everything about here, in one tap</title>
+<meta name="description" content="Tap once on your phone — get verified answers about wherever you're standing. Schools, free clinics, utilities, events, civic, safety. Public data only. No ads. No accounts.">
 <meta name="theme-color" content="#2d6a4f">
+<link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.35.0: HomeAtlas logo — blue house + verified-checkmark badge.
-     Communicates "trusted public data, no paid placement" at a glance. -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M14 32 L32 16 L50 32 L44 32 L44 48 L36 48 L36 38 L28 38 L28 48 L20 48 L20 32 Z' fill='%23ffffff'/><circle cx='50' cy='50' r='11' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45 50 L48.5 53 L55 46' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+<!-- v0.51: Nearnity logo — blue map-pin + verified-checkmark badge.
+     Location-first: signals "you are here, this is verified." -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
 <!-- Open Graph / social-share preview -->
 <meta property="og:type" content="website">
-<meta property="og:title" content="HomeAtlas — Everything about your home, in one place">
-<meta property="og:description" content="Enter your US home address and instantly see your electric utility, internet/TV/security providers, and schools near your home.">
-<meta property="og:site_name" content="HomeAtlas">
-<meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="HomeAtlas">
-<meta name="twitter:description" content="Everything about your home, in one place — by address.">
+<meta property="og:url" content="https://nearnity.com/">
+<meta property="og:title" content="Nearnity — Everything about here, in one tap">
+<meta property="og:description" content="Tap once on your phone — get verified answers about wherever you're standing. Schools, free clinics, utilities, events, civic, safety.">
+<meta property="og:site_name" content="Nearnity">
+<meta property="og:image" content="https://nearnity.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Nearnity — Everything about here, in one tap">
+<meta name="twitter:description" content="Tap once. Get verified answers about wherever you are. Public data only.">
+<meta name="twitter:image" content="https://nearnity.com/og-image.png">
 
 <!-- v0.23: Inter for cleaner Zillow-style typography -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2086,7 +2092,7 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.35.0: HomeAtlas logo — house + verified checkmark — blue, no paid placement -->
+      <!-- v0.51: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2095,18 +2101,19 @@
           </linearGradient>
         </defs>
         <rect width="64" height="64" rx="14" fill="url(#brand-lg)"/>
-        <path d="M14 32 L32 16 L50 32 L44 32 L44 48 L36 48 L36 38 L28 38 L28 48 L20 48 L20 32 Z" fill="#ffffff"/>
+        <path d="M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z" fill="#ffffff"/>
+        <circle cx="32" cy="27" r="6" fill="url(#brand-lg)"/>
         <circle cx="50" cy="50" r="11" fill="#2d6a4f" stroke="#ffffff" stroke-width="2"/>
         <path d="M45 50 L48.5 53 L55 46" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       </svg>
-      HomeAtlas
+      nearnity
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.50</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.51</span>
     </div>
   </header>
 
   <section class="hero">
-    <span class="hero-eyebrow">HomeAtlas · County-verified, no paid placement</span>
+    <span class="hero-eyebrow">nearnity · County-verified, no paid placement</span>
     <h1>Everything about your<br><em>neighborhood</em>, in one tab.</h1>
     <p class="lead">
       Search a service — farmers market, free clinic, hospital, food bank, library, DMV — and we'll surface the verified options near you. No accounts. No tracking. No paid placement.
@@ -3040,9 +3047,9 @@
   <footer class="site-footer">
     <div class="site-footer-grid">
       <div class="site-footer-brand-col">
-        <h3>HomeAtlas</h3>
+        <h3>Nearnity</h3>
         <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 HomeAtlas. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.50</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.51</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -3068,7 +3075,7 @@
       <div class="site-footer-col">
         <div class="site-footer-col-label">Project</div>
         <ul>
-          <li><a href="mailto:feedback@homeatlas.io?subject=HomeAtlas%20feedback">Send feedback</a></li>
+          <li><a href="mailto:feedback@nearnity.com?subject=Nearnity%20feedback">Send feedback</a></li>
           <li><a href="#" id="footer-privacy-link">Privacy posture</a></li>
           <li><a href="#" id="footer-coverage-link">Coverage roadmap</a></li>
         </ul>
@@ -3083,7 +3090,7 @@
 
 <script>
 /* =====================================================================
-   HomeAtlas — preview prototype (v5)
+   Nearnity — preview prototype (v5)
    What changed from v4:
      • Internet / TV / Security results now grouped into sub-sections
        (Cable / Fiber / 5G / Satellite, etc.) — one little table per group
@@ -4728,7 +4735,7 @@ function iconButtonsHtml(name, opts = {}) {
 
 /* -------- Address autocomplete (two-phase: Photon → Census/Nominatim) -- */
 // v0.16: flip to true in DevTools to log each geocoder's results
-window.HOMEATLAS_DEBUG = false;
+window.NEARNITY_DEBUG = false;
 
 /* ─────────────────────────────────────────────────────────────────────
    v0.30: Radial distance filter
@@ -4747,7 +4754,7 @@ let CURRENT_RADIUS_M  = Math.round(DEFAULT_RADIUS_MI * MILES_TO_METERS);
 
 // v0.34.5: bump key to force-reset stale radius values from localStorage.
 // Users who had "5" saved from before now get the new "2" default.
-const RADIUS_LS_KEY = "homeatlas:radius:v2";
+const RADIUS_LS_KEY = "nearnity:radius:v2";
 function loadSavedRadius() {
   // URL hash wins over localStorage (so a shared link forces its radius)
   const hashMatch = (location.hash || "").match(/radius=(\d+)/);
@@ -4757,7 +4764,7 @@ function loadSavedRadius() {
   }
   if (!RADIUS_OPTIONS.includes(r)) r = DEFAULT_RADIUS_MI;
   // Best-effort cleanup of the old key (silent if it fails)
-  try { localStorage.removeItem("homeatlas:radius"); } catch (e) {}
+  try { localStorage.removeItem("nearnity:radius"); } catch (e) {}
   setRadius(r, { silent: true, persist: false });
 }
 function setRadius(miles, opts = {}) {
@@ -5292,7 +5299,7 @@ function refreshActiveSubtabFor(cardId) {
     pill.textContent = `${items.length} ${label.toLowerCase()} · within ${CURRENT_RADIUS_MI} mi`;
   }
 }
-function dlog(...args) { if (window.HOMEATLAS_DEBUG) console.log("[homeatlas]", ...args); }
+function dlog(...args) { if (window.NEARNITY_DEBUG) console.log("[nearnity]", ...args); }
 
 let suggestState = { items: [], activeIdx: -1, lastQuery: "", searched: false, deepRunning: false };
 // Photon is fast and good for type-ahead, but its US house-number coverage
@@ -6921,7 +6928,7 @@ function plantCardHtml(p, categoryEmoji) {
    blocking initial render. We cache hits AND misses (so we don't hammer
    Wikipedia for plants that don't have a sci-name page). 4 fetches in
    parallel — well within Wikipedia's anonymous rate limits. */
-const PLANT_PHOTO_CACHE_KEY = "homeatlas:plant-photos:v1";
+const PLANT_PHOTO_CACHE_KEY = "nearnity:plant-photos:v1";
 function loadPlantPhotoCache() {
   try { return JSON.parse(localStorage.getItem(PLANT_PHOTO_CACHE_KEY) || "{}"); } catch (e) { return {}; }
 }
@@ -7187,13 +7194,13 @@ function renderRisks(risks) {
    v0.19: Home details placeholder (year-built input → unlocks Phase 2)
    ===================================================================== */
 function loadHomeDetails(addr) {
-  const key = "homeatlas:home:" + (addr.postcode || "default");
+  const key = "nearnity:home:" + (addr.postcode || "default");
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(key) || "{}"); } catch (e) {}
   return saved;
 }
 function saveHomeDetails(addr, data) {
-  const key = "homeatlas:home:" + (addr.postcode || "default");
+  const key = "nearnity:home:" + (addr.postcode || "default");
   try { localStorage.setItem(key, JSON.stringify(data)); } catch (e) {}
 }
 
@@ -7867,7 +7874,7 @@ function renderEvents(grouped, total, cityKey, geo) {
 // pasting the new events array below. Filtered at render time by the
 // resolved city. Cities not in the seed get a "coming soon" message.
 // =====================================================================
-const HOMEATLAS_EVENTS_SEED = {
+const NEARNITY_EVENTS_SEED = {
   "generated": "2026-05-09T10:00",
   "window_days": 30,
   "events": [
@@ -7941,7 +7948,7 @@ const HOMEATLAS_EVENTS_SEED = {
 // instances inside the active 30-day window. Days use JS Date#getDay
 // convention (0 = Sun, 1 = Mon, ..., 6 = Sat).
 // =====================================================================
-const HOMEATLAS_EVENTS_RECURRING = {
+const NEARNITY_EVENTS_RECURRING = {
   events: [
     // ---- San Jose (PCFMA) ----
     { "city": "san jose", "state": "CA", "title": "Evergreen Farmers' Market", "venue": "4055 Evergreen Village Sq, San Jose 95121", "lat": 37.3140, "lon": -121.7734, "category": "market", "recurring": { "days": [0, 3], "start": "09:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/evergreen-farmers-market", "source": "PCFMA — Evergreen", "verified": true, "free": true },
@@ -8025,7 +8032,7 @@ function getCuratedFarmersMarketVenues(geo) {
 
   const seenTitles = new Set();
   const out = [];
-  for (const m of HOMEATLAS_EVENTS_RECURRING.events) {
+  for (const m of NEARNITY_EVENTS_RECURRING.events) {
     if (m.category !== "market") continue;
     if (seenTitles.has(m.title)) continue;
     const v = curatedMarketToVenueShape(m, lat, lon, CURRENT_RADIUS_MI);
@@ -8074,8 +8081,8 @@ function expandRecurringEvent(ev, now, horizon) {
 // Cities that have curated coverage (both one-off + recurring). Used to decide
 // whether to show "coming soon" vs. a real listing in Happening-this-month.
 const CURATED_EVENT_CITIES = new Set(
-  HOMEATLAS_EVENTS_SEED.events.map(e => e.city.toLowerCase())
-  .concat(HOMEATLAS_EVENTS_RECURRING.events.map(e => e.city.toLowerCase()))
+  NEARNITY_EVENTS_SEED.events.map(e => e.city.toLowerCase())
+  .concat(NEARNITY_EVENTS_RECURRING.events.map(e => e.city.toLowerCase()))
 );
 
 // v0.39: ZIP → seed-cities-likely-relevant fallback. ZIPs span multiple
@@ -8187,7 +8194,7 @@ function filterCuratedEventsForCity(geo) {
   };
 
   // One-off events
-  const oneOffs = HOMEATLAS_EVENTS_SEED.events
+  const oneOffs = NEARNITY_EVENTS_SEED.events
     .filter(ev => {
       const t = new Date(ev.starts);
       return !isNaN(t) && t >= now && t <= horizon;
@@ -8197,7 +8204,7 @@ function filterCuratedEventsForCity(geo) {
   // Recurring events — expand within window, then filter by distance.
   // (We keep recurrence expansion before distance filter so a market's
   // weekly instances all get evaluated.)
-  const recurringInstances = HOMEATLAS_EVENTS_RECURRING.events
+  const recurringInstances = NEARNITY_EVENTS_RECURRING.events
     .filter(withinRadius)
     .flatMap(ev => expandRecurringEvent(ev, now, horizon));
 
@@ -8212,7 +8219,7 @@ function filterCuratedEventsForCity(geo) {
     })
     .sort((a, b) => a.starts.localeCompare(b.starts));
 
-  if (window.HOMEATLAS_DEBUG) {
+  if (window.NEARNITY_DEBUG) {
     console.log("[curated] distance filter @", lat, lon, "r=" + radius + "mi →",
                 oneOffs.length, "one-offs +", recurringInstances.length, "recurring =", matched.length);
   }
@@ -9702,7 +9709,7 @@ $("resetBtn").addEventListener("click", () => {
   clearStatus();
 });
 
-// v0.49.3: clicking the HomeAtlas logo resets the page to the landing state
+// v0.49.3: clicking the Nearnity logo resets the page to the landing state
 // (clears both search fields, hides results, exits focus mode, resets URL hash)
 function fullReset() {
   // Inputs
@@ -9759,7 +9766,7 @@ document.addEventListener("click", (e) => {
   e.preventDefault();
   const isPrivacy = a.id === "footer-privacy-link";
   const msg = isPrivacy
-    ? "HomeAtlas runs entirely in your browser. Your address text and (if you tap Near Me) geolocation are sent to OpenStreetMap-based services to look up nearby places. Nothing is saved on our side. No accounts. No cookies (except a single localStorage key for your preferred radius). Federal data (HRSA, USDA) is fetched fresh on each visit."
+    ? "Nearnity runs entirely in your browser. Your address text and (if you tap Near Me) geolocation are sent to OpenStreetMap-based services to look up nearby places. Nothing is saved on our side. No accounts. No cookies (except a single localStorage key for your preferred radius). Federal data (HRSA, USDA) is fetched fresh on each visit."
     : "Live: granular utility / internet / school-district data for CA, FL, IL, NY, OH, PA, TX + WA, NJ. Curated event listings for Bay Area + Philadelphia metro. Coming: GA, NC, MI; USDA Local Food Directory (nationwide farmers markets); Google Civic Information API (elected officials); state-by-state expansion via free public sources only.";
   alert(msg);
 });
@@ -9816,7 +9823,7 @@ if (nearMeBtn) {
       return;
     }
     if (location.protocol !== "https:" && location.hostname !== "localhost") {
-      showStatus("Near me requires HTTPS. Open the live site at <code>homeatlas.satyabhanuv.workers.dev</code> instead.", "error");
+      showStatus("Near me requires HTTPS. Open the live site at <code>nearnity.com</code> instead.", "error");
       return;
     }
     const originalLabel = nearMeBtn.innerHTML;
