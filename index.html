@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#2d6a4f">
 <link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.56: Nearnity logo — blue map-pin + verified-checkmark badge.
+<!-- v0.57: Nearnity logo — blue map-pin + verified-checkmark badge.
      Location-first: signals "you are here, this is verified." -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
@@ -2085,7 +2085,34 @@
     .schools-head .summary-pill { margin-left: 0; }
   }
 
-  /* ─── v0.56: Spartan-style red emergency bar (top sticky) ─────────── */
+  /* ─── v0.57: Clear (×) button inside the search inputs ───────────── */
+  .search-field { position: relative; }
+  .input-clear {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.10);
+    color: var(--ink-soft);
+    font-size: 18px; line-height: 1;
+    font-weight: 400;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    padding: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+    z-index: 2;
+  }
+  .input-clear:hover {
+    background: rgba(15, 23, 42, 0.18);
+    color: var(--ink);
+  }
+  /* Reserve room on the input's right side so text doesn't slide under the × */
+  .search-field input { padding-right: 40px; }
+
+  /* ─── v0.57: Spartan-style red emergency bar (top sticky) ─────────── */
   .top-emergency-bar {
     position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
     background: linear-gradient(90deg, #A32D2D 0%, #791F1F 100%);
@@ -2151,7 +2178,7 @@
     max-width: 1480px;
   }
 
-  /* ─── v0.56: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
+  /* ─── v0.57: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
      Stops the scroll-list-then-map pattern. Each major section becomes a
      2-column grid: scrollable content on the left, sticky map on the right.
      Falls back to stacked single-column on tablets/mobile (<920px). */
@@ -2215,7 +2242,7 @@
     }
   }
 
-  /* v0.56: Spartan-style prominent category nav — full-width pill tabs */
+  /* v0.57: Spartan-style prominent category nav — full-width pill tabs */
   .cat-nav {
     background: var(--bg);
     border-bottom: 1px solid var(--line);
@@ -2243,7 +2270,7 @@
 </head>
 <body class="single-view">
 
-<!-- v0.56: Spartan-style sticky red emergency bar across the top.
+<!-- v0.57: Spartan-style sticky red emergency bar across the top.
      Always present, replaces the vertical emergency-rail sidebar. -->
 <div class="top-emergency-bar" role="region" aria-label="Emergency helplines">
   <div class="top-emergency-bar-inner">
@@ -2268,7 +2295,7 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.56: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v0.57: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2284,7 +2311,7 @@
       </svg>
       nearnity
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.56</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.57</span>
     </div>
   </header>
 
@@ -2304,6 +2331,7 @@
                  placeholder="farmers market, hospital, food bank, library…"
                  aria-label="What are you looking for"
                  aria-autocomplete="list" aria-controls="q-suggestions" />
+          <button type="button" class="input-clear" data-clear-target="q-input" aria-label="Clear what you're looking for" hidden>&times;</button>
           <div id="q-suggestions" class="suggestions q-suggestions" hidden role="listbox"></div>
         </div>
         <div class="search-field search-where">
@@ -2311,6 +2339,7 @@
           <input id="addr" type="text"
                  placeholder="📍 Near me — or type a city, ZIP, or address"
                  aria-label="Location" aria-autocomplete="list" aria-controls="suggestions" />
+          <button type="button" class="input-clear" data-clear-target="addr" aria-label="Clear location" hidden>&times;</button>
           <div id="suggestions" class="suggestions addr-suggestions" hidden role="listbox"></div>
         </div>
         <!-- Near me convenience — still here even though the location input auto-uses geolocation when blank -->
@@ -3225,7 +3254,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.56</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.57</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -8383,9 +8412,9 @@ function filterCuratedEventsForCity(geo) {
   };
 
   // One-off events.
-  // v0.56: keep events that are still in progress — events whose `ends` is
+  // v0.57: keep events that are still in progress — events whose `ends` is
   // in the future should appear even if `starts` is in the past.
-  // v0.56: extended — events that ended earlier *today* still appear until
+  // v0.57: extended — events that ended earlier *today* still appear until
   // midnight rolls over. Matches user mental model: "today's events" includes
   // ones that ended this afternoon when I'm checking tonight.
   const todayKey = now.toDateString();
@@ -8498,7 +8527,7 @@ function _calShiftMonth(ym, delta) {
 // v0.48: Calendar view replaces the week-grouped list. Month grid with
 // dots/counts on dates that have events; click a date to see that day's
 // agenda below. Defaults to today (or the next date with events).
-// v0.56: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
+// v0.57: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
 // Queries the nearnity events Worker at /api/events for any lat/lon,
 // returning normalized events that get merged with the curated seed.
 // Fails gracefully — curated seed always renders even if API is down.
@@ -10374,6 +10403,27 @@ if (risksToggle) {
     risksToggle.setAttribute("aria-expanded", String(wasCollapsed));
   });
 }
+
+// v0.57: Wire up the × clear buttons inside the search inputs.
+// Buttons are hidden by default and shown only when their input has content,
+// so the X never crowds an empty field.
+document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
+  const targetId = btn.dataset.clearTarget;
+  const input = document.getElementById(targetId);
+  if (!input) return;
+  const sync = () => { btn.hidden = !input.value; };
+  input.addEventListener("input", sync);
+  input.addEventListener("change", sync);
+  sync();
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    input.value = "";
+    // Fire an input event so any autocomplete/suggestion logic resets too
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+    input.focus();
+    sync();
+  });
+});
 </script>
 </body>
 </html>
