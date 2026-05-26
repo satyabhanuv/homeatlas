@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#2d6a4f">
 <link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.52: Nearnity logo — blue map-pin + verified-checkmark badge.
+<!-- v0.53: Nearnity logo — blue map-pin + verified-checkmark badge.
      Location-first: signals "you are here, this is verified." -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
@@ -2092,7 +2092,7 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.52: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v0.53: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2108,7 +2108,7 @@
       </svg>
       nearnity
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.52</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.53</span>
     </div>
   </header>
 
@@ -3049,7 +3049,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.52</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.53</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -7960,6 +7960,10 @@ const NEARNITY_EVENTS_RECURRING = {
     { "city": "san jose", "state": "CA", "title": "Kaiser Permanente San Jose Farmers' Market", "venue": "250 Hospital Pkwy, San Jose", "lat": 37.2769, "lon": -121.7945, "category": "market", "recurring": { "days": [2], "start": "09:30", "end": "13:30" }, "url": "https://www.pcfma.org/market/kaiser-permanente-san-jose-farmers-market", "source": "PCFMA — Kaiser SJ", "verified": true, "free": true },
     // ---- Milpitas (PCFMA) ----
     { "city": "milpitas", "state": "CA", "title": "Milpitas Farmers' Market", "venue": "1100 S Park Victoria Dr (India Community Center), Milpitas", "lat": 37.4255, "lon": -121.8843, "category": "market", "recurring": { "days": [0], "start": "08:00", "end": "13:00" }, "url": "https://www.pcfma.org/market/milpitas-farmers-market", "source": "PCFMA — Milpitas", "verified": true, "free": true },
+    // ---- Fremont (Bay Area Farmers Markets + PCFMA) ----
+    { "city": "fremont", "state": "CA", "title": "Irvington Farmers' Market", "venue": "4039 Bay St, Fremont", "lat": 37.5363, "lon": -121.9627, "category": "market", "recurring": { "days": [0], "start": "09:00", "end": "14:00" }, "url": "https://www.pcfma.org/market/irvington-farmers-market", "source": "PCFMA — Irvington", "verified": true, "free": true },
+    { "city": "fremont", "state": "CA", "title": "Niles Farmers' Market", "venue": "37482 Niles Blvd (plaza parking lot), Fremont", "lat": 37.5832, "lon": -121.9839, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.bayareafarmersmarkets.com/city/fremont", "source": "Bay Area Farmers Markets — Niles", "verified": true, "free": true },
+    { "city": "fremont", "state": "CA", "title": "Kaiser Fremont Farmers' Market", "venue": "39400 Paseo Padre Pkwy (Kaiser Medical Center), Fremont", "lat": 37.5400, "lon": -121.9650, "category": "market", "recurring": { "days": [4], "start": "10:00", "end": "14:00" }, "url": "https://www.bayareafarmersmarkets.com/city/fremont", "source": "Bay Area Farmers Markets — Kaiser", "verified": true, "free": true },
     // ---- Sunnyvale (Urban Village) — replaces the manually-listed weekly instances ----
     { "city": "sunnyvale", "state": "CA", "title": "Sunnyvale Farmers Market", "venue": "Murphy Ave between Washington & Evelyn", "lat": 37.3776, "lon": -122.0309, "category": "market", "recurring": { "days": [6], "start": "09:00", "end": "13:00" }, "url": "https://www.urbanvillageonline.com/markets/sunnyvale", "source": "Urban Village — Sunnyvale", "verified": true, "free": true },
     // ---- San Francisco (PCFMA + CUESA) ----
@@ -8203,14 +8207,24 @@ function filterCuratedEventsForCity(geo) {
   };
 
   // One-off events.
-  // v0.52: keep events that are still in progress — events whose `ends` is
-  // in the future should appear even if `starts` is in the past, so a user
-  // physically at an all-day fair sees it while standing there.
+  // v0.53: keep events that are still in progress — events whose `ends` is
+  // in the future should appear even if `starts` is in the past.
+  // v0.53: extended — events that ended earlier *today* still appear until
+  // midnight rolls over. Matches user mental model: "today's events" includes
+  // ones that ended this afternoon when I'm checking tonight.
+  const todayKey = now.toDateString();
   const oneOffs = NEARNITY_EVENTS_SEED.events
     .filter(ev => {
       const tStart = new Date(ev.starts);
       const tEnd = ev.ends ? new Date(ev.ends) : null;
-      const stillRelevant = (tEnd && !isNaN(tEnd)) ? tEnd >= now : tStart >= now;
+      const stillRelevant = (() => {
+        if (tEnd && !isNaN(tEnd)) {
+          if (tEnd >= now) return true;
+          return tEnd.toDateString() === todayKey;
+        }
+        if (tStart >= now) return true;
+        return tStart.toDateString() === todayKey;
+      })();
       return !isNaN(tStart) && stillRelevant && tStart <= horizon;
     })
     .filter(withinRadius);
@@ -8318,7 +8332,7 @@ function renderEventsListings(geo, eventsArg) {
     const cityName = getDisplayCityForHeadline(geo);
     tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
       <b>No curated listings for ${escapeHtml(cityName)} yet.</b><br>
-      We're starting with seed coverage for <b>San Jose, Milpitas, Sunnyvale, San Francisco, Phoenixville, King of Prussia, and Philadelphia</b> while the city-by-city scrape pipeline rolls out.<br>
+      We're starting with seed coverage for <b>San Jose, Milpitas, Sunnyvale, Fremont, San Francisco, Phoenixville, King of Prussia, and Philadelphia</b> while the city-by-city scrape pipeline rolls out.<br>
       In the meantime, the <b>Find events online</b> tab links you to Eventbrite, Meetup, Facebook events, and Google searches pre-filtered for ${escapeHtml(cityName)}.
     </div>`;
     return;
