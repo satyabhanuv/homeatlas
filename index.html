@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#2d6a4f">
 <link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.53: Nearnity logo — blue map-pin + verified-checkmark badge.
+<!-- v0.54: Nearnity logo — blue map-pin + verified-checkmark badge.
      Location-first: signals "you are here, this is verified." -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
@@ -2084,15 +2084,127 @@
     .searchbar button { padding: 14px; }
     .schools-head .summary-pill { margin-left: 0; }
   }
+
+  /* ─── v0.54: Spartan-style red emergency bar (top sticky) ─────────── */
+  .top-emergency-bar {
+    position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
+    background: linear-gradient(90deg, #A32D2D 0%, #791F1F 100%);
+    color: #fff;
+    display: flex; align-items: stretch;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+  }
+  .top-emergency-bar-inner {
+    max-width: 1480px; margin: 0 auto; width: 100%;
+    display: flex; align-items: stretch; flex-wrap: wrap;
+    padding: 8px 20px;
+    gap: 10px;
+  }
+  .top-emergency-label {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;
+    color: #FCEBEB;
+    padding: 4px 10px 4px 0;
+    border-right: 1px solid rgba(255,255,255,0.25);
+  }
+  .top-emergency-label::before { content: "🆘"; font-size: 14px; }
+  .top-emergency-num {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    color: #fff; text-decoration: none;
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    transition: background 0.15s ease, transform 0.1s ease;
+  }
+  .top-emergency-num:hover { background: rgba(255,255,255,0.20); }
+  .top-emergency-num:active { transform: scale(0.97); }
+  .top-emergency-num .num {
+    font-weight: 800; font-size: 14px; letter-spacing: 0.3px;
+  }
+  .top-emergency-num .what {
+    color: rgba(255,255,255,0.85); font-weight: 500;
+    border-left: 1px solid rgba(255,255,255,0.25);
+    padding-left: 8px;
+  }
+  @media (max-width: 720px) {
+    .top-emergency-bar-inner { padding: 6px 12px; gap: 6px; }
+    .top-emergency-label {
+      width: 100%; padding: 4px 0 2px;
+      border-right: none; border-bottom: 1px solid rgba(255,255,255,0.18);
+      margin-bottom: 2px;
+    }
+    .top-emergency-num { padding: 4px 10px; font-size: 12px; }
+    .top-emergency-num .what { display: none; }   /* on mobile, just show the number + emoji */
+  }
+
+  /* Hide the old vertical emergency-rail aside (replaced by top bar) */
+  .emergency-rail { display: none !important; }
+
+  /* Old results-grid is now single-column since the emergency rail moved up */
+  .results-grid {
+    display: block;
+    margin-top: 14px;
+  }
+
+  /* Widen the main content area to use the full window */
+  .wrap {
+    max-width: 1480px;
+  }
+
+  /* v0.54: Spartan-style prominent category nav — full-width pill tabs */
+  .cat-nav {
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    padding: 14px 0 0;
+    margin-top: 18px;
+    margin-bottom: 14px;
+    display: flex; flex-wrap: wrap; gap: 4px;
+  }
+  .cat-nav .cat-tab {
+    padding: 12px 20px;
+    font-size: 15px; font-weight: 600;
+    color: var(--ink-soft); text-decoration: none;
+    border-bottom: 3px solid transparent;
+    transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  }
+  .cat-nav .cat-tab:hover {
+    color: var(--ink);
+    background: rgba(0,80,194,0.04);
+  }
+  .cat-nav .cat-tab.active {
+    color: #0050C2;
+    border-bottom-color: #0050C2;
+  }
 </style>
 </head>
 <body class="single-view">
+
+<!-- v0.54: Spartan-style sticky red emergency bar across the top.
+     Always present, replaces the vertical emergency-rail sidebar. -->
+<div class="top-emergency-bar" role="region" aria-label="Emergency helplines">
+  <div class="top-emergency-bar-inner">
+    <span class="top-emergency-label">Need help now?</span>
+    <a class="top-emergency-num" href="tel:911" aria-label="Call 911 for any life-threatening emergency">
+      <span class="num">📞 911</span>
+      <span class="what">life-threatening emergency</span>
+    </a>
+    <a class="top-emergency-num" href="tel:988" aria-label="Call 988 Suicide and Crisis Lifeline">
+      <span class="num">📞 988</span>
+      <span class="what">crisis &amp; mental health</span>
+    </a>
+    <a class="top-emergency-num" href="tel:211" aria-label="Call 211 for food, shelter, utility help">
+      <span class="num">📞 211</span>
+      <span class="what">food, shelter, utilities</span>
+    </a>
+  </div>
+</div>
+
 <div class="wrap">
 
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.53: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v0.54: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2108,7 +2220,7 @@
       </svg>
       nearnity
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.53</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.54</span>
     </div>
   </header>
 
@@ -3049,7 +3161,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.53</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.54</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -8207,9 +8319,9 @@ function filterCuratedEventsForCity(geo) {
   };
 
   // One-off events.
-  // v0.53: keep events that are still in progress — events whose `ends` is
+  // v0.54: keep events that are still in progress — events whose `ends` is
   // in the future should appear even if `starts` is in the past.
-  // v0.53: extended — events that ended earlier *today* still appear until
+  // v0.54: extended — events that ended earlier *today* still appear until
   // midnight rolls over. Matches user mental model: "today's events" includes
   // ones that ended this afternoon when I'm checking tonight.
   const todayKey = now.toDateString();
