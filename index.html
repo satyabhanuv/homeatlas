@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#2d6a4f">
 <link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.58: Nearnity logo — blue map-pin + verified-checkmark badge.
+<!-- v0.59: Nearnity logo — blue map-pin + verified-checkmark badge.
      Location-first: signals "you are here, this is verified." -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
@@ -2085,7 +2085,81 @@
     .schools-head .summary-pill { margin-left: 0; }
   }
 
-  /* ─── v0.58: Clear (×) button inside the search inputs ───────────── */
+  /* ─── v0.59: Search banner above events when keyword is active ────── */
+  .search-banner {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 14px;
+    background: rgba(0,80,194,0.08);
+    border: 1px solid rgba(0,80,194,0.18);
+    border-radius: 10px;
+    margin-bottom: 12px;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .search-banner-icon { font-size: 16px; }
+  .search-banner-text { flex: 1; line-height: 1.4; }
+  .search-banner-text b { color: #0050c2; font-weight: 700; }
+  .search-banner-clear {
+    background: #ffffff;
+    border: 1px solid rgba(0,80,194,0.30);
+    color: #0050c2;
+    padding: 5px 12px;
+    border-radius: 999px;
+    font-size: 12px; font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s ease, color 0.12s ease;
+  }
+  .search-banner-clear:hover { background: #0050c2; color: #ffffff; }
+  @media (max-width: 600px) {
+    .search-banner { flex-direction: column; align-items: stretch; gap: 8px; }
+    .search-banner-clear { align-self: flex-start; }
+  }
+
+  /* ─── v0.59: Tier-grouped event agenda (Right here / Nearby / Worth the drive) ─── */
+  .cal-tier-header {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 14px 6px 6px;
+    border-top: 1px solid var(--line);
+    margin-top: 8px;
+  }
+  .cal-tier-header:first-of-type { border-top: 0; padding-top: 8px; margin-top: 0; }
+  .cal-tier-label {
+    font-size: 13px; font-weight: 700;
+    letter-spacing: 0.2px;
+    color: var(--ink);
+    text-transform: none;
+  }
+  .cal-tier-sub {
+    font-size: 11.5px; color: var(--ink-faint); font-weight: 500;
+    flex: 1; min-width: 0;
+  }
+  .cal-tier-count {
+    font-size: 11px; font-weight: 600;
+    background: var(--surface-2, #f7f9fc);
+    color: var(--ink-soft);
+    padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+  /* Tier-specific accents — left border color on each event card */
+  .cal-event[data-tier="essential"] { border-left: 3px solid #993C1D; padding-left: 9px; }
+  .cal-event[data-tier="daily"]     { border-left: 3px solid #0F6E56; padding-left: 9px; }
+  .cal-event[data-tier="nearby"]    { border-left: 3px solid #0050C2; padding-left: 9px; }
+  .cal-event[data-tier="regional"]  { border-left: 3px solid #534AB7; padding-left: 9px; }
+  .cal-event[data-tier="destination"] { border-left: 3px solid #BA7517; padding-left: 9px; }
+  .cal-event-dist {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: var(--surface-2, #f7f9fc);
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    font-size: 11px; font-weight: 600;
+    vertical-align: 2px;
+  }
+
+  /* ─── v0.59: Clear (×) button inside the search inputs ───────────── */
   .search-field { position: relative; }
   .input-clear {
     position: absolute;
@@ -2112,7 +2186,7 @@
   /* Reserve room on the input's right side so text doesn't slide under the × */
   .search-field input { padding-right: 40px; }
 
-  /* ─── v0.58: Spartan-style red emergency bar (top sticky) ─────────── */
+  /* ─── v0.59: Spartan-style red emergency bar (top sticky) ─────────── */
   .top-emergency-bar {
     position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
     background: linear-gradient(90deg, #A32D2D 0%, #791F1F 100%);
@@ -2178,7 +2252,7 @@
     max-width: 1480px;
   }
 
-  /* ─── v0.58: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
+  /* ─── v0.59: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
      Stops the scroll-list-then-map pattern. Each major section becomes a
      2-column grid: scrollable content on the left, sticky map on the right.
      Falls back to stacked single-column on tablets/mobile (<920px). */
@@ -2242,7 +2316,7 @@
     }
   }
 
-  /* ─── v0.58: Unmissable category nav — icon + label tiles ────────────
+  /* ─── v0.59: Unmissable category nav — icon + label tiles ────────────
      Replaces the easy-to-miss text-only tab row. Each tab now has a big
      emoji icon, a label, and a distinct active-state with colored border.
      Color-coded per category so users learn the visual map. */
@@ -2308,7 +2382,7 @@
 </head>
 <body class="single-view">
 
-<!-- v0.58: Spartan-style sticky red emergency bar across the top.
+<!-- v0.59: Spartan-style sticky red emergency bar across the top.
      Always present, replaces the vertical emergency-rail sidebar. -->
 <div class="top-emergency-bar" role="region" aria-label="Emergency helplines">
   <div class="top-emergency-bar-inner">
@@ -2333,7 +2407,7 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.58: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v0.59: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2349,7 +2423,7 @@
       </svg>
       nearnity
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.58</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.59</span>
     </div>
   </header>
 
@@ -3292,7 +3366,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.58</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.59</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -8423,6 +8497,75 @@ function _eventEffectiveCoords(ev) {
   return c || null;
 }
 
+// ─── v0.59: Tiered distance by event category ──────────────────────────
+// Different event types have different acceptable distances. A farmers
+// market 30mi away is useless; a Bruno Mars concert 30mi away is fine.
+// Each event maps to a tier; each tier has a "natural cap" — the maximum
+// distance we'll surface that type of event even if the user set a narrow
+// search radius. This lets us show concerts/sports automatically even when
+// the user is doing daily-life searches at 2-5mi.
+const TIER_CAPS = {
+  essential:    2,    // fire, police, hospital, urgent care, clinic
+  daily:        5,    // farmers market, food bank, library, school
+  nearby:      15,    // parks, community events, kids, local festivals, art
+  regional:    50,    // music concerts, sports, comedy, theater, big festivals
+  destination: 9999,  // iconic spots (Golden Gate Park, Yosemite, etc.) — unlimited
+};
+const TIER_ORDER = ["essential", "daily", "nearby", "regional", "destination"];
+const TIER_LABELS = {
+  essential:    "Right here",
+  daily:        "Around you",
+  nearby:       "Nearby",
+  regional:     "Worth the drive",
+  destination:  "Destination",
+};
+const TIER_SUBLABELS = {
+  essential:    "within 2 mi · essentials",
+  daily:        "within 5 mi · daily life",
+  nearby:       "within 15 mi · weekend trips",
+  regional:     "within 50 mi · concerts, sports, big events",
+  destination:  "iconic places worth a day trip",
+};
+function tierForCategory(cat) {
+  const c = (cat || "").toLowerCase();
+  // Essential — emergency services
+  if (["fire","police","hospital","clinic","pharmacy","urgent","ems","ambulance"].some(x => c.includes(x))) return "essential";
+  // Daily — services people use weekly
+  if (["market","food","library","school","childcare","daycare","grocery","dmv"].some(x => c.includes(x))) return "daily";
+  // Regional — concerts, sports, ticketed entertainment that people drive for
+  if (["music","concert","sport","sports","comedy","theater","theatre","improv","fireworks","family entertainment","nfl","nba","mlb","nhl","ncaa"].some(x => c.includes(x))) return "regional";
+  // Destination — iconic places (placeholder, expanded post-launch)
+  if (["iconic","destination","national park","yosemite","golden gate"].some(x => c.includes(x))) return "destination";
+  // Default — local / community / kids / art / festival / parks → nearby
+  return "nearby";
+}
+function effectiveRadiusForEvent(ev, userRadius) {
+  const tier = ev.tier || tierForCategory(ev.category);
+  const cap = TIER_CAPS[tier] || TIER_CAPS.nearby;
+  // Show the event if it's within EITHER the user's set radius OR its tier's natural cap.
+  // Essentials stay tight (2mi cap). Concerts auto-extend (50mi) even when user set 2mi.
+  return Math.max(userRadius, cap);
+}
+// v0.59: Apply tier-aware filter to an array of events. Tags each surviving
+// event with `_distance` (mi) and `_tier`. Used for both curated seed
+// events and live API events so the filter is consistent.
+function applyTierFilter(events, geo, userRadius) {
+  if (!Array.isArray(events) || !events.length) return [];
+  if (!geo) return events;
+  const lat = parseFloat(geo.lat);
+  const lon = parseFloat(geo.lon);
+  if (!isFinite(lat) || !isFinite(lon)) return events;
+  const r = userRadius || (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 5);
+  return events.filter((ev) => {
+    const c = _eventEffectiveCoords(ev);
+    if (!c) return false;
+    const d = haversineMiles(lat, lon, c.lat, c.lon);
+    ev._distance = d;
+    ev._tier = ev.tier || tierForCategory(ev.category);
+    return d <= effectiveRadiusForEvent(ev, r);
+  });
+}
+
 // v0.49.5: distance-based filter, consistent with getCuratedFarmersMarketVenues.
 // Previously this was city-candidate based, so at Milpitas 95035 the ZIP map
 // expanded candidates to ["milpitas","san jose"] and the calendar showed
@@ -8438,21 +8581,26 @@ function filterCuratedEventsForCity(geo) {
   const now = new Date();
   const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
 
-  // Inline helper — keep / drop an event by distance vs the user's location.
-  // If we can't compute a distance (no origin AND no city center), keep it
-  // (degrade gracefully — better something than nothing).
+  // v0.59: Tier-aware "should I show this event" filter. Each event's
+  // category maps to a tier (essential/daily/nearby/regional/destination),
+  // and each tier has its own effective radius — concerts auto-extend to
+  // 50mi even when the user set 2mi, while farmers markets stay tight.
   const withinRadius = (ev) => {
     if (!haveOrigin) return true;
     const c = _eventEffectiveCoords(ev);
     if (!c) return false;   // no coords and unknown city → drop
     const d = haversineMiles(lat, lon, c.lat, c.lon);
-    return d <= radius;
+    // Store distance + tier on the event for the renderer to use later
+    ev._distance = d;
+    ev._tier = ev.tier || tierForCategory(ev.category);
+    const effective = effectiveRadiusForEvent(ev, radius);
+    return d <= effective;
   };
 
   // One-off events.
-  // v0.58: keep events that are still in progress — events whose `ends` is
+  // v0.59: keep events that are still in progress — events whose `ends` is
   // in the future should appear even if `starts` is in the past.
-  // v0.58: extended — events that ended earlier *today* still appear until
+  // v0.59: extended — events that ended earlier *today* still appear until
   // midnight rolls over. Matches user mental model: "today's events" includes
   // ones that ended this afternoon when I'm checking tonight.
   const todayKey = now.toDateString();
@@ -8565,26 +8713,31 @@ function _calShiftMonth(ym, delta) {
 // v0.48: Calendar view replaces the week-grouped list. Month grid with
 // dots/counts on dates that have events; click a date to see that day's
 // agenda below. Defaults to today (or the next date with events).
-// v0.58: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
+// v0.59: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
 // Queries the nearnity events Worker at /api/events for any lat/lon,
 // returning normalized events that get merged with the curated seed.
 // Fails gracefully — curated seed always renders even if API is down.
 const NEARNITY_API_BASE = "/api/events";
-const _apiEventsCache = new Map();   // session-scoped cache, keyed by lat/lon/radius
-async function fetchApiEventsForLocation(geo, radiusMi) {
+const _apiEventsCache = new Map();   // session-scoped cache, keyed by lat/lon/radius/keyword
+async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   if (!geo) return [];
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  const r = radiusMi || (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 10);
+  // v0.59: Always query API with the regional-tier cap (50mi) so we get
+  // enough events to populate the "Worth the drive" tier. Frontend filter
+  // then narrows per tier. Concerts auto-show even at 2mi user radius.
+  const r = radiusMi || Math.max(TIER_CAPS.regional, (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 10));
   const addr = geo.address || {};
   const city = (addr.city || addr.town || addr.village || "").toLowerCase();
   const stateCode = (getStateCode && getStateCode(addr)) || (addr.state || "").slice(0, 2).toUpperCase();
-  const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${r}:${stateCode}:${city}`;
+  const kw = (keyword || "").trim().toLowerCase();
+  const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${r}:${stateCode}:${city}:${kw}`;
   if (_apiEventsCache.has(key)) return _apiEventsCache.get(key);
   const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: String(r) });
   if (city) params.set("city", city);
   if (stateCode) params.set("state", stateCode);
+  if (kw) params.set("q", kw);
   const url = `${NEARNITY_API_BASE}?${params.toString()}`;
   try {
     const ctrl = new AbortController();
@@ -8621,24 +8774,52 @@ function renderEventsListings(geo, eventsArg) {
   const tb  = $("events-listings-tbody");
   if (!sec || !tb) return;
   sec.hidden = false;
-  const curated = eventsArg || filterCuratedEventsForCity(geo);
+  // v0.59: Pick up the user's search term from the Looking-for input so it
+  // narrows the events listing too (not just the venue subtabs).
+  const qInput = $("q-input");
+  const keyword = qInput && qInput.value ? qInput.value.trim() : "";
+
+  let curated = eventsArg || filterCuratedEventsForCity(geo);
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    curated = curated.filter((ev) =>
+      (ev.title || "").toLowerCase().includes(kw) ||
+      (ev.venue || "").toLowerCase().includes(kw) ||
+      (ev.category || "").toLowerCase().includes(kw)
+    );
+  }
 
   // Render curated immediately so the user sees something while API fetches
   _renderEventsCalendar(geo, curated, tb);
 
-  // Async: fetch API events and re-render with merged set
-  fetchApiEventsForLocation(geo).then((apiEvents) => {
-    if (!apiEvents || !apiEvents.length) {
-      if (!curated.length) _renderEventsEmpty(geo, tb);
+  // Async: fetch API events with the same keyword, apply tier filter, re-render
+  fetchApiEventsForLocation(geo, null, keyword).then((apiEvents) => {
+    const filteredApi = applyTierFilter(apiEvents, geo);
+    if (!filteredApi.length) {
+      if (!curated.length) _renderEventsEmpty(geo, tb, keyword);
       return;
     }
-    const merged = mergeAndDedupeEvents(curated, apiEvents);
+    const merged = mergeAndDedupeEvents(curated, filteredApi);
     _renderEventsCalendar(geo, merged, tb);
   });
 }
 
-function _renderEventsEmpty(geo, tb) {
+function _renderEventsEmpty(geo, tb, keyword) {
   const cityName = getDisplayCityForHeadline(geo);
+  if (keyword) {
+    const kwSafe = escapeHtml(keyword);
+    const cityForSearch = encodeURIComponent(`${keyword} in ${cityName}`);
+    tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
+      <b>No events matching "${kwSafe}" found near ${escapeHtml(cityName)} in the next 30 days.</b><br>
+      Try a broader term, clear the search to see all events, or look these up directly:<br>
+      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;">
+        <a href="https://www.eventbrite.com/d/${encodeURIComponent(cityName.toLowerCase().replace(/\s+/g,'-'))}/${encodeURIComponent(keyword)}/" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🎫 Eventbrite — "${kwSafe}" in ${escapeHtml(cityName)}</a>
+        <a href="https://www.meetup.com/find/?keywords=${encodeURIComponent(keyword)}&location=${encodeURIComponent(cityName)}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">👥 Meetup — "${kwSafe}" near ${escapeHtml(cityName)}</a>
+        <a href="https://www.google.com/search?q=${cityForSearch}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🔎 Google — "${kwSafe} in ${escapeHtml(cityName)}"</a>
+      </div>
+    </div>`;
+    return;
+  }
   tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
     <b>No events found for ${escapeHtml(cityName)} in the next 30 days.</b><br>
     Try widening your radius, or check the <b>Find events online</b> tab for Eventbrite, Meetup, Facebook, and Google searches pre-filtered for ${escapeHtml(cityName)}.
@@ -8646,8 +8827,11 @@ function _renderEventsEmpty(geo, tb) {
 }
 
 function _renderEventsCalendar(geo, events, tb) {
+  // v0.59: Detect active search keyword for the banner + empty state.
+  const qInput = $("q-input");
+  const keyword = qInput && qInput.value ? qInput.value.trim() : "";
   if (!events || !events.length) {
-    _renderEventsEmpty(geo, tb);
+    _renderEventsEmpty(geo, tb, keyword);
     return;
   }
 
@@ -8676,12 +8860,33 @@ function _renderEventsCalendar(geo, events, tb) {
   let viewMonth = selectedDate.slice(0, 7);   // "YYYY-MM"
 
   const render = () => {
+    // v0.59: Banner above the calendar tells user when search is active.
+    const totalEv = events.length;
+    const banner = keyword
+      ? `<div class="search-banner">
+          <span class="search-banner-icon">🔎</span>
+          <span class="search-banner-text">Showing <b>${totalEv}</b> result${totalEv === 1 ? "" : "s"} matching <b>"${escapeHtml(keyword)}"</b> · across the next 30 days</span>
+          <button type="button" class="search-banner-clear" data-clear-search>Clear search</button>
+        </div>`
+      : "";
     // v0.49.3: wrap calendar + agenda in a 2-col layout so the agenda
     // is visible without scrolling. On mobile this collapses to stacked.
-    tb.innerHTML = `<div class="cal-layout">
+    tb.innerHTML = banner + `<div class="cal-layout">
         <div>${_renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey)}</div>
         <div>${_renderCalendarAgenda(byDate, selectedDate, todayKey)}</div>
       </div>`;
+    // Wire the clear-search button
+    tb.querySelectorAll("[data-clear-search]").forEach(b => {
+      b.addEventListener("click", () => {
+        const inp = $("q-input");
+        if (inp) {
+          inp.value = "";
+          inp.dispatchEvent(new Event("input", { bubbles: true }));
+          // Re-render the listing without the keyword filter
+          renderEventsListings(geo);
+        }
+      });
+    });
     // Wire date clicks
     tb.querySelectorAll("[data-cal-date]").forEach(el => {
       el.addEventListener("click", () => {
@@ -8758,20 +8963,47 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
     html += `<div class="cal-empty">Nothing scheduled. Pick another date from the calendar.</div>`;
     return html;
   }
+  // v0.59: Group events by tier so users see "Right here" → "Nearby" → "Worth the drive"
+  // instead of one flat list. Each group is sorted by start time, then by distance.
+  const groups = {};
   for (const ev of evs) {
+    const tier = ev._tier || tierForCategory(ev.category);
+    if (!groups[tier]) groups[tier] = [];
+    groups[tier].push(ev);
+  }
+  for (const arr of Object.values(groups)) {
+    arr.sort((a, b) => {
+      const t = (a.starts || "").localeCompare(b.starts || "");
+      if (t !== 0) return t;
+      return (a._distance || 0) - (b._distance || 0);
+    });
+  }
+  const renderEvent = (ev) => {
     const when = ev.ends ? `${tFmt(ev.starts)}–${tFmt(ev.ends)}` : tFmt(ev.starts);
     const meta = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
     const free = ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
     const venue = ev.venue ? `<div class="cal-event-meta">${escapeHtml(ev.venue)}</div>` : "";
     const link = ev.url ? `<a class="row-link" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">Details →</a>` : "";
-    html += `<div class="cal-event">
+    const distTag = (ev._distance != null)
+      ? `<span class="cal-event-dist">${ev._distance < 1 ? ev._distance.toFixed(1) : Math.round(ev._distance)} mi</span>`
+      : "";
+    return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}</div>
+        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}</div>
         ${venue}
         <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")}</span></div>
       </div>
     </div>`;
+  };
+  for (const tier of TIER_ORDER) {
+    if (!groups[tier] || !groups[tier].length) continue;
+    html += `<div class="cal-tier-header" data-tier="${tier}">
+      <span class="cal-tier-label">${TIER_LABELS[tier]}</span>
+      <span class="cal-tier-sub">${TIER_SUBLABELS[tier]}</span>
+      <span class="cal-tier-count">${groups[tier].length}</span>
+    </div>`;
+    html += groups[tier].map(renderEvent).join("");
   }
   return html;
 }
@@ -10442,7 +10674,7 @@ if (risksToggle) {
   });
 }
 
-// v0.58: Wire up the × clear buttons inside the search inputs.
+// v0.59: Wire up the × clear buttons inside the search inputs.
 // Buttons are hidden by default and shown only when their input has content,
 // so the X never crowds an empty field.
 document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
