@@ -1,0 +1,42 @@
+{
+  "name": "Nearnity — Everything about here",
+  "short_name": "Nearnity",
+  "description": "Tap once on your phone — get verified answers about wherever you're standing. Schools, free clinics, utilities, events, civic resources, safety data. Public data only. No ads. No accounts.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#2d6a4f",
+  "categories": ["lifestyle", "navigation", "utilities", "social"],
+  "lang": "en-US",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Near Me",
+      "short_name": "Near Me",
+      "description": "Find everything verified about wherever you're standing",
+      "url": "/?action=nearme",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
