@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#2d6a4f">
 <link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.65: PWA support — installable on iOS/Android home screens.
+<!-- v0.67: PWA support — installable on iOS/Android home screens.
      Tap Share → Add to Home Screen (iOS) or browser menu → Install (Android). -->
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="Nearnity">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- v0.65: Nearnity logo — blue map-pin + verified-checkmark badge.
+<!-- v0.67: Nearnity logo — blue map-pin + verified-checkmark badge.
      Location-first: signals "you are here, this is verified." -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
@@ -162,7 +162,7 @@
   }
 
   /* v0.47.1 → v0.50: compact hero once results are showing. */
-  /* v0.65: Hide the "Address resolved" placeholder until a search has run.
+  /* v0.67: Hide the "Address resolved" placeholder until a search has run.
      Previously the section rendered with em-dash placeholders on initial load
      (before JS populated the real values), which crawlers, screen readers,
      and no-JS users saw as a broken "Address resolved" header with blanks.
@@ -1197,6 +1197,11 @@
      category nav, the section-tab row, and the resolved-address header.
      Keep the radius filter visible so users can still change the radius
      (was previously hidden behind the .section-nav block). */
+  /* v0.67: When a search routes to a specific section, hide all other section
+     cards + headers so user sees ONLY the answer they searched for. Maps
+     ChatGPT's "answer-first not section-first" recommendation. JS sets the
+     `.section-suppressed` class on non-target elements via applyFocusSection(). */
+  body.focus-mode .section-suppressed { display: none !important; }
   body.focus-mode .cat-nav { display: none; }
   body.focus-mode .section-nav-inner { display: none; }   /* the row of section pill tabs */
   body.focus-mode .resolved { display: none; }            /* "Address resolved" header */
@@ -2123,7 +2128,7 @@
     .schools-head .summary-pill { margin-left: 0; }
   }
 
-  /* ─── v0.65: Search banner above events when keyword is active ────── */
+  /* ─── v0.67: Search banner above events when keyword is active ────── */
   .search-banner {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 14px;
@@ -2154,7 +2159,7 @@
     .search-banner-clear { align-self: flex-start; }
   }
 
-  /* ─── v0.65: Tier-grouped event agenda (Right here / Nearby / Worth the drive) ─── */
+  /* ─── v0.67: Tier-grouped event agenda (Right here / Nearby / Worth the drive) ─── */
   .cal-tier-header {
     display: flex; align-items: baseline; gap: 10px;
     padding: 14px 6px 6px;
@@ -2196,8 +2201,79 @@
     font-size: 11px; font-weight: 600;
     vertical-align: 2px;
   }
+  /* v0.67: Source-verified vs Nearnity-verified — honest source labels */
+  .cal-event-verif {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(0,80,194,0.08);
+    color: #0050c2;
+    border: 1px solid rgba(0,80,194,0.18);
+    font-size: 11px; font-weight: 600;
+  }
+  /* v0.67: Source-bucket color pill — Official / Community / Ticketed */
+  .cal-event-bucket {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.3px;
+    vertical-align: 2px;
+  }
+  .cal-event-bucket-official  { background: rgba(15,110,86,0.10);  color: #0F6E56; border: 1px solid rgba(15,110,86,0.22); }
+  .cal-event-bucket-community { background: rgba(0,80,194,0.08);   color: #0050C2; border: 1px solid rgba(0,80,194,0.18); }
+  .cal-event-bucket-ticketed  { background: rgba(186,117,23,0.10); color: #BA7517; border: 1px solid rgba(186,117,23,0.22); }
 
-  /* ─── v0.65: Clear (×) button inside the search inputs ───────────── */
+  /* v0.67: Time-window filter chips (Today / Weekend / 7d / Month) */
+  .time-chips {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+    margin: 0 0 14px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .time-chip {
+    background: var(--surface-2, #f7f9fc);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.1s ease;
+  }
+  .time-chip:hover { background: rgba(0,80,194,0.06); color: var(--ink); }
+  .time-chip:active { transform: scale(0.97); }
+  .time-chip.active {
+    background: #0050C2;
+    color: #ffffff;
+    border-color: #0050C2;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.10);
+  }
+  .time-chips-count {
+    margin-left: auto;
+    font-size: 12px; color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  @media (max-width: 600px) {
+    .time-chip { padding: 5px 11px; font-size: 12px; }
+  }
+
+  /* v0.67: Series grouping — "+N more dates" badge for repeating showtimes */
+  .cal-event-series {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: rgba(83,74,183,0.10);
+    color: #534AB7;
+    border: 1px solid rgba(83,74,183,0.22);
+    font-size: 11px; font-weight: 600;
+    vertical-align: 2px;
+  }
+
+  /* ─── v0.67: Clear (×) button inside the search inputs ───────────── */
   .search-field { position: relative; }
   .input-clear {
     position: absolute;
@@ -2224,7 +2300,7 @@
   /* Reserve room on the input's right side so text doesn't slide under the × */
   .search-field input { padding-right: 40px; }
 
-  /* ─── v0.65: Spartan-style red emergency bar (top sticky) ─────────── */
+  /* ─── v0.67: Spartan-style red emergency bar (top sticky) ─────────── */
   .top-emergency-bar {
     position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
     background: linear-gradient(90deg, #A32D2D 0%, #791F1F 100%);
@@ -2290,7 +2366,7 @@
     max-width: 1480px;
   }
 
-  /* ─── v0.65: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
+  /* ─── v0.67: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
      Stops the scroll-list-then-map pattern. Each major section becomes a
      2-column grid: scrollable content on the left, sticky map on the right.
      Falls back to stacked single-column on tablets/mobile (<920px). */
@@ -2354,7 +2430,7 @@
     }
   }
 
-  /* ─── v0.65: Unmissable category nav — icon + label tiles ────────────
+  /* ─── v0.67: Unmissable category nav — icon + label tiles ────────────
      Replaces the easy-to-miss text-only tab row. Each tab now has a big
      emoji icon, a label, and a distinct active-state with colored border.
      Color-coded per category so users learn the visual map. */
@@ -2420,7 +2496,7 @@
 </head>
 <body class="single-view">
 
-<!-- v0.65: Spartan-style sticky red emergency bar across the top.
+<!-- v0.67: Spartan-style sticky red emergency bar across the top.
      Always present, replaces the vertical emergency-rail sidebar. -->
 <div class="top-emergency-bar" role="region" aria-label="Emergency helplines">
   <div class="top-emergency-bar-inner">
@@ -2445,7 +2521,7 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.65: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v0.67: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2461,7 +2537,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.65</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.67</span>
     </div>
   </header>
 
@@ -2537,7 +2613,7 @@
           <span class="product-card-cta">Explore</span>
         </a>
         <a class="product-card" data-cat="civic" tabindex="0">
-          <div class="product-card-eyebrow">Civic &amp; gov't</div>
+          <div class="product-card-eyebrow">Public services</div>
           <div class="product-card-title">Vote, DMV, officials</div>
           <div class="product-card-desc">Voter registration with the right state portal, DMV / permits / courts for your jurisdiction, and direct links to elected officials. Updated quarterly.</div>
           <span class="product-card-cta">Explore</span>
@@ -2631,7 +2707,7 @@
         <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services"   data-category="my-home">Home services</a>
         <a href="#sec-community-help"  class="sec-tab" data-target="sec-community-help"  data-category="help">Community help</a>
         <a href="#sec-health"          class="sec-tab" data-target="sec-health"          data-category="help">Health &amp; wellness</a>
-        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic"           data-category="civic">Civic &amp; gov't</a>
+        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic"           data-category="civic">Public services</a>
         <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services" data-category="safety">Emergency services</a>
         <a href="#sec-risks"           class="sec-tab" data-target="sec-risks"           data-category="safety">Climate risks</a>
       </div>
@@ -2651,7 +2727,7 @@
       <a href="#card-home"            class="subtab" data-subtarget="card-home">Property details</a>
     </div>
 
-    <div class="resolved" id="sub-myhome-address">
+    <div class="resolved" id="sub-myhome-address" hidden>
       <div class="resolved-head">
         <div class="pin">📍</div>
         <span class="pin-label">Address resolved</span>
@@ -2758,7 +2834,7 @@
     <div class="page-section-header public-services" id="sec-civic">
       <div class="psh-icon">🏛️</div>
       <div class="psh-text">
-        <h2 class="psh-title">Civic &amp; gov't</h2>
+        <h2 class="psh-title">Public services</h2>
       </div>
     </div>
 
@@ -3343,7 +3419,7 @@
       <div class="section-map" id="hs-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the providers above once results load.</div></div>
       <a class="submit-missing" id="hs-submit-missing" href="#" target="_blank" rel="noopener">Know a trade we missed? Submit it on OpenStreetMap</a>
       <div class="source" style="margin-top:14px;">
-        Listings from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> (<code>craft=*</code>, <code>shop=hardware</code>). Coverage of trades is improving but not exhaustive — a quick Google search for your specific need is still worth doing.
+        Listings from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> (<code>craft=*</code>, <code>shop=hardware</code>). Coverage of small-business trades varies block by block — call ahead to confirm availability before relying on any single listing.
       </div>
     </div>
 
@@ -3377,11 +3453,11 @@
     </div><!-- /.results-grid -->
   </section>
 
-  <!-- v0.65: "Coming next / Phase 2-5" section removed from the landing page per
+  <!-- v0.67: "Coming next / Phase 2-5" section removed from the landing page per
        ChatGPT review feedback — visible roadmap language was a confidence hit.
        What's on the way still lives in HomeAtlas_Release_Notes.md (internal). -->
   <!--
-  Removed in v0.65: Phase 2 (house anatomy, HVAC, materials) + Phase 3 (risk profile, civic).
+  Removed in v0.67: Phase 2 (house anatomy, HVAC, materials) + Phase 3 (risk profile, civic).
   These will return as their own data layers when shipped, not as labeled future-state.
   -->
 
@@ -3400,7 +3476,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.65</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.67</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -3408,7 +3484,7 @@
           <li><a href="#" data-cat-link="around-me">Around me</a></li>
           <li><a href="#" data-cat-link="my-home">My home</a></li>
           <li><a href="#" data-cat-link="help">Help &amp; wellness</a></li>
-          <li><a href="#" data-cat-link="civic">Civic &amp; gov't</a></li>
+          <li><a href="#" data-cat-link="civic">Public services</a></li>
           <li><a href="#" data-cat-link="safety">Safety &amp; risks</a></li>
         </ul>
       </div>
@@ -5451,7 +5527,7 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     if (!_sectionClusters) window._sectionClusters = _sectionClusters;
     _sectionClusters[elId] = clusterGroup;
   }
-  // v0.65: Smart fit — only fit bounds to pins WITHIN the user's search radius.
+  // v0.67: Smart fit — only fit bounds to pins WITHIN the user's search radius.
   // Previously fit to all pins, which would zoom out to include outliers and
   // make the user's location feel "off-screen / centered on the wrong city."
   // Now: pins within radius drive the fit (map stays close to user); outlier
@@ -6490,6 +6566,11 @@ function compactCardHtml(r, opts = {}) {
 /* -------- Renderers -------------------------------------------------- */
 function renderResolved(geo) {
   const a = geo.address || {};
+  // v0.67: Reveal the Address-resolved card now that we actually have data.
+  // The card is `hidden` by default in HTML so non-JS viewers + crawlers +
+  // first paint don't see "Address resolved" with em-dash placeholders.
+  const ra = document.getElementById("sub-myhome-address");
+  if (ra) ra.hidden = false;
   setText("ra-street", getStreet(a));
   setText("ra-city",   a.city || a.town || a.village || a.hamlet || "—");
   // County with inferred-marker if we filled it from city fallback
@@ -8543,7 +8624,7 @@ function _eventEffectiveCoords(ev) {
   return c || null;
 }
 
-// ─── v0.65: Tiered distance by event category ──────────────────────────
+// ─── v0.67: Tiered distance by event category ──────────────────────────
 // Different event types have different acceptable distances. A farmers
 // market 30mi away is useless; a Bruno Mars concert 30mi away is fine.
 // Each event maps to a tier; each tier has a "natural cap" — the maximum
@@ -8592,7 +8673,7 @@ function effectiveRadiusForEvent(ev, userRadius) {
   // Essentials stay tight (2mi cap). Concerts auto-extend (50mi) even when user set 2mi.
   return Math.max(userRadius, cap);
 }
-// v0.65: Apply tier-aware filter to an array of events. Tags each surviving
+// v0.67: Apply tier-aware filter to an array of events. Tags each surviving
 // event with `_distance` (mi) and `_tier`. Used for both curated seed
 // events and live API events so the filter is consistent.
 function applyTierFilter(events, geo, userRadius) {
@@ -8627,7 +8708,7 @@ function filterCuratedEventsForCity(geo) {
   const now = new Date();
   const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
 
-  // v0.65: Tier-aware "should I show this event" filter. Each event's
+  // v0.67: Tier-aware "should I show this event" filter. Each event's
   // category maps to a tier (essential/daily/nearby/regional/destination),
   // and each tier has its own effective radius — concerts auto-extend to
   // 50mi even when the user set 2mi, while farmers markets stay tight.
@@ -8644,9 +8725,9 @@ function filterCuratedEventsForCity(geo) {
   };
 
   // One-off events.
-  // v0.65: keep events that are still in progress — events whose `ends` is
+  // v0.67: keep events that are still in progress — events whose `ends` is
   // in the future should appear even if `starts` is in the past.
-  // v0.65: extended — events that ended earlier *today* still appear until
+  // v0.67: extended — events that ended earlier *today* still appear until
   // midnight rolls over. Matches user mental model: "today's events" includes
   // ones that ended this afternoon when I'm checking tonight.
   const todayKey = now.toDateString();
@@ -8759,7 +8840,7 @@ function _calShiftMonth(ym, delta) {
 // v0.48: Calendar view replaces the week-grouped list. Month grid with
 // dots/counts on dates that have events; click a date to see that day's
 // agenda below. Defaults to today (or the next date with events).
-// v0.65: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
+// v0.67: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
 // Queries the nearnity events Worker at /api/events for any lat/lon,
 // returning normalized events that get merged with the curated seed.
 // Fails gracefully — curated seed always renders even if API is down.
@@ -8770,7 +8851,7 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.65: Always query API with the regional-tier cap (50mi) so we get
+  // v0.67: Always query API with the regional-tier cap (50mi) so we get
   // enough events to populate the "Worth the drive" tier. Frontend filter
   // then narrows per tier. Concerts auto-show even at 2mi user radius.
   const r = radiusMi || Math.max(TIER_CAPS.regional, (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 10));
@@ -8820,7 +8901,7 @@ function renderEventsListings(geo, eventsArg) {
   const tb  = $("events-listings-tbody");
   if (!sec || !tb) return;
   sec.hidden = false;
-  // v0.65: Pick up the user's search term from the Looking-for input so it
+  // v0.67: Pick up the user's search term from the Looking-for input so it
   // narrows the events listing too (not just the venue subtabs).
   const qInput = $("q-input");
   const keyword = qInput && qInput.value ? qInput.value.trim() : "";
@@ -8836,7 +8917,7 @@ function renderEventsListings(geo, eventsArg) {
     );
   }
 
-  // v0.65: Update the "events-value" header pill so it reflects the filter,
+  // v0.67: Update the "events-value" header pill so it reflects the filter,
   // not the raw unfiltered count. Prevents the "49 curated events" pill from
   // staying up while the filtered list is empty.
   const updatePill = (mergedCount) => {
@@ -8867,7 +8948,7 @@ function renderEventsListings(geo, eventsArg) {
 
 function _renderEventsEmpty(geo, tb, keyword) {
   const cityName = getDisplayCityForHeadline(geo);
-  // v0.65: Honest empty state. Removed the aggregator deep-link grid that
+  // v0.67: Honest empty state. Removed the aggregator deep-link grid that
   // turned this into a redirect portal. Now: short message + clear next
   // action (widen radius / clear search) + report-missing. Users who want
   // external aggregators can navigate to the "Find events online" subtab.
@@ -8892,10 +8973,46 @@ function _renderEventsEmpty(geo, tb, keyword) {
   </div>`;
 }
 
+// v0.67: Time-window state for the events calendar. Persisted to localStorage
+// so the user's last chip choice survives reload. Default = "month."
+const TIME_WINDOW_KEY = "nearnity:events:window:v1";
+function getEventsTimeWindow() {
+  try { return localStorage.getItem(TIME_WINDOW_KEY) || "month"; }
+  catch (e) { return "month"; }
+}
+function setEventsTimeWindow(w) {
+  try { localStorage.setItem(TIME_WINDOW_KEY, w); } catch (e) {}
+}
+function eventsInWindow(events, w) {
+  if (!events || !events.length || !w || w === "month") return events;
+  const now = new Date();
+  const todayKey = now.toDateString();
+  return events.filter((ev) => {
+    const d = new Date(ev.starts);
+    if (isNaN(d)) return false;
+    if (w === "today") return d.toDateString() === todayKey;
+    if (w === "weekend") {
+      const dow = now.getDay();
+      const offsetToSat = dow === 6 ? 0 : (6 - dow);
+      const sat = new Date(now); sat.setDate(now.getDate() + offsetToSat); sat.setHours(0, 0, 0, 0);
+      const sun = new Date(sat); sun.setDate(sat.getDate() + 1); sun.setHours(23, 59, 59, 999);
+      return d >= sat && d <= sun;
+    }
+    if (w === "week") {
+      const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
+      return d >= now && d <= end;
+    }
+    return true;
+  });
+}
+
 function _renderEventsCalendar(geo, events, tb) {
-  // v0.65: Detect active search keyword for the banner + empty state.
+  // v0.67: Detect active search keyword for the banner + empty state.
   const qInput = $("q-input");
   const keyword = qInput && qInput.value ? qInput.value.trim() : "";
+  // v0.67: Apply the selected time-window chip filter
+  const timeWindow = getEventsTimeWindow();
+  events = eventsInWindow(events, timeWindow);
   if (!events || !events.length) {
     _renderEventsEmpty(geo, tb, keyword);
     return;
@@ -8926,7 +9043,7 @@ function _renderEventsCalendar(geo, events, tb) {
   let viewMonth = selectedDate.slice(0, 7);   // "YYYY-MM"
 
   const render = () => {
-    // v0.65: Banner above the calendar tells user when search is active.
+    // v0.67: Banner above the calendar tells user when search is active.
     const totalEv = events.length;
     const banner = keyword
       ? `<div class="search-banner">
@@ -8935,12 +9052,30 @@ function _renderEventsCalendar(geo, events, tb) {
           <button type="button" class="search-banner-clear" data-clear-search>Clear search</button>
         </div>`
       : "";
+    // v0.67: Time-window chips above the calendar — Today / Weekend / 7d / Month
+    const chipDef = [
+      { id: "today",   label: "Today" },
+      { id: "weekend", label: "This weekend" },
+      { id: "week",    label: "Next 7 days" },
+      { id: "month",   label: "This month" },
+    ];
+    const chips = `<div class="time-chips" role="tablist" aria-label="Filter events by time window">
+      ${chipDef.map(c => `<button type="button" class="time-chip ${timeWindow === c.id ? "active" : ""}" data-window="${c.id}" role="tab" aria-selected="${timeWindow === c.id}">${escapeHtml(c.label)}</button>`).join("")}
+      <span class="time-chips-count">${totalEv} event${totalEv === 1 ? "" : "s"}</span>
+    </div>`;
     // v0.49.3: wrap calendar + agenda in a 2-col layout so the agenda
     // is visible without scrolling. On mobile this collapses to stacked.
-    tb.innerHTML = banner + `<div class="cal-layout">
+    tb.innerHTML = banner + chips + `<div class="cal-layout">
         <div>${_renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey)}</div>
         <div>${_renderCalendarAgenda(byDate, selectedDate, todayKey)}</div>
       </div>`;
+    // v0.67: Wire chip clicks — switch the time window and re-render the tab
+    tb.querySelectorAll(".time-chip[data-window]").forEach((c) => {
+      c.addEventListener("click", () => {
+        setEventsTimeWindow(c.dataset.window);
+        renderEventsListings(geo);
+      });
+    });
     // Wire the clear-search button
     tb.querySelectorAll("[data-clear-search]").forEach(b => {
       b.addEventListener("click", () => {
@@ -9029,7 +9164,7 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
     html += `<div class="cal-empty">Nothing scheduled. Pick another date from the calendar.</div>`;
     return html;
   }
-  // v0.65: Group events by tier so users see "Right here" → "Nearby" → "Worth the drive"
+  // v0.67: Group events by tier so users see "Right here" → "Nearby" → "Worth the drive"
   // instead of one flat list. Each group is sorted by start time, then by distance.
   const groups = {};
   for (const ev of evs) {
@@ -9044,21 +9179,48 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
       return (a._distance || 0) - (b._distance || 0);
     });
   }
+  // v0.67: Infer source_bucket if the Worker didn't supply it (curated seed).
+  const inferBucket = (ev) => {
+    if (ev.source_bucket) return ev.source_bucket;
+    const s = (ev.source || "").toLowerCase();
+    if (s.includes("ticketmaster") || s.includes("seatgeek") || s.includes("ticketweb")) return "ticketed";
+    if (s.includes("city calendar") || s.includes("city events") || s.includes("parks") || s.includes("library")) return "official";
+    return "community";
+  };
   const renderEvent = (ev) => {
+    const bucket = inferBucket(ev);
     const when = ev.ends ? `${tFmt(ev.starts)}–${tFmt(ev.ends)}` : tFmt(ev.starts);
     const meta = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
     const free = ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
     const venue = ev.venue ? `<div class="cal-event-meta">${escapeHtml(ev.venue)}</div>` : "";
     const link = ev.url ? `<a class="row-link" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">Details →</a>` : "";
-    const distTag = (ev._distance != null)
-      ? `<span class="cal-event-dist">${ev._distance < 1 ? ev._distance.toFixed(1) : Math.round(ev._distance)} mi</span>`
+    // v0.67: Prefer the API-provided distance_miles (Worker computes it).
+    // Fall back to _distance which the curated-seed tier filter sets.
+    const distMi = (ev.distance_miles != null) ? ev.distance_miles
+                  : (ev._distance != null ? ev._distance : null);
+    const distTag = (distMi != null)
+      ? `<span class="cal-event-dist">${distMi < 1 ? distMi.toFixed(1) : Math.round(distMi)} mi</span>`
       : "";
-    return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}">
+    // v0.67: Honest verified label — distinguish source-linked vs Nearnity-reviewed.
+    // ChatGPT correctly flagged that "verified" on Ticketmaster events was misleading.
+    const sourceVerified = (ev.source_verified === true || ev.verified === true);
+    const verifTag = sourceVerified
+      ? `<span class="cal-event-verif" title="Source-linked — pulled from Ticketmaster/SeatGeek/iCal feed, not Nearnity-reviewed">✓ Source-linked</span>`
+      : "";
+    // v0.67: Series grouping — collapse repeating showtimes into a single card
+    // with "+N more dates" hint. Worker sends related_count + related_starts.
+    const seriesTag = (ev.related_count > 0)
+      ? `<span class="cal-event-series" title="${ev.related_count} additional showtimes">+${ev.related_count} more date${ev.related_count === 1 ? "" : "s"}</span>`
+      : "";
+    // v0.67: source-bucket color pill (Official / Community / Ticketed)
+    const bucketLabel = bucket.charAt(0).toUpperCase() + bucket.slice(1);
+    const bucketTag = `<span class="cal-event-bucket cal-event-bucket-${bucket}" title="Source bucket: ${bucketLabel}">${bucketLabel}</span>`;
+    return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}</div>
+        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag}</div>
         ${venue}
-        <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")}</span></div>
+        <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
       </div>
     </div>`;
   };
@@ -9706,7 +9868,7 @@ const CIVIC_DEEP_LINKS = {
 function refreshCivicMap() {
   const ps  = sectionState["card-public-services"];
   const sch = sectionState["card-school"];
-  // v0.65: fall back to the app's main geo (lastGeo) so the civic map
+  // v0.67: fall back to the app's main geo (lastGeo) so the civic map
   // renders even when the user hasn't visited Emergency services yet.
   // Previously the map sat empty until Public Services was loaded.
   const geo = (ps && ps.geo) || lastGeo;
@@ -10135,7 +10297,7 @@ function pickService(rawQuery) {
   m = SERVICE_QUERIES.find(s => q.startsWith(s.q.toLowerCase() + " ") || q.startsWith(s.q.toLowerCase()));
   if (m) return m;
   // 3) Service phrase appears as a WHOLE WORD in typed (not just substring).
-  //    v0.65: Was a loose substring match — "soccer" matched "ER" because the
+  //    v0.67: Was a loose substring match — "soccer" matched "ER" because the
   //    chars "er" appear inside it. Now requires word-boundary alignment.
   //    Sort by length desc so "farmers market" wins over "park" when "farmers" present.
   m = [...SERVICE_QUERIES]
@@ -10229,6 +10391,8 @@ function showSearchFocus(svc) {
 // v0.49.1: Exit focus mode → show the full browse-all (OG) experience.
 function exitFocusMode() {
   document.body.classList.remove("focus-mode");
+  // v0.67: restore non-target section visibility
+  if (typeof applyFocusSection === "function") applyFocusSection(null);
   const panel = document.getElementById("search-focus");
   if (panel) panel.remove();
   if (qInputEl) qInputEl.value = "";
@@ -10236,12 +10400,12 @@ function exitFocusMode() {
   if (typeof applyCategoryFilter === "function") applyCategoryFilter("around-me");
 }
 
-// v0.65: When no service matches the typed query, show a banner that ALSO
+// v0.67: When no service matches the typed query, show a banner that ALSO
 // includes deep links to Google Maps / Yelp / Eventbrite pre-filtered for
 // the query + the user's city. Previously the banner just said "we don't
 // have a match" — useless dead-end. Now it's a useful jumping-off point
 // for things our APIs can't index (classes, lessons, small businesses).
-// v0.65: Honest empty state. Previously (v0.61-v0.65) this dumped 7 external
+// v0.67: Honest empty state. Previously (v0.61-v0.67) this dumped 7 external
 // aggregator deep-links and turned the no-match banner into a redirect portal —
 // testers learned "this site sends me elsewhere" and the product positioning
 // broke. Now: brief honest message, one small report-missing link, dismiss.
@@ -10297,7 +10461,34 @@ function activateServiceSection(svc) {
     }, 120);
   }
   document.body.classList.add("focus-mode");   // v0.49.1
+  // v0.67: also hide non-target section cards/headers so user sees ONLY
+  // the answer they searched for. ChatGPT's "answer-first not section-first"
+  // recommendation, simplest implementation.
+  applyFocusSection(svc.target);
   showSearchFocus(svc);
+}
+
+// v0.67: Toggle section visibility for focus mode. svc.target is like
+// "sec-events" and the corresponding content card is "card-events" by
+// naming convention; sec-public-services → card-public-services, etc.
+// Schools is the lone exception: sec-schools → card-school (singular).
+function applyFocusSection(targetSecId) {
+  if (!targetSecId) {
+    delete document.body.dataset.focusSection;
+    document.querySelectorAll(".section-suppressed").forEach(el => el.classList.remove("section-suppressed"));
+    return;
+  }
+  document.body.dataset.focusSection = targetSecId;
+  // Map sec-X to card-X (with the schools singular fix)
+  let cardId = targetSecId.replace(/^sec-/, "card-");
+  if (cardId === "card-schools") cardId = "card-school";
+  const CARD_SELECTORS = ".parks-card, .schools-card, .home-card, .yard-card, .risks-card";
+  document.querySelectorAll(CARD_SELECTORS).forEach(el => {
+    el.classList.toggle("section-suppressed", !!el.id && el.id !== cardId);
+  });
+  document.querySelectorAll(".page-section-header").forEach(el => {
+    el.classList.toggle("section-suppressed", !!el.id && el.id !== targetSecId);
+  });
 }
 
 // v0.49: unified search — service query + location. Location empty = Near me.
@@ -10780,7 +10971,7 @@ if (risksToggle) {
   });
 }
 
-// v0.65: Wire up the × clear buttons inside the search inputs.
+// v0.67: Wire up the × clear buttons inside the search inputs.
 // Buttons are hidden by default and shown only when their input has content,
 // so the X never crowds an empty field.
 document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
