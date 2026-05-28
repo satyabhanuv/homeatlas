@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#2d6a4f">
 <link rel="canonical" href="https://nearnity.com/">
 
-<!-- v0.63: PWA support — installable on iOS/Android home screens.
+<!-- v0.64: PWA support — installable on iOS/Android home screens.
      Tap Share → Add to Home Screen (iOS) or browser menu → Install (Android). -->
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
@@ -17,7 +17,7 @@
 <meta name="apple-mobile-web-app-title" content="Nearnity">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- v0.63: Nearnity logo — blue map-pin + verified-checkmark badge.
+<!-- v0.64: Nearnity logo — blue map-pin + verified-checkmark badge.
      Location-first: signals "you are here, this is verified." -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
 
@@ -2116,7 +2116,7 @@
     .schools-head .summary-pill { margin-left: 0; }
   }
 
-  /* ─── v0.63: Search banner above events when keyword is active ────── */
+  /* ─── v0.64: Search banner above events when keyword is active ────── */
   .search-banner {
     display: flex; align-items: center; gap: 10px;
     padding: 10px 14px;
@@ -2147,7 +2147,7 @@
     .search-banner-clear { align-self: flex-start; }
   }
 
-  /* ─── v0.63: Tier-grouped event agenda (Right here / Nearby / Worth the drive) ─── */
+  /* ─── v0.64: Tier-grouped event agenda (Right here / Nearby / Worth the drive) ─── */
   .cal-tier-header {
     display: flex; align-items: baseline; gap: 10px;
     padding: 14px 6px 6px;
@@ -2190,7 +2190,7 @@
     vertical-align: 2px;
   }
 
-  /* ─── v0.63: Clear (×) button inside the search inputs ───────────── */
+  /* ─── v0.64: Clear (×) button inside the search inputs ───────────── */
   .search-field { position: relative; }
   .input-clear {
     position: absolute;
@@ -2217,7 +2217,7 @@
   /* Reserve room on the input's right side so text doesn't slide under the × */
   .search-field input { padding-right: 40px; }
 
-  /* ─── v0.63: Spartan-style red emergency bar (top sticky) ─────────── */
+  /* ─── v0.64: Spartan-style red emergency bar (top sticky) ─────────── */
   .top-emergency-bar {
     position: sticky; top: 0; left: 0; right: 0; z-index: 1000;
     background: linear-gradient(90deg, #A32D2D 0%, #791F1F 100%);
@@ -2283,7 +2283,7 @@
     max-width: 1480px;
   }
 
-  /* ─── v0.63: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
+  /* ─── v0.64: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
      Stops the scroll-list-then-map pattern. Each major section becomes a
      2-column grid: scrollable content on the left, sticky map on the right.
      Falls back to stacked single-column on tablets/mobile (<920px). */
@@ -2347,7 +2347,7 @@
     }
   }
 
-  /* ─── v0.63: Unmissable category nav — icon + label tiles ────────────
+  /* ─── v0.64: Unmissable category nav — icon + label tiles ────────────
      Replaces the easy-to-miss text-only tab row. Each tab now has a big
      emoji icon, a label, and a distinct active-state with colored border.
      Color-coded per category so users learn the visual map. */
@@ -2413,7 +2413,7 @@
 </head>
 <body class="single-view">
 
-<!-- v0.63: Spartan-style sticky red emergency bar across the top.
+<!-- v0.64: Spartan-style sticky red emergency bar across the top.
      Always present, replaces the vertical emergency-rail sidebar. -->
 <div class="top-emergency-bar" role="region" aria-label="Emergency helplines">
   <div class="top-emergency-bar-inner">
@@ -2438,7 +2438,7 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.63: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v0.64: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -2454,7 +2454,7 @@
       </svg>
       nearnity
       <span class="brand-tag">County-verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.63</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.64</span>
     </div>
   </header>
 
@@ -3397,7 +3397,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>County-verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.63</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.64</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -5448,7 +5448,7 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     if (!_sectionClusters) window._sectionClusters = _sectionClusters;
     _sectionClusters[elId] = clusterGroup;
   }
-  // v0.63: Smart fit — only fit bounds to pins WITHIN the user's search radius.
+  // v0.64: Smart fit — only fit bounds to pins WITHIN the user's search radius.
   // Previously fit to all pins, which would zoom out to include outliers and
   // make the user's location feel "off-screen / centered on the wrong city."
   // Now: pins within radius drive the fit (map stays close to user); outlier
@@ -8540,7 +8540,7 @@ function _eventEffectiveCoords(ev) {
   return c || null;
 }
 
-// ─── v0.63: Tiered distance by event category ──────────────────────────
+// ─── v0.64: Tiered distance by event category ──────────────────────────
 // Different event types have different acceptable distances. A farmers
 // market 30mi away is useless; a Bruno Mars concert 30mi away is fine.
 // Each event maps to a tier; each tier has a "natural cap" — the maximum
@@ -8589,7 +8589,7 @@ function effectiveRadiusForEvent(ev, userRadius) {
   // Essentials stay tight (2mi cap). Concerts auto-extend (50mi) even when user set 2mi.
   return Math.max(userRadius, cap);
 }
-// v0.63: Apply tier-aware filter to an array of events. Tags each surviving
+// v0.64: Apply tier-aware filter to an array of events. Tags each surviving
 // event with `_distance` (mi) and `_tier`. Used for both curated seed
 // events and live API events so the filter is consistent.
 function applyTierFilter(events, geo, userRadius) {
@@ -8624,7 +8624,7 @@ function filterCuratedEventsForCity(geo) {
   const now = new Date();
   const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
 
-  // v0.63: Tier-aware "should I show this event" filter. Each event's
+  // v0.64: Tier-aware "should I show this event" filter. Each event's
   // category maps to a tier (essential/daily/nearby/regional/destination),
   // and each tier has its own effective radius — concerts auto-extend to
   // 50mi even when the user set 2mi, while farmers markets stay tight.
@@ -8641,9 +8641,9 @@ function filterCuratedEventsForCity(geo) {
   };
 
   // One-off events.
-  // v0.63: keep events that are still in progress — events whose `ends` is
+  // v0.64: keep events that are still in progress — events whose `ends` is
   // in the future should appear even if `starts` is in the past.
-  // v0.63: extended — events that ended earlier *today* still appear until
+  // v0.64: extended — events that ended earlier *today* still appear until
   // midnight rolls over. Matches user mental model: "today's events" includes
   // ones that ended this afternoon when I'm checking tonight.
   const todayKey = now.toDateString();
@@ -8756,7 +8756,7 @@ function _calShiftMonth(ym, delta) {
 // v0.48: Calendar view replaces the week-grouped list. Month grid with
 // dots/counts on dates that have events; click a date to see that day's
 // agenda below. Defaults to today (or the next date with events).
-// v0.63: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
+// v0.64: Live event aggregator (Ticketmaster + SeatGeek + city iCal feeds).
 // Queries the nearnity events Worker at /api/events for any lat/lon,
 // returning normalized events that get merged with the curated seed.
 // Fails gracefully — curated seed always renders even if API is down.
@@ -8767,7 +8767,7 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.63: Always query API with the regional-tier cap (50mi) so we get
+  // v0.64: Always query API with the regional-tier cap (50mi) so we get
   // enough events to populate the "Worth the drive" tier. Frontend filter
   // then narrows per tier. Concerts auto-show even at 2mi user radius.
   const r = radiusMi || Math.max(TIER_CAPS.regional, (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 10));
@@ -8817,7 +8817,7 @@ function renderEventsListings(geo, eventsArg) {
   const tb  = $("events-listings-tbody");
   if (!sec || !tb) return;
   sec.hidden = false;
-  // v0.63: Pick up the user's search term from the Looking-for input so it
+  // v0.64: Pick up the user's search term from the Looking-for input so it
   // narrows the events listing too (not just the venue subtabs).
   const qInput = $("q-input");
   const keyword = qInput && qInput.value ? qInput.value.trim() : "";
@@ -8833,7 +8833,7 @@ function renderEventsListings(geo, eventsArg) {
     );
   }
 
-  // v0.63: Update the "events-value" header pill so it reflects the filter,
+  // v0.64: Update the "events-value" header pill so it reflects the filter,
   // not the raw unfiltered count. Prevents the "49 curated events" pill from
   // staying up while the filtered list is empty.
   const updatePill = (mergedCount) => {
@@ -8864,9 +8864,10 @@ function renderEventsListings(geo, eventsArg) {
 
 function _renderEventsEmpty(geo, tb, keyword) {
   const cityName = getDisplayCityForHeadline(geo);
-  const slug = cityName.toLowerCase().replace(/\s+/g, "-");
-  const cityEnc = encodeURIComponent(cityName);
-  // v0.63: report-missing-event mailto so testers can flag gaps.
+  // v0.64: Honest empty state. Removed the aggregator deep-link grid that
+  // turned this into a redirect portal. Now: short message + clear next
+  // action (widen radius / clear search) + report-missing. Users who want
+  // external aggregators can navigate to the "Find events online" subtab.
   const reportSubject = encodeURIComponent(`Missing event report: ${keyword ? `"${keyword}" in ${cityName}` : `events in ${cityName}`}`);
   const reportBody = encodeURIComponent(
     `Hey,\n\nI looked for events ${keyword ? `matching "${keyword}" ` : ""}in ${cityName} on Nearnity and noticed something is missing.\n\nThe event I had in mind:\n- Name:\n- Date/Time:\n- Venue:\n- Source/URL (where you found it):\n\nThanks!`
@@ -8874,41 +8875,22 @@ function _renderEventsEmpty(geo, tb, keyword) {
   const reportUrl = `mailto:feedback@nearnity.com?subject=${reportSubject}&body=${reportBody}`;
   if (keyword) {
     const kwSafe = escapeHtml(keyword);
-    const kwEnc = encodeURIComponent(keyword);
     tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
       <b>No events matching "${kwSafe}" found near ${escapeHtml(cityName)} in the next 30 days.</b><br>
-      Try a broader term, clear the search to see all events, or look directly on these:<br>
-      <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;">
-        <a href="https://www.eventbrite.com/d/${slug}/${kwEnc}/" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🎫 Eventbrite — "${kwSafe}"</a>
-        <a href="https://www.meetup.com/find/?keywords=${kwEnc}&location=${cityEnc}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">👥 Meetup — "${kwSafe}"</a>
-        <a href="https://events.sulekha.com/desi-events/${slug}-events?q=${kwEnc}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🪔 Sulekha — South Asian events</a>
-        <a href="https://allevents.in/${cityEnc}/${kwEnc}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">📅 AllEvents — community events</a>
-        <a href="https://www.songkick.com/search?query=${encodeURIComponent(keyword + ' ' + cityName)}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🎵 Songkick — concerts</a>
-        <a href="https://www.google.com/search?q=${encodeURIComponent(keyword + ' in ' + cityName)}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🔎 Google</a>
-      </div>
-      <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">
-        Know about an event we should be showing? <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">Report a missing event →</a>
-      </div>
+      Try a broader term, clear the search, or widen your radius. Looking for something specific?
+      <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">Report a missing event →</a>
     </div>`;
     return;
   }
   tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
     <b>No events found for ${escapeHtml(cityName)} in the next 30 days.</b><br>
-    Try widening your radius, or look directly on these aggregators:<br>
-    <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:10px;">
-      <a href="https://www.eventbrite.com/d/${slug}/events/" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🎫 Eventbrite — ${escapeHtml(cityName)}</a>
-      <a href="https://www.meetup.com/find/?location=${cityEnc}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">👥 Meetup — ${escapeHtml(cityName)}</a>
-      <a href="https://events.sulekha.com/desi-events/${slug}-events" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">🪔 Sulekha — South Asian events</a>
-      <a href="https://allevents.in/${cityEnc}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">📅 AllEvents — community events</a>
-    </div>
-    <div style="margin-top:10px;font-size:13px;color:var(--ink-soft);">
-      Know about an event we should be showing? <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">Report a missing event →</a>
-    </div>
+    Try widening your radius. If you know about something we should be showing,
+    <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">tell us →</a>.
   </div>`;
 }
 
 function _renderEventsCalendar(geo, events, tb) {
-  // v0.63: Detect active search keyword for the banner + empty state.
+  // v0.64: Detect active search keyword for the banner + empty state.
   const qInput = $("q-input");
   const keyword = qInput && qInput.value ? qInput.value.trim() : "";
   if (!events || !events.length) {
@@ -8941,7 +8923,7 @@ function _renderEventsCalendar(geo, events, tb) {
   let viewMonth = selectedDate.slice(0, 7);   // "YYYY-MM"
 
   const render = () => {
-    // v0.63: Banner above the calendar tells user when search is active.
+    // v0.64: Banner above the calendar tells user when search is active.
     const totalEv = events.length;
     const banner = keyword
       ? `<div class="search-banner">
@@ -9044,7 +9026,7 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
     html += `<div class="cal-empty">Nothing scheduled. Pick another date from the calendar.</div>`;
     return html;
   }
-  // v0.63: Group events by tier so users see "Right here" → "Nearby" → "Worth the drive"
+  // v0.64: Group events by tier so users see "Right here" → "Nearby" → "Worth the drive"
   // instead of one flat list. Each group is sorted by start time, then by distance.
   const groups = {};
   for (const ev of evs) {
@@ -9721,7 +9703,7 @@ const CIVIC_DEEP_LINKS = {
 function refreshCivicMap() {
   const ps  = sectionState["card-public-services"];
   const sch = sectionState["card-school"];
-  // v0.63: fall back to the app's main geo (lastGeo) so the civic map
+  // v0.64: fall back to the app's main geo (lastGeo) so the civic map
   // renders even when the user hasn't visited Emergency services yet.
   // Previously the map sat empty until Public Services was loaded.
   const geo = (ps && ps.geo) || lastGeo;
@@ -10150,7 +10132,7 @@ function pickService(rawQuery) {
   m = SERVICE_QUERIES.find(s => q.startsWith(s.q.toLowerCase() + " ") || q.startsWith(s.q.toLowerCase()));
   if (m) return m;
   // 3) Service phrase appears as a WHOLE WORD in typed (not just substring).
-  //    v0.63: Was a loose substring match — "soccer" matched "ER" because the
+  //    v0.64: Was a loose substring match — "soccer" matched "ER" because the
   //    chars "er" appear inside it. Now requires word-boundary alignment.
   //    Sort by length desc so "farmers market" wins over "park" when "farmers" present.
   m = [...SERVICE_QUERIES]
@@ -10251,11 +10233,17 @@ function exitFocusMode() {
   if (typeof applyCategoryFilter === "function") applyCategoryFilter("around-me");
 }
 
-// v0.63: When no service matches the typed query, show a banner that ALSO
+// v0.64: When no service matches the typed query, show a banner that ALSO
 // includes deep links to Google Maps / Yelp / Eventbrite pre-filtered for
 // the query + the user's city. Previously the banner just said "we don't
 // have a match" — useless dead-end. Now it's a useful jumping-off point
 // for things our APIs can't index (classes, lessons, small businesses).
+// v0.64: Honest empty state. Previously (v0.61-v0.64) this dumped 7 external
+// aggregator deep-links and turned the no-match banner into a redirect portal —
+// testers learned "this site sends me elsewhere" and the product positioning
+// broke. Now: brief honest message, one small report-missing link, dismiss.
+// External aggregators remain available in the "Find events online" subtab
+// where users explicitly opt in. Don't become a Google search redirector.
 function showSearchNoMatch(query) {
   const main = document.getElementById("results-main");
   if (!main) return;
@@ -10266,42 +10254,21 @@ function showSearchNoMatch(query) {
     panel.className = "search-focus";
     main.insertBefore(panel, main.firstChild);
   }
-  // Pull the user's city from the resolved address (set at render time)
   const cityName = (lastGeo && typeof getDisplayCityForHeadline === "function")
     ? getDisplayCityForHeadline(lastGeo)
     : "your area";
   const qSafe = escapeHtml(query);
-  const qEnc = encodeURIComponent(query);
-  const cityEnc = encodeURIComponent(cityName);
-  const slug = cityName.toLowerCase().replace(/\s+/g, "-");
-  const gmapsUrl = `https://www.google.com/maps/search/${qEnc}+near+${cityEnc}`;
-  const yelpUrl = `https://www.yelp.com/search?find_desc=${qEnc}&find_loc=${cityEnc}`;
-  const eventbriteUrl = `https://www.eventbrite.com/d/${slug}/${qEnc}/`;
-  const meetupUrl = `https://www.meetup.com/find/?keywords=${qEnc}&location=${cityEnc}`;
-  // v0.63: community-specific event aggregators + music + report-missing
-  const sulekhaUrl = `https://events.sulekha.com/desi-events/${slug}-events?q=${qEnc}`;
-  const allEventsUrl = `https://allevents.in/${encodeURIComponent(cityName)}/${qEnc}`;
-  const songkickUrl = `https://www.songkick.com/search?query=${encodeURIComponent(query + " " + cityName)}`;
-  const reportSubject = encodeURIComponent(`Missing event report: "${query}" in ${cityName}`);
+  const reportSubject = encodeURIComponent(`Missing data report: "${query}" in ${cityName}`);
   const reportBody = encodeURIComponent(
-    `Hey,\n\nI searched Nearnity for "${query}" in ${cityName} and expected to see an event you don't currently surface.\n\nThe event I had in mind:\n- Name:\n- Date/Time:\n- Venue:\n- Source/URL (where you found it):\n\nThanks!`
+    `Hey,\n\nI searched Nearnity for "${query}" in ${cityName} and expected to see something you don't currently surface.\n\nWhat I had in mind:\n- Name:\n- Address / venue (if applicable):\n- Where you usually find it (URL or platform):\n\nThanks!`
   );
   const reportUrl = `mailto:feedback@nearnity.com?subject=${reportSubject}&body=${reportBody}`;
   panel.innerHTML = `
     <div class="search-focus-msg">
-      No verified "${qSafe}" results in our data yet for ${escapeHtml(cityName)} — public APIs don't always index classes, lessons, small businesses, or community events. Try these instead:
+      We don't have curated <b>"${qSafe}"</b> results for ${escapeHtml(cityName)} yet. Showing everything verified near you below — try widening your radius or browsing the category tabs.
     </div>
-    <div class="search-focus-links">
-      <a href="${gmapsUrl}" target="_blank" rel="noopener" class="search-focus-link">🗺️ Google Maps — "${qSafe}" near ${escapeHtml(cityName)}</a>
-      <a href="${yelpUrl}" target="_blank" rel="noopener" class="search-focus-link">⭐ Yelp — "${qSafe}" in ${escapeHtml(cityName)}</a>
-      <a href="${eventbriteUrl}" target="_blank" rel="noopener" class="search-focus-link">🎫 Eventbrite — "${qSafe}" events</a>
-      <a href="${meetupUrl}" target="_blank" rel="noopener" class="search-focus-link">👥 Meetup — "${qSafe}" groups</a>
-      <a href="${sulekhaUrl}" target="_blank" rel="noopener" class="search-focus-link">🪔 Sulekha — South Asian events in ${escapeHtml(cityName)}</a>
-      <a href="${allEventsUrl}" target="_blank" rel="noopener" class="search-focus-link">📅 AllEvents — community events in ${escapeHtml(cityName)}</a>
-      <a href="${songkickUrl}" target="_blank" rel="noopener" class="search-focus-link">🎵 Songkick — "${qSafe}" concerts</a>
-    </div>
-    <div class="search-focus-msg" style="margin-top:6px; font-size:13px; color:var(--ink-soft);">
-      Found an event we should be showing? <a href="${reportUrl}" class="search-focus-report">Report a missing event →</a>
+    <div class="search-focus-msg" style="font-size:13px; color:var(--ink-soft);">
+      Know about something we should be indexing? <a href="${reportUrl}" class="search-focus-report">Report it →</a>
     </div>
     <button class="search-focus-clear" type="button" id="search-focus-clear">Dismiss</button>`;
   const clearBtn = panel.querySelector("#search-focus-clear");
@@ -10810,7 +10777,7 @@ if (risksToggle) {
   });
 }
 
-// v0.63: Wire up the × clear buttons inside the search inputs.
+// v0.64: Wire up the × clear buttons inside the search inputs.
 // Buttons are hidden by default and shown only when their input has content,
 // so the X never crowds an empty field.
 document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
