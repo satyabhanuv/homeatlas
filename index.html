@@ -1541,8 +1541,11 @@
   /* ─── v0.29/v0.30: Sticky section-nav tabs + radius filter row
      v0.49.7: top:52px (was 96px — assumed persistent emergency strip above).
      Background now fully opaque so scrolled content stays masked. ── */
+  /* v0.68.1: section-nav itself is NOT sticky anymore — the radius filter
+     was overlaying content on scroll (user-reported bug). The radius row
+     now scrolls away normally; only .section-nav-inner (tab strip) sticks. */
   .section-nav {
-    position: sticky; top: 52px; z-index: 20;
+    position: static;
     margin: 0 -24px 18px;
     padding: 10px 24px;
     border-bottom: 1px solid var(--line);
@@ -1618,6 +1621,13 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: var(--line) transparent;
+    /* v0.68.1: only the tab strip is sticky, not the wrapping radius filter */
+    position: sticky; top: 52px; z-index: 20;
+    background: var(--surface);
+    padding: 6px 0;
+    margin: 0 -24px;
+    padding-left: 24px; padding-right: 24px;
+    border-bottom: 1px solid var(--line);
   }
   .section-nav-inner::-webkit-scrollbar { height: 4px; }
   .section-nav-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
@@ -2571,9 +2581,20 @@
   .cat-nav .cat-tab[data-cat="safety"].active    { color: #993C1D; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #993C1D; }
   .cat-nav .cat-tab[data-cat="saved"].active     { color: #B45309; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #B45309; }
   @media (max-width: 700px) {
-    .cat-nav { padding: 4px; border-radius: 12px; margin: 14px 0 14px; }
-    .cat-nav .cat-tab { padding: 10px 8px 8px; font-size: 12px; min-width: 76px; }
-    .cat-nav .cat-tab::before { font-size: 22px; }
+    /* v0.68.1: wrap to 2 rows on mobile so all 6 tabs (incl. Saved) are visible
+       without horizontal swipe. Previous overflow-x: auto hid the Saved tab. */
+    .cat-nav {
+      padding: 4px; border-radius: 12px; margin: 14px 0 14px;
+      flex-wrap: wrap;
+      overflow-x: visible;
+    }
+    .cat-nav .cat-tab {
+      padding: 9px 6px 7px; font-size: 11.5px;
+      min-width: 0;
+      flex: 1 1 calc(33.333% - 4px);
+      max-width: calc(33.333% - 4px);
+    }
+    .cat-nav .cat-tab::before { font-size: 20px; }
   }
 </style>
 </head>
@@ -2620,7 +2641,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.1</span>
     </div>
   </header>
 
@@ -3575,7 +3596,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.1</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
