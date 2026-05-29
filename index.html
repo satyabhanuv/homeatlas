@@ -112,9 +112,13 @@
     letter-spacing: 0.3px;
     font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
     cursor: help;
-    display: none;     /* hidden by default — footer carries the version */
+    display: none;     /* header version stays hidden so it doesn't compete with search */
   }
   .brand-area:hover .brand-version { display: inline-block; }
+  /* v0.74: Footer version is ALWAYS visible — debugging requires being able
+     to see what build you're looking at without hovering anything. */
+  .site-footer-disclaimer .brand-version,
+  .site-footer .brand-version { display: inline-block; }
   /* v0.47.1: county-verified tag is now a subtle text accent, not a big pill */
   .brand-tag {
     margin-left: 10px;
@@ -3273,7 +3277,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74.1</span>
     </div>
   </header>
 
@@ -4396,7 +4400,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74.1</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
