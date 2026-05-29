@@ -397,6 +397,21 @@
     margin-top: 5px; line-height: 1.45;
   }
 
+  /* v0.74: Cross-link from Live Alerts → Climate risks under My home */
+  .live-risks-crosslink {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 10px 14px;
+    margin: 0 0 14px;
+    background: rgba(133,79,11,0.06);
+    border: 1px solid rgba(133,79,11,0.18);
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--ink);
+  }
+  .live-risks-crosslink > span { flex: 1; min-width: 200px; }
+  .live-risks-crosslink .ao-chip { background: #fff; border-color: #854F0B; color: #854F0B; }
+  .live-risks-crosslink .ao-chip:hover { background: rgba(133,79,11,0.10); }
+
   /* v0.71: Live risks panel — NWS alerts + AirNow AQI + USGS quakes */
   .live-risks { margin: 6px 0 18px; }
   .live-risks-grid {
@@ -2931,17 +2946,19 @@
 
   /* ─── v0.67: Clear (×) button inside the search inputs ───────────── */
   .search-field { position: relative; }
+  /* v0.74: muted grey, smaller footprint — was visually competing with text
+     and overlaying when the input was full. Input now reserves right-padding. */
   .input-clear {
     position: absolute;
-    right: 10px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    width: 24px; height: 24px;
+    width: 22px; height: 22px;
     border-radius: 50%;
     border: 0;
-    background: rgba(15, 23, 42, 0.10);
-    color: var(--ink-soft);
-    font-size: 18px; line-height: 1;
+    background: transparent;
+    color: #b8c4d2;
+    font-size: 16px; line-height: 1;
     font-weight: 400;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
@@ -2949,9 +2966,12 @@
     transition: background 0.12s ease, color 0.12s ease;
     z-index: 2;
   }
+  /* Reserve room on the right edge of search-field inputs so the X doesn't
+     sit on top of typed text. Both the q-input and addr inputs use it. */
+  .search-field input { padding-right: 36px; }
   .input-clear:hover {
-    background: rgba(15, 23, 42, 0.18);
-    color: var(--ink);
+    background: rgba(15, 23, 42, 0.08);
+    color: var(--ink-soft);
   }
   /* Reserve room on the input's right side so text doesn't slide under the × */
   .search-field input { padding-right: 40px; }
@@ -3253,7 +3273,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.73</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74</span>
     </div>
   </header>
 
@@ -4216,6 +4236,12 @@
 
     <!-- v0.71: Live alerts panel — NWS active alerts + USGS earthquakes + AirNow
          AQI. Real-time data only; climate baseline lives under My Home. -->
+    <!-- v0.74: Cross-link to climate risks — users navigating to Safety expect
+         climate risks here too. Send them one tap away. -->
+    <div class="live-risks-crosslink">
+      <span>🏠 Looking for flood / fire / heat / air baseline zones for this address?</span>
+      <button type="button" class="ao-chip" data-ao-target="sec-myhome">See <b>Climate risks</b> under <b>My home</b> →</button>
+    </div>
     <div class="live-risks" id="live-risks">
       <div class="live-risks-grid">
         <div class="live-risks-card" id="live-alerts-card">
@@ -4370,7 +4396,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.73</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -8631,6 +8657,11 @@ document.addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+    // v0.74: detect "Worker not redeployed" → HTML response
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      throw new Error("Endpoint isn't deployed yet (needs Worker push). Try again after re-deploying nearnity-events.");
+    }
     const data = await r.json();
     if (r.ok && data.ok) {
       if (status) { status.textContent = "Thanks — we got it and will review."; status.className = "correction-status success"; }
@@ -10746,6 +10777,14 @@ document.addEventListener("submit", async (e) => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, lat, lon, zip, place_label }),
     });
+    // v0.74: If Worker isn't redeployed, /api/digest-signup falls through to
+    // the static-site Worker which returns the HTML page — JSON.parse explodes.
+    // Detect the HTML response and give a useful error instead of "unexpected token <".
+    const ct = r.headers.get("content-type") || "";
+    if (!ct.includes("application/json")) {
+      const peek = (await r.text()).slice(0, 80);
+      throw new Error(`Endpoint isn't deployed yet (got HTML — needs Worker push). Response started: "${peek}…"`);
+    }
     const data = await r.json();
     if (r.ok && data.ok) {
       if (status) { status.textContent = `Subscribed! Confirmation will hit ${email} soon.`; status.className = "correction-status success"; }
