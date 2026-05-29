@@ -177,6 +177,166 @@
   body.results-shown .landing-extras { display: none; }   /* hide product cards + trust strip */
   body.results-shown .quick-chips    { display: none; }   /* v0.70: hide quick-chips once results shown */
 
+  /* v0.72: Digest signup widget in Saved view */
+  .digest-widget {
+    display: flex; gap: 14px; align-items: flex-start;
+    margin-top: 24px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, rgba(0,80,194,0.06), rgba(180,83,9,0.04));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .digest-widget-icon { font-size: 28px; line-height: 1; }
+  .digest-widget-body { flex: 1; min-width: 0; }
+  .digest-widget-title {
+    font-size: 15px; font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .digest-widget-sub {
+    font-size: 12.5px; color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .digest-form {
+    display: flex; gap: 8px;
+    flex-wrap: wrap;
+  }
+  .digest-form input[type=email] {
+    flex: 1; min-width: 200px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--surface, #fff);
+    color: var(--ink);
+  }
+  .digest-form input[type=email]:focus {
+    outline: none;
+    border-color: #0050C2;
+    box-shadow: 0 0 0 3px rgba(0,80,194,0.10);
+  }
+  .digest-status { margin-top: 8px; font-size: 13px; }
+  .digest-status.success { color: #0F6E56; }
+  .digest-status.error { color: #991B1B; }
+
+  /* v0.72: "Report" link in event card meta row */
+  .meta-report {
+    background: none; border: 0; padding: 0;
+    color: #0050C2; font-weight: 600;
+    cursor: pointer; font-size: 11px;
+    text-decoration: underline; text-decoration-color: rgba(0,80,194,0.30);
+    font-family: inherit;
+  }
+  .meta-report:hover { text-decoration-color: #0050C2; }
+
+  /* v0.72: Corrections modal */
+  .correction-modal {
+    position: fixed; inset: 0;
+    z-index: 1000;
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+  }
+  .correction-modal[hidden] { display: none; }
+  .correction-modal-backdrop {
+    position: absolute; inset: 0;
+    background: rgba(15,23,42,0.55);
+    backdrop-filter: blur(2px);
+  }
+  .correction-modal-panel {
+    position: relative;
+    width: 100%; max-width: 480px;
+    background: var(--surface, #fff);
+    border-radius: 14px;
+    padding: 24px 24px 20px;
+    box-shadow: 0 20px 60px rgba(15,23,42,0.30);
+    max-height: 90vh; overflow-y: auto;
+  }
+  .correction-modal-panel h3 { margin: 0 0 4px; font-size: 18px; }
+  .correction-modal-sub { font-size: 13px; color: var(--ink-soft); margin: 0 0 16px; }
+  .correction-modal-close {
+    position: absolute; top: 10px; right: 12px;
+    border: 0; background: none;
+    width: 32px; height: 32px;
+    font-size: 22px; line-height: 1;
+    color: var(--ink-soft); cursor: pointer;
+    border-radius: 6px;
+  }
+  .correction-modal-close:hover { background: rgba(15,23,42,0.06); color: var(--ink); }
+  .correction-field {
+    display: block;
+    margin-bottom: 12px;
+  }
+  .correction-field span {
+    display: block;
+    font-size: 12px; font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 5px;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .correction-field select,
+  .correction-field input,
+  .correction-field textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: var(--surface, #fff);
+    color: var(--ink);
+    box-sizing: border-box;
+  }
+  .correction-field textarea { resize: vertical; min-height: 80px; }
+  .correction-field select:focus,
+  .correction-field input:focus,
+  .correction-field textarea:focus {
+    outline: none;
+    border-color: #0050C2;
+    box-shadow: 0 0 0 3px rgba(0,80,194,0.10);
+  }
+  .correction-actions {
+    display: flex; gap: 10px; justify-content: flex-end;
+    margin-top: 8px;
+  }
+  .btn-primary, .btn-secondary {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    font-family: inherit;
+  }
+  .btn-primary {
+    background: #0050C2; color: #fff;
+    border-color: #0050C2;
+  }
+  .btn-primary:hover { background: #003E96; }
+  .btn-primary:disabled { background: #b8c4d2; border-color: #b8c4d2; cursor: not-allowed; }
+  .btn-secondary {
+    background: var(--surface, #fff); color: var(--ink);
+  }
+  .btn-secondary:hover { background: var(--surface-2, #f7f9fc); }
+  .correction-status {
+    margin-top: 10px;
+    font-size: 13px;
+  }
+  .correction-status.success { color: #0F6E56; }
+  .correction-status.error { color: #991B1B; }
+
+  /* v0.72: Climate risks card when rendered inside My Home (always-visible) */
+  .risks-card-inhome { margin-top: 18px; }
+  .risks-summary-inline {
+    font-size: 12px; font-weight: 600;
+    color: var(--ink);
+    text-transform: none; letter-spacing: 0;
+    padding: 2px 10px;
+    background: rgba(133,79,11,0.10);
+    color: #854F0B;
+    border: 1px solid rgba(133,79,11,0.20);
+    border-radius: 999px;
+  }
+
   /* v0.71: NPS / RIDB list rows in Parks section */
   .schools-row {
     display: flex; align-items: flex-start; gap: 12px;
@@ -517,20 +677,12 @@
     padding: 44px 0 28px;
     border-top: 1px solid var(--line);
   }
-  .site-footer-grid {
+  /* v0.72: 3 nav cols side-by-side at top; unified brand block below */
+  .site-footer-cols {
     display: grid;
-    grid-template-columns: 1.4fr repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(3, 1fr);
     gap: 32px;
     margin-bottom: 36px;
-  }
-  .site-footer-brand-col h3 {
-    font-size: 18px; font-weight: 700;
-    margin: 0 0 8px; letter-spacing: -0.015em;
-  }
-  .site-footer-brand-col p {
-    font-size: 14px; color: var(--ink-soft);
-    line-height: 1.55;
-    margin: 0 0 12px; max-width: 320px;
   }
   .site-footer-col-label {
     font-size: 12.5px; font-weight: 700;
@@ -548,17 +700,37 @@
     transition: color 0.15s ease;
   }
   .site-footer-col a:hover { color: var(--primary); }
-  .site-footer-baseline {
+  .site-footer-bottom {
     padding-top: 22px;
     border-top: 1px solid var(--line);
-    display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap;
-    font-size: 13px; color: var(--ink-faint);
   }
-  .site-footer-baseline a { color: var(--ink-soft); text-decoration: none; }
-  .site-footer-baseline a:hover { color: var(--primary); }
+  .site-footer-brand-row {
+    display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .site-footer-brand-row h3 {
+    font-size: 22px; font-weight: 800;
+    margin: 0; letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .site-footer-tag {
+    font-size: 13px;
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
+  .site-footer-disclaimer {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    line-height: 1.6;
+    margin: 0;
+    max-width: 980px;
+  }
   @media (max-width: 680px) {
-    .site-footer-grid { grid-template-columns: 1fr 1fr; }
-    .site-footer-brand-col { grid-column: 1 / -1; }
+    .site-footer-cols { grid-template-columns: 1fr 1fr; gap: 24px; }
+    .site-footer-cols .site-footer-col:nth-child(2) { grid-column: 1 / -1; }
+    .site-footer-brand-row { gap: 8px; }
+    .site-footer-brand-row h3 { font-size: 18px; }
+    .site-footer-tag { font-size: 12px; }
   }
 
   .search-wrap { position: relative; max-width: 860px; }
@@ -3028,7 +3200,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.71</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.72</span>
     </div>
   </header>
 
@@ -3278,6 +3450,22 @@
         <span style="flex:1;height:1px;background:var(--line-2);"></span>
       </div>
       <div class="home-grid" id="home-grid"></div>
+    </div>
+
+    <!-- v0.72: Climate risks moved here from Safety section. These factors are
+         property-specific (flood zone / fire zone / heat / air baseline), so
+         they belong with My Home. Always visible — no collapsible wrapper. -->
+    <div class="home-card risks-card-inhome" id="card-risks" hidden>
+      <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;">
+        <span>⚠️ Climate risks for this address</span>
+        <span style="flex:1;height:1px;background:var(--line-2);"></span>
+        <span class="risks-summary-inline" id="risks-summary">—</span>
+      </div>
+      <span id="risks-headline" style="display:none;"></span>
+      <div id="risks-body"></div>
+      <div class="source" style="margin-top:12px;">
+        Scores are rough estimates by region/state/climate zone. Click any factor for the authoritative free source (FEMA / Cal Fire / AirNow / NOAA) for your specific address.
+      </div>
     </div>
 
     <!-- v0.29: Section 2 — Emergency services (moved up from position 6, renamed from "Public services") -->
@@ -3952,17 +4140,18 @@
       </div>
     </div>
 
-    <!-- v0.23: Slim section header — Climate risks (collapsed by default) -->
+    <!-- v0.72: Section header renamed from "Climate risks" → "Live alerts"
+         since the climate baseline scores moved to My Home (where they belong
+         — they're property-specific). What's left here is real-time data. -->
     <div class="page-section-header risks" id="sec-risks">
-      <div class="psh-icon">⚠️</div>
+      <div class="psh-icon">🚨</div>
       <div class="psh-text">
-        <h2 class="psh-title">Climate risks</h2>
+        <h2 class="psh-title">Live alerts</h2>
       </div>
     </div>
 
     <!-- v0.71: Live alerts panel — NWS active alerts + USGS earthquakes + AirNow
-         AQI. Always-visible at the top of the Risks section since these are
-         time-sensitive. Climate baseline risks live below as a collapsible. -->
+         AQI. Real-time data only; climate baseline lives under My Home. -->
     <div class="live-risks" id="live-risks">
       <div class="live-risks-grid">
         <div class="live-risks-card" id="live-alerts-card">
@@ -3988,24 +4177,6 @@
             <span class="live-risks-card-sub" id="live-quakes-sub">Loading…</span>
           </div>
           <div class="live-risks-card-body" id="live-quakes-body"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Climate risks — collapsed by default. Lives below the live alerts. -->
-    <div class="collapsible collapsed risks-card" id="card-risks" hidden>
-      <button class="collapsible-header" type="button" id="risks-toggle" aria-expanded="false">
-        <span class="collapsible-icon">⚠️</span>
-        <span class="collapsible-text">
-          <span class="collapsible-title" id="risks-headline">Climate risks summary</span>
-          <span class="collapsible-summary" id="risks-summary">Click to see Flood / Fire / Heat / Air factors</span>
-        </span>
-        <span class="collapsible-arrow">▼</span>
-      </button>
-      <div class="collapsible-body">
-        <div id="risks-body"></div>
-        <div class="source" style="margin-top:12px;">
-          Scores are rough estimates by region/state/climate zone. Click any factor for the authoritative free source (FEMA / Cal Fire / AirNow / NOAA) for your specific address.
         </div>
       </div>
     </div>
@@ -4046,14 +4217,54 @@
     </div>
   </section>
 
-  <!-- v0.50: knotapi-style expanded multi-column footer -->
+  <!-- v0.72: Correction modal — single shared modal, opened by any [data-report-payload] click -->
+  <div class="correction-modal" id="correctionModal" hidden role="dialog" aria-modal="true" aria-labelledby="correctionModalTitle">
+    <div class="correction-modal-backdrop" data-correction-close></div>
+    <div class="correction-modal-panel">
+      <button type="button" class="correction-modal-close" data-correction-close aria-label="Close">&times;</button>
+      <h3 id="correctionModalTitle">Report wrong info</h3>
+      <p class="correction-modal-sub" id="correctionModalSub">Tell us what's off about this card. We review every submission.</p>
+      <form id="correctionForm">
+        <label class="correction-field">
+          <span>What's wrong?</span>
+          <select name="issue_type" required>
+            <option value="">Pick one…</option>
+            <option value="wrong_info">Wrong information</option>
+            <option value="closed">Place is closed / event canceled</option>
+            <option value="wrong_hours">Wrong hours</option>
+            <option value="wrong_address">Wrong address / location</option>
+            <option value="broken_link">Link is broken</option>
+            <option value="duplicate">Duplicate of another card</option>
+            <option value="missing_info">Missing important info</option>
+            <option value="other">Something else</option>
+          </select>
+        </label>
+        <label class="correction-field">
+          <span>Details (required)</span>
+          <textarea name="message" rows="4" placeholder="E.g., This clinic moved to a new address in March." required minlength="5" maxlength="2000"></textarea>
+        </label>
+        <label class="correction-field">
+          <span>Source / link (optional)</span>
+          <input type="url" name="source_url" placeholder="https://… an authoritative source we should check" />
+        </label>
+        <label class="correction-field">
+          <span>Your email (optional, for follow-up)</span>
+          <input type="email" name="contact_email" placeholder="you@example.com" />
+        </label>
+        <div class="correction-actions">
+          <button type="button" class="btn-secondary" data-correction-close>Cancel</button>
+          <button type="submit" class="btn-primary" id="correctionSubmit">Send report</button>
+        </div>
+        <div class="correction-status" id="correctionStatus"></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- v0.72: Footer restructured per field-test feedback.
+       Top:    3 nav cols (Explore / Data sources / Project) side-by-side
+       Bottom: unified Nearnity brand + copyright + tagline + disclaimer -->
   <footer class="site-footer">
-    <div class="site-footer-grid">
-      <div class="site-footer-brand-col">
-        <h3>Nearnity</h3>
-        <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.71</span></p>
-      </div>
+    <div class="site-footer-cols">
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
         <ul>
@@ -4073,6 +4284,11 @@
           <li><a href="https://www.211.org/" target="_blank" rel="noopener">211.org</a></li>
           <li><a href="https://broadbandmap.fcc.gov/" target="_blank" rel="noopener">FCC Broadband Map</a></li>
           <li><a href="https://geocoding.geo.census.gov/" target="_blank" rel="noopener">Census Geocoder</a></li>
+          <li><a href="https://api.weather.gov/" target="_blank" rel="noopener">NWS Weather</a></li>
+          <li><a href="https://earthquake.usgs.gov/" target="_blank" rel="noopener">USGS Earthquakes</a></li>
+          <li><a href="https://docs.airnowapi.org/" target="_blank" rel="noopener">EPA AirNow</a></li>
+          <li><a href="https://www.nps.gov/" target="_blank" rel="noopener">National Park Service</a></li>
+          <li><a href="https://www.recreation.gov/" target="_blank" rel="noopener">Recreation.gov RIDB</a></li>
         </ul>
       </div>
       <div class="site-footer-col">
@@ -4084,9 +4300,15 @@
         </ul>
       </div>
     </div>
-    <div class="site-footer-baseline">
-      <span>Public-data tool · No paid placement · Free for residents</span>
-      <span>Internet speeds shown are typical residential max — verify exact availability with the provider.</span>
+    <div class="site-footer-bottom">
+      <div class="site-footer-brand-row">
+        <h3>Nearnity</h3>
+        <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
+      </div>
+      <p class="site-footer-disclaimer">
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.72</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
+      </p>
     </div>
   </footer>
 </div>
@@ -8264,7 +8486,105 @@ function resolveRisks(addr, lat, lon, zone) {
   };
 }
 
-// v0.71 ─── Live-data risk feeds (NWS alerts + AirNow AQI + USGS quakes) ──
+// v0.72 ─── Corrections modal + digest signup wiring ──────────────────
+// Open the modal when any [data-report-payload] element is clicked. Modal
+// stores the payload on a data attribute and the form-submit reads it.
+let _correctionContextPayload = null;
+document.addEventListener("click", (e) => {
+  // Open
+  const btn = e.target.closest("[data-report-payload]");
+  if (btn) {
+    e.preventDefault();
+    try {
+      _correctionContextPayload = JSON.parse(decodeURIComponent(btn.dataset.reportPayload));
+    } catch (err) {
+      _correctionContextPayload = { card_id: "unknown", category: "unknown" };
+    }
+    const modal = document.getElementById("correctionModal");
+    if (modal) {
+      // Reset form state
+      const form = document.getElementById("correctionForm");
+      const status = document.getElementById("correctionStatus");
+      const submit = document.getElementById("correctionSubmit");
+      if (form) form.reset();
+      if (status) { status.textContent = ""; status.className = "correction-status"; }
+      if (submit) { submit.disabled = false; submit.textContent = "Send report"; }
+      // Set the sub-text to mention what's being reported
+      const sub = document.getElementById("correctionModalSub");
+      const titleHint = _correctionContextPayload?.title_hint || "";
+      if (sub) sub.textContent = titleHint
+        ? `Reporting: "${titleHint.slice(0, 60)}${titleHint.length > 60 ? "…" : ""}". We review every submission.`
+        : "Tell us what's off about this card. We review every submission.";
+      modal.hidden = false;
+      document.body.style.overflow = "hidden";
+    }
+    return;
+  }
+  // Close
+  if (e.target.closest("[data-correction-close]")) {
+    const modal = document.getElementById("correctionModal");
+    if (modal) {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+    }
+  }
+});
+// Close on Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    const modal = document.getElementById("correctionModal");
+    if (modal && !modal.hidden) {
+      modal.hidden = true;
+      document.body.style.overflow = "";
+    }
+  }
+});
+// Submit handler — POST to /api/correction
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "correctionForm") return;
+  e.preventDefault();
+  const form = e.target;
+  const submit = document.getElementById("correctionSubmit");
+  const status = document.getElementById("correctionStatus");
+  const fd = new FormData(form);
+  const payload = {
+    card_id: _correctionContextPayload?.card_id || "unknown",
+    category: _correctionContextPayload?.category || "unknown",
+    issue_type: fd.get("issue_type") || "",
+    message: (fd.get("message") || "").toString().trim(),
+    source_url: fd.get("source_url") || _correctionContextPayload?.source_url || "",
+    contact_email: fd.get("contact_email") || "",
+  };
+  if (!payload.message || payload.message.length < 5) {
+    if (status) { status.textContent = "Please add a few details about what's wrong."; status.className = "correction-status error"; }
+    return;
+  }
+  if (submit) { submit.disabled = true; submit.textContent = "Sending…"; }
+  if (status) { status.textContent = ""; status.className = "correction-status"; }
+  try {
+    const r = await fetch("/api/correction", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await r.json();
+    if (r.ok && data.ok) {
+      if (status) { status.textContent = "Thanks — we got it and will review."; status.className = "correction-status success"; }
+      if (submit) submit.textContent = "Sent ✓";
+      setTimeout(() => {
+        const modal = document.getElementById("correctionModal");
+        if (modal) { modal.hidden = true; document.body.style.overflow = ""; }
+      }, 1500);
+    } else {
+      throw new Error(data.error || `HTTP ${r.status}`);
+    }
+  } catch (err) {
+    if (status) { status.textContent = `Couldn't send: ${err.message || err}. Email feedback@nearnity.com if this keeps failing.`; status.className = "correction-status error"; }
+    if (submit) { submit.disabled = false; submit.textContent = "Try again"; }
+  }
+});
+
+// v0.72 ─── Live-data risk feeds (NWS alerts + AirNow AQI + USGS quakes) ──
 // All three Worker endpoints are designed to fail gracefully — if a key is
 // missing or the upstream is down, frontend shows "no data" instead of erroring.
 const LIVE_RISKS_API_BASE = "/api";
@@ -8272,9 +8592,12 @@ async function loadLiveRisks(geo) {
   if (!geo) return;
   const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return;
+  // v0.72: pass ZIP into AirNow — AQI is a reporting-area metric, ZIP is the
+  // most reliable input. Falls back to lat/lon inside the Worker if no ZIP.
+  const zip = (geo.address && geo.address.postcode) ? String(geo.address.postcode).slice(0, 5) : "";
   // Fire all three in parallel — independent
   loadNwsAlerts(lat, lon);
-  loadAirNow(lat, lon);
+  loadAirNow(lat, lon, zip);
   loadUsgsQuakes(lat, lon);
 }
 
@@ -8313,12 +8636,14 @@ async function loadNwsAlerts(lat, lon) {
   }
 }
 
-async function loadAirNow(lat, lon) {
+async function loadAirNow(lat, lon, zip) {
   const sub = $("live-aqi-sub");
   const body = $("live-aqi-body");
   if (!body) return;
   try {
-    const r = await fetch(`${LIVE_RISKS_API_BASE}/aqi?lat=${lat}&lon=${lon}`);
+    const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+    if (zip) params.set("zip", zip);
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/aqi?${params.toString()}`);
     const data = await r.json();
     if (data.status === "no_key") {
       if (sub) sub.textContent = "setup pending";
@@ -8327,8 +8652,8 @@ async function loadAirNow(lat, lon) {
     }
     const primary = data.primary;
     if (!primary || primary.aqi == null) {
-      if (sub) sub.textContent = "no nearby monitor";
-      body.innerHTML = `<div class="live-risks-empty">No AirNow monitoring station within ~25 miles. Try <a href="https://fire.airnow.gov/" target="_blank" rel="noopener">AirNow Fire &amp; Smoke Map</a> for low-cost sensor data.</div>`;
+      if (sub) sub.textContent = "no reading";
+      body.innerHTML = `<div class="live-risks-empty">No EPA AirNow reading came back for this ZIP / area. Try the <a href="https://fire.airnow.gov/" target="_blank" rel="noopener">AirNow Fire &amp; Smoke Map</a> (community sensors with denser coverage).</div>`;
       return;
     }
     const aqi = primary.aqi;
@@ -8451,9 +8776,11 @@ function renderRisks(risks) {
     try { loadLiveRisks(lastRisksGeo); } catch (e) { dlog("[live-risks] error", e); }
   }
   const maxScore = Math.max(...risks.rows.map(r => r.score));
-  const summary = maxScore >= 7 ? "Significant risks — click to review"
-                : maxScore >= 4 ? "Some moderate risks — click to review"
-                                : "Generally low risk — click to expand";
+  // v0.72: card is always-visible now (no more collapsible), so the summary
+  // text no longer says "click to review" — it's just the at-a-glance score.
+  const summary = maxScore >= 7 ? `Significant risks (max ${maxScore}/10)`
+                : maxScore >= 4 ? `Moderate risks (max ${maxScore}/10)`
+                                : `Generally low risk (max ${maxScore}/10)`;
   setText("risks-headline", `Climate risks · max ${maxScore}/10`);
   setText("risks-summary", summary);
   const html = risks.rows.map(r => `
@@ -10020,10 +10347,20 @@ function whyShownText(ev) {
 function metaRowHtml(ev) {
   const conf = confidenceText(ev);
   const why = whyShownText(ev);
+  // v0.72: "Report" link → opens the correction modal pre-filled with card id
+  const cardId = saveIdForEvent(ev);
+  const reportPayload = encodeURIComponent(JSON.stringify({
+    card_id: cardId,
+    category: "event",
+    source_url: ev.url || "",
+    title_hint: ev.title || "",
+  }));
   return `<div class="cal-event-meta-row">
     <span class="meta-checked">${escapeHtml(checkedAgoText(ev))}</span>
     ${conf ? `<span class="meta-sep">·</span>${conf}` : ""}
     ${why ? `<span class="meta-sep">·</span>${why}` : ""}
+    <span class="meta-sep">·</span>
+    <button type="button" class="meta-report" data-report-payload="${reportPayload}" title="Report wrong info or suggest update">Report</button>
   </div>`;
 }
 
@@ -10265,6 +10602,22 @@ document.addEventListener("click", (e) => {
   if (savedView && !savedView.hidden) renderSavedView();
 });
 
+// v0.72: Digest signup widget — appended to Saved view. Sends to /api/digest-signup.
+function digestSignupWidgetHtml() {
+  return `<div class="digest-widget" id="digestWidget">
+    <div class="digest-widget-icon">📬</div>
+    <div class="digest-widget-body">
+      <div class="digest-widget-title">Get weekly updates near your saved place</div>
+      <div class="digest-widget-sub">Free events, new resources, active alerts. One email per week. No password. Unsubscribe anytime.</div>
+      <form id="digestForm" class="digest-form">
+        <input type="email" name="email" placeholder="you@example.com" required />
+        <button type="submit" class="btn-primary">Subscribe</button>
+      </form>
+      <div class="digest-status" id="digestStatus"></div>
+    </div>
+  </div>`;
+}
+
 // Render the "Saved" tab content. Called when user activates the Saved category.
 function renderSavedView() {
   const container = document.getElementById("saved-view-body");
@@ -10274,7 +10627,7 @@ function renderSavedView() {
     container.innerHTML = `<div class="schools-empty" style="padding:18px;line-height:1.55;">
       <b>No saved places yet.</b><br>
       Tap the ☆ star on any event, clinic, park, or service to save it here. Saved items live on this device only — no account, no backend.
-    </div>`;
+    </div>` + digestSignupWidgetHtml();
     return;
   }
   container.innerHTML = `<div class="saved-list">
@@ -10289,8 +10642,49 @@ function renderSavedView() {
         <button type="button" class="save-star saved" data-save-id="${escapeHtml(item.id)}" data-save-payload='${escapeHtml(JSON.stringify(item))}' aria-label="Remove from saved" title="Remove from saved">★</button>
       </div>
     `).join("")}
-  </div>`;
+  </div>` + digestSignupWidgetHtml();
 }
+
+// Submit handler for the digest signup form
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "digestForm") return;
+  e.preventDefault();
+  const form = e.target;
+  const status = document.getElementById("digestStatus");
+  const fd = new FormData(form);
+  const email = (fd.get("email") || "").toString().trim();
+  // Use lastGeo as the location anchor (their most recent searched address)
+  const lat = lastGeo ? parseFloat(lastGeo.lat) : null;
+  const lon = lastGeo ? parseFloat(lastGeo.lon) : null;
+  const a = (lastGeo && lastGeo.address) || {};
+  const zip = a.postcode ? String(a.postcode).slice(0, 5) : "";
+  const place_label = [a.city || a.town, a.state].filter(Boolean).join(", ");
+  if (!lat || !lon) {
+    if (status) { status.textContent = "Search an address first so we know where to send updates from."; status.className = "correction-status error"; }
+    return;
+  }
+  if (status) { status.textContent = "Subscribing…"; status.className = "correction-status"; }
+  const btn = form.querySelector("button[type=submit]");
+  if (btn) btn.disabled = true;
+  try {
+    const r = await fetch("/api/digest-signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, lat, lon, zip, place_label }),
+    });
+    const data = await r.json();
+    if (r.ok && data.ok) {
+      if (status) { status.textContent = `Subscribed! Confirmation will hit ${email} soon.`; status.className = "correction-status success"; }
+      form.reset();
+    } else {
+      throw new Error(data.error || `HTTP ${r.status}`);
+    }
+  } catch (err) {
+    if (status) { status.textContent = `Couldn't subscribe: ${err.message || err}`; status.className = "correction-status error"; }
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+});
 
 // v0.67: Time-window state for the events calendar. Persisted to localStorage
 // so the user's last chip choice survives reload. Default = "month."
