@@ -337,6 +337,44 @@
     border-radius: 999px;
   }
 
+  /* v0.73: Federal lands wrapper — distinctive forest-green-tinted card
+     for NPS + RIDB, visually separated from OSM-sourced playgrounds above. */
+  .federal-lands-wrap {
+    margin-top: 22px;
+    padding: 18px 20px 14px;
+    background: linear-gradient(135deg, rgba(15,110,86,0.06), rgba(133,79,11,0.04));
+    border: 1px solid rgba(15,110,86,0.20);
+    border-radius: 14px;
+  }
+  .federal-lands-header {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+    border-bottom: 1px solid rgba(15,110,86,0.18);
+  }
+  .federal-lands-icon { font-size: 22px; }
+  .federal-lands-title {
+    font-size: 16px; font-weight: 800;
+    color: #0F6E56;
+    letter-spacing: -0.01em;
+  }
+  .federal-lands-sub {
+    font-size: 12px; font-weight: 500;
+    color: var(--ink-soft);
+    margin-left: auto;
+  }
+  .federal-subsection { margin-top: 16px; }
+  .federal-subsection:first-of-type { margin-top: 0; }
+  .federal-subsection h4 {
+    color: #0F6E56;
+    border-bottom: 1px solid rgba(15,110,86,0.15);
+    padding-bottom: 6px;
+  }
+  @media (max-width: 600px) {
+    .federal-lands-wrap { padding: 14px 14px 10px; }
+    .federal-lands-sub { width: 100%; margin-left: 0; }
+  }
+
   /* v0.71: NPS / RIDB list rows in Parks section */
   .schools-row {
     display: flex; align-items: flex-start; gap: 12px;
@@ -1579,7 +1617,10 @@
      ChatGPT's "answer-first not section-first" recommendation. JS sets the
      `.section-suppressed` class on non-target elements via applyFocusSection(). */
   body.focus-mode .section-suppressed { display: none !important; }
-  body.focus-mode .cat-nav { display: none; }
+  /* v0.73: keep cat-nav VISIBLE in focus mode — field-test feedback that
+     users couldn't get back to My home / Saved without finding the
+     thin horizontal "browse all" line. cat-nav is the intuitive escape. */
+  /* body.focus-mode .cat-nav { display: none; }  — removed */
   body.focus-mode .section-nav-inner { display: none; }   /* the row of section pill tabs */
   body.focus-mode .resolved { display: none; }            /* "Address resolved" header */
   body.focus-mode .page-section-header { display: none !important; }   /* section title — banner already names it */
@@ -1601,19 +1642,23 @@
      single-view CSS already handles hiding non-active section content; this
      adds the chrome-hiding on top. */
 
-  /* v0.49 → v0.49.6: search-focus banner. Tells the user what they're
-     looking at and provides a prominent way out to the full browse view. */
+  /* v0.49 → v0.49.6 → v0.73: search-focus banner. Restyled per field-test
+     feedback — the previous flat blue strip read as a decorative banner,
+     not as an actionable "you are here, tap to exit" control. Now it's a
+     two-line panel with a prominent button row that's hard to miss. */
   .search-focus {
-    display: flex; flex-direction: column; align-items: stretch;
-    gap: 10px;
-    padding: 14px 16px;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px;
     margin-bottom: 14px;
-    background: var(--primary-soft);
-    border: 1px solid rgba(0,80,194,0.25);
-    border-radius: 10px;
-    color: var(--primary-2);
-    font-size: 15px;
+    background: #ffffff;
+    border: 2px solid #0050C2;
+    border-radius: 12px;
+    color: var(--ink);
+    font-size: 14px;
+    box-shadow: 0 2px 10px rgba(0,80,194,0.10);
+    flex-wrap: wrap;
   }
+  .search-focus > span:first-child { flex: 1; min-width: 200px; }
   .search-focus b { color: var(--ink); }
   .search-focus-msg {
     line-height: 1.5;
@@ -1637,22 +1682,30 @@
     color: #ffffff;
     border-color: #0050c2;
   }
-  /* The exit button is now a primary-action button (clearer affordance).
-     Was a small text-link before — easy to miss, easy to misinterpret. */
+  /* v0.73: Browse-all exit button — promoted to bold high-contrast pill with
+     icon. Replaces the muted blue strip that field-testers missed. */
   .search-focus-clear {
     color: #fff !important;
     background: var(--primary);
-    border: none;
-    padding: 8px 16px;
+    border: 2px solid var(--primary);
+    padding: 10px 20px;
     border-radius: 999px;
     cursor: pointer;
-    font-size: 14px; font-weight: 600;
+    font-size: 14px; font-weight: 700;
     font-family: inherit;
     text-decoration: none;
-    display: inline-flex; align-items: center; gap: 6px;
-    transition: background 0.12s ease;
+    display: inline-flex; align-items: center; gap: 8px;
+    transition: background 0.12s ease, transform 0.08s ease;
+    flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,80,194,0.30);
+    letter-spacing: 0.2px;
   }
-  .search-focus-clear:hover { background: var(--primary-2); }
+  .search-focus-clear:hover { background: var(--primary-2); transform: translateY(-1px); }
+  .search-focus-clear:active { transform: translateY(0); }
+  .search-focus-clear::before {
+    content: "⌂";
+    font-size: 18px; line-height: 1;
+  }
 
   /* v0.49: q-suggestions (service autocomplete) — same look as address ones */
   .q-suggestions .suggestion .top { font-weight: 600; }
@@ -3200,7 +3253,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.72</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.73</span>
     </div>
   </header>
 
@@ -3796,15 +3849,26 @@
           <h4>🌳 General parks &amp; gardens</h4>
           <div id="parks-park-tbody"></div>
         </div>
-        <!-- v0.71: National Park Service — federal parks within driving distance -->
-        <div class="school-section" id="parks-nps-section" hidden>
-          <h4>🏞️ National parks <span class="hint">— from National Park Service · official data</span></h4>
-          <div id="parks-nps-tbody"></div>
-        </div>
-        <!-- v0.71: RIDB — federal recreation sites (campgrounds, day use, fishing) -->
-        <div class="school-section" id="parks-rec-section" hidden>
-          <h4>🏕️ Federal recreation sites <span class="hint">— from Recreation.gov · campgrounds, trailheads, day-use</span></h4>
-          <div id="parks-rec-tbody"></div>
+        <!-- v0.73: Federal lands wrapper — wraps NPS + RIDB in a distinctive
+             card so it's visually separated from the OSM-sourced playgrounds
+             /dog parks / trails above. Per field-test feedback that these
+             two sections "blended in with everything else." -->
+        <div class="federal-lands-wrap" id="parks-federal-wrap" hidden>
+          <div class="federal-lands-header">
+            <span class="federal-lands-icon">🏞️</span>
+            <span class="federal-lands-title">Federal &amp; state public lands</span>
+            <span class="federal-lands-sub">National Park Service + Recreation.gov · authoritative data</span>
+          </div>
+          <!-- v0.71: National Park Service — federal parks within driving distance -->
+          <div class="school-section federal-subsection" id="parks-nps-section" hidden>
+            <h4>🏞️ National parks <span class="hint">— from National Park Service · official data</span></h4>
+            <div id="parks-nps-tbody"></div>
+          </div>
+          <!-- v0.71: RIDB — federal recreation sites (campgrounds, day use, fishing) -->
+          <div class="school-section federal-subsection" id="parks-rec-section" hidden>
+            <h4>🏕️ Federal recreation sites <span class="hint">— from Recreation.gov · campgrounds, trailheads, day-use</span></h4>
+            <div id="parks-rec-tbody"></div>
+          </div>
         </div>
       </div>
       <!-- v0.33.2: Unified map showing all parks/playgrounds/trails + your home -->
@@ -4306,7 +4370,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.72</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.73</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -8653,7 +8717,13 @@ async function loadAirNow(lat, lon, zip) {
     const primary = data.primary;
     if (!primary || primary.aqi == null) {
       if (sub) sub.textContent = "no reading";
-      body.innerHTML = `<div class="live-risks-empty">No EPA AirNow reading came back for this ZIP / area. Try the <a href="https://fire.airnow.gov/" target="_blank" rel="noopener">AirNow Fire &amp; Smoke Map</a> (community sensors with denser coverage).</div>`;
+      // v0.73: surface what the Worker actually tried so we can spot real
+      // failures vs. genuine "nothing nearby" cases.
+      const tried = (data.debug && Array.isArray(data.debug.tried)) ? data.debug.tried : [];
+      const debugLine = tried.length
+        ? `<div style="font-size:11px;color:var(--ink-faint);margin-top:6px;">Tried: ${tried.map(t => `${t.method}${t.zip ? "(" + t.zip + ")" : ""} @ ${t.distance}mi → ${t.error ? "error" : (t.status === 200 ? (t.count || 0) + " obs" : "HTTP " + t.status)}`).join(" · ")}</div>`
+        : "";
+      body.innerHTML = `<div class="live-risks-empty">No EPA AirNow reading came back. Try the <a href="https://fire.airnow.gov/" target="_blank" rel="noopener">AirNow Fire &amp; Smoke Map</a> (community sensors with denser coverage).${debugLine}</div>`;
       return;
     }
     const aqi = primary.aqi;
@@ -8731,6 +8801,8 @@ async function loadNpsParks(lat, lon) {
     const parks = data.parks || [];
     if (!parks.length) return;
     sec.hidden = false;
+    // v0.73: reveal the federal-lands wrapper when either NPS or RIDB returns data
+    const wrap = $("parks-federal-wrap"); if (wrap) wrap.hidden = false;
     tb.innerHTML = parks.slice(0, 8).map(p => `
       <div class="schools-row">
         <div class="schools-row-body">
@@ -8755,6 +8827,8 @@ async function loadRidbSites(lat, lon) {
     const sites = data.sites || [];
     if (!sites.length) return;
     sec.hidden = false;
+    // v0.73: reveal the federal-lands wrapper when either NPS or RIDB returns data
+    const wrap = $("parks-federal-wrap"); if (wrap) wrap.hidden = false;
     tb.innerHTML = sites.slice(0, 10).map(s => `
       <div class="schools-row">
         <div class="schools-row-body">
@@ -10705,11 +10779,32 @@ function eventsInWindow(events, w) {
     if (isNaN(d)) return false;
     if (w === "today") return d.toDateString() === todayKey;
     if (w === "weekend") {
-      const dow = now.getDay();
-      const offsetToSat = dow === 6 ? 0 : (6 - dow);
-      const sat = new Date(now); sat.setDate(now.getDate() + offsetToSat); sat.setHours(0, 0, 0, 0);
-      const sun = new Date(sat); sun.setDate(sat.getDate() + 1); sun.setHours(23, 59, 59, 999);
-      return d >= sat && d <= sun;
+      // v0.73: "weekend" = Friday 5pm through Sunday 11:59pm in local time.
+      // Field-test feedback: limiting to Sat+Sun returned 0 events because
+      // (a) data is sparse for 2-day windows and (b) people consider Friday
+      // night part of the weekend. Friday evening is the right anchor.
+      const dow = now.getDay();   // 0=Sun, 5=Fri, 6=Sat
+      // Days until next Friday (or today if already Fri)
+      const daysToFri = dow === 5 ? 0 : (dow === 6 ? 6 : (5 - dow + 7) % 7);
+      const fri = new Date(now);
+      fri.setDate(now.getDate() + daysToFri);
+      fri.setHours(17, 0, 0, 0);   // Fri 5pm
+      const sun = new Date(fri);
+      sun.setDate(fri.getDate() + 2);
+      sun.setHours(23, 59, 59, 999);   // Sun 11:59pm
+      // Special case: today IS Saturday or Sunday — use the current weekend
+      // (which started last Friday).
+      if (dow === 6 || dow === 0) {
+        const daysToLastFri = dow === 6 ? 1 : 2;
+        const lastFri = new Date(now);
+        lastFri.setDate(now.getDate() - daysToLastFri);
+        lastFri.setHours(17, 0, 0, 0);
+        const thisSun = new Date(lastFri);
+        thisSun.setDate(lastFri.getDate() + 2);
+        thisSun.setHours(23, 59, 59, 999);
+        return d >= lastFri && d <= thisSun;
+      }
+      return d >= fri && d <= sun;
     }
     if (w === "week") {
       const end = new Date(now.getTime() + 7 * 24 * 3600 * 1000);
@@ -10725,8 +10820,41 @@ function _renderEventsCalendar(geo, events, tb) {
   const keyword = qInput && qInput.value ? qInput.value.trim() : "";
   // v0.67: Apply the selected time-window chip filter
   const timeWindow = getEventsTimeWindow();
+  // v0.73: track pre-filter count so we can distinguish "no events at all"
+  // from "events exist but filter zeroes them out" — different UX.
+  const totalBeforeFilter = events.length;
   events = eventsInWindow(events, timeWindow);
   if (!events || !events.length) {
+    // If filter is non-default AND we had events before filtering, show a
+    // chip-aware empty state inline (keeping the chips so user can broaden).
+    if (timeWindow !== "month" && totalBeforeFilter > 0) {
+      const chipDef = [
+        { id: "today",   label: "Today" },
+        { id: "weekend", label: "This weekend" },
+        { id: "week",    label: "Next 7 days" },
+        { id: "month",   label: "This month" },
+      ];
+      const labelMap = { today: "today", weekend: "this weekend (Fri eve–Sun)", week: "next 7 days", month: "this month" };
+      const chipsHtml = `<div class="time-chips" role="tablist" aria-label="Filter events by time window">
+        ${chipDef.map(c => `<button type="button" class="time-chip ${timeWindow === c.id ? "active" : ""}" data-window="${c.id}" role="tab" aria-selected="${timeWindow === c.id}">${escapeHtml(c.label)}</button>`).join("")}
+        <span class="time-chips-count">${totalBeforeFilter} event${totalBeforeFilter === 1 ? "" : "s"} (unfiltered)</span>
+      </div>`;
+      tb.innerHTML = chipsHtml + `<div class="cal-empty" style="padding:24px 16px;">
+        <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px;">No events match <b>${escapeHtml(labelMap[timeWindow] || timeWindow)}</b> within ${CURRENT_RADIUS_MI || 10} mi.</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin-bottom:14px;">There are <b>${totalBeforeFilter}</b> events available across the next 30 days — try a wider window.</div>
+        <button type="button" class="btn-primary" data-window="week" style="margin-right:8px;">Try Next 7 days →</button>
+        <button type="button" class="btn-secondary" data-window="month">Show all (This month)</button>
+      </div>`;
+      // Wire the broaden buttons to update the chip and re-render
+      tb.querySelectorAll("[data-window]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          setEventsTimeWindow(btn.dataset.window);
+          // Re-trigger the events render
+          if (typeof loadNearbyEvents === "function" && lastEventsGeo) loadNearbyEvents(lastEventsGeo);
+        });
+      });
+      return;
+    }
     _renderEventsEmpty(geo, tb, keyword);
     return;
   }
@@ -12215,9 +12343,9 @@ function showSearchFocus(svc) {
     panel.className = "search-focus";
     main.insertBefore(panel, main.firstChild);
   }
-  panel.innerHTML = `<span><b>Showing:</b> ${escapeHtml(svc.q)} — ${escapeHtml(svc.desc)}</span>
+  panel.innerHTML = `<span><b>Showing results for:</b> ${escapeHtml(svc.q)} — ${escapeHtml(svc.desc)}</span>
     <button class="search-focus-clear" type="button" id="search-focus-clear" title="Exit this filtered view and browse all categories near your location">
-      ← Browse all near you
+      Show everything near me
     </button>`;
   const clearBtn = panel.querySelector("#search-focus-clear");
   if (clearBtn) clearBtn.addEventListener("click", exitFocusMode);
