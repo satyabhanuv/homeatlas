@@ -2226,6 +2226,32 @@
   .cal-event-bucket-community { background: rgba(0,80,194,0.08);   color: #0050C2; border: 1px solid rgba(0,80,194,0.18); }
   .cal-event-bucket-ticketed  { background: rgba(186,117,23,0.10); color: #BA7517; border: 1px solid rgba(186,117,23,0.22); }
 
+  /* v0.68: Flat events list (non-month chips) — date headers with event rows */
+  .flat-events { padding: 0; }
+  .flat-events-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 10px 0 14px;
+    font-size: 18px; font-weight: 700;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+  }
+  .flat-events-sub { font-size: 12px; font-weight: 500; color: var(--ink-faint); }
+  .flat-events-day {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 16px 6px 8px;
+    border-top: 1px solid var(--line);
+    margin-top: 8px;
+  }
+  .flat-events-day:first-of-type { border-top: 0; margin-top: 0; }
+  .flat-events-day-label { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .flat-events-day-count {
+    font-size: 11px; font-weight: 600;
+    background: var(--surface-2, #f7f9fc);
+    color: var(--ink-soft);
+    padding: 2px 8px; border-radius: 999px;
+    border: 1px solid var(--line);
+  }
+
   /* v0.67: Time-window filter chips (Today / Weekend / 7d / Month) */
   .time-chips {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
@@ -2272,6 +2298,61 @@
     font-size: 11px; font-weight: 600;
     vertical-align: 2px;
   }
+
+  /* v0.68: Save-star button on event cards */
+  .save-star {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px;
+    margin-left: 4px;
+    border: 0;
+    background: transparent;
+    color: rgba(15,23,42,0.30);
+    font-size: 16px; line-height: 1;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: color 0.12s ease, background 0.12s ease, transform 0.1s ease;
+    vertical-align: 1px;
+    padding: 0;
+  }
+  .save-star:hover { background: rgba(180,83,9,0.08); color: #B45309; }
+  .save-star:active { transform: scale(0.92); }
+  .save-star.is-saved { color: #B45309; }
+  .save-star.is-saved:hover { background: rgba(180,83,9,0.14); }
+
+  /* v0.68: Saved view — list of starred places/events */
+  #saved-view { padding: 8px 0 24px; }
+  .saved-empty {
+    text-align: center; padding: 40px 16px;
+    color: var(--ink-soft);
+    background: var(--surface-2, #f7f9fc);
+    border-radius: 12px;
+    border: 1px dashed var(--line);
+  }
+  .saved-empty-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
+  .saved-empty-hint  { font-size: 13px; color: var(--ink-faint); }
+  .saved-list { display: flex; flex-direction: column; gap: 8px; }
+  .saved-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 12px 14px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .saved-row-body { flex: 1; min-width: 0; }
+  .saved-row-title { font-size: 14px; font-weight: 600; color: var(--ink); }
+  .saved-row-sub   { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .saved-row-meta  { font-size: 11px; color: var(--ink-faint); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .saved-row-link  { display: inline-block; margin-top: 6px; font-size: 12px; color: #0050C2; }
+  .saved-row .save-star { flex-shrink: 0; margin-top: 1px; }
+  .saved-header {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding: 10px 0 14px;
+    font-size: 18px; font-weight: 700;
+    color: var(--ink);
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 12px;
+  }
+  .saved-header-sub { font-size: 12px; font-weight: 500; color: var(--ink-faint); }
 
   /* ─── v0.67: Clear (×) button inside the search inputs ───────────── */
   .search-field { position: relative; }
@@ -2471,6 +2552,7 @@
   .cat-nav .cat-tab[data-cat="help"]::before      { content: "💚"; }
   .cat-nav .cat-tab[data-cat="civic"]::before     { content: "🏛️"; }
   .cat-nav .cat-tab[data-cat="safety"]::before    { content: "🛡️"; }
+  .cat-nav .cat-tab[data-cat="saved"]::before     { content: "⭐"; }
   .cat-nav .cat-tab:hover {
     color: var(--ink);
     background: rgba(0,80,194,0.06);
@@ -2487,6 +2569,7 @@
   .cat-nav .cat-tab[data-cat="help"].active      { color: #0F6E56; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #0F6E56; }
   .cat-nav .cat-tab[data-cat="civic"].active     { color: #534AB7; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #534AB7; }
   .cat-nav .cat-tab[data-cat="safety"].active    { color: #993C1D; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #993C1D; }
+  .cat-nav .cat-tab[data-cat="saved"].active     { color: #B45309; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #B45309; }
   @media (max-width: 700px) {
     .cat-nav { padding: 4px; border-radius: 12px; margin: 14px 0 14px; }
     .cat-nav .cat-tab { padding: 10px 8px 8px; font-size: 12px; min-width: 76px; }
@@ -2537,7 +2620,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.67</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68</span>
     </div>
   </header>
 
@@ -2683,6 +2766,7 @@
       <a href="#cat-help"       class="cat-tab"            data-cat="help">Help</a>
       <a href="#cat-civic"      class="cat-tab"            data-cat="civic">Civic</a>
       <a href="#cat-safety"     class="cat-tab"            data-cat="safety">Safety &amp; risks</a>
+      <a href="#cat-saved"      class="cat-tab"            data-cat="saved">Saved</a>
     </nav>
 
     <!-- v0.28/v0.29: Section nav — sticky text-only tabs in user-requested order -->
@@ -3449,6 +3533,21 @@
       </div>
     </div>
 
+    <!-- v0.68: Saved view — visible only when cat-nav "Saved" is active.
+         section-managed system (initSingleViewSections) auto-tags this and the
+         #saved-view div below with data-section-group="sec-saved", so they
+         only display when activateSingleViewSection("sec-saved") is called. -->
+    <div class="page-section-header" id="sec-saved" data-category="saved" style="border-color: rgba(180,83,9,0.30);">
+      <div class="psh-icon">⭐</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Saved</h2>
+      </div>
+    </div>
+    <div id="saved-view" data-category="saved">
+      <div style="font-size:13px;color:var(--ink-soft);padding:0 0 12px;">Events and places you've starred. Stored on your device only — no account, no tracking.</div>
+      <div id="saved-view-body"></div>
+    </div>
+
       </div><!-- /.results-main -->
     </div><!-- /.results-grid -->
   </section>
@@ -3476,7 +3575,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.67</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -8973,6 +9072,101 @@ function _renderEventsEmpty(geo, tb, keyword) {
   </div>`;
 }
 
+// ─── v0.68: Save / Star a place ──────────────────────────────────────
+// localStorage-only, no account required, no backend. Saved items live in
+// `nearnity:saved:v1` as a JSON array of { id, type, title, subtitle, url, savedAt }.
+// Each saveable entity needs a stable id (built from type + title + venue/coords).
+const SAVED_LS_KEY = "nearnity:saved:v1";
+function getSavedItems() {
+  try {
+    const raw = localStorage.getItem(SAVED_LS_KEY);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr : [];
+  } catch (e) { return []; }
+}
+function setSavedItems(arr) {
+  try { localStorage.setItem(SAVED_LS_KEY, JSON.stringify(arr)); } catch (e) {}
+}
+function isSaved(id) {
+  if (!id) return false;
+  return getSavedItems().some(it => it.id === id);
+}
+function toggleSaved(item) {
+  if (!item || !item.id) return false;
+  const current = getSavedItems();
+  const idx = current.findIndex(it => it.id === item.id);
+  if (idx >= 0) {
+    current.splice(idx, 1);
+    setSavedItems(current);
+    return false;
+  }
+  current.unshift({ ...item, savedAt: new Date().toISOString() });
+  setSavedItems(current);
+  return true;
+}
+// Build a stable id for an event card so toggle persistence works.
+function saveIdForEvent(ev) {
+  const t = (ev.title || "").trim();
+  const s = (ev.starts || "").slice(0, 16);
+  const v = (ev.venue || "").trim().slice(0, 40);
+  return `evt::${t}::${s}::${v}`;
+}
+// Render a star button — used inside event card titles.
+function saveStarButtonHtml(item) {
+  const saved = isSaved(item.id);
+  return `<button type="button" class="save-star ${saved ? "saved" : ""}"
+    data-save-id="${escapeHtml(item.id)}"
+    data-save-payload='${escapeHtml(JSON.stringify(item))}'
+    aria-label="${saved ? "Remove from saved" : "Save this place"}"
+    title="${saved ? "Saved — tap to remove" : "Save this place (this device only)"}"
+  >${saved ? "★" : "☆"}</button>`;
+}
+// Global click handler for save stars — installed once at page load below.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".save-star[data-save-payload]");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  let payload;
+  try { payload = JSON.parse(btn.dataset.savePayload); } catch (err) { return; }
+  const nowSaved = toggleSaved(payload);
+  btn.textContent = nowSaved ? "★" : "☆";
+  btn.classList.toggle("saved", nowSaved);
+  btn.setAttribute("aria-label", nowSaved ? "Remove from saved" : "Save this place");
+  btn.title = nowSaved ? "Saved — tap to remove" : "Save this place (this device only)";
+  // If a Saved view is currently rendered, refresh it
+  const savedView = document.getElementById("saved-view");
+  if (savedView && !savedView.hidden) renderSavedView();
+});
+
+// Render the "Saved" tab content. Called when user activates the Saved category.
+function renderSavedView() {
+  const container = document.getElementById("saved-view-body");
+  if (!container) return;
+  const items = getSavedItems();
+  if (!items.length) {
+    container.innerHTML = `<div class="schools-empty" style="padding:18px;line-height:1.55;">
+      <b>No saved places yet.</b><br>
+      Tap the ☆ star on any event, clinic, park, or service to save it here. Saved items live on this device only — no account, no backend.
+    </div>`;
+    return;
+  }
+  container.innerHTML = `<div class="saved-list">
+    ${items.map(item => `
+      <div class="saved-row">
+        <div class="saved-row-body">
+          <div class="saved-row-title">${escapeHtml(item.title || "Untitled")}</div>
+          ${item.subtitle ? `<div class="saved-row-sub">${escapeHtml(item.subtitle)}</div>` : ""}
+          <div class="saved-row-meta">Saved ${new Date(item.savedAt).toLocaleDateString()} · ${escapeHtml(item.type || "item")}</div>
+        </div>
+        ${item.url ? `<a class="saved-row-link" href="${escapeHtml(item.url)}" target="_blank" rel="noopener">Open ↗</a>` : ""}
+        <button type="button" class="save-star saved" data-save-id="${escapeHtml(item.id)}" data-save-payload='${escapeHtml(JSON.stringify(item))}' aria-label="Remove from saved" title="Remove from saved">★</button>
+      </div>
+    `).join("")}
+  </div>`;
+}
+
 // v0.67: Time-window state for the events calendar. Persisted to localStorage
 // so the user's last chip choice survives reload. Default = "month."
 const TIME_WINDOW_KEY = "nearnity:events:window:v1";
@@ -9063,12 +9257,20 @@ function _renderEventsCalendar(geo, events, tb) {
       ${chipDef.map(c => `<button type="button" class="time-chip ${timeWindow === c.id ? "active" : ""}" data-window="${c.id}" role="tab" aria-selected="${timeWindow === c.id}">${escapeHtml(c.label)}</button>`).join("")}
       <span class="time-chips-count">${totalEv} event${totalEv === 1 ? "" : "s"}</span>
     </div>`;
-    // v0.49.3: wrap calendar + agenda in a 2-col layout so the agenda
-    // is visible without scrolling. On mobile this collapses to stacked.
-    tb.innerHTML = banner + chips + `<div class="cal-layout">
+    // v0.68: For non-month chips, render a FLAT tiered list of all events in
+    // the window. The calendar+agenda combo only makes sense for the full
+    // month — for "Today" / "This weekend" / "Next 7 days" users want a
+    // direct list, not a tiny grid + agenda that defaults to today only.
+    let body;
+    if (timeWindow !== "month") {
+      body = _renderFlatEventList(events, timeWindow);
+    } else {
+      body = `<div class="cal-layout">
         <div>${_renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey)}</div>
         <div>${_renderCalendarAgenda(byDate, selectedDate, todayKey)}</div>
       </div>`;
+    }
+    tb.innerHTML = banner + chips + body;
     // v0.67: Wire chip clicks — switch the time window and re-render the tab
     tb.querySelectorAll(".time-chip[data-window]").forEach((c) => {
       c.addEventListener("click", () => {
@@ -9146,6 +9348,98 @@ function _renderCalendarMonth(byDate, viewMonth, selectedDate, todayKey) {
   return html;
 }
 
+// v0.68: Flat list mode — render every event in the active time window
+// grouped by date. Used when the user picks Today / Weekend / Next 7 days
+// (the calendar+agenda combo only makes sense for full-month browsing).
+function _renderFlatEventList(events, timeWindow) {
+  if (!events || !events.length) {
+    return `<div class="cal-empty">No events in this window. Try a wider chip above.</div>`;
+  }
+  const tFmt = (s) => {
+    const dd = new Date(s);
+    return dd.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  };
+  // Group by local date key
+  const byDate = new Map();
+  for (const ev of events) {
+    const d = new Date(ev.starts);
+    if (isNaN(d)) continue;
+    const key = _calDateKey(d);
+    if (!byDate.has(key)) byDate.set(key, []);
+    byDate.get(key).push(ev);
+  }
+  const dateKeys = [...byDate.keys()].sort();
+  const todayKey = _calDateKey(new Date());
+
+  // Window label for the header
+  const labels = {
+    today:   "Today",
+    weekend: "This weekend",
+    week:    "Next 7 days",
+  };
+  const headerLabel = labels[timeWindow] || "Upcoming";
+
+  const inferBucket = (ev) => {
+    if (ev.source_bucket) return ev.source_bucket;
+    const s = (ev.source || "").toLowerCase();
+    if (s.includes("ticketmaster") || s.includes("seatgeek") || s.includes("ticketweb")) return "ticketed";
+    if (s.includes("city calendar") || s.includes("city events") || s.includes("parks") || s.includes("library")) return "official";
+    return "community";
+  };
+  const renderEvent = (ev) => {
+    const when = ev.ends ? `${tFmt(ev.starts)}–${tFmt(ev.ends)}` : tFmt(ev.starts);
+    const meta = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
+    const free = ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
+    const venue = ev.venue ? `<div class="cal-event-meta">${escapeHtml(ev.venue)}</div>` : "";
+    const link = ev.url ? `<a class="row-link" href="${escapeHtml(ev.url)}" target="_blank" rel="noopener">Details →</a>` : "";
+    const distMi = (ev.distance_miles != null) ? ev.distance_miles : (ev._distance != null ? ev._distance : null);
+    const distTag = (distMi != null)
+      ? `<span class="cal-event-dist">${distMi < 1 ? distMi.toFixed(1) : Math.round(distMi)} mi</span>`
+      : "";
+    const sourceVerified = (ev.source_verified === true || ev.verified === true);
+    const verifTag = sourceVerified
+      ? `<span class="cal-event-verif" title="Source-linked — pulled from a known feed, not Nearnity-reviewed">✓ Source-linked</span>`
+      : "";
+    const seriesTag = (ev.related_count > 0)
+      ? `<span class="cal-event-series">+${ev.related_count} more date${ev.related_count === 1 ? "" : "s"}</span>`
+      : "";
+    const bucket = inferBucket(ev);
+    const bucketLabel = bucket.charAt(0).toUpperCase() + bucket.slice(1);
+    const bucketTag = `<span class="cal-event-bucket cal-event-bucket-${bucket}" title="Source bucket: ${bucketLabel}">${bucketLabel}</span>`;
+    // v0.68: save-star button
+    const saveItem = {
+      id: saveIdForEvent(ev),
+      type: "event",
+      title: ev.title,
+      subtitle: [ev.venue, ev.starts ? new Date(ev.starts).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null].filter(Boolean).join(" · "),
+      url: ev.url,
+    };
+    const star = saveStarButtonHtml(saveItem);
+    return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
+      <div class="cal-event-time">${escapeHtml(when)}</div>
+      <div class="cal-event-body">
+        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
+        ${venue}
+        <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
+      </div>
+    </div>`;
+  };
+
+  let html = `<div class="flat-events">
+    <div class="flat-events-header"><span>${escapeHtml(headerLabel)}</span> <span class="flat-events-sub">${events.length} event${events.length === 1 ? "" : "s"} total</span></div>`;
+  for (const dk of dateKeys) {
+    const d = new Date(dk + "T00:00:00");
+    const isToday = dk === todayKey;
+    const dayName = d.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" });
+    const label = isToday ? `Today · ${dayName}` : dayName;
+    const arr = byDate.get(dk).sort((a, b) => (a.starts || "").localeCompare(b.starts || ""));
+    html += `<div class="flat-events-day"><span class="flat-events-day-label">${escapeHtml(label)}</span><span class="flat-events-day-count">${arr.length}</span></div>`;
+    html += arr.map(renderEvent).join("");
+  }
+  html += `</div>`;
+  return html;
+}
+
 function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
   const evs = byDate.get(selectedDate) || [];
   const d = new Date(selectedDate + "T00:00:00");
@@ -9215,10 +9509,19 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
     // v0.67: source-bucket color pill (Official / Community / Ticketed)
     const bucketLabel = bucket.charAt(0).toUpperCase() + bucket.slice(1);
     const bucketTag = `<span class="cal-event-bucket cal-event-bucket-${bucket}" title="Source bucket: ${bucketLabel}">${bucketLabel}</span>`;
+    // v0.68: save-star button
+    const saveItem = {
+      id: saveIdForEvent(ev),
+      type: "event",
+      title: ev.title,
+      subtitle: [ev.venue, ev.starts ? new Date(ev.starts).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : null].filter(Boolean).join(" · "),
+      url: ev.url,
+    };
+    const star = saveStarButtonHtml(saveItem);
     return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag}</div>
+        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
         ${venue}
         <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
       </div>
@@ -10757,7 +11060,8 @@ const CATEGORY_MAP = {
   "my-home":   ["sec-myhome", "sec-services", "sec-yard", "sec-home-services"],
   "help":      ["sec-community-help", "sec-health"],
   "civic":     ["sec-civic"],
-  "safety":    ["sec-public-services", "sec-risks"]
+  "safety":    ["sec-public-services", "sec-risks"],
+  "saved":     ["sec-saved"]
 };
 function applyCategoryFilter(cat, opts) {
   opts = opts || {};
@@ -10770,6 +11074,13 @@ function applyCategoryFilter(cat, opts) {
   document.querySelectorAll(".cat-tab").forEach(t => {
     t.classList.toggle("active", t.dataset.cat === cat);
   });
+  // v0.68: Saved tab special case — Saved has no sec-tabs; render directly
+  if (cat === "saved") {
+    // Hide the section-nav radius + tabs since Saved doesn't use them
+    activateSingleViewSection("sec-saved");
+    try { renderSavedView(); } catch (e) { dlog("[saved] render failed", e); }
+    return;
+  }
   // If the currently-active sec-tab isn't in this category, click the first one in the category
   if (opts.activateFirst !== false) {
     const active = document.querySelector(".sec-tab.active");
