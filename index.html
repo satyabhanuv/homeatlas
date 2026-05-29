@@ -2457,6 +2457,53 @@
     max-width: 1480px;
   }
 
+  /* ─── v0.68.2: 2-column subsection layout for stacked info cards ───
+     Civic / Community Help / Health / Risks have 4-6 subsections that all
+     show at once (no subnav swap). Previously they stacked vertically and
+     wasted huge side-space on wide screens, forcing lots of scrolling.
+     At ≥1100px these subsections now render in a 2-column grid. */
+  @media (min-width: 1100px) {
+    #card-civic,
+    #card-community-help,
+    #card-health,
+    #card-risks .collapsible-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 22px;
+      row-gap: 18px;
+      align-items: start;
+    }
+    /* Header bars / popovers / source rows span both columns */
+    #card-civic > .card-context-bar,
+    #card-civic > .info-popover,
+    #card-civic > .source,
+    #card-community-help > .card-context-bar,
+    #card-community-help > .info-popover,
+    #card-community-help > .parks-loading,
+    #card-community-help > .source,
+    #card-health > .card-context-bar,
+    #card-health > .info-popover,
+    #card-health > .parks-loading,
+    #card-health > .source {
+      grid-column: 1 / -1;
+    }
+    /* #ch-sections wraps the 4 community-help cards — make IT the grid */
+    #card-community-help #ch-sections {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: 22px;
+      row-gap: 18px;
+      align-items: start;
+    }
+    /* Civic's DMV subsection has a map inside — give it the full width so the
+       map renders at a useful size, not crammed into half a column. */
+    #card-civic > #civic-dmv,
+    #card-civic > #civic-locations-section {
+      grid-column: 1 / -1;
+    }
+  }
+
   /* ─── v0.67: SIDE-BY-SIDE list + map (Spartan-style) ────────────────
      Stops the scroll-list-then-map pattern. Each major section becomes a
      2-column grid: scrollable content on the left, sticky map on the right.
@@ -2641,7 +2688,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.2</span>
     </div>
   </header>
 
@@ -3596,7 +3643,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.1</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.2</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -8931,6 +8978,105 @@ const EVENT_CAT_META = {
   other:    { icon: "📅", label: "Event" }
 };
 
+// v0.68.2: Specific-emoji inference per event. The generic category icon
+// (sports → runner, music → music note) lost user trust when "Golden State
+// Valkyries vs Indiana Fever" showed as 🏃 instead of 🏀. This scans the
+// event title (and venue / category as fallback signals) for distinctive
+// keywords and returns the most specific emoji available. Order matters —
+// most specific patterns first, generic fallbacks last.
+const _EVENT_ICON_RULES = [
+  // ─── Sports — specific sport > generic "sports" ───
+  [/\b(basketball|nba|wnba|valkyries|warriors|lakers|celtics|knicks|bulls|fever|liberty|sparks|aces|sky|mystics|hawks|hornets|suns|kings|jazz|nuggets|mavericks|rockets|spurs|grizzlies|pelicans|timberwolves|thunder|trail blazers|76ers|raptors|pistons|cavaliers|magic|heat|wizards|clippers|nets|pacers)\b/i, "🏀"],
+  [/\b(football|nfl|49ers|raiders|chiefs|broncos|chargers|cowboys|giants|eagles|patriots|jets|dolphins|bills|steelers|ravens|browns|bengals|texans|colts|jaguars|titans|saints|falcons|panthers|buccaneers|bears|lions|packers|vikings|cardinals|rams|seahawks|commanders)\b/i, "🏈"],
+  [/\b(baseball|mlb|giants vs|yankees|dodgers|red sox|cubs|cardinals|astros|braves|mets|phillies|rays|mariners|angels|athletics|padres|rockies|brewers|twins|guardians|tigers|royals|white sox|orioles|blue jays|nationals|pirates|reds|d-?backs|diamondbacks|marlins)\b/i, "⚾"],
+  [/\b(soccer|fc |united fc|mls|champions league|premier league|world cup|messi|earthquakes|la galaxy|sounders|whitecaps|austin fc|inter miami|atlanta united|nycfc|red bulls|union|revolution|loudoun|crew|nashville sc)\b/i, "⚽"],
+  [/\b(hockey|nhl|sharks|kings vs|ducks|golden knights|stars|wild|jets vs|avalanche|oilers|flames|canucks|coyotes|blackhawks|red wings|predators|blues|penguins|capitals|flyers|devils|islanders|rangers|bruins|sabres|hurricanes|panthers|lightning|maple leafs|senators|canadiens|kraken|blue jackets)\b/i, "🏒"],
+  [/\b(tennis|atp|wta|us open|wimbledon|french open|australian open|grand slam)\b/i, "🎾"],
+  [/\b(golf|pga|lpga|masters|open championship)\b/i, "⛳"],
+  [/\b(boxing|ufc|mma|fight night|championship fight)\b/i, "🥊"],
+  [/\b(marathon|5k|10k|half marathon|fun run|ragnar|color run|charity run|race day)\b/i, "🏃"],
+  [/\b(cycling|bike race|gran fondo|criterium|tour de)\b/i, "🚴"],
+  [/\b(swimming|swim meet|aquatics)\b/i, "🏊"],
+  [/\b(volleyball|avp)\b/i, "🏐"],
+  [/\b(rugby|six nations)\b/i, "🏉"],
+  [/\b(cricket|t20|ipl|odi)\b/i, "🏏"],
+
+  // ─── Music — instrument / genre when possible ───
+  [/\b(symphony|orchestra|philharmonic|chamber music|opera|recital|classical)\b/i, "🎻"],
+  [/\b(jazz|blues|bebop|swing)\b/i, "🎷"],
+  [/\b(piano|pianist)\b/i, "🎹"],
+  [/\b(guitar|guitarist|acoustic)\b/i, "🎸"],
+  [/\b(dj|edm|electronic|house music|techno|rave)\b/i, "🎧"],
+  [/\b(rap|hip hop|hip-hop|r&b)\b/i, "🎤"],
+  [/\b(country music|bluegrass|folk music)\b/i, "🤠"],
+  [/\b(concert|tour|live music|in concert|world tour|album release)\b/i, "🎤"],
+
+  // ─── Theater / arts ───
+  [/\b(comedy|stand-?up|improv|comedian)\b/i, "🎭"],
+  [/\b(broadway|musical|theater|theatre|on stage|playhouse|the play)\b/i, "🎭"],
+  [/\b(ballet|dance show|nutcracker|swan lake)\b/i, "🩰"],
+  [/\b(magic show|magician|illusionist)\b/i, "🎩"],
+  [/\b(circus|cirque|acrobat)\b/i, "🎪"],
+  [/\b(film|movie night|screening|outdoor cinema|cinema|drive-?in)\b/i, "🎬"],
+  [/\b(museum|exhibit|exhibition|gallery|art walk|first friday)\b/i, "🖼️"],
+  [/\b(craft fair|crafts|pottery|ceramics|knitting|sewing)\b/i, "🧶"],
+  [/\b(painting|paint night|sip and paint|drawing class)\b/i, "🎨"],
+
+  // ─── Food / drink ───
+  [/\b(food truck|food festival|food fest|street food|night market food)\b/i, "🌮"],
+  [/\b(wine|winery|wine tasting|vineyard)\b/i, "🍷"],
+  [/\b(beer|brewery|brewfest|oktoberfest|craft beer)\b/i, "🍺"],
+  [/\b(coffee|barista|cafe meetup)\b/i, "☕"],
+  [/\b(bbq|barbecue|grill|cookout|ribfest)\b/i, "🍖"],
+  [/\b(taco|taqueria|cinco de mayo)\b/i, "🌮"],
+  [/\b(pizza)\b/i, "🍕"],
+  [/\b(farmers? market|farm market|growers market)\b/i, "🥬"],
+
+  // ─── Kids / family ───
+  [/\b(storytime|story time|story hour|toddler|baby time|infant program)\b/i, "📖"],
+  [/\b(petting zoo|farm animal)\b/i, "🐑"],
+  [/\b(playground|jungle gym|kids zone|play area)\b/i, "🛝"],
+  [/\b(face painting|kids craft|family fun day|kids day)\b/i, "🧒"],
+
+  // ─── Civic / community ───
+  [/\b(city council|town hall|public hearing|board meeting|commission meeting|planning commission)\b/i, "🏛️"],
+  [/\b(volunteer|cleanup|clean-?up day|service day|community service)\b/i, "🧹"],
+  [/\b(blood drive|donation drive|donate blood)\b/i, "🩸"],
+  [/\b(vaccine|vaccination|flu shot|clinic day)\b/i, "💉"],
+  [/\b(voting|vote|election|polling)\b/i, "🗳️"],
+
+  // ─── Outdoors ───
+  [/\b(hike|hiking|trail walk|nature walk)\b/i, "🥾"],
+  [/\b(camping|campfire|s?'mores)\b/i, "🏕️"],
+  [/\b(yoga|meditation|mindfulness|tai chi|qi gong)\b/i, "🧘"],
+  [/\b(fishing|fish derby)\b/i, "🎣"],
+  [/\b(garden|gardening|plant sale|seed swap)\b/i, "🌱"],
+
+  // ─── Holiday / seasonal ───
+  [/\b(christmas|tree lighting|santa|holiday market|menorah lighting|hanukkah|diwali|kwanzaa|lunar new year|chinese new year)\b/i, "🎄"],
+  [/\b(halloween|trick-?or-?treat|pumpkin patch|haunted)\b/i, "🎃"],
+  [/\b(easter|egg hunt|spring fest)\b/i, "🐰"],
+  [/\b(fourth of july|4th of july|independence day|fireworks)\b/i, "🎆"],
+  [/\b(thanksgiving|turkey trot)\b/i, "🦃"],
+  [/\b(pride|lgbtq)\b/i, "🏳️‍🌈"],
+
+  // ─── Education / talks ───
+  [/\b(workshop|class|seminar|webinar|lecture|talk|panel discussion|book club|book signing|author event|reading)\b/i, "📚"],
+  [/\b(coding|hackathon|tech meetup|developer meetup|meetup)\b/i, "💻"],
+  [/\b(science|astronomy|stargazing|planetarium)\b/i, "🔭"],
+
+  // ─── Fairs / festivals (generic fallback if no specific signal above) ───
+  [/\b(parade)\b/i, "🎺"],
+  [/\b(festival|fair|fest|carnival|jubilee|celebration)\b/i, "🎉"],
+];
+function iconForEvent(ev) {
+  const hay = `${ev.title || ""} ${ev.venue || ""} ${ev.category || ""}`.toLowerCase();
+  for (const [re, icon] of _EVENT_ICON_RULES) {
+    if (re.test(hay)) return icon;
+  }
+  return (EVENT_CAT_META[ev.category] || EVENT_CAT_META.other).icon;
+}
+
 function formatEventWhen(starts, ends) {
   try {
     const s = new Date(starts);
@@ -9439,7 +9585,7 @@ function _renderFlatEventList(events, timeWindow) {
     return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
+        <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
         ${venue}
         <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
       </div>
@@ -9542,7 +9688,7 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
     return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${meta.icon} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
+        <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
         ${venue}
         <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
       </div>
@@ -11095,13 +11241,43 @@ function applyCategoryFilter(cat, opts) {
   document.querySelectorAll(".cat-tab").forEach(t => {
     t.classList.toggle("active", t.dataset.cat === cat);
   });
-  // v0.68: Saved tab special case — Saved has no sec-tabs; render directly
+  // v0.68: Saved tab special case — Saved has no sec-tabs; render directly.
+  // v0.68.2: Don't rely on section-managed tagging (which is conditional on
+  // initSingleViewSections having tagged sec-saved). Show/hide explicitly.
   if (cat === "saved") {
-    // Hide the section-nav radius + tabs since Saved doesn't use them
-    activateSingleViewSection("sec-saved");
+    // Hide every section-managed group manually
+    document.querySelectorAll(".section-managed").forEach(el => el.classList.remove("section-active"));
+    // Force sec-saved + saved-view visible regardless of tagging state
+    const header = document.getElementById("sec-saved");
+    const view = document.getElementById("saved-view");
+    if (header) {
+      header.classList.add("section-managed", "section-active");
+      header.dataset.sectionGroup = "sec-saved";
+      header.style.display = "";
+      header.removeAttribute("hidden");
+    }
+    if (view) {
+      view.classList.add("section-managed", "section-active");
+      view.dataset.sectionGroup = "sec-saved";
+      view.style.display = "";
+      view.removeAttribute("hidden");
+    }
+    // Hide the radius row + section tabs — Saved doesn't use them
+    const sectionNav = document.getElementById("section-nav");
+    if (sectionNav) sectionNav.style.display = "none";
     try { renderSavedView(); } catch (e) { dlog("[saved] render failed", e); }
+    // Scroll to top so user sees the Saved header, not the bottom of the prior section
+    window.scrollTo({ top: 0, behavior: "smooth" });
     return;
   }
+  // v0.68.2: Restore section-nav visibility if leaving Saved
+  const sectionNav = document.getElementById("section-nav");
+  if (sectionNav) sectionNav.style.display = "";
+  // Hide the saved view explicitly when not in Saved category
+  const view = document.getElementById("saved-view");
+  const header = document.getElementById("sec-saved");
+  if (view) view.classList.remove("section-active");
+  if (header) header.classList.remove("section-active");
   // If the currently-active sec-tab isn't in this category, click the first one in the category
   if (opts.activateFirst !== false) {
     const active = document.querySelector(".sec-tab.active");
