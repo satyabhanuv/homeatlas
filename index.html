@@ -1747,6 +1747,12 @@
   body.focus-mode .section-nav-inner { display: none; }   /* the row of section pill tabs */
   body.focus-mode .resolved { display: none; }            /* "Address resolved" header */
   body.focus-mode .page-section-header { display: none !important; }   /* section title — banner already names it */
+  /* v0.78: hide section h2 headers AND per-section summary pills in normal
+     single-view too — the sec-tab and the radius row already tell users what
+     section they're on and the active distance. Was redundant + cluttered. */
+  body.single-view .page-section-header { display: none !important; }
+  body.single-view .summary-pill { display: none !important; }
+  body.single-view .card-context-bar .summary-pill { display: none !important; }
   body.focus-mode .emergency-rail { /* keep rail visible — emergency is always relevant */ }
   /* Slim the section-nav box when only the radius is showing, so the
      "Showing" banner sits closer to the content. */
@@ -2183,13 +2189,15 @@
   }
   .section-nav-inner::-webkit-scrollbar { height: 4px; }
   .section-nav-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
-  /* v0.76: sec-tab as Chrome sub-tab — rounded top, shares bottom border */
+  /* v0.78: sec-tab — strongly tab-shaped so users see them as tabs, not labels.
+     Inactive: faint grey card. Active: light-blue card that visually connects
+     to the content below by sharing the bottom border color. */
   .sec-tab {
     flex: 0 0 auto;
-    padding: 9px 16px 8px;
+    padding: 9px 18px 8px;
     border-radius: 8px 8px 0 0;
-    background: transparent;
-    border: 2px solid transparent;
+    background: #F4F6FA;
+    border: 1.5px solid var(--line);
     border-bottom: 0;
     color: var(--ink-soft);
     text-decoration: none;
@@ -2198,14 +2206,16 @@
     letter-spacing: -0.005em;
     transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
     margin-bottom: -2px;
+    position: relative;
   }
-  .sec-tab:hover { background: var(--blue-light); color: var(--blue-dark); }
+  .sec-tab:hover { background: var(--blue-light); color: var(--blue-dark); border-color: var(--blue-light); }
   .sec-tab:active { transform: translateY(1px); }
   .sec-tab.active {
     background: var(--blue-light);
     color: var(--blue-dark);
     border-color: var(--blue-light);
     box-shadow: none;
+    z-index: 1;
   }
   .sec-tab.active:hover { background: var(--blue-light); }
   /* Section headers: leave room above for the sticky nav so they don't hide under it */
@@ -2234,8 +2244,8 @@
     flex: 0 0 auto;
     padding: 7px 14px 6px;
     border-radius: 8px 8px 0 0;
-    background: transparent;
-    border: 2px solid transparent;
+    background: #F4F6FA;
+    border: 1.5px solid var(--line);
     border-bottom: 0;
     color: var(--ink-soft);
     text-decoration: none;
@@ -3297,12 +3307,12 @@
     padding: 10px 12px 9px;
     font-size: 13px; font-weight: 600;
     color: var(--ink-soft); text-decoration: none;
-    border: 2px solid transparent;
+    border: 1.5px solid var(--line);
     border-bottom: 0;
     border-radius: 10px 10px 0 0;
     display: flex; flex-direction: column; align-items: center; gap: 4px;
     text-align: center; white-space: nowrap;
-    background: transparent;
+    background: #F4F6FA;
     transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     margin-bottom: -2px;
   }
@@ -3392,7 +3402,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.77</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.78</span>
     </div>
   </header>
 
@@ -4571,7 +4581,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.77</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.78</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
