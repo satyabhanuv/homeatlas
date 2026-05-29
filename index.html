@@ -562,6 +562,83 @@
     .ao-chip { padding: 5px 10px; font-size: 12px; }
   }
 
+  /* v0.75: Yelp-inspired category dropdown nav on landing page */
+  .cat-dd-nav {
+    position: relative;
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 18px 0 8px;
+    padding: 6px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+  }
+  body.results-shown .cat-dd-nav { display: none; }   /* hide once results render — cat-nav takes over */
+  .cat-dd-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 14px;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    color: var(--ink);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s ease, color 0.12s ease;
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+  .cat-dd-tab:hover { background: rgba(0,80,194,0.06); color: #0050C2; }
+  .cat-dd-tab[aria-expanded="true"] {
+    background: #0050C2; color: #fff;
+  }
+  .cat-dd-tab[aria-expanded="true"] .cat-dd-arrow { transform: rotate(180deg); }
+  .cat-dd-icon { font-size: 17px; }
+  .cat-dd-arrow {
+    font-size: 11px; opacity: 0.75;
+    transition: transform 0.15s ease;
+  }
+  .cat-dd-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0; right: 0;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 8px;
+    box-shadow: 0 12px 32px rgba(15,23,42,0.14);
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 4px;
+  }
+  .cat-dd-panel[hidden] { display: none; }
+  .cat-dd-link {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--ink);
+    transition: background 0.12s ease;
+    cursor: pointer;
+  }
+  .cat-dd-link:hover { background: rgba(0,80,194,0.06); }
+  .cat-dd-link .dd-em { font-size: 22px; line-height: 1.1; flex: 0 0 auto; }
+  .cat-dd-link .dd-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cat-dd-link .dd-tx b { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .cat-dd-link .dd-tx i { font-style: normal; font-size: 12px; color: var(--ink-soft); line-height: 1.4; }
+  @media (max-width: 700px) {
+    .cat-dd-nav { padding: 5px; gap: 4px; }
+    .cat-dd-tab { padding: 8px 8px; font-size: 12.5px; }
+    .cat-dd-icon { font-size: 15px; }
+    .cat-dd-label { letter-spacing: 0; }
+    .cat-dd-panel { grid-template-columns: 1fr; padding: 6px; }
+    .cat-dd-link { padding: 9px 10px; }
+    .cat-dd-link .dd-em { font-size: 18px; }
+    .cat-dd-link .dd-tx b { font-size: 13.5px; }
+    .cat-dd-link .dd-tx i { font-size: 11.5px; }
+  }
+
   /* v0.70: Quick-chip search shortcuts on homepage */
   .quick-chips {
     display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
@@ -2950,32 +3027,35 @@
 
   /* ─── v0.67: Clear (×) button inside the search inputs ───────────── */
   .search-field { position: relative; }
-  /* v0.74: muted grey, smaller footprint — was visually competing with text
-     and overlaying when the input was full. Input now reserves right-padding. */
+  /* v0.75: muted grey, smaller footprint, !important on background to win
+     against any other rule that might tint it blue. Reserves padding so the
+     X never sits on top of typed text. */
   .input-clear {
-    position: absolute;
-    right: 8px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    border: 0;
-    background: transparent;
-    color: #b8c4d2;
-    font-size: 16px; line-height: 1;
-    font-weight: 400;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    padding: 0;
-    transition: background 0.12s ease, color 0.12s ease;
-    z-index: 2;
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 22px !important; height: 22px !important;
+    border-radius: 50% !important;
+    border: 0 !important;
+    background: transparent !important;
+    color: #94a3b8 !important;
+    font-size: 16px !important; line-height: 1 !important;
+    font-weight: 400 !important;
+    cursor: pointer !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    padding: 0 !important;
+    transition: background 0.12s ease, color 0.12s ease !important;
+    z-index: 2 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
   }
   /* Reserve room on the right edge of search-field inputs so the X doesn't
      sit on top of typed text. Both the q-input and addr inputs use it. */
-  .search-field input { padding-right: 36px; }
+  .search-field input { padding-right: 40px !important; }
   .input-clear:hover {
-    background: rgba(15, 23, 42, 0.08);
-    color: var(--ink-soft);
+    background: rgba(15, 23, 42, 0.06) !important;
+    color: #475569 !important;
   }
   /* Reserve room on the input's right side so text doesn't slide under the × */
   .search-field input { padding-right: 40px; }
@@ -3277,7 +3357,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.75</span>
     </div>
   </header>
 
@@ -3317,6 +3397,62 @@
         <button type="submit" id="searchBtn">Search</button>
       </form>
     </div>
+    <!-- v0.75: Yelp-inspired category dropdown nav. Six tabs, each opens a
+         panel with subsection links. Click a subsection → triggers near-me
+         (or prompts for location) → activates the right section in results. -->
+    <nav class="cat-dd-nav" id="catDdNav" aria-label="Browse by category">
+      <button class="cat-dd-tab" type="button" data-dd="around-you" aria-haspopup="true" aria-expanded="false">
+        <span class="cat-dd-icon">📍</span><span class="cat-dd-label">Around you</span><span class="cat-dd-arrow">▾</span>
+      </button>
+      <button class="cat-dd-tab" type="button" data-dd="my-home" aria-haspopup="true" aria-expanded="false">
+        <span class="cat-dd-icon">🏠</span><span class="cat-dd-label">My home</span><span class="cat-dd-arrow">▾</span>
+      </button>
+      <button class="cat-dd-tab" type="button" data-dd="help" aria-haspopup="true" aria-expanded="false">
+        <span class="cat-dd-icon">💚</span><span class="cat-dd-label">Community help</span><span class="cat-dd-arrow">▾</span>
+      </button>
+      <button class="cat-dd-tab" type="button" data-dd="civic" aria-haspopup="true" aria-expanded="false">
+        <span class="cat-dd-icon">🏛️</span><span class="cat-dd-label">Civic services</span><span class="cat-dd-arrow">▾</span>
+      </button>
+      <button class="cat-dd-tab" type="button" data-dd="safety" aria-haspopup="true" aria-expanded="false">
+        <span class="cat-dd-icon">🛡️</span><span class="cat-dd-label">Safety</span><span class="cat-dd-arrow">▾</span>
+      </button>
+      <button class="cat-dd-tab" type="button" data-dd="saved" aria-haspopup="true" aria-expanded="false">
+        <span class="cat-dd-icon">⭐</span><span class="cat-dd-label">Saved</span><span class="cat-dd-arrow">▾</span>
+      </button>
+
+      <!-- Dropdown panels — one per tab. Hidden by default; JS toggles. -->
+      <div class="cat-dd-panel" data-panel="around-you" hidden role="menu">
+        <a class="cat-dd-link" data-target="sec-events"  role="menuitem"><span class="dd-em">🎪</span><span class="dd-tx"><b>Events near you</b><i>Concerts, markets, festivals, civic events</i></span></a>
+        <a class="cat-dd-link" data-target="sec-schools" role="menuitem"><span class="dd-em">🎓</span><span class="dd-tx"><b>Schools</b><i>Public / private / charter, your district</i></span></a>
+        <a class="cat-dd-link" data-target="sec-parks"   role="menuitem"><span class="dd-em">🌳</span><span class="dd-tx"><b>Parks &amp; rec</b><i>Playgrounds, trails, national parks, federal rec sites</i></span></a>
+      </div>
+      <div class="cat-dd-panel" data-panel="my-home" hidden role="menu">
+        <a class="cat-dd-link" data-target="sec-myhome"        role="menuitem"><span class="dd-em">📋</span><span class="dd-tx"><b>Property details</b><i>Address resolved, year built, lot &amp; building</i></span></a>
+        <a class="cat-dd-link" data-target="sec-services"      role="menuitem"><span class="dd-em">⚡</span><span class="dd-tx"><b>Utilities &amp; internet</b><i>Electric, gas, water, ISPs at this address</i></span></a>
+        <a class="cat-dd-link" data-target="sec-yard"          role="menuitem"><span class="dd-em">🌱</span><span class="dd-tx"><b>Gardening</b><i>USDA zone, plants, watering, soil</i></span></a>
+        <a class="cat-dd-link" data-target="sec-home-services" role="menuitem"><span class="dd-em">🔧</span><span class="dd-tx"><b>Home services</b><i>Handyman, plumber, electrician, HVAC near you</i></span></a>
+        <a class="cat-dd-link" data-target="sec-myhome" data-scroll="card-risks" role="menuitem"><span class="dd-em">⚠️</span><span class="dd-tx"><b>Climate risks</b><i>Flood / fire / heat / air zones for this address</i></span></a>
+      </div>
+      <div class="cat-dd-panel" data-panel="help" hidden role="menu">
+        <a class="cat-dd-link" data-target="sec-community-help" role="menuitem"><span class="dd-em">🆘</span><span class="dd-tx"><b>Community help</b><i>211, food banks, housing aid, legal aid</i></span></a>
+        <a class="cat-dd-link" data-target="sec-health"         role="menuitem"><span class="dd-em">🏥</span><span class="dd-tx"><b>Health &amp; wellness</b><i>Free / sliding-scale clinics (HRSA), mental health</i></span></a>
+      </div>
+      <div class="cat-dd-panel" data-panel="civic" hidden role="menu">
+        <a class="cat-dd-link" data-target="sec-civic" role="menuitem"><span class="dd-em">🗳️</span><span class="dd-tx"><b>Voting &amp; officials</b><i>Voter registration, your elected officials</i></span></a>
+        <a class="cat-dd-link" data-target="sec-civic" data-scroll="civic-dmv"     role="menuitem"><span class="dd-em">🚗</span><span class="dd-tx"><b>DMV</b><i>Driver license, vehicle registration</i></span></a>
+        <a class="cat-dd-link" data-target="sec-civic" data-scroll="civic-permits" role="menuitem"><span class="dd-em">📋</span><span class="dd-tx"><b>Permits, courts &amp; civic offices</b><i>Building permits, court info, post office</i></span></a>
+        <a class="cat-dd-link" data-target="sec-civic" data-scroll="civic-property" role="menuitem"><span class="dd-em">🏠</span><span class="dd-tx"><b>Property records</b><i>Tax assessment, parcel info</i></span></a>
+      </div>
+      <div class="cat-dd-panel" data-panel="safety" hidden role="menu">
+        <a class="cat-dd-link" data-target="sec-public-services" role="menuitem"><span class="dd-em">🚨</span><span class="dd-tx"><b>Emergency services</b><i>Fire, police, hospitals, pharmacies, dentists</i></span></a>
+        <a class="cat-dd-link" data-target="sec-risks"           role="menuitem"><span class="dd-em">⚠️</span><span class="dd-tx"><b>Live alerts</b><i>NWS weather alerts, AirNow AQI, USGS earthquakes</i></span></a>
+      </div>
+      <div class="cat-dd-panel" data-panel="saved" hidden role="menu">
+        <a class="cat-dd-link" data-target="sec-saved" role="menuitem"><span class="dd-em">⭐</span><span class="dd-tx"><b>My saved places</b><i>Events &amp; resources you've starred</i></span></a>
+        <a class="cat-dd-link" data-target="sec-saved" data-scroll="digestWidget" role="menuitem"><span class="dd-em">📬</span><span class="dd-tx"><b>Weekly digest</b><i>Email updates near your saved place</i></span></a>
+      </div>
+    </nav>
+
     <!-- v0.70: Quick-chip shortcuts — pre-formed searches for the most common
          intents. Tap to auto-fill the "Looking for" box and trigger search
          with Near-me location. Hidden once results are shown. -->
@@ -4400,7 +4536,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.74.1</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.75</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -12074,6 +12210,16 @@ function renderResults(geo) {
   // If a non-default section is already active (deep-link via URL hash), kick its load
   const active = document.querySelector(".sec-tab.active");
   if (active && active.dataset.target) maybeLoadSection(active.dataset.target);
+
+  // v0.75: dropdown nav set _pendingDropdownIntent before triggering lookup.
+  // Now that the results are rendered, activate the requested section.
+  if (_pendingDropdownIntent) {
+    const intent = _pendingDropdownIntent;
+    _pendingDropdownIntent = null;
+    setTimeout(() => {
+      try { runLandingFromDropdown(intent.catKey, intent.targetSection, intent.scrollTo); } catch (e) { dlog("[intent] error", e); }
+    }, 250);
+  }
 }
 
 // v0.35.5: lazy-load registry — section header id → load fn that needs the
@@ -12505,6 +12651,127 @@ function applyFocusSection(targetSecId) {
 // end, a setTimeout reset will have flipped it back already, and Back
 // will push a new entry that wipes the Forward stack.
 let _isHistoryRestore = false;
+
+// v0.75: Yelp-style dropdown nav — open/close + subsection click flow.
+// CAT_DD_MAP maps each dropdown tab to a category key (matches applyCategoryFilter).
+const CAT_DD_MAP = {
+  "around-you": "around-me",
+  "my-home":    "my-home",
+  "help":       "help",
+  "civic":      "civic",
+  "safety":     "safety",
+  "saved":      "saved",
+};
+function closeAllDropdowns() {
+  document.querySelectorAll(".cat-dd-tab[aria-expanded=\"true\"]").forEach(t => t.setAttribute("aria-expanded", "false"));
+  document.querySelectorAll(".cat-dd-panel:not([hidden])").forEach(p => p.hidden = true);
+}
+function openDropdown(tab) {
+  closeAllDropdowns();
+  tab.setAttribute("aria-expanded", "true");
+  const ddKey = tab.dataset.dd;
+  const panel = document.querySelector(`.cat-dd-panel[data-panel="${ddKey}"]`);
+  if (panel) panel.hidden = false;
+}
+// Toggle dropdown on tab click
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest(".cat-dd-tab[data-dd]");
+  if (tab) {
+    e.preventDefault();
+    if (tab.getAttribute("aria-expanded") === "true") closeAllDropdowns();
+    else openDropdown(tab);
+    return;
+  }
+  // Click outside any panel/tab closes everything
+  if (!e.target.closest(".cat-dd-panel")) closeAllDropdowns();
+});
+// Close on Escape
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") closeAllDropdowns();
+});
+
+// Click subsection inside a dropdown → resolve location, then activate that section.
+document.addEventListener("click", async (e) => {
+  const link = e.target.closest(".cat-dd-link[data-target]");
+  if (!link) return;
+  e.preventDefault();
+  closeAllDropdowns();
+  const targetSection = link.dataset.target;
+  const scrollTo = link.dataset.scroll || null;   // optional inner element id
+  // Map the parent panel's data-panel to a category key
+  const panel = link.closest(".cat-dd-panel");
+  const ddKey = panel ? panel.dataset.panel : null;
+  const catKey = CAT_DD_MAP[ddKey] || null;
+
+  // If we already have a resolved location, just activate the section.
+  if (lastGeo) {
+    runLandingFromDropdown(catKey, targetSection, scrollTo);
+    return;
+  }
+  // Else try Near me first. If denied/unavailable, fall back to Cloudflare IP city
+  // exposed via /api/health (which echoes cf.colo/country/etc) or prompt the user.
+  if ("geolocation" in navigator) {
+    showStatus("Locating you to load this section…", "info");
+    try {
+      const pos = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true, timeout: 10000, maximumAge: 60000,
+        });
+      });
+      clearStatus();
+      const feature = { geometry: { coordinates: [pos.coords.longitude, pos.coords.latitude] }, properties: {} };
+      if (addrEl) addrEl.value = `📍 Current location`;
+      // Stash the intent so the post-search handler activates the right section
+      _pendingDropdownIntent = { catKey, targetSection, scrollTo };
+      await runLookupFromFeature(feature);
+      return;
+    } catch (err) {
+      dlog("[dropdown] geolocation failed:", err && err.message);
+      // Fall through to manual prompt
+    }
+  }
+  // Geolocation denied or unavailable — prompt user to type a city/ZIP/address
+  showStatus(`Enable location, or type a city / ZIP / address above to load <b>${escapeHtml(link.querySelector(".dd-tx b")?.textContent || "this section")}</b>.`, "info");
+  // Focus the address input so user can type
+  if (addrEl) { addrEl.focus(); }
+  // Remember the intent — the submit handler will pick it up
+  _pendingDropdownIntent = { catKey, targetSection, scrollTo };
+});
+
+// Set by the dropdown flow when we want to land on a specific section after
+// the next successful location resolve. Read + cleared by renderResults.
+let _pendingDropdownIntent = null;
+
+// Called when we already have a location — just flip to the right section.
+function runLandingFromDropdown(catKey, targetSection, scrollTo) {
+  // Make sure results are visible
+  const results = $("results");
+  if (results) results.hidden = false;
+  document.body.classList.add("single-view", "results-shown");
+  // Apply the category filter so the section is in the allowed set
+  if (catKey && typeof applyCategoryFilter === "function") {
+    try { applyCategoryFilter(catKey); } catch (_) {}
+  }
+  // Activate the section
+  if (targetSection) {
+    const tab = document.querySelector(`.sec-tab[data-target="${targetSection}"]`);
+    if (tab) tab.click();
+    else {
+      // No sec-tab (e.g., sec-saved which doesn't have one) — activate via section-managed system
+      if (typeof activateSingleViewSection === "function") activateSingleViewSection(targetSection);
+    }
+  }
+  // If there's an inner element to scroll to (like #card-risks under My Home),
+  // do it after a brief delay so the section is rendered.
+  if (scrollTo) {
+    setTimeout(() => {
+      const el = document.getElementById(scrollTo);
+      if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 350);
+  }
+  // Scroll to the results section so user sees the landing
+  if (results) results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 // v0.70: Quick-chip click handler — pre-fills the search box with the chip's
 // query string, points location at Near me (or keeps whatever is typed), and
