@@ -177,6 +177,126 @@
   body.results-shown .landing-extras { display: none; }   /* hide product cards + trust strip */
   body.results-shown .quick-chips    { display: none; }   /* v0.70: hide quick-chips once results shown */
 
+  /* v0.71: NPS / RIDB list rows in Parks section */
+  .schools-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 10px 12px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .schools-row-body { flex: 1; min-width: 0; }
+  .schools-row-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+  .schools-row-title a { color: #0050C2; text-decoration: none; }
+  .schools-row-title a:hover { text-decoration: underline; }
+  .schools-row-meta {
+    font-size: 12px; color: var(--ink-soft);
+    margin-top: 3px;
+  }
+  .schools-row-desc {
+    font-size: 12.5px; color: var(--ink);
+    margin-top: 5px; line-height: 1.45;
+  }
+
+  /* v0.71: Live risks panel — NWS alerts + AirNow AQI + USGS quakes */
+  .live-risks { margin: 6px 0 18px; }
+  .live-risks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .live-risks-card {
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 16px;
+  }
+  .live-risks-card-header {
+    display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .live-risks-icon { font-size: 18px; }
+  .live-risks-card-title {
+    font-size: 13px; font-weight: 800;
+    color: var(--ink);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .live-risks-card-sub {
+    font-size: 12px; font-weight: 500;
+    color: var(--ink-faint);
+    margin-left: auto;
+  }
+  .live-risks-card-body { font-size: 13px; color: var(--ink); }
+  .live-risks-empty {
+    font-size: 13px; color: var(--ink-soft);
+    padding: 8px 0;
+  }
+  /* Alert severity color stripes (left border) */
+  .alert-item {
+    border-left: 3px solid #6b7280;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    background: rgba(15,23,42,0.03);
+    border-radius: 0 6px 6px 0;
+  }
+  .alert-item:last-child { margin-bottom: 0; }
+  .alert-item-extreme { border-left-color: #991B1B; background: rgba(153,27,27,0.06); }
+  .alert-item-severe  { border-left-color: #C2410C; background: rgba(194,65,12,0.06); }
+  .alert-item-moderate{ border-left-color: #CA8A04; background: rgba(202,138,4,0.06); }
+  .alert-item-minor   { border-left-color: #0F6E56; background: rgba(15,110,86,0.06); }
+  .alert-item-event {
+    font-weight: 700; font-size: 13.5px;
+    color: var(--ink);
+  }
+  .alert-item-meta {
+    font-size: 11.5px; color: var(--ink-faint);
+    margin-top: 3px;
+    text-transform: uppercase; letter-spacing: 0.3px;
+  }
+  .alert-item-area { font-size: 12px; color: var(--ink-soft); margin-top: 3px; }
+  .alert-item-link {
+    display: inline-block; margin-top: 6px;
+    font-size: 12px; color: #0050C2; text-decoration: none; font-weight: 600;
+  }
+  .alert-item-link:hover { text-decoration: underline; }
+  /* AQI value display */
+  .aqi-big {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-bottom: 6px;
+  }
+  .aqi-number { font-size: 36px; font-weight: 800; line-height: 1; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .aqi-category { font-size: 14px; font-weight: 700; }
+  .aqi-cat-good     { color: #00E400; }
+  .aqi-cat-moderate { color: #FFFF00; text-shadow: 0 0 1px #000; }
+  .aqi-cat-usg      { color: #FF7E00; }
+  .aqi-cat-unhealthy{ color: #FF0000; }
+  .aqi-cat-veryunhealthy { color: #8F3F97; }
+  .aqi-cat-hazardous{ color: #7E0023; }
+  .aqi-detail { font-size: 12px; color: var(--ink-soft); margin-top: 4px; }
+  /* Quake list */
+  .quake-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--line-2, #eef0f4);
+  }
+  .quake-item:last-child { border-bottom: 0; }
+  .quake-mag {
+    flex: 0 0 auto;
+    width: 38px; height: 38px;
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 8px;
+    font-weight: 800; font-size: 14px;
+    background: rgba(15,23,42,0.06);
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .quake-mag.qm-strong { background: rgba(194,65,12,0.14); color: #C2410C; }
+  .quake-mag.qm-major  { background: rgba(153,27,27,0.16); color: #991B1B; }
+  .quake-body { flex: 1; min-width: 0; }
+  .quake-place { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .quake-meta { font-size: 11.5px; color: var(--ink-faint); margin-top: 2px; }
+
   /* v0.70: Address overview — "Serves this address" panel above cat-nav */
   .address-overview {
     margin: 16px 0 14px;
@@ -2908,7 +3028,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.70</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.71</span>
     </div>
   </header>
 
@@ -3488,6 +3608,16 @@
           <h4>🌳 General parks &amp; gardens</h4>
           <div id="parks-park-tbody"></div>
         </div>
+        <!-- v0.71: National Park Service — federal parks within driving distance -->
+        <div class="school-section" id="parks-nps-section" hidden>
+          <h4>🏞️ National parks <span class="hint">— from National Park Service · official data</span></h4>
+          <div id="parks-nps-tbody"></div>
+        </div>
+        <!-- v0.71: RIDB — federal recreation sites (campgrounds, day use, fishing) -->
+        <div class="school-section" id="parks-rec-section" hidden>
+          <h4>🏕️ Federal recreation sites <span class="hint">— from Recreation.gov · campgrounds, trailheads, day-use</span></h4>
+          <div id="parks-rec-tbody"></div>
+        </div>
       </div>
       <!-- v0.33.2: Unified map showing all parks/playgrounds/trails + your home -->
       <div class="section-map" id="parks-map" style="margin-top:14px;"><div class="section-map-empty">Map shows pins for the parks above once results load.</div></div>
@@ -3830,7 +3960,39 @@
       </div>
     </div>
 
-    <!-- Climate risks — collapsed by default -->
+    <!-- v0.71: Live alerts panel — NWS active alerts + USGS earthquakes + AirNow
+         AQI. Always-visible at the top of the Risks section since these are
+         time-sensitive. Climate baseline risks live below as a collapsible. -->
+    <div class="live-risks" id="live-risks">
+      <div class="live-risks-grid">
+        <div class="live-risks-card" id="live-alerts-card">
+          <div class="live-risks-card-header">
+            <span class="live-risks-icon">🚨</span>
+            <span class="live-risks-card-title">Active alerts</span>
+            <span class="live-risks-card-sub" id="live-alerts-sub">Loading…</span>
+          </div>
+          <div class="live-risks-card-body" id="live-alerts-body"></div>
+        </div>
+        <div class="live-risks-card" id="live-aqi-card">
+          <div class="live-risks-card-header">
+            <span class="live-risks-icon">🌫️</span>
+            <span class="live-risks-card-title">Air quality</span>
+            <span class="live-risks-card-sub" id="live-aqi-sub">Loading…</span>
+          </div>
+          <div class="live-risks-card-body" id="live-aqi-body"></div>
+        </div>
+        <div class="live-risks-card" id="live-quakes-card">
+          <div class="live-risks-card-header">
+            <span class="live-risks-icon">🌍</span>
+            <span class="live-risks-card-title">Recent earthquakes</span>
+            <span class="live-risks-card-sub" id="live-quakes-sub">Loading…</span>
+          </div>
+          <div class="live-risks-card-body" id="live-quakes-body"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Climate risks — collapsed by default. Lives below the live alerts. -->
     <div class="collapsible collapsed risks-card" id="card-risks" hidden>
       <button class="collapsible-header" type="button" id="risks-toggle" aria-expanded="false">
         <span class="collapsible-icon">⚠️</span>
@@ -3890,7 +4052,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.70</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.71</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -8102,8 +8264,192 @@ function resolveRisks(addr, lat, lon, zone) {
   };
 }
 
+// v0.71 ─── Live-data risk feeds (NWS alerts + AirNow AQI + USGS quakes) ──
+// All three Worker endpoints are designed to fail gracefully — if a key is
+// missing or the upstream is down, frontend shows "no data" instead of erroring.
+const LIVE_RISKS_API_BASE = "/api";
+async function loadLiveRisks(geo) {
+  if (!geo) return;
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  if (!isFinite(lat) || !isFinite(lon)) return;
+  // Fire all three in parallel — independent
+  loadNwsAlerts(lat, lon);
+  loadAirNow(lat, lon);
+  loadUsgsQuakes(lat, lon);
+}
+
+async function loadNwsAlerts(lat, lon) {
+  const sub = $("live-alerts-sub");
+  const body = $("live-alerts-body");
+  if (!body) return;
+  try {
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/alerts?lat=${lat}&lon=${lon}`);
+    const data = await r.json();
+    const alerts = data.alerts || [];
+    if (!alerts.length) {
+      if (sub) sub.textContent = "No active alerts";
+      body.innerHTML = `<div class="live-risks-empty">All clear — no active National Weather Service alerts for this location.</div>`;
+      return;
+    }
+    if (sub) sub.textContent = `${alerts.length} active`;
+    body.innerHTML = alerts.slice(0, 5).map(a => {
+      const sev = (a.severity || "").toLowerCase();
+      const sevClass = sev === "extreme" ? "alert-item-extreme"
+                     : sev === "severe"  ? "alert-item-severe"
+                     : sev === "moderate"? "alert-item-moderate"
+                     : "alert-item-minor";
+      const expires = a.expires ? new Date(a.expires).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+      return `<div class="alert-item ${sevClass}">
+        <div class="alert-item-event">${escapeHtml(a.event || "Alert")}</div>
+        <div class="alert-item-meta">${escapeHtml(a.severity || "")} · ${escapeHtml(a.urgency || "")}${expires ? " · expires " + escapeHtml(expires) : ""}</div>
+        ${a.area ? `<div class="alert-item-area">${escapeHtml(a.area.length > 120 ? a.area.slice(0, 117) + "…" : a.area)}</div>` : ""}
+        <a class="alert-item-link" href="${escapeHtml(a.url || "https://www.weather.gov/")}" target="_blank" rel="noopener">Details on weather.gov →</a>
+      </div>`;
+    }).join("") + (alerts.length > 5 ? `<div class="live-risks-empty" style="margin-top:6px;">+${alerts.length - 5} more on <a href="https://www.weather.gov/" target="_blank" rel="noopener">weather.gov</a></div>` : "");
+  } catch (e) {
+    if (sub) sub.textContent = "unavailable";
+    body.innerHTML = `<div class="live-risks-empty">Couldn't reach the alerts feed right now.</div>`;
+    dlog("[nws] error", e);
+  }
+}
+
+async function loadAirNow(lat, lon) {
+  const sub = $("live-aqi-sub");
+  const body = $("live-aqi-body");
+  if (!body) return;
+  try {
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/aqi?lat=${lat}&lon=${lon}`);
+    const data = await r.json();
+    if (data.status === "no_key") {
+      if (sub) sub.textContent = "setup pending";
+      body.innerHTML = `<div class="live-risks-empty">AirNow API key not configured. Until then, check <a href="https://www.airnow.gov/?city=${encodeURIComponent("near me")}" target="_blank" rel="noopener">airnow.gov</a> for your area.</div>`;
+      return;
+    }
+    const primary = data.primary;
+    if (!primary || primary.aqi == null) {
+      if (sub) sub.textContent = "no nearby monitor";
+      body.innerHTML = `<div class="live-risks-empty">No AirNow monitoring station within ~25 miles. Try <a href="https://fire.airnow.gov/" target="_blank" rel="noopener">AirNow Fire &amp; Smoke Map</a> for low-cost sensor data.</div>`;
+      return;
+    }
+    const aqi = primary.aqi;
+    const cat = primary.category || "";
+    const catClass = aqi <= 50 ? "aqi-cat-good"
+                   : aqi <= 100 ? "aqi-cat-moderate"
+                   : aqi <= 150 ? "aqi-cat-usg"
+                   : aqi <= 200 ? "aqi-cat-unhealthy"
+                   : aqi <= 300 ? "aqi-cat-veryunhealthy"
+                   : "aqi-cat-hazardous";
+    if (sub) sub.textContent = primary.reporting_area ? `${primary.reporting_area}, ${primary.state || ""}`.replace(/, $/, "") : "Current";
+    body.innerHTML = `
+      <div class="aqi-big">
+        <span class="aqi-number">${aqi}</span>
+        <span class="aqi-category ${catClass}">${escapeHtml(cat)}</span>
+      </div>
+      <div class="aqi-detail">Pollutant: ${escapeHtml(primary.parameter || "—")} · Observed ${escapeHtml(primary.date || "")} at ${escapeHtml(String(primary.hour || ""))}:00</div>
+      <a class="alert-item-link" href="https://www.airnow.gov/" target="_blank" rel="noopener">Details on airnow.gov →</a>
+    `;
+  } catch (e) {
+    if (sub) sub.textContent = "unavailable";
+    body.innerHTML = `<div class="live-risks-empty">Couldn't reach AirNow right now.</div>`;
+    dlog("[airnow] error", e);
+  }
+}
+
+async function loadUsgsQuakes(lat, lon) {
+  const sub = $("live-quakes-sub");
+  const body = $("live-quakes-body");
+  if (!body) return;
+  try {
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/quakes?lat=${lat}&lon=${lon}&radius_km=200&min_mag=2.5&days=30`);
+    const data = await r.json();
+    const quakes = data.quakes || [];
+    if (!quakes.length) {
+      if (sub) sub.textContent = "none in 30 days";
+      body.innerHTML = `<div class="live-risks-empty">No M2.5+ earthquakes within 200km in the last 30 days.</div>`;
+      return;
+    }
+    if (sub) sub.textContent = `${quakes.length} in 30 days`;
+    const top = quakes.slice(0, 6);
+    body.innerHTML = top.map(q => {
+      const m = parseFloat(q.magnitude) || 0;
+      const magClass = m >= 5.0 ? "qm-major" : m >= 4.0 ? "qm-strong" : "";
+      const when = q.time ? new Date(q.time).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "";
+      return `<div class="quake-item">
+        <span class="quake-mag ${magClass}">${m.toFixed(1)}</span>
+        <div class="quake-body">
+          <div class="quake-place">${escapeHtml(q.place || "Unknown location")}</div>
+          <div class="quake-meta">${escapeHtml(when)}${q.depth_km != null ? " · " + q.depth_km.toFixed(0) + " km deep" : ""}</div>
+        </div>
+      </div>`;
+    }).join("") + (quakes.length > 6 ? `<div class="live-risks-empty" style="margin-top:6px;">+${quakes.length - 6} more on <a href="https://earthquake.usgs.gov/earthquakes/map/" target="_blank" rel="noopener">USGS map</a></div>` : "");
+  } catch (e) {
+    if (sub) sub.textContent = "unavailable";
+    body.innerHTML = `<div class="live-risks-empty">Couldn't reach USGS feed right now.</div>`;
+    dlog("[usgs] error", e);
+  }
+}
+
+// v0.71 ─── NPS + RIDB park feeds (called from loadNearbyParks) ─────────
+async function loadNpsAndRidb(lat, lon) {
+  // Fire in parallel
+  loadNpsParks(lat, lon);
+  loadRidbSites(lat, lon);
+}
+async function loadNpsParks(lat, lon) {
+  const sec = $("parks-nps-section");
+  const tb  = $("parks-nps-tbody");
+  if (!sec || !tb) return;
+  try {
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/parks-nps?lat=${lat}&lon=${lon}&radius=120`);
+    const data = await r.json();
+    if (data.status === "no_key") return;   // silently skip; NPS_KEY not configured
+    const parks = data.parks || [];
+    if (!parks.length) return;
+    sec.hidden = false;
+    tb.innerHTML = parks.slice(0, 8).map(p => `
+      <div class="schools-row">
+        <div class="schools-row-body">
+          <div class="schools-row-title"><a href="${escapeHtml(p.url || "#")}" target="_blank" rel="noopener">${escapeHtml(p.name || "")}</a></div>
+          <div class="schools-row-meta">${escapeHtml(p.designation || "")} · ${escapeHtml((p.states || "").split(",").join(", "))} · <b>${p.distance_miles} mi</b></div>
+          ${p.description ? `<div class="schools-row-desc">${escapeHtml(p.description)}</div>` : ""}
+        </div>
+      </div>
+    `).join("") + (parks.length > 8 ? `<div class="schools-empty" style="padding:6px 10px;font-size:12px;color:var(--ink-faint);">+${parks.length - 8} more — see <a href="https://www.nps.gov/findapark/" target="_blank" rel="noopener">nps.gov/findapark</a></div>` : "");
+  } catch (e) {
+    dlog("[nps] error", e);
+  }
+}
+async function loadRidbSites(lat, lon) {
+  const sec = $("parks-rec-section");
+  const tb  = $("parks-rec-tbody");
+  if (!sec || !tb) return;
+  try {
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/recreation?lat=${lat}&lon=${lon}&radius=50`);
+    const data = await r.json();
+    if (data.status === "no_key") return;   // silently skip; RIDB_KEY not configured
+    const sites = data.sites || [];
+    if (!sites.length) return;
+    sec.hidden = false;
+    tb.innerHTML = sites.slice(0, 10).map(s => `
+      <div class="schools-row">
+        <div class="schools-row-body">
+          <div class="schools-row-title"><a href="${escapeHtml(s.url || "#")}" target="_blank" rel="noopener">${escapeHtml(s.name || "")}</a></div>
+          <div class="schools-row-meta">${escapeHtml(s.type || "")}${s.phone ? " · " + escapeHtml(s.phone) : ""}</div>
+          ${s.description ? `<div class="schools-row-desc">${escapeHtml(s.description)}</div>` : ""}
+        </div>
+      </div>
+    `).join("") + (sites.length > 10 ? `<div class="schools-empty" style="padding:6px 10px;font-size:12px;color:var(--ink-faint);">+${sites.length - 10} more — see <a href="https://www.recreation.gov/" target="_blank" rel="noopener">recreation.gov</a></div>` : "");
+  } catch (e) {
+    dlog("[ridb] error", e);
+  }
+}
+
 function renderRisks(risks) {
   $("card-risks").hidden = false;
+  // v0.71: kick off live-risks fetch when this section renders too
+  if (lastRisksGeo) {
+    try { loadLiveRisks(lastRisksGeo); } catch (e) { dlog("[live-risks] error", e); }
+  }
   const maxScore = Math.max(...risks.rows.map(r => r.score));
   const summary = maxScore >= 7 ? "Significant risks — click to review"
                 : maxScore >= 4 ? "Some moderate risks — click to review"
@@ -8253,6 +8599,8 @@ async function loadNearbyParks(geo) {
   $("parks-sections").hidden = true;
   $("parks-summary").hidden = true;
   setText("parks-value", "Searching…");
+  // v0.71: Kick off NPS + RIDB in parallel (don't block OSM parks render)
+  loadNpsAndRidb(lat, lon);
   try {
     const elements = await fetchNearbyParks(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
     const items = elements
@@ -11139,6 +11487,7 @@ function renderResults(geo) {
   lastEventsGeo = geo;
   lastChGeo     = geo;   // v0.42
   lastHealthGeo = geo;   // v0.45
+  lastRisksGeo  = geo;   // v0.71 — live alerts, AQI, quakes
   // Reset loaded flags so any new search starts fresh
   for (const k of Object.keys(sectionLoadedOnce)) delete sectionLoadedOnce[k];
 
@@ -11165,6 +11514,7 @@ function renderResults(geo) {
 // v0.35.5: lazy-load registry — section header id → load fn that needs the
 // stashed geo. Only sections that hit Overpass appear here. Civic, Utility
 // services, Yard, Risks, My Home all use synchronous data and don't need it.
+let lastRisksGeo = null;
 const SECTION_LAZY_LOAD = {
   "sec-public-services": () => lastPsGeo     && loadNearbyPublicServices(lastPsGeo),
   "sec-schools":         () => lastSchoolGeo && loadNearbySchools(lastSchoolGeo),
@@ -11174,7 +11524,9 @@ const SECTION_LAZY_LOAD = {
   // v0.42 / v0.45 — curated, no Overpass dependency; we still lazy-load to
   // avoid running the city-filter + HRSA fetch on pages users don't visit.
   "sec-community-help":  () => lastChGeo     && loadCommunityHelp(lastChGeo),
-  "sec-health":          () => lastHealthGeo && loadHealthWellness(lastHealthGeo)
+  "sec-health":          () => lastHealthGeo && loadHealthWellness(lastHealthGeo),
+  // v0.71 — live data sources (Worker-proxied; free APIs)
+  "sec-risks":           () => lastRisksGeo  && loadLiveRisks(lastRisksGeo),
 };
 const sectionLoadedOnce = {};   // sectionId → true once its load has fired
 
