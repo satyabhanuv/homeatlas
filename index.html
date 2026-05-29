@@ -60,6 +60,11 @@
     --primary:   #006aff;       /* Zillow-style action blue */
     --primary-2: #0050c2;
     --primary-soft: rgba(0,106,255,0.08);
+    /* v0.76: Strict 3-shade blue palette — every blue on the page maps to one
+       of these. No ad-hoc rgba(0,80,194,X) shades anywhere. */
+    --blue-dark:  #0050C2;        /* Major actions: search button, primary CTAs, key links */
+    --blue-mid:   #2D6FD1;        /* Selected state: active tab text, selected events, highlights */
+    --blue-light: #E5EEFC;        /* Section highlight backgrounds: active tab fill, hover */
     --green:     #2d6a4f;       /* legacy green still used for badges/icons */
     --green-2:   #1b4332;
     --accent:    #d4a373;
@@ -562,51 +567,69 @@
     .ao-chip { padding: 5px 10px; font-size: 12px; }
   }
 
-  /* v0.75: Yelp-inspired category dropdown nav on landing page */
+  /* v0.75/v0.76: Yelp-inspired category dropdown nav on landing page,
+     restyled as Chrome-style tabs in v0.76. Rounded top, shared bottom
+     border, active tab "connects" to the dropdown panel below. */
   .cat-dd-nav {
     position: relative;
-    display: flex; flex-wrap: wrap; gap: 6px;
-    margin: 18px 0 8px;
-    padding: 6px;
-    background: var(--surface, #fff);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+    display: flex; flex-wrap: wrap; gap: 2px;
+    margin: 22px 0 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--blue-light);
   }
   body.results-shown .cat-dd-nav { display: none; }   /* hide once results render — cat-nav takes over */
   .cat-dd-tab {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 9px 14px;
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 11px 16px 10px;
     background: transparent;
-    border: 0;
-    border-radius: 8px;
-    color: var(--ink);
+    border: 2px solid transparent;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    color: var(--ink-soft);
     font-size: 14px; font-weight: 600;
     cursor: pointer;
     font-family: inherit;
-    transition: background 0.12s ease, color 0.12s ease;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
     flex: 1 1 auto;
     justify-content: center;
+    margin-bottom: -2px;   /* overlap the nav's bottom border */
+    position: relative;
   }
-  .cat-dd-tab:hover { background: rgba(0,80,194,0.06); color: #0050C2; }
+  .cat-dd-tab:hover { background: var(--blue-light); color: var(--blue-dark); }
   .cat-dd-tab[aria-expanded="true"] {
-    background: #0050C2; color: #fff;
+    background: var(--blue-light);
+    color: var(--blue-dark);
+    border-color: var(--blue-light);
+    /* "Hide" the bottom border by matching the panel background. */
   }
   .cat-dd-tab[aria-expanded="true"] .cat-dd-arrow { transform: rotate(180deg); }
   .cat-dd-icon { font-size: 17px; }
+  /* v0.76: CSS-drawn triangle arrow — bulletproof rendering across all
+     fonts/browsers. Was a unicode glyph ▾ that some clients rendered as a dot. */
   .cat-dd-arrow {
-    font-size: 11px; opacity: 0.75;
+    display: inline-block;
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid currentColor;
+    opacity: 0.7;
     transition: transform 0.15s ease;
+    margin-left: 2px;
   }
+  /* v0.76: dropdown panel "connects" to the active Chrome-tab — same light
+     blue background so visually they read as one continuous surface. */
   .cat-dd-panel {
     position: absolute;
-    top: calc(100% + 6px);
+    top: 100%;
     left: 0; right: 0;
-    background: var(--surface, #fff);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 8px;
-    box-shadow: 0 12px 32px rgba(15,23,42,0.14);
+    background: var(--blue-light);
+    border: 2px solid var(--blue-light);
+    border-top: 0;
+    border-radius: 0 12px 12px 12px;
+    padding: 10px;
+    box-shadow: 0 8px 24px rgba(15,23,42,0.10);
     z-index: 50;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -619,10 +642,11 @@
     border-radius: 8px;
     text-decoration: none;
     color: var(--ink);
+    background: rgba(255,255,255,0.5);
     transition: background 0.12s ease;
     cursor: pointer;
   }
-  .cat-dd-link:hover { background: rgba(0,80,194,0.06); }
+  .cat-dd-link:hover { background: #ffffff; color: var(--blue-dark); }
   .cat-dd-link .dd-em { font-size: 22px; line-height: 1.1; flex: 0 0 auto; }
   .cat-dd-link .dd-tx { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .cat-dd-link .dd-tx b { font-size: 14px; font-weight: 700; color: var(--ink); }
@@ -2078,37 +2102,42 @@
     background: var(--surface);
   }
 
-  /* v0.30: Radius filter row — sits on top of the section-nav inner */
+  /* v0.30 → v0.76: contextual radius filter. Label reads "Showing [section] within"
+     so users see distance is tied to the section they're viewing. */
   .radius-filter {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    padding: 6px 0 8px;
-    border-bottom: 1px solid var(--line-2);
-    margin-bottom: 8px;
+    padding: 8px 0 10px;
+    border-bottom: 0;
+    margin-bottom: 4px;
   }
   .radius-filter-label {
-    font-size: 12px; font-weight: 600;
-    color: var(--ink-soft); letter-spacing: 0.2px;
-    text-transform: uppercase; margin-right: 4px;
+    font-size: 13px; font-weight: 500;
+    color: var(--ink-soft); letter-spacing: 0;
+    text-transform: none; margin-right: 2px;
+  }
+  .radius-filter-label b {
+    font-weight: 700;
+    color: var(--blue-dark);
   }
   .radius-btn {
     flex: 0 0 auto;
-    padding: 6px 12px;
-    border-radius: 8px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    color: var(--ink);
+    padding: 5px 12px;
+    border-radius: 6px;
+    background: transparent;
+    border: 1.5px solid var(--line);
+    color: var(--ink-soft);
     font-size: 13px; font-weight: 600;
     letter-spacing: -0.005em;
     cursor: pointer;
-    transition: background 0.12s ease, border-color 0.12s ease;
+    transition: background 0.12s ease, border-color 0.12s ease, color 0.12s ease;
     font-family: inherit;
   }
-  .radius-btn:hover { background: var(--surface-2); border-color: #d6dbe3; }
+  .radius-btn:hover { background: var(--blue-light); border-color: var(--blue-light); color: var(--blue-dark); }
   .radius-btn.active {
-    background: var(--primary);
+    background: var(--blue-mid);
     color: #fff;
-    border-color: var(--primary);
-    box-shadow: 0 1px 4px rgba(0,106,255,0.18);
+    border-color: var(--blue-mid);
+    box-shadow: none;
   }
   .radius-status {
     margin-left: auto;
@@ -2141,44 +2170,46 @@
     border: 1px solid var(--line);
   }
   .psh-text { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; flex: 1; min-width: 200px; }
+  /* v0.76: section-nav-inner — Chrome-tab style, second level */
   .section-nav-inner {
-    display: flex; gap: 8px;
+    display: flex; gap: 2px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
     scrollbar-color: var(--line) transparent;
-    /* v0.68.1: only the tab strip is sticky, not the wrapping radius filter */
     position: sticky; top: 52px; z-index: 20;
     background: var(--surface);
-    padding: 6px 0;
+    padding: 4px 24px 0;
     margin: 0 -24px;
-    padding-left: 24px; padding-right: 24px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 2px solid var(--blue-light);
   }
   .section-nav-inner::-webkit-scrollbar { height: 4px; }
   .section-nav-inner::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+  /* v0.76: sec-tab as Chrome sub-tab — rounded top, shares bottom border */
   .sec-tab {
     flex: 0 0 auto;
-    padding: 11px 18px;
-    border-radius: 10px;
-    background: var(--surface);
-    border: 1px solid var(--line);
-    color: var(--ink);
+    padding: 9px 16px 8px;
+    border-radius: 8px 8px 0 0;
+    background: transparent;
+    border: 2px solid transparent;
+    border-bottom: 0;
+    color: var(--ink-soft);
     text-decoration: none;
-    font-size: 15px; font-weight: 600;
+    font-size: 14px; font-weight: 600;
     white-space: nowrap;
-    letter-spacing: -0.01em;
-    transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+    letter-spacing: -0.005em;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+    margin-bottom: -2px;
   }
-  .sec-tab:hover { background: var(--surface-2); border-color: #d6dbe3; }
+  .sec-tab:hover { background: var(--blue-light); color: var(--blue-dark); }
   .sec-tab:active { transform: translateY(1px); }
   .sec-tab.active {
-    background: var(--primary);
-    color: #fff;
-    border-color: var(--primary);
-    box-shadow: 0 2px 8px rgba(0,106,255,0.22);
+    background: var(--blue-light);
+    color: var(--blue-dark);
+    border-color: var(--blue-light);
+    box-shadow: none;
   }
-  .sec-tab.active:hover { background: var(--primary-2); }
+  .sec-tab.active:hover { background: var(--blue-light); }
   /* Section headers: leave room above for the sticky nav so they don't hide under it */
   /* v0.49.7: cat-nav (~52px) + section-nav (~96px stacked) = 148px ceiling */
   .page-section-header { scroll-margin-top: 156px; }
@@ -3241,13 +3272,16 @@
      Replaces the easy-to-miss text-only tab row. Each tab now has a big
      emoji icon, a label, and a distinct active-state with colored border.
      Color-coded per category so users learn the visual map. */
+  /* v0.76: cat-nav redesigned as Chrome-style tabs. Shared bottom border,
+     rounded tops, active tab "connects" with the content below it. */
   .cat-nav {
-    background: var(--surface-2, #f7f9fc);
-    border: 1px solid var(--line);
-    border-radius: 14px;
-    padding: 6px;
+    background: transparent;
+    border: 0;
+    border-bottom: 2px solid var(--blue-light);
+    border-radius: 0;
+    padding: 0;
     margin: 18px 0 18px;
-    display: flex; flex-wrap: nowrap; gap: 4px;
+    display: flex; flex-wrap: nowrap; gap: 2px;
     overflow-x: auto;
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -3258,18 +3292,21 @@
   .cat-nav::-webkit-scrollbar { display: none; }
   .cat-nav .cat-tab {
     flex: 1 0 auto;
-    min-width: 102px;
-    padding: 12px 12px 10px;
-    font-size: 13.5px; font-weight: 600;
+    min-width: 96px;
+    padding: 10px 12px 9px;
+    font-size: 13px; font-weight: 600;
     color: var(--ink-soft); text-decoration: none;
-    border-radius: 10px;
-    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    border: 2px solid transparent;
+    border-bottom: 0;
+    border-radius: 10px 10px 0 0;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
     text-align: center; white-space: nowrap;
     background: transparent;
-    transition: color 0.15s ease, background 0.15s ease, transform 0.1s ease;
+    transition: color 0.15s ease, background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    margin-bottom: -2px;
   }
   .cat-nav .cat-tab::before {
-    font-size: 24px; line-height: 1;
+    font-size: 20px; line-height: 1;
     display: block;
     filter: grayscale(15%);
   }
@@ -3280,22 +3317,19 @@
   .cat-nav .cat-tab[data-cat="safety"]::before    { content: "🛡️"; }
   .cat-nav .cat-tab[data-cat="saved"]::before     { content: "⭐"; }
   .cat-nav .cat-tab:hover {
-    color: var(--ink);
-    background: rgba(0,80,194,0.06);
+    color: var(--blue-dark);
+    background: var(--blue-light);
   }
-  .cat-nav .cat-tab:active { transform: scale(0.97); }
+  .cat-nav .cat-tab:active { transform: scale(0.98); }
+  /* v0.76: ALL active tabs use the same blue palette (no per-category color
+     variations). User asked for max 3 blue shades. */
   .cat-nav .cat-tab.active {
-    background: #ffffff;
-    color: #0050C2;
-    box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #0050C2;
+    background: var(--blue-light);
+    color: var(--blue-dark);
+    border-color: var(--blue-light);
+    box-shadow: none;
   }
   .cat-nav .cat-tab.active::before { filter: grayscale(0%); }
-  /* Per-category accent on the active tab — subtle color-code so each section feels distinct */
-  .cat-nav .cat-tab[data-cat="my-home"].active   { color: #2d6a4f; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #2d6a4f; }
-  .cat-nav .cat-tab[data-cat="help"].active      { color: #0F6E56; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #0F6E56; }
-  .cat-nav .cat-tab[data-cat="civic"].active     { color: #534AB7; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #534AB7; }
-  .cat-nav .cat-tab[data-cat="safety"].active    { color: #993C1D; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #993C1D; }
-  .cat-nav .cat-tab[data-cat="saved"].active     { color: #B45309; box-shadow: 0 1px 3px rgba(15,23,42,0.08), 0 0 0 1.5px #B45309; }
   @media (max-width: 700px) {
     /* v0.68.1: wrap to 2 rows on mobile so all 6 tabs (incl. Saved) are visible
        without horizontal swipe. Previous overflow-x: auto hid the Saved tab. */
@@ -3357,7 +3391,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.75</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.76</span>
     </div>
   </header>
 
@@ -3402,22 +3436,22 @@
          (or prompts for location) → activates the right section in results. -->
     <nav class="cat-dd-nav" id="catDdNav" aria-label="Browse by category">
       <button class="cat-dd-tab" type="button" data-dd="around-you" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">📍</span><span class="cat-dd-label">Around you</span><span class="cat-dd-arrow">▾</span>
+        <span class="cat-dd-icon">📍</span><span class="cat-dd-label">Around you</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="my-home" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">🏠</span><span class="cat-dd-label">My home</span><span class="cat-dd-arrow">▾</span>
+        <span class="cat-dd-icon">🏠</span><span class="cat-dd-label">My home</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="help" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">💚</span><span class="cat-dd-label">Community help</span><span class="cat-dd-arrow">▾</span>
+        <span class="cat-dd-icon">💚</span><span class="cat-dd-label">Community help</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="civic" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">🏛️</span><span class="cat-dd-label">Civic services</span><span class="cat-dd-arrow">▾</span>
+        <span class="cat-dd-icon">🏛️</span><span class="cat-dd-label">Civic services</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="safety" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">🛡️</span><span class="cat-dd-label">Safety</span><span class="cat-dd-arrow">▾</span>
+        <span class="cat-dd-icon">🛡️</span><span class="cat-dd-label">Safety</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="saved" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">⭐</span><span class="cat-dd-label">Saved</span><span class="cat-dd-arrow">▾</span>
+        <span class="cat-dd-icon">⭐</span><span class="cat-dd-label">Saved</span><span class="cat-dd-arrow"></span>
       </button>
 
       <!-- Dropdown panels — one per tab. Hidden by default; JS toggles. -->
@@ -3593,12 +3627,12 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
+      <!-- v0.76: contextual label — reads "Showing [active section] within: ..." -->
       <div class="radius-filter" role="radiogroup" aria-label="Search radius">
-        <span class="radius-filter-label">Searching within</span>
+        <span class="radius-filter-label" id="radius-context-label">Showing results within</span>
         <button type="button" class="radius-btn" data-radius="2"  role="radio" aria-checked="true">2 mi</button>
         <button type="button" class="radius-btn" data-radius="5"  role="radio">5 mi</button>
         <button type="button" class="radius-btn" data-radius="10" role="radio">10 mi</button>
-        <span class="radius-filter-label" style="margin-left:6px;text-transform:none;letter-spacing:0;color:var(--ink-faint);">RADIUS · daily-use range</span>
         <span class="radius-status" id="radius-status"></span>
       </div>
       <div class="section-nav-inner">
@@ -4536,7 +4570,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.75</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.76</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -12651,6 +12685,47 @@ function applyFocusSection(targetSecId) {
 // end, a setTimeout reset will have flipped it back already, and Back
 // will push a new entry that wipes the Forward stack.
 let _isHistoryRestore = false;
+
+// v0.76: Update the radius-filter label to include the active section name.
+// So users see "Showing Civic services within: [2mi] [5mi] [10mi]" — makes it
+// obvious that distance is contextual to the section, not a global filter.
+const SECTION_DISPLAY_NAME = {
+  "sec-events":          "Events near you",
+  "sec-schools":         "Schools",
+  "sec-parks":           "Parks & rec",
+  "sec-myhome":          "My home",
+  "sec-services":        "Utilities & internet",
+  "sec-yard":            "Gardening",
+  "sec-home-services":   "Home services",
+  "sec-community-help":  "Community help",
+  "sec-health":          "Health & wellness",
+  "sec-civic":           "Civic services",
+  "sec-public-services": "Emergency services",
+  "sec-risks":           "Live alerts",
+  "sec-saved":           "Saved places",
+};
+function updateRadiusContextLabel() {
+  const label = document.getElementById("radius-context-label");
+  if (!label) return;
+  const active = document.querySelector(".sec-tab.active");
+  const id = active && active.dataset && active.dataset.target;
+  const name = SECTION_DISPLAY_NAME[id];
+  if (name) {
+    label.innerHTML = `Showing <b>${escapeHtml(name)}</b> within`;
+  } else {
+    label.textContent = "Showing results within";
+  }
+}
+// Re-run whenever a sec-tab gets activated. The existing sec-tab handler
+// (around line 11440-ish) already toggles `.active`; we observe that.
+document.addEventListener("click", (e) => {
+  const tab = e.target.closest(".sec-tab");
+  if (!tab) return;
+  // Run after the existing handler flips .active (delegated, runs first)
+  setTimeout(updateRadiusContextLabel, 50);
+});
+// Also run on initial load + after the cat-filter activates a first sec-tab
+setTimeout(updateRadiusContextLabel, 600);
 
 // v0.75: Yelp-style dropdown nav — open/close + subsection click flow.
 // CAT_DD_MAP maps each dropdown tab to a category key (matches applyCategoryFilter).
