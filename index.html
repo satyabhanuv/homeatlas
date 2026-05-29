@@ -175,6 +175,91 @@
   body.results-shown .hero-eyebrow { display: none; }
   body.results-shown .hero-disclosure { display: none; }
   body.results-shown .landing-extras { display: none; }   /* hide product cards + trust strip */
+  body.results-shown .quick-chips    { display: none; }   /* v0.70: hide quick-chips once results shown */
+
+  /* v0.70: Address overview — "Serves this address" panel above cat-nav */
+  .address-overview {
+    margin: 16px 0 14px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg, rgba(0,80,194,0.04), rgba(15,110,86,0.04));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .address-overview-header {
+    display: flex; align-items: baseline; gap: 8px;
+    margin-bottom: 10px;
+  }
+  .address-overview-pin { font-size: 16px; }
+  .address-overview-title {
+    font-size: 13px; font-weight: 800;
+    color: var(--ink);
+    text-transform: uppercase; letter-spacing: 0.6px;
+  }
+  .address-overview-sub {
+    font-size: 13px; color: var(--ink-soft);
+    font-weight: 500;
+    margin-left: 4px;
+  }
+  .address-overview-chips {
+    display: flex; flex-wrap: wrap; gap: 8px;
+  }
+  .ao-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    color: var(--ink);
+    text-decoration: none;
+    font-size: 12.5px; font-weight: 600;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .ao-chip:hover { background: rgba(0,80,194,0.06); border-color: rgba(0,80,194,0.30); }
+  .ao-chip:active { transform: scale(0.97); }
+  .ao-chip-label { font-size: 10.5px; color: var(--ink-faint); font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; }
+  .ao-chip-value { color: var(--ink); }
+  @media (max-width: 600px) {
+    .address-overview { padding: 12px 14px; }
+    .ao-chip { padding: 5px 10px; font-size: 12px; }
+  }
+
+  /* v0.70: Quick-chip search shortcuts on homepage */
+  .quick-chips {
+    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    margin: 18px 0 8px;
+    padding: 14px 0;
+    border-top: 1px solid var(--line);
+  }
+  .quick-chips-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--ink-faint);
+    text-transform: uppercase; letter-spacing: 0.4px;
+    margin-right: 4px;
+  }
+  .quick-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    font-size: 13px; font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: background 0.12s ease, border-color 0.12s ease, transform 0.08s ease, color 0.12s ease;
+  }
+  .quick-chip:hover {
+    background: rgba(0,80,194,0.06);
+    border-color: rgba(0,80,194,0.30);
+    color: #0050C2;
+  }
+  .quick-chip:active { transform: scale(0.97); }
+  @media (max-width: 600px) {
+    .quick-chip { padding: 6px 11px; font-size: 12px; }
+    .quick-chips { padding: 12px 0; gap: 6px; }
+  }
 
   /* v0.47.1: "What's covered?" collapsed disclosure replaces the long hint
      paragraph. Single small line by default; expands to show coverage info. */
@@ -2232,6 +2317,51 @@
     text-transform: uppercase; letter-spacing: 0.3px;
     vertical-align: 2px;
   }
+  /* v0.70: Expanded trust-label pills (8 vocab) — replaces the 3-bucket pill */
+  .trust-pill {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.3px;
+    vertical-align: 2px;
+    white-space: nowrap;
+  }
+  .trust-pill-official   { background: rgba(15,110,86,0.10);  color: #0F6E56; border: 1px solid rgba(15,110,86,0.24); }
+  .trust-pill-dataset    { background: rgba(83,74,183,0.10);  color: #534AB7; border: 1px solid rgba(83,74,183,0.24); }
+  .trust-pill-linked     { background: rgba(0,80,194,0.08);   color: #0050C2; border: 1px solid rgba(0,80,194,0.20); }
+  .trust-pill-ticketed   { background: rgba(186,117,23,0.10); color: #BA7517; border: 1px solid rgba(186,117,23,0.24); }
+  .trust-pill-community  { background: rgba(180,83,9,0.10);   color: #B45309; border: 1px solid rgba(180,83,9,0.22); }
+  .trust-pill-claimed    { background: rgba(72,84,99,0.10);   color: #485463; border: 1px solid rgba(72,84,99,0.24); }
+  .trust-pill-verified   { background: rgba(15,110,86,0.18);  color: #0F6E56; border: 1px solid rgba(15,110,86,0.40); }
+  .trust-pill-unverified { background: rgba(120,120,128,0.10); color: #71717A; border: 1px solid rgba(120,120,128,0.24); }
+  /* v0.70: meta row under each event card — "Checked 5 min ago · ● High · Why · close to you" */
+  .cal-event-meta-row {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    margin-top: 4px;
+    font-size: 11px; color: var(--ink-faint);
+    letter-spacing: 0;
+  }
+  .cal-event-meta-row .meta-sep { color: #c5cad3; }
+  .cal-event-meta-row .meta-checked { font-variant-numeric: tabular-nums; }
+  .conf-pill {
+    display: inline-flex; align-items: center; gap: 3px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: rgba(15,23,42,0.04);
+    border: 1px solid rgba(15,23,42,0.08);
+    font-size: 10.5px; font-weight: 600;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .conf-high { color: #0F6E56; }
+  .conf-med  { color: #B45309; }
+  .conf-low  { color: #993C1D; }
+  .why-shown {
+    color: var(--ink-soft);
+    font-weight: 500;
+  }
   .cal-event-bucket-official  { background: rgba(15,110,86,0.10);  color: #0F6E56; border: 1px solid rgba(15,110,86,0.22); }
   .cal-event-bucket-community { background: rgba(0,80,194,0.08);   color: #0050C2; border: 1px solid rgba(0,80,194,0.18); }
   .cal-event-bucket-ticketed  { background: rgba(186,117,23,0.10); color: #BA7517; border: 1px solid rgba(186,117,23,0.22); }
@@ -2307,6 +2437,96 @@
     border: 1px solid rgba(83,74,183,0.22);
     font-size: 11px; font-weight: 600;
     vertical-align: 2px;
+  }
+
+  /* v0.69: Ways-to-watch chip + expandable panel on event cards */
+  .watch-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    margin-left: 4px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(15,23,42,0.06);
+    border: 1px solid rgba(15,23,42,0.14);
+    color: var(--ink-soft);
+    font-size: 11px; font-weight: 600;
+    cursor: pointer;
+    line-height: 1.6;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+    vertical-align: 2px;
+    font-family: inherit;
+  }
+  .watch-chip:hover {
+    background: rgba(0,80,194,0.10);
+    color: #0050C2;
+    border-color: rgba(0,80,194,0.30);
+  }
+  .watch-chip-open {
+    background: #0050C2;
+    color: #fff;
+    border-color: #0050C2;
+  }
+  .watch-panel {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: var(--surface-2, #f7f9fc);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .watch-panel-header {
+    font-size: 12px; font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 8px;
+    letter-spacing: 0.01em;
+  }
+  .watch-panel-sub {
+    font-size: 11px; font-weight: 500;
+    color: var(--ink-faint);
+    letter-spacing: 0;
+  }
+  .watch-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 7px 8px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--ink);
+    margin-bottom: 6px;
+    transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
+  }
+  .watch-row:last-child { margin-bottom: 0; }
+  .watch-row:hover { border-color: #b8c4d2; background: rgba(0,80,194,0.04); }
+  .watch-row:active { transform: scale(0.99); }
+  .watch-badge {
+    flex: 0 0 auto;
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 10px; font-weight: 800;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+  }
+  .watch-name {
+    flex: 1; min-width: 0;
+    font-size: 13px; font-weight: 600;
+    color: var(--ink);
+  }
+  .watch-note {
+    font-size: 11px; font-weight: 500;
+    color: var(--ink-faint);
+    margin-left: 4px;
+  }
+  .watch-go {
+    flex: 0 0 auto;
+    font-size: 11px; font-weight: 600;
+    color: #0050C2;
+    text-transform: uppercase; letter-spacing: 0.04em;
+  }
+  @media (max-width: 600px) {
+    .watch-chip { padding: 2px 8px; font-size: 10.5px; }
+    .watch-name { font-size: 12.5px; }
+    .watch-badge { width: 26px; height: 26px; font-size: 9.5px; }
   }
 
   /* v0.68: Save-star button on event cards */
@@ -2688,7 +2908,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.2</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.70</span>
     </div>
   </header>
 
@@ -2727,6 +2947,20 @@
         </button>
         <button type="submit" id="searchBtn">Search</button>
       </form>
+    </div>
+    <!-- v0.70: Quick-chip shortcuts — pre-formed searches for the most common
+         intents. Tap to auto-fill the "Looking for" box and trigger search
+         with Near-me location. Hidden once results are shown. -->
+    <div class="quick-chips" id="quickChips" aria-label="Quick searches">
+      <span class="quick-chips-label">Quick searches</span>
+      <button type="button" class="quick-chip" data-chip-q="free clinic">🏥 Free clinic</button>
+      <button type="button" class="quick-chip" data-chip-q="farmers market">🥬 Farmers market</button>
+      <button type="button" class="quick-chip" data-chip-q="food bank">🥫 Food bank</button>
+      <button type="button" class="quick-chip" data-chip-q="library">📚 Library</button>
+      <button type="button" class="quick-chip" data-chip-q="DMV">🚗 DMV</button>
+      <button type="button" class="quick-chip" data-chip-q="electric utility">⚡ Electric utility</button>
+      <button type="button" class="quick-chip" data-chip-q="flood risk">🌊 Flood risk</button>
+      <button type="button" class="quick-chip" data-chip-q="this weekend">🎉 This weekend</button>
     </div>
     <details class="hero-disclosure">
       <summary>What's covered &amp; how it works</summary>
@@ -2824,6 +3058,19 @@
         </div>
       </aside>
       <div class="results-main" id="results-main">
+
+    <!-- v0.70: Address overview — "Serves this address" facts surfaced above
+         the cat-nav so users see what's relevant to THEIR address before
+         drilling into category browsing. Populated by renderAddressOverview()
+         once a search resolves. Hidden until data arrives. -->
+    <div id="address-overview" class="address-overview" hidden>
+      <div class="address-overview-header">
+        <span class="address-overview-pin">📍</span>
+        <span class="address-overview-title">Serves this address</span>
+        <span class="address-overview-sub" id="address-overview-sub"></span>
+      </div>
+      <div class="address-overview-chips" id="address-overview-chips"></div>
+    </div>
 
     <!-- v0.47: Level-1 category nav. Filters the section-nav below to show
          only the services in the active category. Single blue accent for
@@ -3643,7 +3890,7 @@
       <div class="site-footer-brand-col">
         <h3>Nearnity</h3>
         <p>Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. No paid placement. No accounts. No tracking.</p>
-        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.68.2</span></p>
+        <p style="font-size:12.5px;color:var(--ink-faint);">© 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.70</span></p>
       </div>
       <div class="site-footer-col">
         <div class="site-footer-col-label">Explore</div>
@@ -6731,6 +6978,74 @@ function compactCardHtml(r, opts = {}) {
 }
 
 /* -------- Renderers -------------------------------------------------- */
+// v0.70: Address overview — "Serves this address" summary above cat-nav.
+// Renders city/county/state + utility/internet/schools/climate facts as
+// click-through chips. Called once geo is resolved; each chip jumps to
+// the relevant deep section.
+function renderAddressOverview(geo) {
+  const a = geo.address || {};
+  const container = document.getElementById("address-overview");
+  const subEl = document.getElementById("address-overview-sub");
+  const chipsEl = document.getElementById("address-overview-chips");
+  if (!container || !chipsEl) return;
+  const city = a.city || a.town || a.village || a.hamlet || "";
+  const countyMeta = (typeof getCountyMeta === "function") ? getCountyMeta(a) : { name: a.county || "" };
+  const stateCode = (typeof getStateCode === "function" ? getStateCode(a) : "") || a.state || "";
+  const place = [city, countyMeta.name ? `${countyMeta.name} County` : "", stateCode].filter(Boolean).join(" · ");
+  subEl.textContent = place || (geo.display_name ? geo.display_name.split(",").slice(0, 2).join(", ") : "");
+  // Build chips — each is a click-target to its deep section.
+  // Some values (utility, school district, climate) get populated later when
+  // their respective lookups complete — we'll re-call this function then.
+  const chips = [];
+  if (city)       chips.push({ label: "City",         value: city,           target: "sec-civic" });
+  if (countyMeta.name) chips.push({ label: "County",  value: `${countyMeta.name} County`, target: "sec-civic" });
+  if (stateCode)  chips.push({ label: "State",        value: stateCode,      target: "sec-civic" });
+  // Utility (electric) — read from the rendered electric-value field if filled
+  const electricVal = (document.getElementById("electric-value")?.textContent || "").trim();
+  if (electricVal && electricVal !== "—" && electricVal.length < 40) {
+    chips.push({ label: "Electric", value: electricVal, target: "sec-services" });
+  }
+  // Internet — count internet providers if rendered
+  const intNodes = document.querySelectorAll("#card-services .provider-grid .compact-card");
+  if (intNodes.length > 0) {
+    chips.push({ label: "Internet", value: `${intNodes.length} provider${intNodes.length === 1 ? "" : "s"}`, target: "sec-services" });
+  }
+  // School district — read from the school-value field
+  const schoolVal = (document.getElementById("school-value")?.textContent || "").trim();
+  if (schoolVal && schoolVal !== "—" && !schoolVal.includes("skeleton") && schoolVal.length < 60) {
+    chips.push({ label: "Schools", value: schoolVal, target: "sec-schools" });
+  }
+  // Climate risks — read from risks summary if available
+  const risksSummary = (document.getElementById("risks-summary")?.textContent || "").trim();
+  if (risksSummary && !risksSummary.includes("Click to see")) {
+    chips.push({ label: "Climate", value: risksSummary.slice(0, 38), target: "sec-risks" });
+  }
+  if (!chips.length) {
+    container.hidden = true;
+    return;
+  }
+  chipsEl.innerHTML = chips.map(c =>
+    `<button type="button" class="ao-chip" data-ao-target="${escapeHtml(c.target)}" title="Jump to ${escapeHtml(c.label)} details">
+      <span class="ao-chip-label">${escapeHtml(c.label)}</span>
+      <span class="ao-chip-value">${escapeHtml(c.value)}</span>
+    </button>`
+  ).join("");
+  container.hidden = false;
+}
+// Click handler for address-overview chips — jump to the deep section.
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".ao-chip[data-ao-target]");
+  if (!chip) return;
+  const targetId = chip.dataset.aoTarget;
+  const secTab = document.querySelector(`.sec-tab[data-target="${targetId}"]`);
+  if (secTab) {
+    secTab.click();
+  } else {
+    const section = document.getElementById(targetId);
+    if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+});
+
 function renderResolved(geo) {
   const a = geo.address || {};
   // v0.67: Reveal the Address-resolved card now that we actually have data.
@@ -6738,6 +7053,13 @@ function renderResolved(geo) {
   // first paint don't see "Address resolved" with em-dash placeholders.
   const ra = document.getElementById("sub-myhome-address");
   if (ra) ra.hidden = false;
+  // v0.70: Surface a compact "Serves this address" overview above cat-nav.
+  // Called again later when utility/school/climate data loads to fill chips.
+  try { renderAddressOverview(geo); } catch (e) { dlog("[overview] render failed", e); }
+  // Re-render after a delay so async data (utility/internet/schools/climate)
+  // has had a chance to populate.
+  setTimeout(() => { try { renderAddressOverview(geo); } catch (_) {} }, 1200);
+  setTimeout(() => { try { renderAddressOverview(geo); } catch (_) {} }, 3500);
   setText("ra-street", getStreet(a));
   setText("ra-city",   a.city || a.town || a.village || a.hamlet || "—");
   // County with inferred-marker if we filled it from city fallback
@@ -9069,6 +9391,294 @@ const _EVENT_ICON_RULES = [
   [/\b(parade)\b/i, "🎺"],
   [/\b(festival|fair|fest|carnival|jubilee|celebration)\b/i, "🎉"],
 ];
+// v0.69: Ways-to-watch metadata. For televised/streamed events (mostly sports
+// + some civic broadcasts) we attach a list of broadcasters with deep-links so
+// the user can choose to drive there OR watch from home. Implementation is
+// client-side because broadcast rights data per-game is not in any free API
+// — we go LEAGUE-level (every game of that league has these options) which
+// is honest, covers 100% of league games, and never requires per-game data.
+//
+// Each entry: { name, hue, url, note? }
+// hue = CSS background tint for the pill (brand-recognizable color).
+const _WAYS_LEAGUE_PASS = {
+  wnba:  { name: "WNBA League Pass", hue: "#FF671B", url: "https://watch.wnba.com/" },
+  nba:   { name: "NBA League Pass",  hue: "#1D428A", url: "https://www.nba.com/leaguepass" },
+  nfl:   { name: "NFL+",             hue: "#013369", url: "https://www.nfl.com/plus/" },
+  nhl:   { name: "NHL.TV",           hue: "#041E42", url: "https://watch.nhl.com/" },
+  mlb:   { name: "MLB.TV",           hue: "#041E42", url: "https://www.mlb.com/tv" },
+  mls:   { name: "MLS Season Pass",  hue: "#000000", url: "https://tv.apple.com/us/mls" },
+};
+// Broadcasters that carry a given league's games. (League-wide, not per-game.)
+const _WAYS_BY_LEAGUE = {
+  wnba: [
+    { name: "Prime Video",         hue: "#00A8E1", url: "https://www.amazon.com/wnba/" },
+    { name: "ESPN",                hue: "#D7252B", url: "https://www.espn.com/wnba/" },
+    { name: "ESPN+",               hue: "#000000", url: "https://plus.espn.com/" },
+    { name: "ABC",                 hue: "#000000", url: "https://www.espn.com/watch/abc/" },
+    { name: "CBS Sports / ION",    hue: "#003366", url: "https://www.iontelevision.com/sports" },
+    { name: "NBA TV",              hue: "#1D428A", url: "https://www.nba.com/watch" },
+    _WAYS_LEAGUE_PASS.wnba,
+  ],
+  nba: [
+    { name: "ESPN",                hue: "#D7252B", url: "https://www.espn.com/nba/" },
+    { name: "ABC",                 hue: "#000000", url: "https://www.espn.com/watch/abc/" },
+    { name: "TNT (on Max)",        hue: "#0046B4", url: "https://www.max.com/sports" },
+    { name: "NBA TV",              hue: "#1D428A", url: "https://www.nba.com/watch" },
+    { name: "Prime Video",         hue: "#00A8E1", url: "https://www.amazon.com/gp/video/sports/nba", note: "From 2025-26 season" },
+    _WAYS_LEAGUE_PASS.nba,
+  ],
+  nfl: [
+    { name: "CBS",                 hue: "#003F7F", url: "https://www.cbssports.com/nfl/" },
+    { name: "FOX",                 hue: "#0033A0", url: "https://www.foxsports.com/nfl" },
+    { name: "NBC (Sunday Night)",  hue: "#005DAA", url: "https://www.nbcsports.com/nfl" },
+    { name: "ESPN/ABC (Monday)",   hue: "#D7252B", url: "https://www.espn.com/nfl/" },
+    { name: "Prime Video (Thursday)", hue: "#00A8E1", url: "https://www.amazon.com/gp/video/sports/nfl" },
+    { name: "Peacock (select)",    hue: "#000000", url: "https://www.peacocktv.com/sports/nfl" },
+    { name: "NFL Network",         hue: "#013369", url: "https://www.nfl.com/network/" },
+    _WAYS_LEAGUE_PASS.nfl,
+  ],
+  mlb: [
+    { name: "FOX Sports",          hue: "#0033A0", url: "https://www.foxsports.com/mlb" },
+    { name: "ESPN",                hue: "#D7252B", url: "https://www.espn.com/mlb/" },
+    { name: "TBS",                 hue: "#000000", url: "https://www.tbs.com/sports" },
+    { name: "Apple TV+ (Friday)",  hue: "#000000", url: "https://tv.apple.com/us/mlb" },
+    { name: "Peacock (Sunday AM)", hue: "#000000", url: "https://www.peacocktv.com/sports/mlb" },
+    _WAYS_LEAGUE_PASS.mlb,
+  ],
+  nhl: [
+    { name: "ESPN/ABC",            hue: "#D7252B", url: "https://www.espn.com/nhl/" },
+    { name: "TNT (on Max)",        hue: "#0046B4", url: "https://www.max.com/sports" },
+    { name: "Hulu (live games)",   hue: "#1CE783", url: "https://www.hulu.com/live-tv/nhl" },
+    _WAYS_LEAGUE_PASS.nhl,
+  ],
+  mls: [
+    { name: "Apple TV — MLS",      hue: "#000000", url: "https://tv.apple.com/us/mls" },
+    _WAYS_LEAGUE_PASS.mls,
+  ],
+  "college-football": [
+    { name: "ESPN / ABC",          hue: "#D7252B", url: "https://www.espn.com/college-football/" },
+    { name: "CBS",                 hue: "#003F7F", url: "https://www.cbssports.com/college-football/" },
+    { name: "FOX (Big Noon)",      hue: "#0033A0", url: "https://www.foxsports.com/college-football" },
+    { name: "NBC / Peacock",       hue: "#005DAA", url: "https://www.peacocktv.com/sports/college-football" },
+  ],
+  "college-basketball": [
+    { name: "ESPN",                hue: "#D7252B", url: "https://www.espn.com/mens-college-basketball/" },
+    { name: "CBS",                 hue: "#003F7F", url: "https://www.cbssports.com/college-basketball/" },
+    { name: "FOX",                 hue: "#0033A0", url: "https://www.foxsports.com/college-basketball" },
+    { name: "TNT (on Max)",        hue: "#0046B4", url: "https://www.max.com/sports" },
+  ],
+  ufc: [
+    { name: "ESPN+ (PPV)",         hue: "#000000", url: "https://plus.espn.com/ufc" },
+    { name: "ESPN",                hue: "#D7252B", url: "https://www.espn.com/mma/" },
+  ],
+  tennis: [
+    { name: "ESPN",                hue: "#D7252B", url: "https://www.espn.com/tennis/" },
+    { name: "Tennis Channel",      hue: "#E6E600", url: "https://www.tennischannel.com/watch/" },
+  ],
+  golf: [
+    { name: "Golf Channel",        hue: "#005DAA", url: "https://www.nbcsports.com/golf" },
+    { name: "CBS / NBC weekends",  hue: "#003F7F", url: "https://www.cbssports.com/golf/" },
+    { name: "ESPN+ (early rds.)",  hue: "#000000", url: "https://plus.espn.com/" },
+  ],
+  // Civic broadcasts — many cities stream council meetings on Granicus/YouTube
+  "civic-meeting": [
+    { name: "City YouTube",        hue: "#FF0000", url: "https://www.youtube.com/results?search_query=city+council+meeting+livestream" },
+    { name: "Granicus (city)",     hue: "#005DAA", url: "https://granicus.com/" },
+  ],
+};
+// Detect which league an event belongs to from title/venue. Two-tier match:
+//   - HIGH-confidence tokens (unique names + league brand) match alone
+//   - AMBIGUOUS tokens (jazz / heat / magic / storm — also non-sports words)
+//     require a "vs" or league brand to be present in the title to count.
+// Returns null if no broadcast info available.
+function _hasVsContext(s) { return /\b(vs\.?|@)\b/i.test(s); }
+const _WAYS_LEAGUE_RULES = [
+  // ─── WNBA — high-confidence brand / unique team names ───
+  [/\b(wnba|valkyries|fever|liberty|aces|sparks|mystics|lynx)\b/i, "wnba"],
+  // ─── NBA — high-confidence ───
+  [/\b(nba|warriors|lakers|celtics|knicks|bulls|nets vs|76ers|sixers|raptors|bucks|cavaliers|cavs|pistons|pacers|hornets|grizzlies|pelicans|spurs|rockets|mavericks|mavs|nuggets|timberwolves|clippers|trail blazers|blazers)\b/i, "nba"],
+  // ─── NFL — team names mostly unique enough ───
+  [/\b(nfl|49ers|raiders|chiefs|broncos|chargers|cowboys|eagles|patriots|jets vs|dolphins|bills|steelers|ravens|browns|bengals|texans|colts|jaguars|titans|saints|falcons|buccaneers|bucs|bears vs|lions vs|packers|vikings|rams|seahawks|commanders)\b/i, "nfl"],
+  // ─── MLB — team names ───
+  [/\b(mlb|yankees|red sox|cubs|astros|braves|mets|phillies|rays|mariners|athletics|padres|rockies|brewers|twins|guardians|royals|white sox|orioles|blue jays|nationals|pirates|reds vs|d-?backs|diamondbacks|marlins)\b/i, "mlb"],
+  // ─── NHL — team names mostly unique ───
+  [/\b(nhl|sharks|ducks|golden knights|avalanche|oilers|flames|canucks|coyotes|blackhawks|red wings|predators|penguins|capitals|flyers|islanders|bruins|sabres|hurricanes|lightning|maple leafs|senators|canadiens|kraken|blue jackets)\b/i, "nhl"],
+  // ─── MLS — team names ───
+  [/\b(mls|earthquakes|la galaxy|sounders|whitecaps|austin fc|inter miami|atlanta united|nycfc|red bulls|nashville sc|sporting kc|fc cincinnati|minnesota united|orlando city|portland timbers|real salt lake|st\.? louis city|toronto fc|vancouver whitecaps)\b/i, "mls"],
+  // ─── College sports ───
+  [/\b(college football|ncaa football|bowl game|rose bowl|orange bowl|sugar bowl|cotton bowl|fiesta bowl|cfp)\b/i, "college-football"],
+  [/\b(college basketball|ncaa basketball|march madness|final four|nit tournament)\b/i, "college-basketball"],
+  // ─── Combat sports ───
+  [/\b(ufc|mma|fight night)\b/i, "ufc"],
+  // ─── Tennis / golf ───
+  [/\b(tennis|atp|wta|wimbledon|french open|australian open)\b/i, "tennis"],
+  [/\b(us open)\b/i, "tennis"],   // US Open is most often tennis when no "golf" qualifier
+  [/\b(pga|lpga|masters tournament|the open championship|golf tournament)\b/i, "golf"],
+  // ─── Civic meeting broadcasts ───
+  [/\b(city council|town hall|board meeting|public hearing|commission meeting|planning commission)\b/i, "civic-meeting"],
+];
+// Ambiguous tokens — must be paired with city or "vs"/"@" or league brand.
+// Each entry: [token regex, full-city-team regex, league key]
+const _WAYS_AMBIGUOUS_RULES = [
+  // WNBA ambiguous (also weather / generic words)
+  [/\b(sky|sun|storm|mercury|dream|wings)\b/i,
+   /\b(chicago sky|connecticut sun|seattle storm|phoenix mercury|atlanta dream|dallas wings)\b/i, "wnba"],
+  // NBA ambiguous (also concert / event / weather words)
+  [/\b(jazz|heat|magic|wizards|hawks|kings|suns|thunder)\b/i,
+   /\b(utah jazz|miami heat|orlando magic|washington wizards|atlanta hawks|sacramento kings|phoenix suns|oklahoma city thunder|okc thunder)\b/i, "nba"],
+  // MLB ambiguous
+  [/\b(giants|cardinals|angels|tigers|rangers)\b/i,
+   /\b(san francisco giants|st\.? louis cardinals|los angeles angels|anaheim angels|detroit tigers|texas rangers)\b/i, "mlb"],
+  // NHL ambiguous
+  [/\b(stars|wild|jets|devils|panthers|rangers|kings)\b/i,
+   /\b(dallas stars|minnesota wild|winnipeg jets|new jersey devils|florida panthers|new york rangers|los angeles kings)\b/i, "nhl"],
+  // NFL ambiguous
+  [/\b(giants|cardinals|bears|lions|panthers)\b/i,
+   /\b(new york giants|arizona cardinals|chicago bears|detroit lions|carolina panthers)\b/i, "nfl"],
+];
+function detectLeague(ev) {
+  const hay = `${ev.title || ""} ${ev.venue || ""}`.toLowerCase();
+  // Tier 1 — unambiguous brand / team names match alone
+  for (const [re, lg] of _WAYS_LEAGUE_RULES) {
+    if (re.test(hay)) return lg;
+  }
+  // Tier 2 — ambiguous tokens (jazz/heat/magic/storm/etc.) only count when
+  // either paired with a city ("Utah Jazz") or used in a "vs"/"@" matchup
+  // ("Jazz vs Suns"). Otherwise "Jazz Festival" / "Heat Advisory" / "Magic
+  // Show" would incorrectly route to sports broadcasters.
+  const hasVs = _hasVsContext(hay);
+  for (const [tokenRe, fullRe, lg] of _WAYS_AMBIGUOUS_RULES) {
+    if (fullRe.test(hay)) return lg;
+    if (hasVs && tokenRe.test(hay)) return lg;
+  }
+  return null;
+}
+function waysToWatchForEvent(ev) {
+  const lg = detectLeague(ev);
+  if (!lg) return [];
+  return _WAYS_BY_LEAGUE[lg] || [];
+}
+function watchChipHtml(ev) {
+  const ways = waysToWatchForEvent(ev);
+  if (!ways.length) return "";
+  const evId = saveIdForEvent(ev);
+  return `<button type="button" class="watch-chip" data-watch-toggle="${escapeHtml(evId)}"
+    aria-expanded="false"
+    title="Watch this game / event from home"
+  >📺 Watch · ${ways.length}</button>`;
+}
+function watchPanelHtml(ev) {
+  const ways = waysToWatchForEvent(ev);
+  if (!ways.length) return "";
+  const evId = saveIdForEvent(ev);
+  const rows = ways.map(w => `
+    <a class="watch-row" href="${escapeHtml(w.url)}" target="_blank" rel="noopener">
+      <span class="watch-badge" style="background:${escapeHtml(w.hue)};">${escapeHtml(w.name.slice(0, 2).toUpperCase())}</span>
+      <span class="watch-name">${escapeHtml(w.name)}${w.note ? ` <span class="watch-note">${escapeHtml(w.note)}</span>` : ""}</span>
+      <span class="watch-go">Watch ↗</span>
+    </a>
+  `).join("");
+  return `<div class="watch-panel" id="watch-panel-${escapeHtml(evId)}" hidden>
+    <div class="watch-panel-header">Ways to watch <span class="watch-panel-sub">— league-wide broadcasters; specific game may not be on every option</span></div>
+    ${rows}
+  </div>`;
+}
+// Global click handler for watch-chip toggle (delegated, installed once below)
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".watch-chip[data-watch-toggle]");
+  if (!btn) return;
+  e.preventDefault();
+  e.stopPropagation();
+  const id = btn.dataset.watchToggle;
+  const panel = document.getElementById(`watch-panel-${id}`);
+  if (!panel) return;
+  const opening = panel.hidden;
+  panel.hidden = !opening;
+  btn.setAttribute("aria-expanded", String(opening));
+  btn.classList.toggle("watch-chip-open", opening);
+});
+
+// v0.70: Trust label vocabulary — expanded from the 3-bucket pill set per
+// the ChatGPT recommendations doc. Worker now emits `trust_label` directly
+// on every event from the canonical set; this helper handles older cached
+// rows (which only have `source_bucket`) by mapping bucket → label.
+const _BUCKET_TO_LABEL = {
+  official:  "Official source",
+  community: "Source-linked",
+  ticketed:  "Ticketed event source",
+};
+function trustLabelForEvent(ev) {
+  if (ev.trust_label) return ev.trust_label;
+  if (ev.source_bucket && _BUCKET_TO_LABEL[ev.source_bucket]) return _BUCKET_TO_LABEL[ev.source_bucket];
+  // Fall back to inference from source string (matches Worker logic)
+  const s = (ev.source || "").toLowerCase();
+  if (s.includes("ticketmaster") || s.includes("seatgeek") || s.includes("ticketweb")) return "Ticketed event source";
+  if (s.includes("city calendar") || s.includes("parks") || s.includes("library")) return "Official source";
+  if (s.includes("usda") || s.includes("hrsa") || s.includes("census")) return "Public dataset";
+  return "Source-linked";
+}
+// Map label → color class (defined in CSS as .trust-pill-* )
+function trustClassForLabel(label) {
+  return {
+    "Official source":        "trust-pill-official",
+    "Public dataset":         "trust-pill-dataset",
+    "Source-linked":          "trust-pill-linked",
+    "Ticketed event source":  "trust-pill-ticketed",
+    "Community submitted":    "trust-pill-community",
+    "Business claimed":       "trust-pill-claimed",
+    "Nearnity verified":      "trust-pill-verified",
+    "Unverified listing":     "trust-pill-unverified",
+  }[label] || "trust-pill-linked";
+}
+function trustPillHtml(ev) {
+  const label = trustLabelForEvent(ev);
+  const cls = trustClassForLabel(label);
+  return `<span class="trust-pill ${cls}" title="${escapeHtml(label)} — ${ev.source ? "via " + escapeHtml(ev.source) : ""}">${escapeHtml(label)}</span>`;
+}
+// "Checked X min/hr ago" helper for the last_checked field (or falls back to
+// "Checked recently" if Worker didn't supply it — older curated seed rows).
+function checkedAgoText(ev) {
+  const ts = ev.last_checked;
+  if (!ts) return "Checked recently";
+  const d = new Date(ts);
+  if (isNaN(d)) return "Checked recently";
+  const mins = Math.max(1, Math.round((Date.now() - d.getTime()) / 60000));
+  if (mins < 60) return `Checked ${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `Checked ${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  return `Checked ${days}d ago`;
+}
+function confidenceText(ev) {
+  const c = (ev.confidence || "").toLowerCase();
+  if (c === "high")   return `<span class="conf-pill conf-high" title="High confidence — structured record from a known feed">● High</span>`;
+  if (c === "medium") return `<span class="conf-pill conf-med" title="Medium confidence — community/curated source">● Medium</span>`;
+  if (c === "low")    return `<span class="conf-pill conf-low" title="Low confidence — unverified or user-submitted">● Low</span>`;
+  return "";
+}
+// "Why shown" — short explanation rendered on each card.
+function whyShownText(ev) {
+  const reasons = [];
+  if (ev._tier === "essential" || ev._tier === "daily") reasons.push("close to you");
+  else if (ev._tier === "nearby") reasons.push("within your radius");
+  else if (ev._tier === "regional") reasons.push("regional match");
+  else if (ev._tier === "destination") reasons.push("worth the drive");
+  if (ev.free) reasons.push("free");
+  if (ev.source_bucket === "official") reasons.push("official source");
+  if (!reasons.length) return "";
+  return `<span class="why-shown" title="Why this card is shown">Why · ${escapeHtml(reasons.join(" · "))}</span>`;
+}
+// Compact metadata row rendered under every event card.
+function metaRowHtml(ev) {
+  const conf = confidenceText(ev);
+  const why = whyShownText(ev);
+  return `<div class="cal-event-meta-row">
+    <span class="meta-checked">${escapeHtml(checkedAgoText(ev))}</span>
+    ${conf ? `<span class="meta-sep">·</span>${conf}` : ""}
+    ${why ? `<span class="meta-sep">·</span>${why}` : ""}
+  </div>`;
+}
+
 function iconForEvent(ev) {
   const hay = `${ev.title || ""} ${ev.venue || ""} ${ev.category || ""}`.toLowerCase();
   for (const [re, icon] of _EVENT_ICON_RULES) {
@@ -9571,8 +10181,9 @@ function _renderFlatEventList(events, timeWindow) {
       ? `<span class="cal-event-series">+${ev.related_count} more date${ev.related_count === 1 ? "" : "s"}</span>`
       : "";
     const bucket = inferBucket(ev);
-    const bucketLabel = bucket.charAt(0).toUpperCase() + bucket.slice(1);
-    const bucketTag = `<span class="cal-event-bucket cal-event-bucket-${bucket}" title="Source bucket: ${bucketLabel}">${bucketLabel}</span>`;
+    // v0.70: richer trust-label pill (Official / Public dataset / Source-linked /
+    // Ticketed / Community submitted / etc.) replaces the 3-bucket pill.
+    const trustPill = trustPillHtml(ev);
     // v0.68: save-star button
     const saveItem = {
       id: saveIdForEvent(ev),
@@ -9582,12 +10193,17 @@ function _renderFlatEventList(events, timeWindow) {
       url: ev.url,
     };
     const star = saveStarButtonHtml(saveItem);
+    const watchChip = watchChipHtml(ev);
+    const watchPanel = watchPanelHtml(ev);
+    const metaRow = metaRowHtml(ev);
     return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
+        <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${trustPill} ${star} ${watchChip}</div>
         ${venue}
+        ${metaRow}
         <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
+        ${watchPanel}
       </div>
     </div>`;
   };
@@ -9685,12 +10301,15 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
       url: ev.url,
     };
     const star = saveStarButtonHtml(saveItem);
+    const watchChip = watchChipHtml(ev);
+    const watchPanel = watchPanelHtml(ev);
     return `<div class="cal-event" data-tier="${ev._tier || tierForCategory(ev.category)}" data-bucket="${bucket}">
       <div class="cal-event-time">${escapeHtml(when)}</div>
       <div class="cal-event-body">
-        <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star}</div>
+        <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star} ${watchChip}</div>
         ${venue}
         <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
+        ${watchPanel}
       </div>
     </div>`;
   };
@@ -10969,6 +11588,25 @@ function applyFocusSection(targetSecId) {
 // end, a setTimeout reset will have flipped it back already, and Back
 // will push a new entry that wipes the Forward stack.
 let _isHistoryRestore = false;
+
+// v0.70: Quick-chip click handler — pre-fills the search box with the chip's
+// query string, points location at Near me (or keeps whatever is typed), and
+// submits the form. Single delegated listener; idempotent.
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest(".quick-chip[data-chip-q]");
+  if (!chip) return;
+  e.preventDefault();
+  const q = chip.dataset.chipQ || "";
+  if (qInputEl) {
+    qInputEl.value = q;
+    // Show the clear-x if it's hidden
+    const clearBtn = document.querySelector('.input-clear[data-clear-target="q-input"]');
+    if (clearBtn) clearBtn.hidden = !q;
+  }
+  // If user hasn't typed an address, leave it blank — submit handler treats
+  // blank as "near me" and will geolocate. If they have typed one, respect it.
+  formEl.dispatchEvent(new Event("submit", { cancelable: true }));
+});
 
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();
