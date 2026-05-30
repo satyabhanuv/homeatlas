@@ -2618,6 +2618,70 @@
   .civic-card.unavailable .civic-card-link { color: var(--ink-faint); }
 
   /* v0.27: "Reviews coming in Phase 4" banner under Home services */
+  /* v0.83: List-map sync — numbered pins + row number-badge + hover sync */
+  .ha-label-marker { background: transparent !important; border: 0 !important; }
+  .ha-pin {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 32px; height: 36px;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    color: #fff;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .ha-pin > * { transform: rotate(45deg); }
+  .ha-pin-num {
+    font-size: 13px; font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.5px;
+  }
+  .ha-pin-label {
+    font-size: 8px; font-weight: 700;
+    margin-top: 1px;
+    line-height: 1;
+    letter-spacing: 0.2px;
+    text-transform: uppercase;
+    opacity: 0.95;
+  }
+  .ha-pin-active {
+    transform: rotate(-45deg) scale(1.25);
+    box-shadow: 0 4px 14px rgba(0,80,194,0.50), 0 0 0 4px rgba(0,80,194,0.20);
+    z-index: 999 !important;
+  }
+  /* Numbered badge on each list row — matches the pin number */
+  .row-num-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    flex: 0 0 auto;
+    width: 26px; height: 26px;
+    margin-right: 8px;
+    background: var(--blue-light);
+    color: var(--blue-dark);
+    border: 1.5px solid var(--blue-mid);
+    border-radius: 50%;
+    font-weight: 800; font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  /* Hover-sync state on list rows — pulses to match the active pin */
+  .school-row.row-hover-sync,
+  [data-place-id].row-hover-sync {
+    background: var(--blue-light);
+    cursor: pointer;
+    outline: 1.5px solid var(--blue-mid);
+    outline-offset: -1px;
+  }
+  .school-row.row-hover-sync .row-num-badge,
+  [data-place-id].row-hover-sync .row-num-badge {
+    background: var(--blue-mid);
+    color: #fff;
+    border-color: var(--blue-mid);
+  }
+  /* Map should never feel like dead space — tighten min-height */
+  .section-map { min-height: 320px; }
+  @media (min-width: 920px) {
+    .section-map { min-height: 480px; }
+  }
+
   /* v0.82: Verified local help banner for home services per QA2 */
   .verified-help-banner {
     margin: 18px 0 14px;
@@ -3482,7 +3546,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.83</span>
     </div>
   </header>
 
@@ -4710,7 +4774,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.83</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -6658,6 +6722,88 @@ function markerLabelFor(item) {
   if (cat === "hardware")    return { label: "🛒", bg: "#c08552" };
   return null;
 }
+// v0.83: per-section marker-by-place-id index. Used by sync handlers to
+// resolve a list row's place-id → the corresponding marker.
+const _sectionMarkerById = {};
+
+// v0.83: hover and click sync between list rows and map pins.
+// Hovering a row pulses the corresponding pin; clicking a row pans+opens it.
+// Wired ONCE at startup as event delegation — covers any future rendered rows.
+let _syncWiredOnce = false;
+function _findMarkerForRow(row) {
+  const pid = row.dataset.placeId;
+  if (!pid) return null;
+  for (const elId in _sectionMarkerById) {
+    const m = _sectionMarkerById[elId].get(pid);
+    if (m) return { marker: m, mapElId: elId };
+  }
+  return null;
+}
+function _highlightMarker(marker, on) {
+  const el = marker.getElement && marker.getElement();
+  if (!el) return;
+  const inner = el.querySelector(".ha-pin");
+  if (!inner) return;
+  if (on) inner.classList.add("ha-pin-active");
+  else inner.classList.remove("ha-pin-active");
+}
+function wireListMapSync() {
+  if (_syncWiredOnce) return;
+  _syncWiredOnce = true;
+  // Hover IN — highlight matching pin
+  document.addEventListener("mouseover", (e) => {
+    const row = e.target.closest("[data-place-id]");
+    if (!row) return;
+    row.classList.add("row-hover-sync");
+    const found = _findMarkerForRow(row);
+    if (found) _highlightMarker(found.marker, true);
+  });
+  // Hover OUT
+  document.addEventListener("mouseout", (e) => {
+    const row = e.target.closest("[data-place-id]");
+    if (!row) return;
+    // Only unhighlight if we're truly leaving the row (not entering a child)
+    if (row.contains(e.relatedTarget)) return;
+    row.classList.remove("row-hover-sync");
+    const found = _findMarkerForRow(row);
+    if (found) _highlightMarker(found.marker, false);
+  });
+  // Click on the row body (not on action buttons / links) → fly to pin + open popup
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("a, button")) return;   // let actions through
+    const row = e.target.closest("[data-place-id]");
+    if (!row) return;
+    const found = _findMarkerForRow(row);
+    if (!found) return;
+    const map = _sectionMaps[found.mapElId];
+    if (!map) return;
+    const ll = found.marker.getLatLng();
+    map.flyTo(ll, Math.max(map.getZoom(), 15), { duration: 0.4 });
+    setTimeout(() => found.marker.openPopup(), 350);
+  });
+}
+// Wire on first DOM ready
+if (typeof document !== "undefined") {
+  if (document.readyState === "complete" || document.readyState === "interactive") wireListMapSync();
+  else document.addEventListener("DOMContentLoaded", wireListMapSync);
+}
+
+// v0.83: filter `items` to those whose place-id appears in the visible
+// list rows (data-place-id attribute). Falls back to full items if no
+// list rows are found yet (initial render race).
+function _filterItemsToVisibleList(elId, items) {
+  if (!items || !items.length) return items;
+  // Locate the card containing this map — walk up from the map element
+  const mapEl = document.getElementById(elId);
+  if (!mapEl) return items;
+  const card = mapEl.closest(".parks-card, .home-card, .school-card") || mapEl.parentElement;
+  if (!card) return items;
+  const rowIds = new Set();
+  card.querySelectorAll("[data-place-id]").forEach(r => rowIds.add(r.dataset.placeId));
+  if (!rowIds.size) return items;   // no list rendered yet — keep all
+  return items.filter(it => rowIds.has(placeIdFor(it)));
+}
+
 function setupSectionMap(elId, centerLat, centerLon, items) {
   if (typeof L === "undefined") {
     // Leaflet still loading — try again shortly
@@ -6666,6 +6812,9 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   }
   const el = document.getElementById(elId);
   if (!el) return;
+  // v0.83: filter items to those currently visible in the list (so map and
+  // list always show the same count and the user can 1:1 associate them).
+  items = _filterItemsToVisibleList(elId, items);
   // Clear empty-state placeholder if present
   const empty = el.querySelector(".section-map-empty");
   if (empty) empty.remove();
@@ -6714,20 +6863,35 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
         chunkedLoading: true
       })
     : null;
-  validItems.forEach(item => {
+  // v0.83: reset per-section marker-by-id index for fresh sync
+  _sectionMarkerById[elId] = new Map();
+  validItems.forEach((item, idx) => {
     const labelInfo = markerLabelFor(item);
+    // v0.83: numbered badge on every pin so users can match "row 1 = pin 1"
+    const num = idx + 1;
     let marker;
     if (labelInfo) {
       const icon = L.divIcon({
         className: "ha-label-marker",
-        html: `<div style="background:${labelInfo.bg};color:#fff;width:28px;height:36px;border-radius:14px 14px 14px 2px;display:grid;place-items:center;font-weight:700;font-size:11px;letter-spacing:-0.02em;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,0.35);transform:rotate(-45deg);"><span style="transform:rotate(45deg);">${labelInfo.label}</span></div>`,
-        iconSize: [28, 36], iconAnchor: [14, 32]
+        html: `<div class="ha-pin" style="background:${labelInfo.bg};">
+          <span class="ha-pin-num">${num}</span>
+          <span class="ha-pin-label">${labelInfo.label}</span>
+        </div>`,
+        iconSize: [32, 40], iconAnchor: [16, 36]
       });
       marker = L.marker([item.lat, item.lon], { icon });
     } else {
-      marker = L.marker([item.lat, item.lon]);
+      const icon = L.divIcon({
+        className: "ha-label-marker",
+        html: `<div class="ha-pin" style="background:#0050C2;"><span class="ha-pin-num">${num}</span></div>`,
+        iconSize: [32, 40], iconAnchor: [16, 36]
+      });
+      marker = L.marker([item.lat, item.lon], { icon });
     }
-    const popupHtml = `<b>${(item.name || "").replace(/[<>]/g, '')}</b><br>` +
+    const pid = placeIdFor(item);
+    marker._placeId = pid;
+    marker._listNum = num;
+    const popupHtml = `<b>#${num} · ${(item.name || "").replace(/[<>]/g, '')}</b><br>` +
       `${(item.subtype || "").replace(/[<>]/g, '')} · ${item.dist != null ? item.dist.toFixed(1) + " mi" : ""}` +
       (item.access === "private" ? `<br><span style="color:#8c2222;">🔒 Private / HOA</span>` : "") +
       (item.phone ? `<br>📞 ${(item.phone + "").replace(/[<>]/g, '')}` : "") +
@@ -6740,7 +6904,26 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
       marker.addTo(map);
     }
     _sectionMarkers[elId].push(marker);
+    _sectionMarkerById[elId].set(pid, marker);
   });
+  // v0.83: now also stamp the list rows with their corresponding number so
+  // the user can match list row #3 = pin #3.
+  const card = el.closest(".parks-card, .home-card, .school-card") || el.parentElement;
+  if (card) {
+    validItems.forEach((item, idx) => {
+      const pid = placeIdFor(item);
+      const row = card.querySelector(`[data-place-id="${pid}"]`);
+      if (row) {
+        row.dataset.listNum = idx + 1;
+        if (!row.querySelector(".row-num-badge")) {
+          const badge = document.createElement("span");
+          badge.className = "row-num-badge";
+          badge.textContent = idx + 1;
+          row.insertBefore(badge, row.firstChild);
+        }
+      }
+    });
+  }
   if (clusterGroup) {
     map.addLayer(clusterGroup);
     if (!_sectionClusters) window._sectionClusters = _sectionClusters;
@@ -8046,12 +8229,22 @@ function placeIconForSubtype(subtype, category) {
   if (s.includes("college") || s.includes("university") || s.includes("higher")) return { emoji: "🎓", cls: "cat-college" };
   return { emoji: "📍", cls: "" };
 }
+// v0.83: stable place-id used to sync a list row with its map pin
+function placeIdFor(item) {
+  const name = (item.name || "").toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "").slice(0, 40);
+  const lat = (item.lat != null) ? Number(item.lat).toFixed(4) : "0";
+  const lon = (item.lon != null) ? Number(item.lon).toFixed(4) : "0";
+  return `pl-${name}-${lat}-${lon}`;
+}
+
 function placeRow(item, cityKey) {
   const q = `${item.name} ${cityKey || ""}`.trim();
   const reach = item.website || `https://www.google.com/search?q=${encodeURIComponent(q)}`;
   const map   = mapUrlExact(item.lat, item.lon);
   const distCls = distClass(item.dist);
   const ic = placeIconForSubtype(item.subtype, item.category);
+  // v0.83: stable id tag so the map can sync hover/click with this row
+  const pid = placeIdFor(item);
   // v0.33: verified-contact badge — businesses with phone+website+hours+address get a checkmark
   const verifiedBadge = item.verified
     ? `<span class="osm-verified-tag" title="Verified contact info on OpenStreetMap: ${(item.reasons || []).join(', ')}">✓ Verified</span>`
@@ -8077,7 +8270,7 @@ function placeRow(item, cityKey) {
   const phone = (item.phone || "").trim();
   const accessTag = item.access ? `<span class="access-tag access-${escapeHtml(item.access)}">${escapeHtml(item.access === 'private' ? 'Private / HOA' : 'Public')}</span>` : "";
   const contactLine = (phone || hours) ? `<div class="place-contact">${phone ? `<a class="place-phone" href="tel:${escapeHtml(phone.replace(/[^\d+]/g, ''))}">📞 ${escapeHtml(phone)}</a>` : ""}${phone && hours ? ` · ` : ""}${hours ? `<span class="place-hours">🕐 ${escapeHtml(hours.length > 60 ? hours.slice(0,60) + '…' : hours)}</span>` : ""}</div>` : "";
-  return `<div class="school-row" title="${escapeHtml(whyRanked)}">
+  return `<div class="school-row" data-place-id="${pid}" data-lat="${item.lat}" data-lon="${item.lon}" title="${escapeHtml(whyRanked)}">
     <a class="school-badge icon-bubble ${ic.cls}" href="${map}" target="_blank" rel="noopener" aria-label="Open ${escapeHtml(item.name)} on map">${ic.emoji}</a>
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
@@ -10820,14 +11013,24 @@ function waysToWatchForEvent(ev) {
   if (!lg) return [];
   return _WAYS_BY_LEAGUE[lg] || [];
 }
+// v0.83: detect if the event is a SPORTS event so we can auto-expand the
+// "Where to watch" panel — sports is where the feature is most expected,
+// per QA2 feedback that the chip was easy to miss.
+function _isSportsEvent(ev) {
+  const lg = (typeof detectLeague === "function") ? detectLeague(ev) : null;
+  // All our broadcast leagues are sports except civic-meeting
+  return lg && lg !== "civic-meeting";
+}
 function watchChipHtml(ev) {
   const ways = waysToWatchForEvent(ev);
   if (!ways.length) return "";
   const evId = saveIdForEvent(ev);
-  return `<button type="button" class="watch-chip" data-watch-toggle="${escapeHtml(evId)}"
-    aria-expanded="false"
-    title="Watch this game / event from home"
-  >📺 Watch · ${ways.length}</button>`;
+  // v0.83: clearer label + auto-expanded state for sports
+  const autoExpand = _isSportsEvent(ev);
+  return `<button type="button" class="watch-chip ${autoExpand ? "watch-chip-open" : ""}" data-watch-toggle="${escapeHtml(evId)}"
+    aria-expanded="${autoExpand ? "true" : "false"}"
+    title="Where to watch this from home — broadcasters that carry this league"
+  >📺 Where to watch (${ways.length})</button>`;
 }
 function watchPanelHtml(ev) {
   const ways = waysToWatchForEvent(ev);
@@ -10840,8 +11043,11 @@ function watchPanelHtml(ev) {
       <span class="watch-go">Watch ↗</span>
     </a>
   `).join("");
-  return `<div class="watch-panel" id="watch-panel-${escapeHtml(evId)}" hidden>
-    <div class="watch-panel-header">Ways to watch <span class="watch-panel-sub">— league-wide broadcasters; specific game may not be on every option</span></div>
+  // v0.83: auto-expand for sports events so the user sees options immediately
+  // (per QA2 — wanted "where to watch" more prominent, not behind a toggle).
+  const autoExpand = _isSportsEvent(ev);
+  return `<div class="watch-panel" id="watch-panel-${escapeHtml(evId)}"${autoExpand ? "" : " hidden"}>
+    <div class="watch-panel-header">Where to watch <span class="watch-panel-sub">— broadcasters that carry this league; specific game may not be on every option</span></div>
     ${rows}
   </div>`;
 }
@@ -11281,6 +11487,36 @@ document.addEventListener("submit", async (e) => {
   }
 });
 
+// v0.83: prefer the Worker's pre-formatted display_date/display_time/timezone
+// (emitted in v0.79) over re-formatting from raw UTC starts. Local-time
+// display is much more honest — a 7pm event in NYC shouldn't say "4pm" to a
+// Pacific user just because they happen to be in PT. Worker formats in the
+// EVENT's local tz; we just render the string.
+function eventDateDisplay(ev) {
+  // Prefer Worker-emitted display_date ("Fri, May 29"); fall back to client format
+  if (ev && ev.display_date) return ev.display_date;
+  const d = new Date(ev && (ev.starts_local || ev.starts) || "");
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+}
+function eventTimeDisplay(ev) {
+  // Prefer Worker-emitted display_time ("7:30 PM"); fall back to client format
+  if (ev && ev.display_time) return ev.display_time;
+  const s = ev && (ev.starts_local || ev.starts);
+  const d = s ? new Date(s) : null;
+  if (!d || isNaN(d)) return "";
+  return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+function eventTimeRangeDisplay(ev) {
+  // "7:30 PM" or "7:30 PM – 9:00 PM"
+  const start = eventTimeDisplay(ev);
+  if (!ev || !ev.ends) return start;
+  const endD = new Date(ev.ends);
+  if (isNaN(endD)) return start;
+  const end = endD.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${start}–${end}`;
+}
+
 // v0.67/v0.82: Time-window state for the events calendar. Persisted to
 // localStorage so the user's last chip choice survives reload.
 // v0.82: default flipped from "month" → "weekend" per QA2 — people don't
@@ -11605,7 +11841,8 @@ function _renderFlatEventList(events, timeWindow) {
     return "community";
   };
   const renderEvent = (ev) => {
-    const when = ev.ends ? `${tFmt(ev.starts)}–${tFmt(ev.ends)}` : tFmt(ev.starts);
+    // v0.83: use Worker's pre-formatted display_time (in event's local tz)
+    const when = eventTimeRangeDisplay(ev);
     const meta = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
     const free = ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
     const venue = ev.venue ? `<div class="cal-event-meta">${escapeHtml(ev.venue)}</div>` : "";
@@ -11707,7 +11944,8 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
   };
   const renderEvent = (ev) => {
     const bucket = inferBucket(ev);
-    const when = ev.ends ? `${tFmt(ev.starts)}–${tFmt(ev.ends)}` : tFmt(ev.starts);
+    // v0.83: use Worker's pre-formatted display_time (in event's local tz)
+    const when = eventTimeRangeDisplay(ev);
     const meta = EVENT_CAT_META[ev.category] || EVENT_CAT_META.other;
     const free = ev.free ? `<span class="badge-verified" title="Free or donation-based">Free</span>` : "";
     const venue = ev.venue ? `<div class="cal-event-meta">${escapeHtml(ev.venue)}</div>` : "";
