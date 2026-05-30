@@ -3527,6 +3527,7 @@
       position: sticky;
       top: 12px;
       align-self: start;
+      z-index: 5;
     }
     .results-grid > .cat-nav .cat-tab {
       width: 100%;
@@ -3558,6 +3559,17 @@
       border-color: var(--blue-mid);
       box-shadow: 0 2px 8px rgba(45,111,209,0.10);
     }
+
+    /* v0.84.1: KILL the full-bleed negative margins on the right column so
+       its content can't overflow LEFT into the cat-nav sidebar. Was the
+       root cause of the "everything overlaps the sidebar" bug. */
+    .results-grid > .results-main { min-width: 0; overflow: hidden; }
+    .results-grid > .results-main .section-nav { margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+    .results-grid > .results-main .section-nav-inner { margin-left: 0; margin-right: 0; padding-left: 4px; padding-right: 4px; }
+    .results-grid > .results-main .subnav { margin-left: 0; margin-right: 0; }
+    /* Sticky banners inside the right column should stick to the column
+       top, not the viewport — keep the top bar (red helpline) still on top */
+    .results-grid > .results-main .section-nav-inner { top: 0; }
   }
 </style>
 </head>
@@ -3604,7 +3616,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84.1</span>
     </div>
   </header>
 
@@ -4832,7 +4844,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
