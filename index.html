@@ -3482,7 +3482,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82.1</span>
     </div>
   </header>
 
@@ -4201,7 +4201,7 @@
       <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Farmers markets</a>
       <a href="#events-worship-section"   class="subtab" data-subtarget="events-worship-section">Churches &amp; temples</a>
       <a href="#events-community-section" class="subtab" data-subtarget="events-community-section">Community centers</a>
-      <a href="#events-online-section"    class="subtab" data-subtarget="events-online-section">Find events online</a>
+      <a href="#events-online-section"    class="subtab" data-subtarget="events-online-section">External sites</a>
     </div>
 
     <div class="parks-card" id="card-events" hidden>
@@ -4710,7 +4710,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -6919,6 +6919,17 @@ function refreshActiveSubtabFor(cardId) {
   if (cardId === "card-events") {
     const mapEl = document.getElementById(meta.mapElId);
     if (mapEl) mapEl.style.display = "";
+  }
+  // v0.82.1: hide the shared OSM parks-map when user is on "National parks &
+  // rec" subtab — that map shows OSM playgrounds/dog-parks/trails, which is
+  // irrelevant + confusing under the federal-lands subtab. The federal lands
+  // section has its own visualization (the list itself + per-park map links).
+  if (cardId === "card-parks") {
+    const mapEl = document.getElementById(meta.mapElId);
+    if (mapEl) {
+      const onFederalSubtab = activeSubtab.dataset.subtarget === "parks-federal-wrap";
+      mapEl.style.display = onFederalSubtab ? "none" : "";
+    }
   }
 
   const itemsFor = (subtab) => {
@@ -13534,10 +13545,33 @@ function applyCategoryFilter(cat, opts) {
 }
 
 // Click handler for cat-tabs — single delegated handler.
+// v0.82.1: cat-tab click is an EXPLICIT navigation. Clear any active query
+// + exit focus mode + force events to refresh — fixes the "DMV stays stuck
+// after I navigate away" bug. The search query was persisting in qInputEl
+// and the events Worker call still used it, so all sections showed 0 hits.
 document.addEventListener("click", (e) => {
   const catTab = e.target.closest(".cat-tab[data-cat]");
   if (!catTab) return;
   e.preventDefault();
+  // Clear any active query / focus mode — navigating to a new category is
+  // an explicit "I'm done with that search" signal.
+  if (typeof qInputEl !== "undefined" && qInputEl && qInputEl.value) {
+    qInputEl.value = "";
+    const clearBtn = document.querySelector('.input-clear[data-clear-target="q-input"]');
+    if (clearBtn) clearBtn.hidden = true;
+  }
+  if (document.body.classList.contains("focus-mode") && typeof exitFocusMode === "function") {
+    try { exitFocusMode(); } catch (_) {}
+  }
+  // Wipe events cache + section-loaded flag so we refetch with the new clean query
+  if (typeof _apiEventsCache !== "undefined") _apiEventsCache.clear();
+  if (typeof sectionLoadedOnce === "object") {
+    sectionLoadedOnce["sec-events"] = false;
+    sectionLoadedOnce["sec-schools"] = false;
+    sectionLoadedOnce["sec-parks"] = false;
+    sectionLoadedOnce["sec-public-services"] = false;
+    sectionLoadedOnce["sec-home-services"] = false;
+  }
   applyCategoryFilter(catTab.dataset.cat);
   if (history.replaceState) history.replaceState(null, "", "#cat-" + catTab.dataset.cat);
 });
