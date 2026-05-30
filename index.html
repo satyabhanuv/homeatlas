@@ -3571,6 +3571,154 @@
        top, not the viewport — keep the top bar (red helpline) still on top */
     .results-grid > .results-main .section-nav-inner { top: 0; }
   }
+
+  /* =========================================================================
+     v0.85 LAYOUT — clean-slate Yelp-style 3-column desktop redesign.
+     Scoped to body.v85-layout so existing CSS stays untouched on mobile / older
+     paths. Uses !important liberally to override the accumulated negative
+     margins / sticky positioning from earlier versions.
+     ========================================================================= */
+  @media (min-width: 1100px) {
+    body.v85-layout .results-grid {
+      display: grid !important;
+      grid-template-columns: 150px 1fr 380px !important;
+      grid-template-areas: "left center right" !important;
+      gap: 20px !important;
+      align-items: start !important;
+      max-width: none;
+    }
+    /* CAT-NAV → left column, vertical stack */
+    body.v85-layout .results-grid > .cat-nav {
+      grid-area: left !important;
+      position: sticky !important;
+      top: 70px !important;
+      z-index: 4 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      flex-wrap: nowrap !important;
+      gap: 8px !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      background: transparent !important;
+      border: 0 !important;
+      width: 150px !important;
+      overflow-x: visible !important;
+      align-self: start !important;
+    }
+    body.v85-layout .results-grid > .cat-nav .cat-tab {
+      width: 100% !important;
+      flex: 0 0 auto !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      padding: 14px 8px 11px !important;
+      border: 1.5px solid var(--line) !important;
+      border-radius: 12px !important;
+      background: var(--surface, #fff) !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+      gap: 6px !important;
+      font-size: 12.5px !important;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+      margin: 0 !important;
+    }
+    body.v85-layout .results-grid > .cat-nav .cat-tab::before { font-size: 26px !important; }
+    body.v85-layout .results-grid > .cat-nav .cat-tab:hover {
+      background: var(--blue-light) !important;
+      color: var(--blue-dark) !important;
+      border-color: var(--blue-mid) !important;
+    }
+    body.v85-layout .results-grid > .cat-nav .cat-tab.active {
+      background: var(--blue-light) !important;
+      color: var(--blue-dark) !important;
+      border-color: var(--blue-mid) !important;
+      box-shadow: 0 2px 8px rgba(45,111,209,0.12) !important;
+    }
+    /* Emergency rail (left column previously) — hidden on desktop */
+    body.v85-layout .results-grid > .emergency-rail { display: none !important; }
+    /* RESULTS-MAIN → center column. Kill ALL the full-bleed negative margins
+       inside it. Set overflow to prevent any rogue child from breaking out. */
+    body.v85-layout .results-grid > .results-main {
+      grid-area: center !important;
+      min-width: 0 !important;
+      max-width: 100% !important;
+      overflow-x: hidden !important;
+    }
+    body.v85-layout .results-grid > .results-main .section-nav,
+    body.v85-layout .results-grid > .results-main .section-nav-inner,
+    body.v85-layout .results-grid > .results-main .subnav,
+    body.v85-layout .results-grid > .results-main .cat-dd-nav,
+    body.v85-layout .results-grid > .results-main #address-overview,
+    body.v85-layout .results-grid > .results-main .address-overview,
+    body.v85-layout .results-grid > .results-main .live-risks,
+    body.v85-layout .results-grid > .results-main .live-risks-crosslink,
+    body.v85-layout .results-grid > .results-main .page-section-header,
+    body.v85-layout .results-grid > .results-main .quick-chips {
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+    }
+    /* Sticky tab strips should anchor to the column top, NOT viewport */
+    body.v85-layout .results-grid > .results-main .section-nav-inner {
+      position: sticky !important;
+      top: 60px !important;
+      z-index: 3 !important;
+    }
+    /* RIGHT RAIL — sidebar for results list. Sticky so it stays visible
+       as user scrolls the center column. */
+    body.v85-layout .v85-right-rail {
+      grid-area: right !important;
+      position: sticky !important;
+      top: 70px !important;
+      max-height: calc(100vh - 90px) !important;
+      overflow-y: auto !important;
+      align-self: start !important;
+      padding: 14px !important;
+      background: var(--surface, #fff) !important;
+      border: 1px solid var(--line) !important;
+      border-radius: 14px !important;
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04) !important;
+    }
+    body.v85-layout .v85-right-rail-empty {
+      padding: 24px 16px !important;
+      text-align: center !important;
+      color: var(--ink-faint) !important;
+      font-size: 13px !important;
+    }
+    body.v85-layout .v85-right-rail-title {
+      font-size: 12px !important;
+      font-weight: 800 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.5px !important;
+      color: var(--ink-soft) !important;
+      margin-bottom: 12px !important;
+      padding-bottom: 8px !important;
+      border-bottom: 1px solid var(--line) !important;
+    }
+    body.v85-layout .v85-rail-line {
+      font-size: 13px !important;
+      color: var(--ink) !important;
+      padding: 6px 0 !important;
+      border-bottom: 1px solid var(--line-2, #f0f3f7) !important;
+    }
+    body.v85-layout .v85-rail-line:last-child { border-bottom: 0 !important; }
+    body.v85-layout .v85-rail-k {
+      display: inline-block !important;
+      font-size: 10.5px !important;
+      font-weight: 800 !important;
+      text-transform: uppercase !important;
+      letter-spacing: 0.3px !important;
+      color: var(--ink-faint) !important;
+      margin-right: 6px !important;
+    }
+  }
+  /* Below 1100px → fall back to existing 2-col / stacked. v85 only kicks in
+     when there's enough width for all three columns (150 + 1fr + 380 + gaps). */
+  body.v85-layout .v85-right-rail { display: none; }
+  @media (min-width: 1100px) {
+    body.v85-layout .v85-right-rail { display: block; }
+  }
 </style>
 </head>
 <body class="single-view">
@@ -3616,7 +3764,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.85</span>
     </div>
   </header>
 
@@ -4844,7 +4992,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.85</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -6858,20 +7006,65 @@ if (typeof document !== "undefined") {
   else document.addEventListener("DOMContentLoaded", wireListMapSync);
 }
 
-// v0.84: relocate cat-nav from inside results-main → direct child of
+// v0.85: relocate cat-nav from inside results-main → direct child of
 // results-grid so CSS Grid can place it as the left sidebar. One-time DOM
 // move on page load. All click handlers still work (delegated).
-function relocateCatNavToSidebar() {
+// Also adds the right-rail container + body.v85-layout class to activate
+// the new 3-column layout.
+function setupV85Layout() {
   const grid = document.querySelector(".results-grid");
   const catNav = document.getElementById("cat-nav");
   if (!grid || !catNav) return;
-  if (catNav.parentElement === grid) return;   // already moved
-  // Insert cat-nav as the FIRST child of results-grid (left sidebar slot)
-  grid.insertBefore(catNav, grid.firstChild);
+  // Move cat-nav into results-grid as left column
+  if (catNav.parentElement !== grid) {
+    grid.insertBefore(catNav, grid.firstChild);
+  }
+  // Add right-rail container if not present
+  if (!document.querySelector(".v85-right-rail")) {
+    const rail = document.createElement("aside");
+    rail.className = "v85-right-rail";
+    rail.setAttribute("aria-label", "Quick stats and saved");
+    rail.innerHTML = `
+      <div class="v85-right-rail-title">📍 Your context</div>
+      <div class="v85-right-rail-empty" id="v85-right-rail-body">
+        Search an address or use Near me to populate quick info about this location.
+      </div>
+    `;
+    grid.appendChild(rail);
+  }
+  // Activate the v85 layout
+  document.body.classList.add("v85-layout");
 }
 if (typeof document !== "undefined") {
-  if (document.readyState === "complete" || document.readyState === "interactive") relocateCatNavToSidebar();
-  else document.addEventListener("DOMContentLoaded", relocateCatNavToSidebar);
+  if (document.readyState === "complete" || document.readyState === "interactive") setupV85Layout();
+  else document.addEventListener("DOMContentLoaded", setupV85Layout);
+}
+
+// v0.85: keep the right rail informative — when address is resolved, render
+// a summary card with city/county/state/utility, saved-count, and a "today/
+// this weekend" event-count hint. Called by renderAddressOverview as a
+// follow-up step.
+function renderV85RightRail(geo) {
+  const body = document.getElementById("v85-right-rail-body");
+  if (!body) return;
+  const a = (geo && geo.address) || {};
+  const city = a.city || a.town || a.village || "";
+  const state = (typeof getStateCode === "function" ? getStateCode(a) : a.state) || "";
+  const saved = (typeof getSavedItems === "function" ? getSavedItems().length : 0);
+  const lines = [];
+  if (city || state) lines.push(`<div class="v85-rail-line"><b>📍 ${escapeHtml([city, state].filter(Boolean).join(", "))}</b></div>`);
+  const electricVal = (document.getElementById("electric-value")?.textContent || "").trim();
+  if (electricVal && electricVal !== "—" && electricVal.length < 40) {
+    lines.push(`<div class="v85-rail-line"><span class="v85-rail-k">Electric</span> ${escapeHtml(electricVal)}</div>`);
+  }
+  const schoolVal = (document.getElementById("school-value")?.textContent || "").trim();
+  if (schoolVal && schoolVal !== "—" && !schoolVal.includes("skeleton") && schoolVal.length < 60) {
+    lines.push(`<div class="v85-rail-line"><span class="v85-rail-k">Schools</span> ${escapeHtml(schoolVal)}</div>`);
+  }
+  lines.push(`<div class="v85-rail-line"><span class="v85-rail-k">⭐ Saved</span> ${saved} place${saved === 1 ? "" : "s"}</div>`);
+  if (!lines.length) return;
+  body.classList.remove("v85-right-rail-empty");
+  body.innerHTML = lines.join("");
 }
 
 // v0.83: filter `items` to those whose place-id appears in the visible
@@ -8116,6 +8309,8 @@ function renderAddressOverview(geo) {
     </button>`
   ).join("");
   container.hidden = false;
+  // v0.85: also update the right rail with the same info, condensed
+  try { renderV85RightRail(geo); } catch (e) {}
 }
 // Click handler for address-overview chips — jump to the deep section.
 document.addEventListener("click", (e) => {
