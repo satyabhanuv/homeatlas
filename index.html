@@ -3401,13 +3401,13 @@
         <path d="M45 50 L48.5 53 L55 46" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
       </svg>
       nearnity
-      <span class="brand-tag">Public-source verified · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.78</span>
+      <span class="brand-tag">Source-linked · No paid placement</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.79</span>
     </div>
   </header>
 
   <section class="hero">
-    <span class="hero-eyebrow">nearnity · Public-source verified, no paid placement</span>
+    <span class="hero-eyebrow">nearnity · Source-linked, no paid placement</span>
     <h1>Find what's around you —<br>from <em>trusted public sources</em>.</h1>
     <p class="lead">
       Free clinics, events, parks, utilities, schools, civic services, and risk data — one clean page per address. No accounts. No tracking. No paid placement.
@@ -3515,7 +3515,7 @@
     <details class="hero-disclosure">
       <summary>What's covered &amp; how it works</summary>
       <div class="hero-disclosure-body">
-        Type a service (farmers market, free clinic, school...) in the first box, then tap Search. Leave the location box empty (or type "Near me") and your browser will share your location when you submit. You can also type a city, ZIP, or full address there. Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> GA, NC, MI.
+        Type a service (farmers market, free clinic, school...) in the first box, then tap Search. Leave the location box empty (or type "Near me") and your browser will share your location when you submit. You can also type a city, ZIP, or full address there. Suggestions appear after 3 characters. US-only for now. Granular state data (electric utility, cable, fiber, school district) loaded for <b>CA, FL, GA, IL, NY, OH, PA, TX</b>, plus WA, NJ. <b>Coming soon:</b> NC, MI, AZ, VA.
       </div>
     </details>
     <div id="status"></div>
@@ -4017,11 +4017,15 @@
     </div>
 
     <!-- Sub-nav for Recreation -->
+    <!-- v0.79: added "National parks" as its own subtab so the federal-lands
+         wrap (NPS + RIDB) only shows under that subtab. Was leaking into
+         For kids / For pets / etc., per field-test feedback. -->
     <div class="subnav" data-subnav-for="card-parks">
       <a href="#parks-playground-section" class="subtab" data-subtarget="parks-playground-section">For kids</a>
       <a href="#parks-dog-section"        class="subtab" data-subtarget="parks-dog-section">For pets</a>
       <a href="#parks-trail-section"      class="subtab" data-subtarget="parks-trail-section">For you</a>
       <a href="#parks-park-section"       class="subtab" data-subtarget="parks-park-section">Parks &amp; gardens</a>
+      <a href="#parks-federal-wrap"       class="subtab" data-subtarget="parks-federal-wrap">National parks &amp; rec</a>
     </div>
 
     <!-- Parks & places card MOVED here (between Schools and Yard) -->
@@ -4433,7 +4437,7 @@
           <div class="live-risks-card-header">
             <span class="live-risks-icon">🚨</span>
             <span class="live-risks-card-title">Active alerts</span>
-            <span class="live-risks-card-sub" id="live-alerts-sub">Loading…</span>
+            <span class="live-risks-card-sub" id="live-alerts-sub">Search to load</span>
           </div>
           <div class="live-risks-card-body" id="live-alerts-body"></div>
         </div>
@@ -4441,7 +4445,7 @@
           <div class="live-risks-card-header">
             <span class="live-risks-icon">🌫️</span>
             <span class="live-risks-card-title">Air quality</span>
-            <span class="live-risks-card-sub" id="live-aqi-sub">Loading…</span>
+            <span class="live-risks-card-sub" id="live-aqi-sub">Search to load</span>
           </div>
           <div class="live-risks-card-body" id="live-aqi-body"></div>
         </div>
@@ -4449,7 +4453,7 @@
           <div class="live-risks-card-header">
             <span class="live-risks-icon">🌍</span>
             <span class="live-risks-card-title">Recent earthquakes</span>
-            <span class="live-risks-card-sub" id="live-quakes-sub">Loading…</span>
+            <span class="live-risks-card-sub" id="live-quakes-sub">Search to load</span>
           </div>
           <div class="live-risks-card-body" id="live-quakes-body"></div>
         </div>
@@ -4581,7 +4585,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.78</span> · Public-source verified data on utilities, schools, parks, free clinics, events, and civic services. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.79</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
