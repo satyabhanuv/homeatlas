@@ -1742,17 +1742,23 @@
   .pgroup-popular::before { content: "★"; font-size: 9px; }
 
   /* v0.49: 2-column results grid — emergency rail (left) + main content (right).
-     Stacks on mobile. The emergency rail sits sticky inside its column so it
-     stays visible as the user scrolls the main column. */
+     Stacks on mobile. v0.84 redesign: left column is now the VERTICAL cat-nav
+     sidebar (replaces the emergency-rail — that's already covered by the
+     sticky red top bar). Inspired by Yelp/Airbnb. */
   .results-grid {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 140px 1fr;
     gap: 22px;
     align-items: start;
     margin-top: 18px;
   }
   @media (max-width: 920px) {
     .results-grid { grid-template-columns: 1fr; gap: 14px; }
+  }
+  /* v0.84: hide emergency-rail on desktop — the red sticky bar at top handles
+     911/988/211. On mobile, show it as horizontal row of phone buttons. */
+  @media (min-width: 920px) {
+    .emergency-rail { display: none; }
   }
   .emergency-rail {
     position: sticky; top: 12px;
@@ -3501,6 +3507,58 @@
     }
     .cat-nav .cat-tab::before { font-size: 20px; }
   }
+
+  /* v0.84: VERTICAL cat-nav sidebar on desktop. Same DOM, different layout.
+     6 tiles stack vertically with icon-on-top + label-below. Active tab gets
+     a soft blue fill (matches the light-blue palette). */
+  @media (min-width: 920px) {
+    /* When cat-nav is a direct child of .results-grid it's the left sidebar */
+    .results-grid > .cat-nav {
+      display: flex;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      gap: 6px;
+      padding: 0;
+      margin: 0;
+      background: transparent;
+      border: 0;
+      border-bottom: 0;
+      width: 140px;
+      position: sticky;
+      top: 12px;
+      align-self: start;
+    }
+    .results-grid > .cat-nav .cat-tab {
+      width: 100%;
+      flex: 0 0 auto;
+      min-width: 0;
+      padding: 14px 6px 10px;
+      border: 1.5px solid var(--line);
+      border-radius: 12px;
+      background: var(--surface, #fff);
+      box-shadow: 0 1px 3px rgba(15,23,42,0.04);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 0;
+      font-size: 12.5px;
+    }
+    .results-grid > .cat-nav .cat-tab::before {
+      font-size: 26px;
+    }
+    .results-grid > .cat-nav .cat-tab:hover {
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      border-color: var(--blue-light);
+    }
+    .results-grid > .cat-nav .cat-tab.active {
+      background: var(--blue-light);
+      color: var(--blue-dark);
+      border-color: var(--blue-mid);
+      box-shadow: 0 2px 8px rgba(45,111,209,0.10);
+    }
+  }
 </style>
 </head>
 <body class="single-view">
@@ -3546,7 +3604,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.83</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84</span>
     </div>
   </header>
 
@@ -4774,7 +4832,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.83</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.84</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -6786,6 +6844,22 @@ function wireListMapSync() {
 if (typeof document !== "undefined") {
   if (document.readyState === "complete" || document.readyState === "interactive") wireListMapSync();
   else document.addEventListener("DOMContentLoaded", wireListMapSync);
+}
+
+// v0.84: relocate cat-nav from inside results-main → direct child of
+// results-grid so CSS Grid can place it as the left sidebar. One-time DOM
+// move on page load. All click handlers still work (delegated).
+function relocateCatNavToSidebar() {
+  const grid = document.querySelector(".results-grid");
+  const catNav = document.getElementById("cat-nav");
+  if (!grid || !catNav) return;
+  if (catNav.parentElement === grid) return;   // already moved
+  // Insert cat-nav as the FIRST child of results-grid (left sidebar slot)
+  grid.insertBefore(catNav, grid.firstChild);
+}
+if (typeof document !== "undefined") {
+  if (document.readyState === "complete" || document.readyState === "interactive") relocateCatNavToSidebar();
+  else document.addEventListener("DOMContentLoaded", relocateCatNavToSidebar);
 }
 
 // v0.83: filter `items` to those whose place-id appears in the visible
