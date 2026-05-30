@@ -3574,19 +3574,23 @@
 
   /* =========================================================================
      v0.85 LAYOUT — clean-slate Yelp-style 3-column desktop redesign.
-     Scoped to body.v85-layout so existing CSS stays untouched on mobile / older
-     paths. Uses !important liberally to override the accumulated negative
-     margins / sticky positioning from earlier versions.
+     v0.87: removed the separate right rail. Right column is now the section
+     card's INTERNAL list pane (map on left = page center, list on right =
+     page right). Cleaner 2-column page grid + card-internal grid.
+     Scoped to body.v85-layout so existing CSS stays untouched on mobile.
      ========================================================================= */
   @media (min-width: 1100px) {
     body.v85-layout .results-grid {
       display: grid !important;
-      grid-template-columns: 150px 1fr 380px !important;
-      grid-template-areas: "left center right" !important;
+      grid-template-columns: 150px 1fr !important;
+      grid-template-areas: "left center" !important;
       gap: 20px !important;
       align-items: start !important;
       max-width: none;
     }
+    /* v0.87: hide the v85 right rail — list-on-right is now handled by the
+       section cards' internal grid (map left, list right). */
+    body.v85-layout .v85-right-rail { display: none !important; }
     /* CAT-NAV → left column, vertical stack */
     body.v85-layout .results-grid > .cat-nav {
       grid-area: left !important;
@@ -3819,6 +3823,64 @@
       font-weight: 800 !important;
       letter-spacing: -0.015em !important;
     }
+
+    /* v0.87: SWAP section card columns — map on LEFT (= page center),
+       list on RIGHT (= page right). Was list-left + map-right since v0.55.
+       Map gets a bit more width than list (1.3fr vs 1fr). */
+    body.v85-layout #card-events,
+    body.v85-layout #card-school,
+    body.v85-layout #card-parks,
+    body.v85-layout #card-public-services,
+    body.v85-layout #card-home-services {
+      grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) !important;
+      column-gap: 20px !important;
+    }
+    /* Subsection content (the lists) → RIGHT column of the card */
+    body.v85-layout #card-events > .school-section,
+    body.v85-layout #card-school > .school-section,
+    body.v85-layout #card-parks > .school-section,
+    body.v85-layout #card-public-services > .school-section,
+    body.v85-layout #card-home-services > .school-section {
+      grid-column: 2 !important;
+    }
+    /* Map → LEFT column of the card (which is the visual center of the page) */
+    body.v85-layout #card-events > .section-map,
+    body.v85-layout #card-school > .section-map,
+    body.v85-layout #card-parks > .section-map,
+    body.v85-layout #card-public-services > .section-map,
+    body.v85-layout #card-home-services > .section-map {
+      grid-column: 1 !important;
+      grid-row: 2 / span 999 !important;
+      position: sticky !important;
+      top: 70px !important;
+    }
+    /* Card-context-bar + info-popover still span both columns at top */
+    body.v85-layout #card-events > .card-context-bar,
+    body.v85-layout #card-events > .info-popover,
+    body.v85-layout #card-events > .source,
+    body.v85-layout #card-school > .card-context-bar,
+    body.v85-layout #card-school > .info-popover,
+    body.v85-layout #card-school > .source,
+    body.v85-layout #card-parks > .card-context-bar,
+    body.v85-layout #card-parks > .info-popover,
+    body.v85-layout #card-parks > .source,
+    body.v85-layout #card-public-services > .card-context-bar,
+    body.v85-layout #card-public-services > .info-popover,
+    body.v85-layout #card-public-services > .source,
+    body.v85-layout #card-home-services > .card-context-bar,
+    body.v85-layout #card-home-services > .info-popover,
+    body.v85-layout #card-home-services > .source {
+      grid-column: 1 / -1 !important;
+    }
+    /* Tighter map height since it's now the center hero */
+    body.v85-layout #card-events > .section-map,
+    body.v85-layout #card-school > .section-map,
+    body.v85-layout #card-parks > .section-map,
+    body.v85-layout #card-public-services > .section-map,
+    body.v85-layout #card-home-services > .section-map {
+      min-height: 540px !important;
+      max-height: calc(100vh - 110px) !important;
+    }
   }
   /* Below 1100px → fall back to existing 2-col / stacked. v85 only kicks in
      when there's enough width for all three columns (150 + 1fr + 380 + gaps). */
@@ -3871,7 +3933,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.86</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.87</span>
     </div>
   </header>
 
@@ -5099,7 +5161,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.86</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.87</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
