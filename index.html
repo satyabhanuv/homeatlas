@@ -3402,7 +3402,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.79</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.81</span>
     </div>
   </header>
 
@@ -3735,6 +3735,9 @@
     </div>
 
     <!-- Sub-nav for Emergency services -->
+    <!-- v0.80: removed "Civic" subtab — DMV / USPS / city hall / USCIS are not
+         emergency services. They live under Civic services category where
+         they belong. Per field-test bug report. -->
     <div class="subnav" data-subnav-for="card-public-services">
       <a href="#ps-emergency-section" class="subtab" data-subtarget="ps-emergency-section">Fire</a>
       <a href="#ps-police-section"    class="subtab" data-subtarget="ps-police-section">Police</a>
@@ -3742,7 +3745,6 @@
       <a href="#ps-clinic-section"    class="subtab" data-subtarget="ps-clinic-section">Clinics</a>
       <a href="#ps-pharmacy-section"  class="subtab" data-subtarget="ps-pharmacy-section">Pharmacies</a>
       <a href="#ps-dentist-section"   class="subtab" data-subtarget="ps-dentist-section">Dentists</a>
-      <a href="#ps-civic-section"     class="subtab" data-subtarget="ps-civic-section">Civic</a>
     </div>
 
     <div class="parks-card" id="card-public-services" hidden>
@@ -3782,8 +3784,11 @@
           <h4>🦷 Dentists</h4>
           <div id="ps-dentist-tbody"></div>
         </div>
-        <div class="school-section" id="ps-civic-section" hidden>
-          <h4>🏛️ Civic services <span class="hint">— post office, town hall</span></h4>
+        <!-- v0.80: ps-civic-section REMOVED from Emergency services subnav above.
+             Kept the markup hidden + style display:none so any stale link still
+             resolves silently. Real civic data lives under Civic services. -->
+        <div class="school-section" id="ps-civic-section" hidden style="display:none !important;">
+          <h4>🏛️ Civic services <span class="hint">— moved to Civic services category</span></h4>
           <div id="ps-civic-tbody"></div>
         </div>
       </div>
@@ -4585,7 +4590,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.79</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.81</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -6187,8 +6192,25 @@ function osmReasons(t) {
   if (t["addr:housenumber"] && t["addr:street"]) r.push("address");
   return r;
 }
+// v0.81: Sort distance-first (was completeness-first). The old order
+// buried close places like "EZ Mail 0.9mi" behind verified-but-far ones
+// like "PostNet 8.4mi" — field-test bug. Users expect closest first;
+// completeness is now only a tiebreaker for places at the same distance.
+//
+// Banding: places within the same 0.3-mi band are treated as equivalent
+// distance and broken by completeness score (so within the closest band,
+// the best-tagged place wins). Beyond that, raw distance dominates.
 function rankByScoreThenDistance(arr) {
-  return arr.slice().sort((a, b) => ((b.score || 0) - (a.score || 0)) || ((a.dist || 0) - (b.dist || 0)));
+  return arr.slice().sort((a, b) => {
+    const da = a.dist || 0;
+    const db = b.dist || 0;
+    // Round to 0.3 mi bands so cards at 1.1 and 1.3 mi are treated equal,
+    // and within that band the higher completeness wins.
+    const banda = Math.floor(da / 0.3);
+    const bandb = Math.floor(db / 0.3);
+    if (banda !== bandb) return banda - bandb;
+    return (b.score || 0) - (a.score || 0);
+  });
 }
 
 /* -------- DOM helpers ------------------------------------------------ */
@@ -12445,7 +12467,7 @@ const SERVICE_QUERIES = [
   { q: "school",                target: "sec-schools",          subtab: null,                        desc: "Schools — public, private, charter" },
   { q: "elementary school",     target: "sec-schools",          subtab: null,                        desc: "Elementary schools" },
   { q: "high school",           target: "sec-schools",          subtab: null,                        desc: "High schools" },
-  { q: "library",               target: "sec-public-services", subtab: "ps-civic-section",          desc: "Public libraries" },
+  { q: "library",               target: "sec-civic",           subtab: null,                       desc: "Public libraries — see Civic services" },
   { q: "park",                  target: "sec-parks",            subtab: null,                        desc: "Parks, trails, playgrounds" },
   { q: "playground",            target: "sec-parks",            subtab: null,                        desc: "Playgrounds" },
   { q: "hospital",              target: "sec-public-services", subtab: "ps-hospital-section",       desc: "Hospitals" },
