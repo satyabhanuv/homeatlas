@@ -346,6 +346,42 @@
     border-radius: 999px;
   }
 
+  /* v0.82: Federal lands distance band selector (Nearby / Day trip / Weekend) */
+  .federal-lands-distance {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin-bottom: 14px;
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(15,110,86,0.10);
+  }
+  .fl-dist-label {
+    font-size: 12px; font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase; letter-spacing: 0.3px;
+    margin-right: 4px;
+  }
+  .fl-dist-btn {
+    padding: 5px 10px;
+    border: 1.5px solid var(--line);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ink-soft);
+    font-size: 12.5px; font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: background 0.12s ease, color 0.12s ease, border-color 0.12s ease;
+  }
+  .fl-dist-btn .fl-dist-range {
+    color: var(--ink-faint);
+    font-weight: 500;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .fl-dist-btn:hover { background: rgba(15,110,86,0.06); border-color: #0F6E56; color: #0F6E56; }
+  .fl-dist-btn.active {
+    background: #0F6E56; color: #fff; border-color: #0F6E56;
+  }
+  .fl-dist-btn.active .fl-dist-range { color: rgba(255,255,255,0.85); }
+
   /* v0.73: Federal lands wrapper — distinctive forest-green-tinted card
      for NPS + RIDB, visually separated from OSM-sourced playgrounds above. */
   .federal-lands-wrap {
@@ -1443,6 +1479,18 @@
   .risks-head .text-block { display: flex; flex-direction: column; }
   .risks-head .value { font-size: 20px; font-weight: 700; color: var(--ink); margin-top: 2px; }
   .risks-head .summary-pill { margin-left: auto; padding: 8px 14px; border-radius: 999px; background: rgba(176,52,52,0.10); color: #b34d4d; font-size: 12px; font-weight: 600; }
+  /* v0.82: specificity pill for risk factors — Address-specific vs Area estimate */
+  .risk-spec {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    font-size: 10.5px; font-weight: 700;
+    text-transform: uppercase; letter-spacing: 0.3px;
+    vertical-align: 2px;
+  }
+  .risk-spec-addr { background: rgba(15,110,86,0.10); color: #0F6E56; border: 1px solid rgba(15,110,86,0.24); }
+  .risk-spec-area { background: rgba(180,83,9,0.10); color: #B45309; border: 1px solid rgba(180,83,9,0.22); }
   .risk-row {
     display: flex; align-items: center; gap: 16px;
     padding: 14px 4px; border-bottom: 1px solid var(--line);
@@ -2570,6 +2618,38 @@
   .civic-card.unavailable .civic-card-link { color: var(--ink-faint); }
 
   /* v0.27: "Reviews coming in Phase 4" banner under Home services */
+  /* v0.82: Verified local help banner for home services per QA2 */
+  .verified-help-banner {
+    margin: 18px 0 14px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, var(--blue-light), rgba(15,110,86,0.06));
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .vh-row { display: flex; align-items: flex-start; gap: 16px; }
+  .vh-icon { font-size: 32px; line-height: 1; flex: 0 0 auto; }
+  .vh-body { flex: 1; min-width: 0; }
+  .vh-title { font-size: 17px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+  .vh-desc { font-size: 13.5px; color: var(--ink-soft); line-height: 1.55; margin-bottom: 12px; }
+  .vh-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .vh-action { font-size: 13px; padding: 8px 14px; }
+  .public-listings-divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 20px 0 12px;
+    font-size: 11.5px; font-weight: 700;
+    color: var(--ink-faint);
+    text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .pld-line {
+    flex: 1; height: 1px; background: var(--line);
+  }
+  .pld-label { padding: 0 4px; }
+  @media (max-width: 600px) {
+    .vh-row { flex-direction: column; gap: 12px; }
+    .vh-icon { font-size: 28px; }
+    .vh-title { font-size: 16px; }
+  }
+
   .reviews-coming-banner {
     margin: 8px 0 14px;
     padding: 12px 14px;
@@ -3402,7 +3482,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.81</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82</span>
     </div>
   </header>
 
@@ -3456,7 +3536,7 @@
         <span class="cat-dd-icon">💚</span><span class="cat-dd-label">Community help</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="civic" aria-haspopup="true" aria-expanded="false">
-        <span class="cat-dd-icon">🏛️</span><span class="cat-dd-label">Civic services</span><span class="cat-dd-arrow"></span>
+        <span class="cat-dd-icon">🏛️</span><span class="cat-dd-label">Official links</span><span class="cat-dd-arrow"></span>
       </button>
       <button class="cat-dd-tab" type="button" data-dd="safety" aria-haspopup="true" aria-expanded="false">
         <span class="cat-dd-icon">🛡️</span><span class="cat-dd-label">Safety</span><span class="cat-dd-arrow"></span>
@@ -3629,7 +3709,7 @@
       <a href="#cat-around-me"  class="cat-tab"            data-cat="around-me">Around me</a>
       <a href="#cat-my-home"    class="cat-tab"            data-cat="my-home">My home</a>
       <a href="#cat-help"       class="cat-tab"            data-cat="help">Help</a>
-      <a href="#cat-civic"      class="cat-tab"            data-cat="civic">Civic</a>
+      <a href="#cat-civic"      class="cat-tab"            data-cat="civic">Official links</a>
       <a href="#cat-safety"     class="cat-tab"            data-cat="safety">Safety &amp; risks</a>
       <a href="#cat-saved"      class="cat-tab"            data-cat="saved">Saved</a>
     </nav>
@@ -3656,7 +3736,7 @@
         <a href="#sec-home-services"   class="sec-tab" data-target="sec-home-services"   data-category="my-home">Home services</a>
         <a href="#sec-community-help"  class="sec-tab" data-target="sec-community-help"  data-category="help">Community help</a>
         <a href="#sec-health"          class="sec-tab" data-target="sec-health"          data-category="help">Health &amp; wellness</a>
-        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic"           data-category="civic">Public services</a>
+        <a href="#sec-civic"           class="sec-tab" data-target="sec-civic"           data-category="civic">Official links</a>
         <a href="#sec-public-services" class="sec-tab" data-target="sec-public-services" data-category="safety">Emergency services</a>
         <a href="#sec-risks"           class="sec-tab" data-target="sec-risks"           data-category="safety">Climate risks</a>
       </div>
@@ -3676,10 +3756,14 @@
       <a href="#card-home"            class="subtab" data-subtarget="card-home">Property details</a>
     </div>
 
+    <!-- v0.82: state-aware label — was "Address resolved" always, even when
+         no data was actually resolved (per ChatGPT QA2). Now reads "Your
+         address" by default; JS upgrades to "Address resolved" only when
+         renderResolved() succeeds with real data. -->
     <div class="resolved" id="sub-myhome-address" hidden>
       <div class="resolved-head">
         <div class="pin">📍</div>
-        <span class="pin-label">Address resolved</span>
+        <span class="pin-label" id="ra-pin-label">Your address</span>
         <button class="reset-btn" id="resetBtn" type="button">Search a different address</button>
       </div>
       <div class="resolved-body">
@@ -3804,7 +3888,7 @@
     <div class="page-section-header public-services" id="sec-civic">
       <div class="psh-icon">🏛️</div>
       <div class="psh-text">
-        <h2 class="psh-title">Public services</h2>
+        <h2 class="psh-title">Official links</h2>
       </div>
     </div>
 
@@ -4066,12 +4150,20 @@
         <!-- v0.73: Federal lands wrapper — wraps NPS + RIDB in a distinctive
              card so it's visually separated from the OSM-sourced playgrounds
              /dog parks / trails above. Per field-test feedback that these
-             two sections "blended in with everything else." -->
+             two sections "blended in with everything else."
+             v0.82: 3 distance modes (Nearby / Day trip / Weekend trip)
+             per QA2 — federal lands shouldn't use 2/5/10mi local-park scale. -->
         <div class="federal-lands-wrap" id="parks-federal-wrap" hidden>
           <div class="federal-lands-header">
             <span class="federal-lands-icon">🏞️</span>
             <span class="federal-lands-title">Federal &amp; state public lands</span>
             <span class="federal-lands-sub">National Park Service + Recreation.gov · authoritative data</span>
+          </div>
+          <div class="federal-lands-distance" role="radiogroup" aria-label="Federal lands distance">
+            <span class="fl-dist-label">Distance:</span>
+            <button type="button" class="fl-dist-btn active" data-fl-band="nearby" role="radio" aria-checked="true">Nearby <span class="fl-dist-range">0–25 mi</span></button>
+            <button type="button" class="fl-dist-btn" data-fl-band="daytrip" role="radio">Day trip <span class="fl-dist-range">25–150 mi</span></button>
+            <button type="button" class="fl-dist-btn" data-fl-band="weekend" role="radio">Weekend trip <span class="fl-dist-range">150–300 mi</span></button>
           </div>
           <!-- v0.71: National Park Service — federal parks within driving distance -->
           <div class="school-section federal-subsection" id="parks-nps-section" hidden>
@@ -4105,7 +4197,7 @@
 
     <!-- Sub-nav for Events -->
     <div class="subnav" data-subnav-for="card-events">
-      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section">Happening this month</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section">What's happening</a>
       <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Farmers markets</a>
       <a href="#events-worship-section"   class="subtab" data-subtarget="events-worship-section">Churches &amp; temples</a>
       <a href="#events-community-section" class="subtab" data-subtarget="events-community-section">Community centers</a>
@@ -4356,8 +4448,32 @@
         <b>Where this comes from:</b> registered businesses tagged on OpenStreetMap as a craft (plumber, electrician, carpenter, HVAC, painter, etc.) or a relevant shop (hardware, paint, appliance) within ~3 mi. Coverage is spotty for individual sole-proprietors who haven't registered on OSM yet.
       </div>
       <!-- v0.27: explicit "verified-resident reviews coming" note — sets expectations -->
-      <div class="reviews-coming-banner">
-        <div><b>Reviews are on the roadmap.</b> When ratings launch, only verified neighbors — homeowners, residents, and tenants on this block — will be able to review. No paid placements, no random drive-by reviews. Until then, these are listings only.</div>
+      <!-- v0.82: Verified local help vs Public map listings split per QA2.
+           Today we have zero verified entries; honest about that, plus three
+           CTAs: Recommend a pro (community submission), Claim a business,
+           Request help (post a request neighbors might answer). -->
+      <div class="verified-help-banner">
+        <div class="vh-row">
+          <div class="vh-icon">🤝</div>
+          <div class="vh-body">
+            <div class="vh-title">Verified local help</div>
+            <div class="vh-desc">
+              We don't have verified neighbor-recommended help in this area yet.
+              When neighbors start recommending pros, they'll appear here with a verified badge.
+              Until then, the listings below are <b>public map data</b> only — call ahead to confirm.
+            </div>
+            <div class="vh-actions">
+              <button type="button" class="btn-secondary vh-action" data-vh-action="recommend">👍 Recommend a pro</button>
+              <button type="button" class="btn-secondary vh-action" data-vh-action="claim">🏷️ Claim a business</button>
+              <button type="button" class="btn-secondary vh-action" data-vh-action="request">🙋 Request help</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="public-listings-divider">
+        <span class="pld-line"></span>
+        <span class="pld-label">Public map listings (from OpenStreetMap)</span>
+        <span class="pld-line"></span>
       </div>
       <div class="parks-loading" id="hs-loading" hidden>Finding nearby home-service providers…</div>
       <div id="hs-sections" hidden>
@@ -4495,9 +4611,13 @@
 
   <section class="block">
     <h2>Privacy &amp; data</h2>
+    <!-- v0.82: rewrote per QA2 — the old "runs entirely in your browser"
+         + "address sent to OSM services" combo read contradictory to a
+         normal user. Now: clear about what stays local vs what gets sent. -->
     <div class="privacy">
-      <p style="margin:0 0 6px;"><b>We don&rsquo;t store your address.</b> Search runs entirely in your browser. The address text is sent to OpenStreetMap-based services to convert it to coordinates and look up nearby schools &mdash; nothing is saved on our side.</p>
-      <p style="margin:0;">When we add user accounts, saving an address will be opt-in and used to power personalized recommendations.</p>
+      <p style="margin:0 0 8px;"><b>We do not store your address on Nearnity servers.</b> To resolve a location and load nearby results, your browser may send the address or coordinates to public map and geocoding services (OpenStreetMap-based providers, US Census Geocoder, federal data APIs like NWS / USGS / NPS). These are public-data services with their own privacy policies linked below.</p>
+      <p style="margin:0 0 8px;"><b>Saved places stay on your device.</b> Anything you star is stored in your browser's local storage only — not on Nearnity's servers, not synced. Clearing your browser data removes them.</p>
+      <p style="margin:0;"><b>Email digest is opt-in.</b> If (and only if) you subscribe to weekly updates, we store your email + saved-place location in our database to send those emails. Unsubscribe anytime. No third-party sharing, ever.</p>
     </div>
   </section>
 
@@ -4555,7 +4675,7 @@
           <li><a href="#" data-cat-link="around-me">Around me</a></li>
           <li><a href="#" data-cat-link="my-home">My home</a></li>
           <li><a href="#" data-cat-link="help">Help &amp; wellness</a></li>
-          <li><a href="#" data-cat-link="civic">Public services</a></li>
+          <li><a href="#" data-cat-link="civic">Official links</a></li>
           <li><a href="#" data-cat-link="safety">Safety &amp; risks</a></li>
         </ul>
       </div>
@@ -4590,7 +4710,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.81</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.82</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7738,6 +7858,11 @@ function renderResolved(geo) {
   // first paint don't see "Address resolved" with em-dash placeholders.
   const ra = document.getElementById("sub-myhome-address");
   if (ra) ra.hidden = false;
+  // v0.82: upgrade the label from default "Your address" → "Address resolved"
+  // only when we have actual address data (state-aware per QA2).
+  const pinLabel = document.getElementById("ra-pin-label");
+  const hasData = a.city || a.town || a.village || a.postcode || a.state;
+  if (pinLabel) pinLabel.textContent = hasData ? "Address resolved" : "Address partially resolved";
   // v0.70: Surface a compact "Serves this address" overview above cat-nav.
   // Called again later when utility/school/climate data loads to fill chips.
   try { renderAddressOverview(geo); } catch (e) { dlog("[overview] render failed", e); }
@@ -7920,6 +8045,20 @@ function placeRow(item, cityKey) {
   const verifiedBadge = item.verified
     ? `<span class="osm-verified-tag" title="Verified contact info on OpenStreetMap: ${(item.reasons || []).join(', ')}">✓ Verified</span>`
     : "";
+  // v0.82: trust label on every card (per QA2). OSM is "Public map data".
+  // The verified flag determines confidence: verified-OSM = high, raw = medium.
+  const trustLabel = "Public map data";
+  const trustCls = "trust-pill-linked";
+  const trustPill = `<span class="trust-pill ${trustCls}" style="margin-left:6px;" title="${escapeHtml(trustLabel)} — from OpenStreetMap, community-edited">${trustLabel}</span>`;
+  // v0.82: save star on every card (per QA2). Build a stable id from name + lat/lon.
+  const saveItem = {
+    id: `place::${item.category || "x"}::${(item.name || "").toLowerCase().replace(/\s+/g, "-").slice(0,60)}::${(item.lat||0).toFixed(3)}-${(item.lon||0).toFixed(3)}`,
+    type: "place",
+    title: item.name,
+    subtitle: [item.subtype, item.dist != null ? item.dist.toFixed(1) + " mi" : null].filter(Boolean).join(" · "),
+    url: reach,
+  };
+  const saveStar = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml(saveItem) : "";
   // v0.33: transparent "why ranked here"
   const whyRanked = `Ranked by: ${item.dist.toFixed(1)} mi away${(item.reasons && item.reasons.length) ? ' · OSM-verified ' + item.reasons.join(', ') : ''}`;
   // v0.33.4: contact + hours line under the name when OSM has them
@@ -7935,9 +8074,10 @@ function placeRow(item, cityKey) {
       <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
       ${accessTag}
       ${verifiedBadge}
+      ${trustPill}
       ${contactLine}
     </div>
-    <div class="school-icons">${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
+    <div class="school-icons">${saveStar}${iconButtonsHtml(item.name, { reachUrl: reach, mapUrl: map })}</div>
   </div>`;
 }
 // v0.12: build a 3×3 grid (Elementary/Middle/High × category).
@@ -8779,13 +8919,68 @@ function resolveRisks(addr, lat, lon, zone) {
 
   return {
     rows: [
-      { glyph:"💧", title:`${floodScore}/10 Flood Factor`, score:floodScore, desc:floodDesc, url:femaUrl },
-      { glyph:"🔥", title:`${fireScore}/10 Fire Factor`,   score:fireScore,  desc:fireDesc,  url:wildfireUrl },
-      { glyph:"☀️", title:`${heatScore}/10 Heat Factor`,    score:heatScore,  desc:heatDesc,  url:heatUrl },
-      { glyph:"🌬️", title:`${airScore}/10 Air Factor`,      score:airScore,   desc:airDesc,   url:airUrl }
+      // v0.82: per-factor specificity labels per QA2 — distinguish what's
+      // address-specific (FEMA flood, Cal Fire FHSZ) from rough area estimates
+      // (heat zone, regional AQ). Don't make rough scores sound address-specific.
+      { glyph:"💧", title:`${floodScore}/10 Flood Factor`, score:floodScore, desc:floodDesc, url:femaUrl,
+        specificity: "Address-specific", specificity_note: "FEMA NFHL flood map — verify on FEMA Map Service Center for exact zone" },
+      { glyph:"🔥", title:`${fireScore}/10 Fire Factor`,   score:fireScore,  desc:fireDesc,  url:wildfireUrl,
+        specificity: "Address-specific in CA", specificity_note: "Cal Fire FHSZ is parcel-level in CA; rougher zones elsewhere" },
+      { glyph:"☀️", title:`${heatScore}/10 Heat Factor`,    score:heatScore,  desc:heatDesc,  url:heatUrl,
+        specificity: "Area estimate", specificity_note: "Based on climate zone, not your specific address" },
+      { glyph:"🌬️", title:`${airScore}/10 Air Factor`,      score:airScore,   desc:airDesc,   url:airUrl,
+        specificity: "Area estimate", specificity_note: "Regional baseline — for live readings see Live Alerts → Air quality" }
     ]
   };
 }
+
+// v0.82: Verified local help action buttons (Recommend a pro / Claim a business
+// / Request help) — open the corrections modal with pre-filled context per
+// QA2. Same backend storage, different intent labels.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("[data-vh-action]");
+  if (!btn) return;
+  e.preventDefault();
+  const action = btn.dataset.vhAction;
+  const labelMap = {
+    recommend: { title: "Recommend a local pro", issue: "recommendation",
+      sub: "Tell us about a local pro (plumber, electrician, handyman, etc.) who's done good work for you. We'll show neighbor-recommended pros with a verified badge once we have a few." },
+    claim:     { title: "Claim a business", issue: "claim_business",
+      sub: "Own a local trade business? Tell us the business name + your contact, and we'll add a Verified badge once we've confirmed." },
+    request:   { title: "Request help", issue: "help_request",
+      sub: "Describe what you need help with. We'll route to neighbors who've recommended pros in that trade." },
+  };
+  const cfg = labelMap[action] || labelMap.recommend;
+  // Reuse the correction modal — same backend, different intent
+  _correctionContextPayload = { card_id: `vh::${action}`, category: action, source_url: "", title_hint: cfg.title };
+  const modal = document.getElementById("correctionModal");
+  if (modal) {
+    const form = document.getElementById("correctionForm");
+    const status = document.getElementById("correctionStatus");
+    const submit = document.getElementById("correctionSubmit");
+    if (form) form.reset();
+    if (status) { status.textContent = ""; status.className = "correction-status"; }
+    if (submit) { submit.disabled = false; submit.textContent = "Submit"; }
+    const title = document.getElementById("correctionModalTitle");
+    const sub = document.getElementById("correctionModalSub");
+    if (title) title.textContent = cfg.title;
+    if (sub) sub.textContent = cfg.sub;
+    // Pre-fill issue type
+    const issueSelect = form && form.querySelector("select[name=issue_type]");
+    if (issueSelect) {
+      // Add the option if it doesn't exist (action-specific value)
+      if (!Array.from(issueSelect.options).some(o => o.value === cfg.issue)) {
+        const opt = document.createElement("option");
+        opt.value = cfg.issue;
+        opt.textContent = cfg.title;
+        issueSelect.insertBefore(opt, issueSelect.children[1]);
+      }
+      issueSelect.value = cfg.issue;
+    }
+    modal.hidden = false;
+    document.body.style.overflow = "hidden";
+  }
+});
 
 // v0.72 ─── Corrections modal + digest signup wiring ──────────────────
 // Open the modal when any [data-report-payload] element is clicked. Modal
@@ -9027,21 +9222,62 @@ async function loadUsgsQuakes(lat, lon) {
 }
 
 // v0.71 ─── NPS + RIDB park feeds (called from loadNearbyParks) ─────────
+// v0.82: 3 distance bands per QA2 — federal lands shouldn't use the local
+// 2/5/10mi scale. Each band controls a different (min, max) miles range.
+const FL_BANDS = {
+  nearby:  { min: 0,   max: 25,  label: "Nearby" },
+  daytrip: { min: 25,  max: 150, label: "Day trip" },
+  weekend: { min: 150, max: 300, label: "Weekend trip" },
+};
+let _flCurrentBand = "nearby";
+let _flLastLatLon = null;
 async function loadNpsAndRidb(lat, lon) {
+  _flLastLatLon = { lat, lon };
   // Fire in parallel
-  loadNpsParks(lat, lon);
-  loadRidbSites(lat, lon);
+  loadNpsParks(lat, lon, _flCurrentBand);
+  loadRidbSites(lat, lon, _flCurrentBand);
 }
-async function loadNpsParks(lat, lon) {
+// Wire the band buttons. Click → switch active, refetch with new band.
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest(".fl-dist-btn[data-fl-band]");
+  if (!btn) return;
+  e.preventDefault();
+  const band = btn.dataset.flBand;
+  if (band === _flCurrentBand) return;
+  _flCurrentBand = band;
+  document.querySelectorAll(".fl-dist-btn").forEach(b => {
+    b.classList.toggle("active", b.dataset.flBand === band);
+    b.setAttribute("aria-checked", String(b.dataset.flBand === band));
+  });
+  if (_flLastLatLon) {
+    // Clear NPS + RIDB section contents while loading new band
+    const nps = $("parks-nps-tbody"), rec = $("parks-rec-tbody");
+    if (nps) nps.innerHTML = `<div class="schools-empty" style="padding:14px;color:var(--ink-faint);">Searching ${escapeHtml(FL_BANDS[band].label.toLowerCase())} range…</div>`;
+    if (rec) rec.innerHTML = "";
+    loadNpsParks(_flLastLatLon.lat, _flLastLatLon.lon, band);
+    loadRidbSites(_flLastLatLon.lat, _flLastLatLon.lon, band);
+  }
+});
+async function loadNpsParks(lat, lon, band) {
   const sec = $("parks-nps-section");
   const tb  = $("parks-nps-tbody");
   if (!sec || !tb) return;
+  band = band || _flCurrentBand || "nearby";
+  const range = FL_BANDS[band] || FL_BANDS.nearby;
   try {
-    const r = await fetch(`${LIVE_RISKS_API_BASE}/parks-nps?lat=${lat}&lon=${lon}&radius=120`);
+    // Fetch with the upper bound of the band as radius, then filter by min
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/parks-nps?lat=${lat}&lon=${lon}&radius=${range.max}`);
     const data = await r.json();
     if (data.status === "no_key") return;   // silently skip; NPS_KEY not configured
-    const parks = data.parks || [];
-    if (!parks.length) return;
+    let parks = data.parks || [];
+    // Filter to band — keep only places between min and max miles
+    parks = parks.filter(p => (p.distance_miles ?? 0) >= range.min && (p.distance_miles ?? 0) <= range.max);
+    if (!parks.length) {
+      sec.hidden = false;
+      const wrap = $("parks-federal-wrap"); if (wrap) wrap.hidden = false;
+      tb.innerHTML = `<div class="schools-empty" style="padding:14px;color:var(--ink-faint);">No National Park Service sites in the ${escapeHtml(range.label.toLowerCase())} range. Try another distance band above.</div>`;
+      return;
+    }
     sec.hidden = false;
     // v0.73: reveal the federal-lands wrapper when either NPS or RIDB returns data
     const wrap = $("parks-federal-wrap"); if (wrap) wrap.hidden = false;
@@ -9058,16 +9294,34 @@ async function loadNpsParks(lat, lon) {
     dlog("[nps] error", e);
   }
 }
-async function loadRidbSites(lat, lon) {
+async function loadRidbSites(lat, lon, band) {
   const sec = $("parks-rec-section");
   const tb  = $("parks-rec-tbody");
   if (!sec || !tb) return;
+  band = band || _flCurrentBand || "nearby";
+  const range = FL_BANDS[band] || FL_BANDS.nearby;
   try {
-    const r = await fetch(`${LIVE_RISKS_API_BASE}/recreation?lat=${lat}&lon=${lon}&radius=50`);
+    const r = await fetch(`${LIVE_RISKS_API_BASE}/recreation?lat=${lat}&lon=${lon}&radius=${range.max}`);
     const data = await r.json();
-    if (data.status === "no_key") return;   // silently skip; RIDB_KEY not configured
-    const sites = data.sites || [];
-    if (!sites.length) return;
+    if (data.status === "no_key") return;
+    let sites = data.sites || [];
+    // RIDB doesn't return distance — compute from lat/lon
+    const haver = (la1, lo1, la2, lo2) => {
+      const R = 3958.8, toRad = d => (d * Math.PI) / 180;
+      const dLa = toRad(la2 - la1), dLo = toRad(lo2 - lo1);
+      const a = Math.sin(dLa / 2) ** 2 + Math.cos(toRad(la1)) * Math.cos(toRad(la2)) * Math.sin(dLo / 2) ** 2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    };
+    for (const s of sites) {
+      if (s.lat != null && s.lon != null && s.distance_miles == null) {
+        s.distance_miles = +(haver(lat, lon, parseFloat(s.lat), parseFloat(s.lon))).toFixed(2);
+      }
+    }
+    sites = sites.filter(s => (s.distance_miles ?? 0) >= range.min && (s.distance_miles ?? 0) <= range.max);
+    if (!sites.length) {
+      // Don't double-empty if NPS already filled with empty message
+      return;
+    }
     sec.hidden = false;
     // v0.73: reveal the federal-lands wrapper when either NPS or RIDB returns data
     const wrap = $("parks-federal-wrap"); if (wrap) wrap.hidden = false;
@@ -9099,11 +9353,17 @@ function renderRisks(risks) {
                                 : `Generally low risk (max ${maxScore}/10)`;
   setText("risks-headline", `Climate risks · max ${maxScore}/10`);
   setText("risks-summary", summary);
+  // v0.82: per-factor specificity pill (Address-specific vs Area estimate)
+  // makes it visually obvious which scores are parcel-level vs regional rough.
+  const specClass = (s) => /^Address/i.test(s) ? "risk-spec-addr" : "risk-spec-area";
   const html = risks.rows.map(r => `
     <a class="risk-row" href="${r.url}" target="_blank" rel="noopener">
       <div class="risk-glyph">${r.glyph}</div>
       <div class="risk-text">
-        <div class="risk-title"><span class="${scoreClass(r.score)}">${escapeHtml(r.title)}</span></div>
+        <div class="risk-title">
+          <span class="${scoreClass(r.score)}">${escapeHtml(r.title)}</span>
+          ${r.specificity ? `<span class="risk-spec ${specClass(r.specificity)}" title="${escapeHtml(r.specificity_note || "")}">${escapeHtml(r.specificity)}</span>` : ""}
+        </div>
         <div class="risk-desc">${escapeHtml(r.desc)}</div>
       </div>
       <div class="risk-arrow">›</div>
@@ -11010,12 +11270,38 @@ document.addEventListener("submit", async (e) => {
   }
 });
 
-// v0.67: Time-window state for the events calendar. Persisted to localStorage
-// so the user's last chip choice survives reload. Default = "month."
+// v0.67/v0.82: Time-window state for the events calendar. Persisted to
+// localStorage so the user's last chip choice survives reload.
+// v0.82: default flipped from "month" → "weekend" per QA2 — people don't
+// think "happening this month" first. They think Today / This weekend.
 const TIME_WINDOW_KEY = "nearnity:events:window:v1";
 function getEventsTimeWindow() {
-  try { return localStorage.getItem(TIME_WINDOW_KEY) || "month"; }
-  catch (e) { return "month"; }
+  try { return localStorage.getItem(TIME_WINDOW_KEY) || "weekend"; }
+  catch (e) { return "weekend"; }
+}
+// v0.82: source-bucket filter ("all" | "free" | "official" | "community" | "ticketed")
+// per QA2. Splits events so users can hide Ticketmaster noise when looking for
+// local/community/free things.
+const SOURCE_BUCKET_KEY = "nearnity:events:bucket:v1";
+function getEventsSourceBucket() {
+  try { return localStorage.getItem(SOURCE_BUCKET_KEY) || "all"; }
+  catch (e) { return "all"; }
+}
+function setEventsSourceBucket(b) {
+  try { localStorage.setItem(SOURCE_BUCKET_KEY, b); } catch (e) {}
+}
+function eventsByBucket(events, b) {
+  if (!b || b === "all" || !events) return events;
+  return events.filter((ev) => {
+    const bucket = (ev.source_bucket || "").toLowerCase();
+    const src = (ev.source || "").toLowerCase();
+    if (b === "free")     return ev.free === true;
+    if (b === "markets")  return /market/i.test(ev.title || "") || /market/i.test(ev.category || "");
+    if (b === "official") return bucket === "official";
+    if (b === "community") return bucket === "community";
+    if (b === "ticketed") return bucket === "ticketed";
+    return true;
+  });
 }
 function setEventsTimeWindow(w) {
   try { localStorage.setItem(TIME_WINDOW_KEY, w); } catch (e) {}
@@ -11070,10 +11356,14 @@ function _renderEventsCalendar(geo, events, tb) {
   const keyword = qInput && qInput.value ? qInput.value.trim() : "";
   // v0.67: Apply the selected time-window chip filter
   const timeWindow = getEventsTimeWindow();
+  // v0.82: also apply source-bucket filter per QA2 — splits events into
+  // Free / Markets / Official / Community / Ticketed buckets.
+  const bucketFilter = getEventsSourceBucket();
   // v0.73: track pre-filter count so we can distinguish "no events at all"
   // from "events exist but filter zeroes them out" — different UX.
   const totalBeforeFilter = events.length;
   events = eventsInWindow(events, timeWindow);
+  events = eventsByBucket(events, bucketFilter);
   if (!events || !events.length) {
     // If filter is non-default AND we had events before filtering, show a
     // chip-aware empty state inline (keeping the chips so user can broaden).
@@ -11154,6 +11444,19 @@ function _renderEventsCalendar(geo, events, tb) {
       ${chipDef.map(c => `<button type="button" class="time-chip ${timeWindow === c.id ? "active" : ""}" data-window="${c.id}" role="tab" aria-selected="${timeWindow === c.id}">${escapeHtml(c.label)}</button>`).join("")}
       <span class="time-chips-count">${totalEv} event${totalEv === 1 ? "" : "s"}</span>
     </div>`;
+    // v0.82: source-bucket chips below time chips. Per QA2 — Ticketmaster
+    // shouldn't be the default event universe. Users pick what kind they want.
+    const bucketDef = [
+      { id: "all",       label: "All sources" },
+      { id: "free",      label: "Free" },
+      { id: "markets",   label: "Markets" },
+      { id: "official",  label: "Official / civic" },
+      { id: "community", label: "Community" },
+      { id: "ticketed",  label: "Ticketed" },
+    ];
+    const bucketChips = `<div class="time-chips" role="tablist" aria-label="Filter events by source" style="margin-top:-6px;">
+      ${bucketDef.map(c => `<button type="button" class="time-chip bucket-chip ${bucketFilter === c.id ? "active" : ""}" data-bucket="${c.id}" role="tab" aria-selected="${bucketFilter === c.id}">${escapeHtml(c.label)}</button>`).join("")}
+    </div>`;
     // v0.68: For non-month chips, render a FLAT tiered list of all events in
     // the window. The calendar+agenda combo only makes sense for the full
     // month — for "Today" / "This weekend" / "Next 7 days" users want a
@@ -11167,7 +11470,14 @@ function _renderEventsCalendar(geo, events, tb) {
         <div>${_renderCalendarAgenda(byDate, selectedDate, todayKey)}</div>
       </div>`;
     }
-    tb.innerHTML = banner + chips + body;
+    tb.innerHTML = banner + chips + bucketChips + body;
+    // v0.82: wire bucket-chip clicks
+    tb.querySelectorAll(".bucket-chip[data-bucket]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        setEventsSourceBucket(btn.dataset.bucket);
+        if (typeof loadNearbyEvents === "function" && lastEventsGeo) loadNearbyEvents(lastEventsGeo);
+      });
+    });
     // v0.67: Wire chip clicks — switch the time window and re-render the tab
     tb.querySelectorAll(".time-chip[data-window]").forEach((c) => {
       c.addEventListener("click", () => {
@@ -12736,7 +13046,7 @@ const SECTION_DISPLAY_NAME = {
   "sec-home-services":   "Home services",
   "sec-community-help":  "Community help",
   "sec-health":          "Health & wellness",
-  "sec-civic":           "Civic services",
+  "sec-civic":           "Official links",
   "sec-public-services": "Emergency services",
   "sec-risks":           "Live alerts",
   "sec-saved":           "Saved places",
