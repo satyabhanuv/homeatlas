@@ -3883,10 +3883,27 @@
     }
   }
   /* Below 1100px → fall back to existing 2-col / stacked. v85 only kicks in
-     when there's enough width for all three columns (150 + 1fr + 380 + gaps). */
-  body.v85-layout .v85-right-rail { display: none; }
-  @media (min-width: 1100px) {
-    body.v85-layout .v85-right-rail { display: block; }
+     when there's enough width for all three columns. v0.87: right rail dropped. */
+  body.v85-layout .v85-right-rail { display: none !important; }
+
+  /* v0.88: explicit mobile guard — if any v85 rule leaks below 1100px,
+     reset it. Belt-and-suspenders for the launch UI quality. */
+  @media (max-width: 1099px) {
+    body.v85-layout .results-grid {
+      display: grid !important;
+      grid-template-columns: 1fr !important;
+      grid-template-areas: none !important;
+      gap: 14px !important;
+    }
+    body.v85-layout .results-grid > .cat-nav {
+      width: auto !important;
+      position: static !important;
+      flex-direction: row !important;
+      flex-wrap: wrap !important;
+      overflow-x: auto !important;
+    }
+    body.v85-layout .v85-right-rail { display: none !important; }
+    /* Cards inside results-main keep their existing single-column flow */
   }
 </style>
 </head>
@@ -3933,7 +3950,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.87</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88</span>
     </div>
   </header>
 
@@ -4683,7 +4700,10 @@
           <div id="events-community-tbody"></div>
         </div>
         <div class="school-section" id="events-online-section">
-          <h4>🌐 Find events online <span class="hint">— authoritative free aggregators</span></h4>
+          <h4>🌐 External event sites <span class="hint">— search beyond Nearnity's curated data</span></h4>
+          <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;">
+            Nearnity surfaces curated civic + ticketed events from public sources. For broader event search (concerts, classes, meetups, community events), these external sites have wider coverage but include ads and aren't source-linked the way Nearnity is. Each opens pre-filtered to your area.
+          </div>
           <div id="events-online-body" class="civic-grid"></div>
         </div>
       </div>
@@ -5161,7 +5181,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.87</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -8564,6 +8584,15 @@ function renderResolved(geo) {
   const pinLabel = document.getElementById("ra-pin-label");
   const hasData = a.city || a.town || a.village || a.postcode || a.state;
   if (pinLabel) pinLabel.textContent = hasData ? "Address resolved" : "Address partially resolved";
+  // v0.88: hide tiles whose value is the em-dash placeholder — otherwise the
+  // resolved card shows half-empty content when geocoding partially fails.
+  setTimeout(() => {
+    if (!ra) return;
+    ra.querySelectorAll(".home-tile").forEach(tile => {
+      const val = (tile.querySelector(".home-tile-value")?.textContent || "").trim();
+      tile.style.display = (val === "" || val === "—") ? "none" : "";
+    });
+  }, 50);
   // v0.70: Surface a compact "Serves this address" overview above cat-nav.
   // Called again later when utility/school/climate data loads to fill chips.
   try { renderAddressOverview(geo); } catch (e) { dlog("[overview] render failed", e); }
