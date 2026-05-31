@@ -3843,14 +3843,16 @@
     body.v85-layout #card-home-services > .school-section {
       grid-column: 2 !important;
     }
-    /* Map → LEFT column of the card (which is the visual center of the page) */
+    /* Map → LEFT column of the card (which is the visual center of the page).
+       v0.88.1: dropped the explicit grid-row override — let Grid auto-place
+       handle it. The explicit "row 2 / span 999" was likely causing maps to
+       sit in a row that didn't exist, rendering invisible. */
     body.v85-layout #card-events > .section-map,
     body.v85-layout #card-school > .section-map,
     body.v85-layout #card-parks > .section-map,
     body.v85-layout #card-public-services > .section-map,
     body.v85-layout #card-home-services > .section-map {
       grid-column: 1 !important;
-      grid-row: 2 / span 999 !important;
       position: sticky !important;
       top: 70px !important;
     }
@@ -3872,15 +3874,10 @@
     body.v85-layout #card-home-services > .source {
       grid-column: 1 / -1 !important;
     }
-    /* Tighter map height since it's now the center hero */
-    body.v85-layout #card-events > .section-map,
-    body.v85-layout #card-school > .section-map,
-    body.v85-layout #card-parks > .section-map,
-    body.v85-layout #card-public-services > .section-map,
-    body.v85-layout #card-home-services > .section-map {
-      min-height: 540px !important;
-      max-height: calc(100vh - 110px) !important;
-    }
+    /* v0.87 map sizing — DEFER to existing CSS. v0.88.1 removed our explicit
+       min/max-height overrides because they conflicted with the existing
+       `height: calc(100vh - 140px) !important` rule and may have caused
+       map containers to render with zero height. */
   }
   /* Below 1100px → fall back to existing 2-col / stacked. v85 only kicks in
      when there's enough width for all three columns. v0.87: right rail dropped. */
@@ -3950,7 +3947,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88.1</span>
     </div>
   </header>
 
@@ -5181,7 +5178,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7313,20 +7310,28 @@ function renderV85RightRail(geo) {
   });
 }
 
-// v0.83: filter `items` to those whose place-id appears in the visible
-// list rows (data-place-id attribute). Falls back to full items if no
-// list rows are found yet (initial render race).
+// v0.83 + v0.88.1: filter `items` to those whose place-id appears in the
+// visible list rows. v0.88.1 — LENIENT MODE: if filtering would drop all
+// items (e.g., the list hasn't rendered yet OR the ID hash drifted between
+// list and map render paths), fall back to the unfiltered list so the map
+// at least shows. Prevents "no maps load" regressions.
 function _filterItemsToVisibleList(elId, items) {
   if (!items || !items.length) return items;
-  // Locate the card containing this map — walk up from the map element
   const mapEl = document.getElementById(elId);
   if (!mapEl) return items;
   const card = mapEl.closest(".parks-card, .home-card, .school-card") || mapEl.parentElement;
   if (!card) return items;
   const rowIds = new Set();
   card.querySelectorAll("[data-place-id]").forEach(r => rowIds.add(r.dataset.placeId));
-  if (!rowIds.size) return items;   // no list rendered yet — keep all
-  return items.filter(it => rowIds.has(placeIdFor(it)));
+  if (!rowIds.size) return items;
+  const filtered = items.filter(it => rowIds.has(placeIdFor(it)));
+  // v0.88.1: if filtering nuked everything, return the unfiltered list. Better
+  // to show pins without exact list-row association than show no pins at all.
+  if (!filtered.length && items.length) {
+    if (typeof dlog === "function") dlog("[map-sync] filter dropped all items, falling back to unfiltered");
+    return items;
+  }
+  return filtered;
 }
 
 function setupSectionMap(elId, centerLat, centerLon, items) {
