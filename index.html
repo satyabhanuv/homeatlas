@@ -3947,7 +3947,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.89</span>
     </div>
   </header>
 
@@ -4072,7 +4072,7 @@
     <div class="landing-section">
       <span class="landing-section-label">What's inside</span>
       <h2>Five clear answers for your address.</h2>
-      <p class="section-lead">No login. No tracking. Just public-source verified data organized the way residents actually look for it.</p>
+      <p class="section-lead">No login. No tracking. Source-linked results organized the way residents actually look for them.</p>
       <div class="product-grid">
         <a class="product-card" data-cat="around-me" tabindex="0">
           <div class="product-card-eyebrow">Around me</div>
@@ -5178,7 +5178,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.88.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.89</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7426,7 +7426,7 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
       (item.access === "private" ? `<br><span style="color:#8c2222;">🔒 Private / HOA</span>` : "") +
       (item.phone ? `<br>📞 ${(item.phone + "").replace(/[<>]/g, '')}` : "") +
       (item.opening_hours ? `<br>🕐 ${(item.opening_hours.length > 50 ? item.opening_hours.slice(0,50) + '…' : item.opening_hours).replace(/[<>]/g, '')}` : "") +
-      (item.verified ? `<br><span style="color:#2d6a4f;">✓ Verified contact info</span>` : "");
+      (item.verified ? `<br><span style="color:#2d6a4f;">✓ Complete OSM listing</span>` : "");
     marker.bindPopup(popupHtml);
     if (clusterGroup) {
       clusterGroup.addLayer(marker);
@@ -8788,7 +8788,7 @@ function placeRow(item, cityKey) {
   const pid = placeIdFor(item);
   // v0.33: verified-contact badge — businesses with phone+website+hours+address get a checkmark
   const verifiedBadge = item.verified
-    ? `<span class="osm-verified-tag" title="Verified contact info on OpenStreetMap: ${(item.reasons || []).join(', ')}">✓ Verified</span>`
+    ? `<span class="osm-verified-tag" title="Complete OpenStreetMap listing — has ${(item.reasons || []).join(', ')}. Not Nearnity-verified.">✓ Complete listing</span>`
     : "";
   // v0.82: trust label on every card (per QA2). OSM is "Public map data".
   // The verified flag determines confidence: verified-OSM = high, raw = medium.
@@ -11617,13 +11617,23 @@ const _BUCKET_TO_LABEL = {
   ticketed:  "Ticketed event source",
 };
 function trustLabelForEvent(ev) {
-  if (ev.trust_label) return ev.trust_label;
+  // v0.89: "Nearnity verified" is reserved for items manually verified by us.
+  // Only emit when the data has an explicit nearnity_verified flag set true.
+  if (ev.nearnity_verified === true) return "Nearnity verified";
+  if (ev.trust_label && ev.trust_label !== "Nearnity verified") return ev.trust_label;
   if (ev.source_bucket && _BUCKET_TO_LABEL[ev.source_bucket]) return _BUCKET_TO_LABEL[ev.source_bucket];
   // Fall back to inference from source string (matches Worker logic)
+  // v0.89: federal/state authoritative sources → "Official source"
+  //        Multi-record public data feeds → "Public dataset"
+  //        OSM and similar community map data → "Public map data"
   const s = (ev.source || "").toLowerCase();
   if (s.includes("ticketmaster") || s.includes("seatgeek") || s.includes("ticketweb")) return "Ticketed event source";
-  if (s.includes("city calendar") || s.includes("parks") || s.includes("library")) return "Official source";
-  if (s.includes("usda") || s.includes("hrsa") || s.includes("census")) return "Public dataset";
+  if (s.includes("hrsa") || s.includes("nws") || s.includes("usgs") || s.includes("nps")
+      || s.includes("airnow") || s.includes("recreation.gov") || s.includes("samhsa")
+      || s.includes("city calendar") || s.includes("city events") || s.includes("parks")
+      || s.includes("library") || s.includes("cal fire") || s.includes("fema")) return "Official source";
+  if (s.includes("usda") || s.includes("hifld") || s.includes("fcc") || s.includes("census")) return "Public dataset";
+  if (s.includes("openstreetmap") || s.includes("osm")) return "Public map data";
   return "Source-linked";
 }
 // Map label → color class (defined in CSS as .trust-pill-* )
@@ -12747,10 +12757,13 @@ async function loadCommunityHelp(geo) {
 
 // v0.47: tier badges are now compact colored dots (8px). Tooltip carries
 // the semantics. Visual weight drops dramatically so row content can breathe.
+// v0.89: tier-badge tooltip text softened — was "Verified" which implied
+// Nearnity verified the data. Reality: these are sourced from federal
+// locators / named nonprofits. Now reads "Official source" semantics.
 function tierBadgeHtml(tier) {
-  if (tier === "verified") return `<span class="tier-badge tier-verified" title="Verified — curated from an authoritative source (211, 988, SAMHSA, named nonprofit, federal data)"></span>`;
-  if (tier === "osm")      return `<span class="tier-badge tier-osm" title="OSM — from OpenStreetMap, community-edited"></span>`;
-  if (tier === "fallback") return `<span class="tier-badge tier-fallback" title="Fallback — deep-link to an external search"></span>`;
+  if (tier === "verified") return `<span class="tier-badge tier-verified" title="Official source — from federal data (211, 988, SAMHSA, HRSA) or named nonprofit. Not Nearnity-verified."></span>`;
+  if (tier === "osm")      return `<span class="tier-badge tier-osm" title="Public map data — from OpenStreetMap, community-edited"></span>`;
+  if (tier === "fallback") return `<span class="tier-badge tier-fallback" title="Source-linked — deep-link to an external search"></span>`;
   return "";
 }
 
@@ -12794,12 +12807,44 @@ function rowActionsHtml(r) {
   return primaryHtml + secHtml;
 }
 
+// v0.89: add explicit trust_label rendering. Falls back to inferring from
+// row source/tier if not provided. Per QA — every card needs a precise label,
+// not a blanket "verified."
+function _inferTrustLabel(r) {
+  if (r.trust_label) return r.trust_label;
+  const src = (r.source || "").toLowerCase();
+  const name = (r.name || "").toLowerCase();
+  if (/hrsa|nws|usgs|nps|samhsa|211|988|fema|cal fire|airnow|census|recreation\.gov/.test(src + " " + name)) return "Official source";
+  if (/openstreetmap|osm/.test(src)) return "Public map data";
+  if (/usda|hifld|fcc/.test(src)) return "Public dataset";
+  if (r.tier === "verified") return "Official source";
+  if (r.tier === "osm") return "Public map data";
+  if (r.nearnity_verified === true) return "Nearnity verified";
+  return "Source-linked";
+}
+function _trustPillCls(label) {
+  return {
+    "Official source":        "trust-pill-official",
+    "Public dataset":         "trust-pill-dataset",
+    "Public map data":        "trust-pill-linked",
+    "Source-linked":          "trust-pill-linked",
+    "Ticketed event source":  "trust-pill-ticketed",
+    "Community submitted":    "trust-pill-community",
+    "Business claimed":       "trust-pill-claimed",
+    "Nearnity verified":      "trust-pill-verified",
+    "Needs verification":     "trust-pill-unverified",
+  }[label] || "trust-pill-linked";
+}
 function communityResourceRow(r, tierBadge) {
   const meta = [r.when, r.scope, r.address].filter(Boolean).map(escapeHtml).join(" · ");
   const actions = rowActionsHtml(r);
+  // v0.89: explicit per-card trust-label pill
+  const trustLabel = _inferTrustLabel(r);
+  const trustCls = _trustPillCls(trustLabel);
+  const trustPill = `<span class="trust-pill ${trustCls}" style="margin-left:6px;vertical-align:1px;">${escapeHtml(trustLabel)}</span>`;
   return `<div class="school-row" style="display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px;flex-wrap:wrap;">
     <div style="flex:1;min-width:260px;">
-      <div style="display:flex;align-items:center;font-weight:600;font-size:15px;">${tierBadge || ""}<span>${escapeHtml(r.name)}</span></div>
+      <div style="display:flex;align-items:center;font-weight:600;font-size:15px;flex-wrap:wrap;">${tierBadge || ""}<span>${escapeHtml(r.name)}</span>${trustPill}</div>
       ${meta ? `<div class="hint" style="margin-top:4px;font-size:14px;">${meta}</div>` : ""}
       ${r.what ? `<div style="margin-top:6px;font-size:14px;line-height:1.5;color:var(--ink-soft);">${escapeHtml(r.what)}</div>` : ""}
     </div>
