@@ -3879,6 +3879,42 @@
        `height: calc(100vh - 140px) !important` rule and may have caused
        map containers to render with zero height. */
   }
+  /* =========================================================================
+     v0.90: REUSABLE EMPTY STATE COMPONENT
+     Per Launch_Ready_W1 Goal 1 — replace "blank dashes / loading" pre-search
+     states with intentional empty states across every section.
+     ========================================================================= */
+  .empty-state {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center;
+    padding: 36px 22px;
+    margin: 12px 0;
+    background: linear-gradient(135deg, var(--blue-light), rgba(15,110,86,0.04));
+    border: 1px dashed var(--line);
+    border-radius: 14px;
+    color: var(--ink);
+  }
+  .empty-state-icon { font-size: 36px; line-height: 1; margin-bottom: 10px; opacity: 0.8; }
+  .empty-state-title { font-size: 16px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+  .empty-state-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.5; max-width: 480px; margin-bottom: 14px; }
+  .empty-state-action {
+    background: var(--blue-dark); color: #fff;
+    border: 0; border-radius: 8px;
+    padding: 9px 18px;
+    font-size: 13.5px; font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    font-family: inherit;
+    transition: background 0.12s ease;
+  }
+  .empty-state-action:hover { background: var(--blue-mid); }
+  /* Hide section content cards by default — they show only after a search.
+     Pre-search state shows the empty-state component instead. */
+  body:not(.results-shown) .section-empty-state { display: flex; }
+  body.results-shown .section-empty-state { display: none; }
+  /* Inverse for the actual content containers */
+  body:not(.results-shown) .post-search-only { display: none !important; }
+
   /* Below 1100px → fall back to existing 2-col / stacked. v85 only kicks in
      when there's enough width for all three columns. v0.87: right rail dropped. */
   body.v85-layout .v85-right-rail { display: none !important; }
@@ -3947,7 +3983,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.89</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.90</span>
     </div>
   </header>
 
@@ -5178,7 +5214,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.89</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.90</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -12112,6 +12148,10 @@ function eventsInWindow(events, w) {
     const d = new Date(ev.starts);
     if (isNaN(d)) return false;
     if (w === "today") return d.toDateString() === todayKey;
+    // v0.90: tonight = today AND start time is 5pm or later local
+    if (w === "tonight") {
+      return d.toDateString() === todayKey && d.getHours() >= 17;
+    }
     if (w === "weekend") {
       // v0.73: "weekend" = Friday 5pm through Sunday 11:59pm in local time.
       // Field-test feedback: limiting to Sat+Sun returned 0 events because
@@ -12172,7 +12212,7 @@ function _renderEventsCalendar(geo, events, tb) {
         { id: "week",    label: "Next 7 days" },
         { id: "month",   label: "This month" },
       ];
-      const labelMap = { today: "today", weekend: "this weekend (Fri eve–Sun)", week: "next 7 days", month: "this month" };
+      const labelMap = { today: "today", tonight: "tonight (today after 5pm)", weekend: "this weekend (Fri eve–Sun)", week: "next 7 days", month: "this month" };
       const chipsHtml = `<div class="time-chips" role="tablist" aria-label="Filter events by time window">
         ${chipDef.map(c => `<button type="button" class="time-chip ${timeWindow === c.id ? "active" : ""}" data-window="${c.id}" role="tab" aria-selected="${timeWindow === c.id}">${escapeHtml(c.label)}</button>`).join("")}
         <span class="time-chips-count">${totalBeforeFilter} event${totalBeforeFilter === 1 ? "" : "s"} (unfiltered)</span>
@@ -12232,8 +12272,11 @@ function _renderEventsCalendar(geo, events, tb) {
         </div>`
       : "";
     // v0.67: Time-window chips above the calendar — Today / Weekend / 7d / Month
+    // v0.90: Tonight chip added per Launch_Ready Goal 4 — "Tonight" is the
+    // single most-asked-for primary event lens after "Today/Weekend".
     const chipDef = [
       { id: "today",   label: "Today" },
+      { id: "tonight", label: "Tonight" },
       { id: "weekend", label: "This weekend" },
       { id: "week",    label: "Next 7 days" },
       { id: "month",   label: "This month" },
