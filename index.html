@@ -3983,7 +3983,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.90</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.91</span>
     </div>
   </header>
 
@@ -4696,12 +4696,19 @@
       </div>
     </div>
 
-    <!-- Sub-nav for Events -->
+    <!-- v0.91: Sub-nav for Events restructured per Launch_Ready Goal 4 —
+         primary tabs are now TIME / SOURCE filters (Today / Tonight / This
+         weekend / Free / Markets / Ticketed / Where to watch) instead of
+         venue-type browsing. Time/source tabs route to events-listings-section
+         with data-filter attributes that pre-set the time-window + bucket state. -->
     <div class="subnav" data-subnav-for="card-events">
-      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section">What's happening</a>
-      <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Farmers markets</a>
-      <a href="#events-worship-section"   class="subtab" data-subtarget="events-worship-section">Churches &amp; temples</a>
-      <a href="#events-community-section" class="subtab" data-subtarget="events-community-section">Community centers</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="today"   data-filter-bucket="all">Today</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="tonight" data-filter-bucket="all">Tonight</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="weekend" data-filter-bucket="all">This weekend</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="community">Free &amp; community</a>
+      <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Markets</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="ticketed">Ticketed</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="watch">Where to watch</a>
       <a href="#events-online-section"    class="subtab" data-subtarget="events-online-section">External sites</a>
     </div>
 
@@ -5214,7 +5221,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.90</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.91</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -11907,9 +11914,16 @@ function _renderEventsEmpty(geo, tb, keyword) {
     </div>`;
     return;
   }
+  // v0.91: Goal 4 — when nothing matches the current bucket/window, point
+  // users at the other tabs (Ticketed, External sites) rather than dead-ending.
+  const curBucket = (typeof getEventsSourceBucket === "function") ? getEventsSourceBucket() : "all";
+  const nudge = curBucket === "all"
+    ? `Try widening your radius, or check <a href="#events-online-section" class="subtab" data-subtarget="events-online-section" style="color:#0050c2;font-weight:600;">External sites</a>.`
+    : `No source-linked events found here yet. Try <a href="#events-listings-section" class="subtab" data-subtarget="events-listings-section" data-filter-window="month" data-filter-bucket="ticketed" style="color:#0050c2;font-weight:600;">Ticketed</a> or <a href="#events-online-section" class="subtab" data-subtarget="events-online-section" style="color:#0050c2;font-weight:600;">External sites</a>.`;
   tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
     <b>No events found for ${escapeHtml(cityName)} in the next 30 days.</b><br>
-    Try widening your radius. If you know about something we should be showing,
+    ${nudge}<br>
+    If you know about something we should be showing,
     <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">tell us →</a>.
   </div>`;
 }
@@ -12134,6 +12148,16 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
+    // v0.91: "watch" filter — events that have league broadcast options
+    // (basketball / football / etc. games where users can watch from home).
+    if (b === "watch") {
+      if (typeof waysToWatchForEvent === "function") {
+        const ways = waysToWatchForEvent(ev);
+        if (ways && ways.length) return true;
+      }
+      const t = (ev.title || "").toLowerCase();
+      return /watch part|viewing party|live screening|world cup|super bowl|finals/.test(t);
+    }
     return true;
   });
 }
@@ -14455,6 +14479,22 @@ document.addEventListener("click", (e) => {
   const target = targetId && document.getElementById(targetId);
   if (!target) return;
   e.preventDefault();
+  // v0.91: subtab with data-filter-window / data-filter-bucket — pre-set the
+  // events filter state and force the events render to refresh. Per Goal 4
+  // (Today/Tonight/Weekend as first-class tabs that route to the listings
+  // section with the right state already applied).
+  if (tab.dataset.filterWindow || tab.dataset.filterBucket) {
+    if (tab.dataset.filterWindow && typeof setEventsTimeWindow === "function") {
+      setEventsTimeWindow(tab.dataset.filterWindow);
+    }
+    if (tab.dataset.filterBucket && typeof setEventsSourceBucket === "function") {
+      setEventsSourceBucket(tab.dataset.filterBucket);
+    }
+    // Re-trigger the events render so the new state takes effect
+    if (typeof loadNearbyEvents === "function" && typeof lastEventsGeo !== "undefined" && lastEventsGeo) {
+      setTimeout(() => loadNearbyEvents(lastEventsGeo), 50);
+    }
+  }
   if (tab.classList.contains("sec-tab")) {
     if (document.body.classList.contains("single-view")) {
       // v0.34.0: hide all sections, show only the clicked one
