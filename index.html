@@ -3983,7 +3983,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.93</span>
     </div>
   </header>
 
@@ -4219,14 +4219,10 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
-      <!-- v0.76: contextual label — reads "Showing [active section] within: ..." -->
-      <div class="radius-filter" role="radiogroup" aria-label="Search radius">
-        <span class="radius-filter-label" id="radius-context-label">Showing results within</span>
-        <button type="button" class="radius-btn" data-radius="2"  role="radio" aria-checked="true">2 mi</button>
-        <button type="button" class="radius-btn" data-radius="5"  role="radio">5 mi</button>
-        <button type="button" class="radius-btn" data-radius="10" role="radio">10 mi</button>
-        <span class="radius-status" id="radius-status"></span>
-      </div>
+      <!-- v0.93: radius buttons REMOVED. Search radius is now driven by the
+           section maps themselves — pan or zoom and a "Search this area"
+           button surfaces on the map. Default radius is tier-based per
+           category (daily=25, nearby=15, regional=50, day_trip=75). -->
       <div class="section-nav-inner">
         <a href="#sec-events"          class="sec-tab" data-target="sec-events"          data-category="around-me">Events</a>
         <a href="#sec-schools"         class="sec-tab" data-target="sec-schools"         data-category="around-me">Schools</a>
@@ -4734,7 +4730,7 @@
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
         </div>
-        <!-- v0.92.1.1: REMOVED worship + community-center sections. Those rendered
+        <!-- v0.93.1: REMOVED worship + community-center sections. Those rendered
              OSM venue cards (place_of_worship + community_centre amenities) with
              no event data — clicking through went to Google search results
              because the venues didn't carry websites. That's the exact
@@ -5223,7 +5219,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.93</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -6906,7 +6902,12 @@ window.NEARNITY_DEBUG = false;
 // v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
 // v0.34.4: default 5→2 — matches "daily-use range" framing better
 const RADIUS_OPTIONS = [2, 5, 10];               // miles
-const DEFAULT_RADIUS_MI = 2;
+// v0.93: Default base radius bumped 2→25 because metro reality means most
+// useful results aren't within 2mi. Radius is now driven by the section
+// maps via the "Search this area" flow — pan/zoom the map and re-query
+// the visible bounds. This DEFAULT_RADIUS_MI is just the initial fallback
+// before any map interaction.
+const DEFAULT_RADIUS_MI = 25;
 const MILES_TO_METERS = 1609.34;
 let CURRENT_RADIUS_MI = DEFAULT_RADIUS_MI;
 let CURRENT_RADIUS_M  = Math.round(DEFAULT_RADIUS_MI * MILES_TO_METERS);
@@ -7023,12 +7024,13 @@ function refetchAllRadialSections() {
     }
   }, 80);
 }
-// Wire the buttons (delegated, attached once at DOMContentLoaded equivalent)
+// v0.93: radius-button click delegator retained as a no-op. The buttons
+// themselves are gone, but external links / cached HTML / browser-restored
+// state might still produce stray .radius-btn clicks. Swallow them silently.
 document.addEventListener("click", (e) => {
   const btn = e.target.closest(".radius-btn[data-radius]");
   if (!btn) return;
   e.preventDefault();
-  setRadius(parseInt(btn.dataset.radius, 10));
 });
 
 // v0.34.4: Retry button on map empty-state overlays. Maps each section's
@@ -7546,6 +7548,112 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   }
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
+  // v0.93: install Search-this-area hook on supported maps. Currently
+  // wired for events; other section maps will follow.
+  if (elId === "events-map") {
+    _installSearchThisAreaHook(map, el, "events-map");
+  }
+}
+
+// v0.93: Map-driven "Search this area" flow.
+// When user pans the map > 0.25mi from where it was last fetched, or zooms
+// in/out by >= 1 level, a floating "Search this area" button appears at
+// the top-center of the map. Clicking it re-fetches the section's data
+// using the map's current center + radius derived from visible bounds.
+const _mapAnchors = new Map();  // elId → { lat, lon, zoom }
+function _installSearchThisAreaHook(map, mapEl, elId) {
+  if (mapEl.dataset.searchThisAreaInstalled) return;
+  mapEl.dataset.searchThisAreaInstalled = "1";
+
+  // Remember where this map was last anchored (where we last fetched for)
+  const c0 = map.getCenter();
+  _mapAnchors.set(elId, { lat: c0.lat, lon: c0.lng, zoom: map.getZoom() });
+
+  // Build the floating button (hidden by default)
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "search-this-area-btn";
+  btn.innerHTML = "🔍 Search this area";
+  btn.setAttribute("aria-label", "Search this area");
+  btn.style.cssText = "position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:600;background:#0050c2;color:#fff;border:none;border-radius:24px;padding:9px 18px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;display:none;";
+  mapEl.style.position = "relative";
+  mapEl.appendChild(btn);
+
+  const showOrHide = () => {
+    const anchor = _mapAnchors.get(elId);
+    if (!anchor) return;
+    const c = map.getCenter();
+    const z = map.getZoom();
+    const moved = typeof haversineMiles === "function"
+      ? haversineMiles(anchor.lat, anchor.lon, c.lat, c.lng)
+      : 0;
+    const zoomChanged = Math.abs(z - anchor.zoom) >= 1;
+    btn.style.display = (moved > 0.25 || zoomChanged) ? "block" : "none";
+  };
+  map.on("moveend", showOrHide);
+  map.on("zoomend", showOrHide);
+
+  btn.addEventListener("click", () => {
+    btn.style.display = "none";
+    const c = map.getCenter();
+    const radius = _radiusFromMapBounds(map);
+    // Anchor at the new center so the button only re-appears after the
+    // NEXT pan/zoom — not immediately because the data re-fit shifted the map.
+    _mapAnchors.set(elId, { lat: c.lat, lon: c.lng, zoom: map.getZoom() });
+    // Dispatch to the section's reload function with the new geo.
+    _reloadSectionAtMapBounds(elId, c.lat, c.lng, radius);
+  });
+}
+
+// v0.93: Derive a search radius (miles) from the map's visible bounds, then
+// SNAP UP to the next tier bracket. Brackets match the tier caps so every
+// map-driven search lands on a tier-aligned radius the user can reason about:
+//    2 mi = essential (fire / police / hospital / urgent care)
+//    5 mi = tight neighborhood
+//   15 mi = nearby (parks, kids, community, volunteer)
+//   25 mi = daily (markets, library, school, Saturday errands)
+//   50 mi = regional (concerts, sports, "where to watch")
+//   75 mi = day trip (farm u-pick, orchards, pumpkin patches)
+//  100 mi = wider day trip cap (wineries, iconic spots)
+//
+// Why snap UP: the user explicitly zoomed to see an area. Snapping down would
+// hide events they intentionally panned to. A small cushion on the search
+// area is the right side of the trade-off — "more info is always better
+// than missing an event by 0.1 mi."
+//
+// Why bracket at all: prevents weird in-between radii (7 / 13 / 22) that
+// blow KV cache hits and don't materially change results at metro scale.
+const RADIUS_BRACKETS = [2, 5, 15, 25, 50, 75, 100];
+function _radiusFromMapBounds(map) {
+  try {
+    const bounds = map.getBounds();
+    const ne = bounds.getNorthEast();
+    const sw = bounds.getSouthWest();
+    const d = (typeof haversineMiles === "function")
+      ? haversineMiles(ne.lat, ne.lng, sw.lat, sw.lng)
+      : 0;
+    const derived = d / 2;
+    for (const bk of RADIUS_BRACKETS) {
+      if (derived <= bk) return bk;
+    }
+    return RADIUS_BRACKETS[RADIUS_BRACKETS.length - 1];
+  } catch (e) { return 25; }
+}
+
+// Re-fetch the section's data using a NEW center + radius (instead of the
+// user's home address). The home pin stays where it was; the section now
+// shows what's around the new center.
+function _reloadSectionAtMapBounds(elId, lat, lon, radius) {
+  if (elId === "events-map") {
+    if (typeof lastEventsGeo !== "undefined" && lastEventsGeo) {
+      const newGeo = { ...lastEventsGeo, lat, lon, _mapRadius: radius, _searchedFromMap: true };
+      // Invalidate the per-keyword cache so we re-query the Worker
+      if (typeof _apiEventsCache !== "undefined") _apiEventsCache.clear();
+      if (typeof _apiFarmCache   !== "undefined") _apiFarmCache.clear();
+      loadNearbyEvents(newGeo);
+    }
+  }
+  // Other sections will be wired in follow-up iterations.
 }
 
 /* =====================================================================
@@ -10657,7 +10765,7 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
-  // v0.92.1.1: Overpass query NARROWED to marketplace only. Worship + community
+  // v0.93.1: Overpass query NARROWED to marketplace only. Worship + community
   // centers were OSM venue rows masquerading as events — they had no event
   // data attached (no date, no title, no source URL beyond Google search).
   // If we want church/temple events surfaced, the path is Submit Event +
@@ -10680,7 +10788,7 @@ function classifyEventVenue(el) {
   if (am === "marketplace") {
     category = "markets";
     subtype = "Farmers market";
-  } else return null;  // v0.92.1.1: worship/community classification removed
+  } else return null;  // v0.93.1: worship/community classification removed
   const score = osmScore(t);
   const reasons = osmReasons(t);
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
@@ -10708,7 +10816,7 @@ async function loadNearbyEvents(geo) {
   renderEventsListings(geo, cityListings);
   renderEventsOnline(geo);
 
-  // v0.92.1.1: markets is the only OSM-dependent subtab now (worship + community
+  // v0.93.1: markets is the only OSM-dependent subtab now (worship + community
   // removed — they were venue cards, not events).
   const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
   ["events-markets-tbody"].forEach(id => {
@@ -10747,7 +10855,7 @@ async function loadNearbyEvents(geo) {
       ...curatedMarkets,
       ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
     ].slice(0, 40);
-    // v0.92.1.1: worship + community arrays removed; only markets remain.
+    // v0.93.1: worship + community arrays removed; only markets remain.
     const totalCount = mergedMarkets.length;
     const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
@@ -10797,7 +10905,7 @@ function renderEvents(grouped, total, cityKey, geo) {
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("events-markets-section",   "events-markets-tbody",   grouped.markets || []);
-  // v0.92.1.1: worship + community sections removed — they leaked OSM venue
+  // v0.93.1: worship + community sections removed — they leaked OSM venue
   // cards into the events tab. If those sections need to come back, they
   // need real event data (ICS feeds, admin entries), not OSM amenity tags.
 
@@ -11149,32 +11257,43 @@ function _eventEffectiveCoords(ev) {
 // distance we'll surface that type of event even if the user set a narrow
 // search radius. This lets us show concerts/sports automatically even when
 // the user is doing daily-life searches at 2-5mi.
+// v0.93: Tier caps reflect actual metro reality.
+//   - daily bumped 5→25 because urban farmers markets are routinely 10-25 mi away
+//   - day_trip added at 75 mi for farm experiences / u-pick / orchards / agritourism
+//     (no farm is 5mi from a Bay Area house — they're day trips)
+//   - destination remains "unlimited" for iconic places (national parks)
 const TIER_CAPS = {
   essential:    2,    // fire, police, hospital, urgent care, clinic
-  daily:        5,    // farmers market, food bank, library, school
+  daily:       25,    // farmers market, food bank, library, school (v0.93: was 5)
   nearby:      15,    // parks, community events, kids, local festivals, art
   regional:    50,    // music concerts, sports, comedy, theater, big festivals
+  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.93: new)
   destination: 9999,  // iconic spots (Golden Gate Park, Yosemite, etc.) — unlimited
 };
-const TIER_ORDER = ["essential", "daily", "nearby", "regional", "destination"];
+const TIER_ORDER = ["essential", "daily", "nearby", "regional", "day_trip", "destination"];
 const TIER_LABELS = {
   essential:    "Right here",
   daily:        "Around you",
   nearby:       "Nearby",
   regional:     "Worth the drive",
+  day_trip:     "Day trip",
   destination:  "Destination",
 };
 const TIER_SUBLABELS = {
   essential:    "within 2 mi · essentials",
-  daily:        "within 5 mi · daily life",
+  daily:        "within 25 mi · weekly errands",
   nearby:       "within 15 mi · weekend trips",
   regional:     "within 50 mi · concerts, sports, big events",
+  day_trip:     "within 75 mi · farm experiences, u-pick, orchards",
   destination:  "iconic places worth a day trip",
 };
 function tierForCategory(cat) {
   const c = (cat || "").toLowerCase();
   // Essential — emergency services
   if (["fire","police","hospital","clinic","pharmacy","urgent","ems","ambulance"].some(x => c.includes(x))) return "essential";
+  // v0.93: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
+  // daily/regional so a "u-pick farm" doesn't fall into market/daily by mistake.
+  if (["u_pick","u-pick","upick","pumpkin patch","cherry pick","strawberry pick","apple pick","berry pick","farm fair","petting zoo","wagon ride","hayride","agritour","farm stand","farm tour","farm_u_pick"].some(x => c.includes(x))) return "day_trip";
   // Daily — services people use weekly
   if (["market","food","library","school","childcare","daycare","grocery","dmv"].some(x => c.includes(x))) return "daily";
   // Regional — concerts, sports, ticketed entertainment that people drive for
@@ -11787,7 +11906,7 @@ const NEARNITY_FARM_API_BASE = "/api/farm-experiences";
 const _apiEventsCache = new Map();    // session-scoped cache, keyed by lat/lon/radius/keyword
 const _apiFarmCache   = new Map();    // session-scoped cache for farm experiences
 
-// v0.92.1.1: Fetch farm experiences from /api/farm-experiences and normalize
+// v0.93.1: Fetch farm experiences from /api/farm-experiences and normalize
 // them into event-shaped rows so they merge into the events listing. Farm
 // rows are SEASONAL — they don't have a specific start time. We synthesize
 // `starts` to today so the row passes through downstream date-grouping,
@@ -11798,7 +11917,9 @@ async function fetchFarmExperiences(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  const r = radiusMi || 75;   // farm experiences are day-trip scale
+  // v0.93: farm experiences default to 75mi (day-trip tier) but accept a
+  // map-driven override when user clicks "Search this area" on the events map.
+  const r = radiusMi || geo._mapRadius || 75;
   const kw = (keyword || "").trim().toLowerCase();
   const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${r}:${kw}`;
   if (_apiFarmCache.has(key)) return _apiFarmCache.get(key);
@@ -11868,10 +11989,12 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.67: Always query API with the regional-tier cap (50mi) so we get
-  // enough events to populate the "Worth the drive" tier. Frontend filter
-  // then narrows per tier. Concerts auto-show even at 2mi user radius.
-  const r = radiusMi || Math.max(TIER_CAPS.regional, (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 10));
+  // v0.93: radius comes from EITHER an explicit override OR the map-driven
+  // radius (when user clicked "Search this area") OR the regional-tier cap
+  // as a safe default (so concerts/farms still surface on initial load).
+  const r = radiusMi
+    || geo._mapRadius
+    || Math.max(TIER_CAPS.regional, (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 25));
   const addr = geo.address || {};
   const city = (addr.city || addr.town || addr.village || "").toLowerCase();
   const stateCode = (getStateCode && getStateCode(addr)) || (addr.state || "").slice(0, 2).toUpperCase();
@@ -11906,7 +12029,7 @@ function mergeAndDedupeEvents(a, b) {
   for (const ev of [...(a || []), ...(b || [])]) {
     if (!ev || !ev.title) continue;
     if (!ev.starts && !ev.is_farm_experience) continue;
-    // v0.92.1.1: Publishable-row guard. An event MUST have a real source URL
+    // v0.93.1: Publishable-row guard. An event MUST have a real source URL
     // that isn't a Google/Bing search query. Without this, OSM venues with
     // no website would fall back to /maps/search/<name> URLs and pretend
     // to be events. That's the redirect-portal anti-pattern we banned.
@@ -11958,7 +12081,7 @@ function renderEventsListings(geo, eventsArg) {
   _renderEventsCalendar(geo, curated, tb);
 
   // Async: fetch API events + farm experiences in parallel, merge, re-render.
-  // v0.92.1.1: Farm experiences come from /api/farm-experiences (seasonal
+  // v0.93.1: Farm experiences come from /api/farm-experiences (seasonal
   // directory). When user types "cherry picking" / "pumpkin patch" /
   // "u-pick", the events listing now actually has farm rows to show
   // instead of dumping OSM venue cards.
@@ -12235,7 +12358,7 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
-    // v0.92.1: new buckets from Source Network spec
+    // v0.93: new buckets from Source Network spec
     if (b === "kids_family") {
       return sec.includes("kids_family") ||
         /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
@@ -12275,7 +12398,7 @@ function eventsInWindow(events, w) {
   const now = new Date();
   const todayKey = now.toDateString();
   return events.filter((ev) => {
-    // v0.92.1.1: Farm experiences are seasonal — they don't belong in
+    // v0.93.1: Farm experiences are seasonal — they don't belong in
     // Today/Tonight/Weekend filters. They surface via the Farm & u-pick
     // bucket filter and in the unfiltered month view.
     if (ev.is_farm_experience) return w === "month";
