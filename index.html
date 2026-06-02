@@ -3983,7 +3983,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92.1</span>
     </div>
   </header>
 
@@ -4734,14 +4734,13 @@
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
         </div>
-        <div class="school-section" id="events-worship-section" hidden>
-          <h4>⛪ Churches, temples &amp; faith communities <span class="hint">— service times</span></h4>
-          <div id="events-worship-tbody"></div>
-        </div>
-        <div class="school-section" id="events-community-section" hidden>
-          <h4>🏛️ Community centers <span class="hint">— neighborhood programs</span></h4>
-          <div id="events-community-tbody"></div>
-        </div>
+        <!-- v0.92.1.1: REMOVED worship + community-center sections. Those rendered
+             OSM venue cards (place_of_worship + community_centre amenities) with
+             no event data — clicking through went to Google search results
+             because the venues didn't carry websites. That's the exact
+             redirect-portal anti-pattern Nearnity refuses to ship. Real church
+             /community-center events should arrive via Submit Event flow or
+             ICS feeds added to EVENT_SOURCES in the Worker. -->
         <div class="school-section" id="events-online-section">
           <h4>🌐 External event sites <span class="hint">— search beyond Nearnity's curated data</span></h4>
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;">
@@ -5224,7 +5223,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -10658,15 +10657,14 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
-  // v0.36: re-enabled. v0.35.4 disabled this because all 5 sections fired in
-  // parallel and 429'd Overpass; v0.35.5 made section loads lazy (one per tab
-  // click), so Events only hits Overpass when the user actually clicks the
-  // Events tab — no stampede. Single combined query keeps it cheap.
+  // v0.92.1.1: Overpass query NARROWED to marketplace only. Worship + community
+  // centers were OSM venue rows masquerading as events — they had no event
+  // data attached (no date, no title, no source URL beyond Google search).
+  // If we want church/temple events surfaced, the path is Submit Event +
+  // ICS feeds added to EVENT_SOURCES in the Worker, not OSM venue scraping.
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
   const q = `[out:json][timeout:12];(
     nwr["amenity"="marketplace"](around:${radiusMeters},${lat},${lon});
-    nwr["amenity"="place_of_worship"](around:${radiusMeters},${lat},${lon});
-    nwr["amenity"="community_centre"](around:${radiusMeters},${lat},${lon});
   );out center tags;`;
   return await overpassQuery(q, onProgress);
 }
@@ -10682,15 +10680,7 @@ function classifyEventVenue(el) {
   if (am === "marketplace") {
     category = "markets";
     subtype = "Farmers market";
-  } else if (am === "place_of_worship") {
-    category = "worship";
-    const religion = (t.religion || "").toLowerCase();
-    const denom    = (t.denomination || "").toLowerCase();
-    subtype = religion ? religion.charAt(0).toUpperCase() + religion.slice(1) + (denom ? ` (${denom})` : "") : "Place of worship";
-  } else if (am === "community_centre") {
-    category = "community";
-    subtype = "Community center";
-  } else return null;
+  } else return null;  // v0.92.1.1: worship/community classification removed
   const score = osmScore(t);
   const reasons = osmReasons(t);
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
@@ -10718,9 +10708,10 @@ async function loadNearbyEvents(geo) {
   renderEventsListings(geo, cityListings);
   renderEventsOnline(geo);
 
-  // OSM-dependent subtabs: clear stale content while we wait for Overpass
+  // v0.92.1.1: markets is the only OSM-dependent subtab now (worship + community
+  // removed — they were venue cards, not events).
   const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
-  ["events-markets-tbody", "events-worship-tbody", "events-community-tbody"].forEach(id => {
+  ["events-markets-tbody"].forEach(id => {
     const el = $(id); if (el) el.innerHTML = osmLoadingMsg;
   });
 
@@ -10756,14 +10747,9 @@ async function loadNearbyEvents(geo) {
       ...curatedMarkets,
       ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
     ].slice(0, 40);
-    const totalCount = mergedMarkets.length
-      + items.filter(i => i.category === "worship").length
-      + items.filter(i => i.category === "community").length;
-    const grouped = {
-      markets:   mergedMarkets,
-      worship:   items.filter(i => i.category === "worship").slice(0, 60),
-      community: items.filter(i => i.category === "community").slice(0, 30)
-    };
+    // v0.92.1.1: worship + community arrays removed; only markets remain.
+    const totalCount = mergedMarkets.length;
+    const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
     // v0.38: also stash curated listings so refreshActiveSubtabFor can size
     // the per-subtab pill correctly when "Happening this month" is active.
@@ -10810,9 +10796,10 @@ function renderEvents(grouped, total, cityKey, geo) {
     if (!items.length) { tb.innerHTML = evEmptyMsg; return; }
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
-  fill("events-markets-section",   "events-markets-tbody",   grouped.markets);
-  fill("events-worship-section",   "events-worship-tbody",   grouped.worship);
-  fill("events-community-section", "events-community-tbody", grouped.community);
+  fill("events-markets-section",   "events-markets-tbody",   grouped.markets || []);
+  // v0.92.1.1: worship + community sections removed — they leaked OSM venue
+  // cards into the events tab. If those sections need to come back, they
+  // need real event data (ICS feeds, admin entries), not OSM amenity tags.
 
   // v0.41: append a "broader search" CTA to the Farmers markets subtab. When
   // our list is short OR even when it's full, users may want to compare with
@@ -11796,7 +11783,86 @@ function _calShiftMonth(ym, delta) {
 // returning normalized events that get merged with the curated seed.
 // Fails gracefully — curated seed always renders even if API is down.
 const NEARNITY_API_BASE = "/api/events";
-const _apiEventsCache = new Map();   // session-scoped cache, keyed by lat/lon/radius/keyword
+const NEARNITY_FARM_API_BASE = "/api/farm-experiences";
+const _apiEventsCache = new Map();    // session-scoped cache, keyed by lat/lon/radius/keyword
+const _apiFarmCache   = new Map();    // session-scoped cache for farm experiences
+
+// v0.92.1.1: Fetch farm experiences from /api/farm-experiences and normalize
+// them into event-shaped rows so they merge into the events listing. Farm
+// rows are SEASONAL — they don't have a specific start time. We synthesize
+// `starts` to today so the row passes through downstream date-grouping,
+// but `display_date`/`display_time` show "Seasonal · <season_text>" and
+// "Call ahead" so the UI doesn't lie about when the experience is.
+async function fetchFarmExperiences(geo, radiusMi, keyword) {
+  if (!geo) return [];
+  const lat = parseFloat(geo.lat);
+  const lon = parseFloat(geo.lon);
+  if (!isFinite(lat) || !isFinite(lon)) return [];
+  const r = radiusMi || 75;   // farm experiences are day-trip scale
+  const kw = (keyword || "").trim().toLowerCase();
+  const key = `${lat.toFixed(2)}:${lon.toFixed(2)}:${r}:${kw}`;
+  if (_apiFarmCache.has(key)) return _apiFarmCache.get(key);
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon), radius: String(r) });
+  if (kw) params.set("q", kw);
+  const url = `${NEARNITY_FARM_API_BASE}?${params.toString()}`;
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 6000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) { _apiFarmCache.set(key, []); return []; }
+    const data = await resp.json();
+    const farms = Array.isArray(data.farm_experiences) ? data.farm_experiences : [];
+    // Normalize each FarmExperience to event-shaped row
+    const todayIso = new Date().toISOString();
+    const normalized = farms.map((f) => {
+      const expTypes = Array.isArray(f.experience_type) ? f.experience_type.join(", ") : (f.experience_type || "");
+      const crops = Array.isArray(f.crops) ? f.crops.join(", ") : (f.crops || "");
+      // Skip farms without a verifiable source_url — same publish rule
+      // we enforce on the Worker side.
+      const srcUrl = f.source_url || f.website || "";
+      if (!srcUrl) return null;
+      // Drop if URL looks like a Google search rather than a real source
+      if (/google\.com\/search|google\.com\/maps\/search/i.test(srcUrl)) return null;
+      return {
+        title: f.farm_name + (expTypes ? ` — ${expTypes}` : ""),
+        venue: [f.address, f.city, f.state].filter(Boolean).join(", "),
+        city: f.city || "",
+        state: f.state || "",
+        lat: f.lat,
+        lon: f.lon,
+        distance_miles: f.distance_miles,
+        starts: todayIso,             // synthetic — calendar grouping only
+        ends: null,
+        display_date: `Seasonal · ${f.season_text || "varies"}`,
+        display_time: "Call ahead",
+        category: "farm_u_pick",
+        url: srcUrl,
+        source_url: srcUrl,
+        source: f.source_type === "direct_farm_website" ? f.farm_name : (f.farm_name + " · " + (f.source_type || "directory")),
+        source_bucket: "community",
+        secondary_buckets: ["farm_u_pick", "seasonal"],
+        trust_label: f.trust_label || "Source-linked",
+        confidence: f.confidence || "medium",
+        is_farm_experience: true,
+        is_seasonal: true,
+        crops,
+        season_text: f.season_text || "",
+        caveat: f.caveat,
+        phone: f.phone,
+        free: true,                  // most are admission-free; ticketed orchards rare
+      };
+    }).filter(Boolean);
+    _apiFarmCache.set(key, normalized);
+    if (window.NEARNITY_DEBUG) console.log("[api/farm-experiences]", url, normalized.length);
+    return normalized;
+  } catch (e) {
+    if (window.NEARNITY_DEBUG) console.warn("[api/farm-experiences] failed:", e.message);
+    _apiFarmCache.set(key, []);
+    return [];
+  }
+}
+
 async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   if (!geo) return [];
   const lat = parseFloat(geo.lat);
@@ -11838,8 +11904,16 @@ function mergeAndDedupeEvents(a, b) {
   const seen = new Set();
   const out = [];
   for (const ev of [...(a || []), ...(b || [])]) {
-    if (!ev || !ev.title || !ev.starts) continue;
-    const key = `${ev.title}|${ev.starts.slice(0, 16)}|${(ev.venue || "").slice(0, 30)}`;
+    if (!ev || !ev.title) continue;
+    if (!ev.starts && !ev.is_farm_experience) continue;
+    // v0.92.1.1: Publishable-row guard. An event MUST have a real source URL
+    // that isn't a Google/Bing search query. Without this, OSM venues with
+    // no website would fall back to /maps/search/<name> URLs and pretend
+    // to be events. That's the redirect-portal anti-pattern we banned.
+    const u = (ev.url || ev.source_url || "").trim();
+    if (!u) continue;
+    if (/google\.com\/(search|maps\/search)|bing\.com\/search|duckduckgo\.com\/\?q=/i.test(u)) continue;
+    const key = `${ev.title}|${(ev.starts || "").slice(0, 16)}|${(ev.venue || "").slice(0, 30)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(ev);
@@ -11883,15 +11957,23 @@ function renderEventsListings(geo, eventsArg) {
   // Render curated immediately so the user sees something while API fetches
   _renderEventsCalendar(geo, curated, tb);
 
-  // Async: fetch API events with the same keyword, apply tier filter, re-render
-  fetchApiEventsForLocation(geo, null, keyword).then((apiEvents) => {
+  // Async: fetch API events + farm experiences in parallel, merge, re-render.
+  // v0.92.1.1: Farm experiences come from /api/farm-experiences (seasonal
+  // directory). When user types "cherry picking" / "pumpkin patch" /
+  // "u-pick", the events listing now actually has farm rows to show
+  // instead of dumping OSM venue cards.
+  Promise.all([
+    fetchApiEventsForLocation(geo, null, keyword),
+    fetchFarmExperiences(geo, null, keyword),
+  ]).then(([apiEvents, farmEvents]) => {
     const filteredApi = applyTierFilter(apiEvents, geo);
-    if (!filteredApi.length) {
+    const combinedApi = [...filteredApi, ...farmEvents];
+    if (!combinedApi.length) {
       updatePill(curated.length);
       if (!curated.length) _renderEventsEmpty(geo, tb, keyword);
       return;
     }
-    const merged = mergeAndDedupeEvents(curated, filteredApi);
+    const merged = mergeAndDedupeEvents(curated, combinedApi);
     updatePill(merged.length);
     _renderEventsCalendar(geo, merged, tb);
   });
@@ -12153,7 +12235,7 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
-    // v0.92: new buckets from Source Network spec
+    // v0.92.1: new buckets from Source Network spec
     if (b === "kids_family") {
       return sec.includes("kids_family") ||
         /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
@@ -12193,6 +12275,10 @@ function eventsInWindow(events, w) {
   const now = new Date();
   const todayKey = now.toDateString();
   return events.filter((ev) => {
+    // v0.92.1.1: Farm experiences are seasonal — they don't belong in
+    // Today/Tonight/Weekend filters. They surface via the Farm & u-pick
+    // bucket filter and in the unfiltered month view.
+    if (ev.is_farm_experience) return w === "month";
     const d = new Date(ev.starts);
     if (isNaN(d)) return false;
     if (w === "today") return d.toDateString() === todayKey;
