@@ -3983,7 +3983,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.91</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92</span>
     </div>
   </header>
 
@@ -4706,7 +4706,10 @@
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="tonight" data-filter-bucket="all">Tonight</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="weekend" data-filter-bucket="all">This weekend</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="community">Free &amp; community</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="kids_family">Kids &amp; family</a>
       <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Markets</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="farm_u_pick">Farm &amp; u-pick</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="volunteer">Volunteer</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="ticketed">Ticketed</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="watch">Where to watch</a>
       <a href="#events-online-section"    class="subtab" data-subtarget="events-online-section">External sites</a>
@@ -5221,7 +5224,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.91</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.92</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -12142,12 +12145,33 @@ function eventsByBucket(events, b) {
   if (!b || b === "all" || !events) return events;
   return events.filter((ev) => {
     const bucket = (ev.source_bucket || "").toLowerCase();
+    const sec = Array.isArray(ev.secondary_buckets) ? ev.secondary_buckets : [];
     const src = (ev.source || "").toLowerCase();
+    const titleCat = ((ev.title || "") + " " + (ev.category || "")).toLowerCase();
     if (b === "free")     return ev.free === true;
-    if (b === "markets")  return /market/i.test(ev.title || "") || /market/i.test(ev.category || "");
+    if (b === "markets")  return sec.includes("markets") || /market/i.test(ev.title || "") || /market/i.test(ev.category || "");
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
+    // v0.92: new buckets from Source Network spec
+    if (b === "kids_family") {
+      return sec.includes("kids_family") ||
+        /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
+    }
+    if (b === "farm_u_pick") {
+      return sec.includes("farm_u_pick") ||
+        /u[- ]pick|pick[- ]your[- ]own|pumpkin patch|cherry pick|strawberry pick|apple pick|berry pick|farm fair|petting zoo|wagon ride|hayride|agritour|farm stand|farm tour/i.test(titleCat);
+    }
+    if (b === "volunteer") {
+      return sec.includes("volunteer") ||
+        /\b(volunteer|cleanup|clean[- ]up|food drive|coat drive|toy drive|community service|park clean|beach clean)\b/i.test(titleCat);
+    }
+    if (b === "seasonal") {
+      return sec.includes("seasonal") ||
+        /\b(seasonal|harvest|fall festival|spring fair|christmas tree farm|halloween|haunted)\b/i.test(titleCat);
+    }
+    if (b === "library")   return sec.includes("library") || /library/i.test(src + " " + titleCat);
+    if (b === "parks_rec") return sec.includes("parks_rec") || /\bpark|rec center|parks & rec/i.test(src + " " + titleCat);
     // v0.91: "watch" filter — events that have league broadcast options
     // (basketball / football / etc. games where users can watch from home).
     if (b === "watch") {
