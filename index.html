@@ -3940,7 +3940,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.94: 3-COLUMN APP SHELL
+     v0.94.1: 3-COLUMN APP SHELL
      -------------------------
      Sticky section rail (col 1) + active section's map (col 2) + active
      section's list/content (col 3). Both map + list always fit the viewport
@@ -4220,7 +4220,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.94</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.94.1</span>
     </div>
   </header>
 
@@ -4456,7 +4456,7 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
-      <!-- v0.94: radius buttons REMOVED. Search radius is now driven by the
+      <!-- v0.94.1: radius buttons REMOVED. Search radius is now driven by the
            section maps themselves — pan or zoom and a "Search this area"
            button surfaces on the map. Default radius is tier-based per
            category (daily=25, nearby=15, regional=50, day_trip=75). -->
@@ -4967,7 +4967,7 @@
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
         </div>
-        <!-- v0.94.1: REMOVED worship + community-center sections. Those rendered
+        <!-- v0.94.1.1: REMOVED worship + community-center sections. Those rendered
              OSM venue cards (place_of_worship + community_centre amenities) with
              no event data — clicking through went to Google search results
              because the venues didn't carry websites. That's the exact
@@ -5456,7 +5456,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.94</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.94.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7139,7 +7139,7 @@ window.NEARNITY_DEBUG = false;
 // v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
 // v0.34.4: default 5→2 — matches "daily-use range" framing better
 const RADIUS_OPTIONS = [2, 5, 10];               // miles
-// v0.94: Default base radius bumped 2→25 because metro reality means most
+// v0.94.1: Default base radius bumped 2→25 because metro reality means most
 // useful results aren't within 2mi. Radius is now driven by the section
 // maps via the "Search this area" flow — pan/zoom the map and re-query
 // the visible bounds. This DEFAULT_RADIUS_MI is just the initial fallback
@@ -7261,7 +7261,7 @@ function refetchAllRadialSections() {
     }
   }, 80);
 }
-// v0.94: radius-button click delegator retained as a no-op. The buttons
+// v0.94.1: radius-button click delegator retained as a no-op. The buttons
 // themselves are gone, but external links / cached HTML / browser-restored
 // state might still produce stray .radius-btn clicks. Swallow them silently.
 document.addEventListener("click", (e) => {
@@ -7481,12 +7481,39 @@ if (typeof document !== "undefined") {
 // move on page load. All click handlers still work (delegated).
 // Also adds the right-rail container + body.v85-layout class to activate
 // the new 3-column layout.
-// v0.94: setupV85Layout is now a no-op — superseded by setupAppShell below.
-// The v85 cat-nav-as-left-column model was the wrong granularity; the new
-// shell puts SECTIONS in col 1, not cat-tabs.
-function setupV85Layout() { /* no-op; replaced by setupAppShell */ }
+// v0.94.1.1: setupV85Layout RESTORED. v0.94.1's shell shipped broken (some
+// expected map/card IDs don't exist in the DOM, causing the shell to mount
+// partially while the CSS hid the legacy layout — left the page half-blank).
+// Rolled back to v0.85's working layout as the default. The new shell still
+// exists below but only activates with `?shell=1` URL param so I can debug
+// the missing-element issue in v0.95 without keeping the live site broken.
+function setupV85Layout() {
+  const grid = document.querySelector(".results-grid");
+  const catNav = document.getElementById("cat-nav");
+  if (!grid || !catNav) return;
+  if (catNav.parentElement !== grid) {
+    grid.insertBefore(catNav, grid.firstChild);
+  }
+  if (!document.querySelector(".v85-right-rail")) {
+    const rail = document.createElement("aside");
+    rail.className = "v85-right-rail";
+    rail.setAttribute("aria-label", "Quick stats and saved");
+    rail.innerHTML = `
+      <div class="v85-right-rail-title">📍 Your context</div>
+      <div class="v85-right-rail-empty" id="v85-right-rail-body">
+        Search an address or use Near me to populate quick info about this location.
+      </div>
+    `;
+    grid.appendChild(rail);
+  }
+  document.body.classList.add("v85-layout");
+}
+if (typeof document !== "undefined") {
+  if (document.readyState === "complete" || document.readyState === "interactive") setupV85Layout();
+  else document.addEventListener("DOMContentLoaded", setupV85Layout);
+}
 
-// v0.94: 3-column app shell.
+// v0.94.1: 3-column app shell.
 // Sticky section rail (col 1) + active section's map (col 2) + active
 // section's subnav + list content (col 3). Mobile collapses to single
 // column with [📋 List | 🗺 Map] toggle pill. Both columns always fit
@@ -7654,7 +7681,10 @@ function _shellInvalidateActiveMap() {
     }
   }, 100);
 }
-if (typeof document !== "undefined") {
+// v0.94.1.1: shell is OPT-IN only. Add ?shell=1 to the URL to activate it
+// while I debug what broke in v0.94.1. Without the param, the page falls
+// back to v0.85's working layout via setupV85Layout above.
+if (typeof document !== "undefined" && /[?&]shell=1\b/.test(location.search)) {
   if (document.readyState === "complete" || document.readyState === "interactive") setupAppShell();
   else document.addEventListener("DOMContentLoaded", setupAppShell);
 }
@@ -7934,14 +7964,14 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   }
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
-  // v0.94: install Search-this-area hook on supported maps. Currently
+  // v0.94.1: install Search-this-area hook on supported maps. Currently
   // wired for events; other section maps will follow.
   if (elId === "events-map") {
     _installSearchThisAreaHook(map, el, "events-map");
   }
 }
 
-// v0.94: Map-driven "Search this area" flow.
+// v0.94.1: Map-driven "Search this area" flow.
 // When user pans the map > 0.25mi from where it was last fetched, or zooms
 // in/out by >= 1 level, a floating "Search this area" button appears at
 // the top-center of the map. Clicking it re-fetches the section's data
@@ -7991,7 +8021,7 @@ function _installSearchThisAreaHook(map, mapEl, elId) {
   });
 }
 
-// v0.94: Derive a search radius (miles) from the map's visible bounds, then
+// v0.94.1: Derive a search radius (miles) from the map's visible bounds, then
 // SNAP UP to the next tier bracket. Brackets match the tier caps so every
 // map-driven search lands on a tier-aligned radius the user can reason about:
 //    2 mi = essential (fire / police / hospital / urgent care)
@@ -11151,7 +11181,7 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
-  // v0.94.1: Overpass query NARROWED to marketplace only. Worship + community
+  // v0.94.1.1: Overpass query NARROWED to marketplace only. Worship + community
   // centers were OSM venue rows masquerading as events — they had no event
   // data attached (no date, no title, no source URL beyond Google search).
   // If we want church/temple events surfaced, the path is Submit Event +
@@ -11174,7 +11204,7 @@ function classifyEventVenue(el) {
   if (am === "marketplace") {
     category = "markets";
     subtype = "Farmers market";
-  } else return null;  // v0.94.1: worship/community classification removed
+  } else return null;  // v0.94.1.1: worship/community classification removed
   const score = osmScore(t);
   const reasons = osmReasons(t);
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
@@ -11202,7 +11232,7 @@ async function loadNearbyEvents(geo) {
   renderEventsListings(geo, cityListings);
   renderEventsOnline(geo);
 
-  // v0.94.1: markets is the only OSM-dependent subtab now (worship + community
+  // v0.94.1.1: markets is the only OSM-dependent subtab now (worship + community
   // removed — they were venue cards, not events).
   const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
   ["events-markets-tbody"].forEach(id => {
@@ -11241,7 +11271,7 @@ async function loadNearbyEvents(geo) {
       ...curatedMarkets,
       ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
     ].slice(0, 40);
-    // v0.94.1: worship + community arrays removed; only markets remain.
+    // v0.94.1.1: worship + community arrays removed; only markets remain.
     const totalCount = mergedMarkets.length;
     const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
@@ -11291,7 +11321,7 @@ function renderEvents(grouped, total, cityKey, geo) {
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("events-markets-section",   "events-markets-tbody",   grouped.markets || []);
-  // v0.94.1: worship + community sections removed — they leaked OSM venue
+  // v0.94.1.1: worship + community sections removed — they leaked OSM venue
   // cards into the events tab. If those sections need to come back, they
   // need real event data (ICS feeds, admin entries), not OSM amenity tags.
 
@@ -11643,17 +11673,17 @@ function _eventEffectiveCoords(ev) {
 // distance we'll surface that type of event even if the user set a narrow
 // search radius. This lets us show concerts/sports automatically even when
 // the user is doing daily-life searches at 2-5mi.
-// v0.94: Tier caps reflect actual metro reality.
+// v0.94.1: Tier caps reflect actual metro reality.
 //   - daily bumped 5→25 because urban farmers markets are routinely 10-25 mi away
 //   - day_trip added at 75 mi for farm experiences / u-pick / orchards / agritourism
 //     (no farm is 5mi from a Bay Area house — they're day trips)
 //   - destination remains "unlimited" for iconic places (national parks)
 const TIER_CAPS = {
   essential:    2,    // fire, police, hospital, urgent care, clinic
-  daily:       25,    // farmers market, food bank, library, school (v0.94: was 5)
+  daily:       25,    // farmers market, food bank, library, school (v0.94.1: was 5)
   nearby:      15,    // parks, community events, kids, local festivals, art
   regional:    50,    // music concerts, sports, comedy, theater, big festivals
-  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.94: new)
+  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.94.1: new)
   destination: 9999,  // iconic spots (Golden Gate Park, Yosemite, etc.) — unlimited
 };
 const TIER_ORDER = ["essential", "daily", "nearby", "regional", "day_trip", "destination"];
@@ -11677,7 +11707,7 @@ function tierForCategory(cat) {
   const c = (cat || "").toLowerCase();
   // Essential — emergency services
   if (["fire","police","hospital","clinic","pharmacy","urgent","ems","ambulance"].some(x => c.includes(x))) return "essential";
-  // v0.94: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
+  // v0.94.1: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
   // daily/regional so a "u-pick farm" doesn't fall into market/daily by mistake.
   if (["u_pick","u-pick","upick","pumpkin patch","cherry pick","strawberry pick","apple pick","berry pick","farm fair","petting zoo","wagon ride","hayride","agritour","farm stand","farm tour","farm_u_pick"].some(x => c.includes(x))) return "day_trip";
   // Daily — services people use weekly
@@ -12292,7 +12322,7 @@ const NEARNITY_FARM_API_BASE = "/api/farm-experiences";
 const _apiEventsCache = new Map();    // session-scoped cache, keyed by lat/lon/radius/keyword
 const _apiFarmCache   = new Map();    // session-scoped cache for farm experiences
 
-// v0.94.1: Fetch farm experiences from /api/farm-experiences and normalize
+// v0.94.1.1: Fetch farm experiences from /api/farm-experiences and normalize
 // them into event-shaped rows so they merge into the events listing. Farm
 // rows are SEASONAL — they don't have a specific start time. We synthesize
 // `starts` to today so the row passes through downstream date-grouping,
@@ -12303,7 +12333,7 @@ async function fetchFarmExperiences(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.94: farm experiences default to 75mi (day-trip tier) but accept a
+  // v0.94.1: farm experiences default to 75mi (day-trip tier) but accept a
   // map-driven override when user clicks "Search this area" on the events map.
   const r = radiusMi || geo._mapRadius || 75;
   const kw = (keyword || "").trim().toLowerCase();
@@ -12375,7 +12405,7 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.94: radius comes from EITHER an explicit override OR the map-driven
+  // v0.94.1: radius comes from EITHER an explicit override OR the map-driven
   // radius (when user clicked "Search this area") OR the regional-tier cap
   // as a safe default (so concerts/farms still surface on initial load).
   const r = radiusMi
@@ -12415,7 +12445,7 @@ function mergeAndDedupeEvents(a, b) {
   for (const ev of [...(a || []), ...(b || [])]) {
     if (!ev || !ev.title) continue;
     if (!ev.starts && !ev.is_farm_experience) continue;
-    // v0.94.1: Publishable-row guard. An event MUST have a real source URL
+    // v0.94.1.1: Publishable-row guard. An event MUST have a real source URL
     // that isn't a Google/Bing search query. Without this, OSM venues with
     // no website would fall back to /maps/search/<name> URLs and pretend
     // to be events. That's the redirect-portal anti-pattern we banned.
@@ -12467,7 +12497,7 @@ function renderEventsListings(geo, eventsArg) {
   _renderEventsCalendar(geo, curated, tb);
 
   // Async: fetch API events + farm experiences in parallel, merge, re-render.
-  // v0.94.1: Farm experiences come from /api/farm-experiences (seasonal
+  // v0.94.1.1: Farm experiences come from /api/farm-experiences (seasonal
   // directory). When user types "cherry picking" / "pumpkin patch" /
   // "u-pick", the events listing now actually has farm rows to show
   // instead of dumping OSM venue cards.
@@ -12744,7 +12774,7 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
-    // v0.94: new buckets from Source Network spec
+    // v0.94.1: new buckets from Source Network spec
     if (b === "kids_family") {
       return sec.includes("kids_family") ||
         /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
@@ -12784,7 +12814,7 @@ function eventsInWindow(events, w) {
   const now = new Date();
   const todayKey = now.toDateString();
   return events.filter((ev) => {
-    // v0.94.1: Farm experiences are seasonal — they don't belong in
+    // v0.94.1.1: Farm experiences are seasonal — they don't belong in
     // Today/Tonight/Weekend filters. They surface via the Farm & u-pick
     // bucket filter and in the unfiltered month view.
     if (ev.is_farm_experience) return w === "month";
