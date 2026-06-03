@@ -3939,8 +3939,47 @@
     /* Cards inside results-main keep their existing single-column flow */
   }
 
+  /* v0.95.0: Search-this-area Leaflet Control. Custom-positioned at top
+     center via absolute positioning override. Z-index 1000 sits above all
+     Leaflet panes (max 700) and the control container (800). */
+  .leaflet-top .leaflet-control.nearnity-search-area-control {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 0;
+    float: none;
+    z-index: 1000;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+  }
+  .nearnity-search-area-btn {
+    background: #0050c2;
+    color: #fff;
+    border: none;
+    border-radius: 24px;
+    padding: 9px 18px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .nearnity-search-area-btn:hover {
+    background: #003c92;
+    transform: translateY(-1px);
+  }
+  .nearnity-search-area-btn:focus {
+    outline: 3px solid rgba(0, 80, 194, 0.35);
+    outline-offset: 2px;
+  }
+  .nearnity-search-area-btn:active { transform: translateY(0); }
+
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.94.1: 3-COLUMN APP SHELL
+     v0.95.0: 3-COLUMN APP SHELL
      -------------------------
      Sticky section rail (col 1) + active section's map (col 2) + active
      section's list/content (col 3). Both map + list always fit the viewport
@@ -4175,6 +4214,83 @@
     body.shell-v94 .shell-rail-tab { padding: 9px 14px; font-size: 13px; }
     body.shell-v94 .shell-list-col .shell-list-content { padding: 12px; }
   }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v0.95.0 — RAIL-ONLY SHELL (Phase B)
+     -------------------------------------
+     Sticky left sidebar with all sections, grouped by cat-tab. Clicking a tab
+     scrolls to the section anchor. No content is hidden or moved. Page below
+     renders identically to legacy.
+     Activated by body.shell-v95 class (only when ?shell=1 in URL).
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .nearnity-rail {
+    /* hidden by default; only visible when body.shell-v95 is set */
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 220px;
+    height: 100vh;
+    background: #f7f9fc;
+    border-right: 1px solid #e8edf2;
+    overflow-y: auto;
+    z-index: 90;   /* below the v85 header (z 100) but above body content */
+    padding: 80px 0 16px 0;  /* leave room for the fixed-top header */
+    box-sizing: border-box;
+  }
+  body.shell-v95 .nearnity-rail { display: block; }
+  body.shell-v95 { padding-left: 220px; }   /* shift all page content right of the rail */
+  body.shell-v95 .results-grid { max-width: 100%; }
+
+  .nearnity-rail-group {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #6b7280;
+    font-weight: 700;
+    padding: 14px 18px 6px;
+  }
+  .nearnity-rail-tab {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 18px;
+    font-size: 14px;
+    color: #344054;
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .nearnity-rail-tab:hover {
+    background: #eef2f8;
+    color: #0050c2;
+  }
+  .nearnity-rail-tab.active {
+    background: #e8eff9;
+    color: #0050c2;
+    border-left-color: #0050c2;
+    font-weight: 600;
+  }
+  .nearnity-rail-tab .rail-icon {
+    font-size: 16px;
+    width: 22px;
+    text-align: center;
+    flex: 0 0 auto;
+  }
+  .nearnity-rail-tab .rail-label { flex: 1; min-width: 0; }
+
+  /* 13" laptops — slightly narrower rail */
+  @media (min-width: 900px) and (max-width: 1440px) {
+    body.shell-v95 { padding-left: 184px; }
+    .nearnity-rail { width: 184px; }
+    .nearnity-rail-tab { padding: 9px 14px; font-size: 13px; }
+  }
+  /* Mobile — hide rail entirely, no content shift */
+  @media (max-width: 899px) {
+    body.shell-v95 { padding-left: 0; }
+    body.shell-v95 .nearnity-rail { display: none; }
+  }
 </style>
 </head>
 <body class="single-view">
@@ -4220,7 +4336,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.94.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.95.0</span>
     </div>
   </header>
 
@@ -4456,7 +4572,7 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
-      <!-- v0.94.1: radius buttons REMOVED. Search radius is now driven by the
+      <!-- v0.95.0: radius buttons REMOVED. Search radius is now driven by the
            section maps themselves — pan or zoom and a "Search this area"
            button surfaces on the map. Default radius is tier-based per
            category (daily=25, nearby=15, regional=50, day_trip=75). -->
@@ -4967,7 +5083,7 @@
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
         </div>
-        <!-- v0.94.1.1: REMOVED worship + community-center sections. Those rendered
+        <!-- v0.95.0.1: REMOVED worship + community-center sections. Those rendered
              OSM venue cards (place_of_worship + community_centre amenities) with
              no event data — clicking through went to Google search results
              because the venues didn't carry websites. That's the exact
@@ -5456,7 +5572,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.94.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.95.0</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7139,7 +7255,7 @@ window.NEARNITY_DEBUG = false;
 // v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
 // v0.34.4: default 5→2 — matches "daily-use range" framing better
 const RADIUS_OPTIONS = [2, 5, 10];               // miles
-// v0.94.1: Default base radius bumped 2→25 because metro reality means most
+// v0.95.0: Default base radius bumped 2→25 because metro reality means most
 // useful results aren't within 2mi. Radius is now driven by the section
 // maps via the "Search this area" flow — pan/zoom the map and re-query
 // the visible bounds. This DEFAULT_RADIUS_MI is just the initial fallback
@@ -7261,7 +7377,7 @@ function refetchAllRadialSections() {
     }
   }, 80);
 }
-// v0.94.1: radius-button click delegator retained as a no-op. The buttons
+// v0.95.0: radius-button click delegator retained as a no-op. The buttons
 // themselves are gone, but external links / cached HTML / browser-restored
 // state might still produce stray .radius-btn clicks. Swallow them silently.
 document.addEventListener("click", (e) => {
@@ -7481,7 +7597,7 @@ if (typeof document !== "undefined") {
 // move on page load. All click handlers still work (delegated).
 // Also adds the right-rail container + body.v85-layout class to activate
 // the new 3-column layout.
-// v0.94.1.1: setupV85Layout RESTORED. v0.94.1's shell shipped broken (some
+// v0.95.0.1: setupV85Layout RESTORED. v0.95.0's shell shipped broken (some
 // expected map/card IDs don't exist in the DOM, causing the shell to mount
 // partially while the CSS hid the legacy layout — left the page half-blank).
 // Rolled back to v0.85's working layout as the default. The new shell still
@@ -7513,181 +7629,137 @@ if (typeof document !== "undefined") {
   else document.addEventListener("DOMContentLoaded", setupV85Layout);
 }
 
-// v0.94.1: 3-column app shell.
+// v0.95.0: 3-column app shell.
 // Sticky section rail (col 1) + active section's map (col 2) + active
 // section's subnav + list content (col 3). Mobile collapses to single
 // column with [📋 List | 🗺 Map] toggle pill. Both columns always fit
 // the viewport — no scrolling past the map to see results.
-const SHELL_SECTIONS = [
-  { id: "events",         label: "Events",          icon: "🎪",  mapId: "events-map",          cardId: "card-events",          subnavSel: '.subnav[data-subnav-for="card-events"]',          group: "around-me" },
-  { id: "schools",        label: "Schools",         icon: "🎓",  mapId: "schools-map",         cardId: "card-school",          subnavSel: '.subnav[data-subnav-for="card-school"]',          group: "around-me" },
-  { id: "parks",          label: "Parks & rec",     icon: "🌳",  mapId: "parks-map",           cardId: "card-parks",           subnavSel: '.subnav[data-subnav-for="card-parks"]',           group: "around-me" },
-  { id: "myhome",         label: "Property",        icon: "🏠",  mapId: null,                  cardId: "card-myhome",          subnavSel: null,                                              group: "my-home" },
-  { id: "services",       label: "Utilities",       icon: "🔌",  mapId: null,                  cardId: "card-services",        subnavSel: '.subnav[data-subnav-for="card-services"]',        group: "my-home" },
-  { id: "yard",           label: "Gardening",       icon: "🌱",  mapId: "yard-map",            cardId: "card-yard",            subnavSel: '.subnav[data-subnav-for="card-yard"]',            group: "my-home" },
-  { id: "home-services",  label: "Home services",   icon: "🛠️", mapId: "home-services-map",   cardId: "card-home-services",   subnavSel: '.subnav[data-subnav-for="card-home-services"]',   group: "my-home" },
-  { id: "community-help", label: "Community help",  icon: "🤝",  mapId: "community-help-map",  cardId: "card-community-help",  subnavSel: '.subnav[data-subnav-for="card-community-help"]',  group: "help" },
-  { id: "health",         label: "Health",          icon: "❤️",  mapId: "health-map",          cardId: "card-health",          subnavSel: '.subnav[data-subnav-for="card-health"]',          group: "help" },
-  { id: "civic",          label: "Official links",  icon: "🏛️",  mapId: "civic-map",           cardId: "card-civic",           subnavSel: '.subnav[data-subnav-for="card-civic"]',           group: "civic" },
-  { id: "public-services",label: "Emergency",       icon: "🆘",  mapId: "public-services-map", cardId: "card-public-services", subnavSel: '.subnav[data-subnav-for="card-public-services"]', group: "safety" },
-  { id: "risks",          label: "Climate risks",   icon: "⚠️",  mapId: null,                  cardId: "card-risks",           subnavSel: null,                                              group: "safety" },
+// v0.95.0: Section table built from Phase-A DOM audit (ground truth, not guesses).
+// `secHeaderId` is the anchor we scroll to in Phase B. Sections without a card
+// (saved, services-as-container) are kept in the rail as scroll targets only.
+const SHELL_V95_SECTIONS = [
+  // Around me
+  { id: "events",         label: "Events",          icon: "🎪", group: "around-me", cardId: "card-events",          mapId: "events-map",  subnavSel: '.subnav[data-subnav-for="card-events"]',          secHeaderId: "sec-events" },
+  { id: "schools",        label: "Schools",         icon: "🎓", group: "around-me", cardId: "card-school",          mapId: "schools-map", subnavSel: '.subnav[data-subnav-for="card-school"]',          secHeaderId: "sec-schools" },
+  { id: "parks",          label: "Parks & rec",     icon: "🌳", group: "around-me", cardId: "card-parks",           mapId: "parks-map",   subnavSel: '.subnav[data-subnav-for="card-parks"]',           secHeaderId: "sec-parks" },
+  // My home
+  { id: "myhome",         label: "Property",        icon: "🏠", group: "my-home",   cardId: "card-home",            mapId: null,          subnavSel: null,                                              secHeaderId: "sec-myhome" },
+  { id: "services",       label: "Utilities",       icon: "🔌", group: "my-home",   cardId: null,                   mapId: null,          subnavSel: '.subnav[data-subnav-for="card-services"]',        secHeaderId: "sec-services", multiCardIds: ["card-electric","card-internet","card-tv","card-security"] },
+  { id: "yard",           label: "Gardening",       icon: "🌱", group: "my-home",   cardId: "card-yard",            mapId: null,          subnavSel: '.subnav[data-subnav-for="card-yard"]',            secHeaderId: "sec-yard" },
+  { id: "home-services",  label: "Home services",   icon: "🛠️",group: "my-home",   cardId: "card-home-services",   mapId: "hs-map",      subnavSel: '.subnav[data-subnav-for="card-home-services"]',   secHeaderId: "sec-home-services" },
+  // Help
+  { id: "community-help", label: "Community help",  icon: "🤝", group: "help",      cardId: "card-community-help",  mapId: null,          subnavSel: '.subnav[data-subnav-for="card-community-help"]',  secHeaderId: "sec-community-help" },
+  { id: "health",         label: "Health",          icon: "❤️", group: "help",      cardId: "card-health",          mapId: null,          subnavSel: '.subnav[data-subnav-for="card-health"]',          secHeaderId: "sec-health" },
+  // Civic
+  { id: "civic",          label: "Official links",  icon: "🏛️",group: "civic",     cardId: "card-civic",           mapId: "civic-map",   subnavSel: '.subnav[data-subnav-for="card-civic"]',           secHeaderId: "sec-civic" },
+  // Safety
+  { id: "public-services",label: "Emergency",       icon: "🆘", group: "safety",    cardId: "card-public-services", mapId: "ps-map",      subnavSel: '.subnav[data-subnav-for="card-public-services"]', secHeaderId: "sec-public-services" },
+  { id: "risks",          label: "Climate risks",   icon: "⚠️", group: "safety",    cardId: "card-risks",           mapId: "ra-map",      subnavSel: null,                                              secHeaderId: "sec-risks" },
+  // Saved
+  { id: "saved",          label: "Saved",           icon: "⭐", group: "saved",     cardId: null,                   mapId: null,          subnavSel: null,                                              secHeaderId: "sec-saved" },
 ];
-const SHELL_GROUP_LABELS = {
+const SHELL_V95_GROUPS = {
   "around-me": "📍 Around me",
   "my-home":   "🏡 My home",
   "help":      "❤️ Help",
   "civic":     "🏛️ Official",
   "safety":    "🛡️ Safety",
+  "saved":     "⭐ Saved",
 };
-function setupAppShell() {
-  if (document.getElementById("app-shell")) return;   // idempotent
-  const resultsMain = document.getElementById("results-main");
-  if (!resultsMain) return;
 
-  // Build shell wrapper
-  const shell = document.createElement("div");
-  shell.id = "app-shell";
-  shell.innerHTML = `
-    <aside class="shell-rail" id="shell-rail" aria-label="Sections"></aside>
-    <div class="shell-maplist-toggle" role="tablist">
-      <button type="button" data-toggle="list" class="active" role="tab" aria-selected="true">📋 List</button>
-      <button type="button" data-toggle="map" role="tab" aria-selected="false">🗺 Map</button>
-    </div>
-    <section class="shell-map-col" id="shell-map-col" aria-label="Map"></section>
-    <section class="shell-list-col" id="shell-list-col" aria-label="Results">
-      <div class="shell-list-subnav" id="shell-list-subnav"></div>
-      <div class="shell-list-content" id="shell-list-content"></div>
-    </section>
-  `;
-  // Build rail with section group labels
-  const rail = shell.querySelector(".shell-rail");
+// v0.95.0 — Phase B: rail-only shell. Adds a sticky left sidebar listing all
+// audited sections, grouped by cat-tab. NO content is moved. NO global hides.
+// Rail click scrolls smoothly to the section's header anchor. Page below
+// renders identically to legacy. The rail is purely additive navigation.
+//
+// Behind ?shell=1 URL param. Default page is unchanged.
+function setupShellV95Rail() {
+  if (document.getElementById("nearnity-rail")) return;   // idempotent
+  // Build the rail
+  const rail = document.createElement("nav");
+  rail.id = "nearnity-rail";
+  rail.className = "nearnity-rail";
+  rail.setAttribute("aria-label", "Section navigation");
+
   let lastGroup = "";
-  for (const sec of SHELL_SECTIONS) {
+  let activeRailCount = 0;
+  const missing = [];
+  for (const sec of SHELL_V95_SECTIONS) {
+    // Verify the section's anchor exists. If not, skip (don't break the rail).
+    const anchor = document.getElementById(sec.secHeaderId);
+    if (!anchor) { missing.push(sec.id); continue; }
     if (sec.group !== lastGroup) {
       const lbl = document.createElement("div");
-      lbl.className = "shell-rail-section-label";
-      lbl.textContent = SHELL_GROUP_LABELS[sec.group] || sec.group;
+      lbl.className = "nearnity-rail-group";
+      lbl.textContent = SHELL_V95_GROUPS[sec.group] || sec.group;
       rail.appendChild(lbl);
       lastGroup = sec.group;
     }
     const tab = document.createElement("a");
-    tab.className = "shell-rail-tab";
-    tab.href = "#";
+    tab.className = "nearnity-rail-tab";
+    tab.href = "#" + sec.secHeaderId;
     tab.dataset.section = sec.id;
-    tab.dataset.hasMap = sec.mapId ? "true" : "false";
-    tab.innerHTML = `<span class="rail-icon">${sec.icon}</span><span>${sec.label}</span>`;
-    rail.appendChild(tab);
-  }
-
-  // Append shell to results-main FIRST so the child elements exist before we move into them
-  resultsMain.appendChild(shell);
-
-  const mapCol = shell.querySelector("#shell-map-col");
-  const subnavHolder = shell.querySelector("#shell-list-subnav");
-  const contentHolder = shell.querySelector("#shell-list-content");
-
-  // Move each section's pieces into the shell. Note: appendChild on an existing
-  // node MOVES it (preserves event listeners and attached widgets like Leaflet).
-  for (const sec of SHELL_SECTIONS) {
-    if (sec.mapId) {
-      const mapEl = document.getElementById(sec.mapId);
-      if (mapEl) {
-        mapEl.dataset.shellSection = sec.id;
-        mapCol.appendChild(mapEl);
+    tab.innerHTML = `<span class="rail-icon" aria-hidden="true">${sec.icon}</span><span class="rail-label">${sec.label}</span>`;
+    tab.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = document.getElementById(sec.secHeaderId);
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Set active state
+        rail.querySelectorAll(".nearnity-rail-tab").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
       }
-    }
-    if (sec.subnavSel) {
-      const subnavEl = document.querySelector(sec.subnavSel);
-      if (subnavEl) {
-        subnavEl.dataset.shellSubnav = sec.id;
-        subnavHolder.appendChild(subnavEl);
-      }
-    }
-    const card = document.getElementById(sec.cardId);
-    if (card) {
-      card.dataset.shellSection = sec.id;
-      // The shell makes the section visible via CSS, so strip the legacy
-      // `hidden` attribute that loadNearbyEvents et al. flip on first load.
-      card.removeAttribute("hidden");
-      contentHolder.appendChild(card);
-    }
-  }
-
-  // Activate shell mode
-  document.body.classList.add("shell-v94");
-  document.body.classList.remove("v85-layout");
-
-  // Initial active section: events (first one with a map)
-  setShellActiveSection("events");
-
-  // Rail click → switch active section
-  rail.addEventListener("click", (e) => {
-    const tab = e.target.closest(".shell-rail-tab");
-    if (!tab) return;
-    e.preventDefault();
-    setShellActiveSection(tab.dataset.section);
-  });
-
-  // Mobile Map/List toggle
-  shell.querySelector(".shell-maplist-toggle").addEventListener("click", (e) => {
-    const btn = e.target.closest("button[data-toggle]");
-    if (!btn) return;
-    const which = btn.dataset.toggle;
-    shell.classList.toggle("show-map",  which === "map");
-    shell.classList.toggle("show-list", which === "list");
-    shell.querySelectorAll(".shell-maplist-toggle button").forEach(b => {
-      const on = b.dataset.toggle === which;
-      b.classList.toggle("active", on);
-      b.setAttribute("aria-selected", String(on));
     });
-    if (which === "map") _shellInvalidateActiveMap();
-  });
-  shell.classList.add("show-list");   // mobile default
+    rail.appendChild(tab);
+    activeRailCount++;
+  }
+  if (missing.length) {
+    console.warn("[shell-v95] Skipped sections (no secHeader in DOM):", missing.join(", "));
+  }
+  console.log(`[shell-v95] Rail mounted with ${activeRailCount} sections.`);
 
-  // Re-invalidate map on window resize so Leaflet doesn't render with stale dimensions
-  window.addEventListener("resize", () => {
-    clearTimeout(window._shellResizeTimer);
-    window._shellResizeTimer = setTimeout(_shellInvalidateActiveMap, 150);
-  });
+  // Mount the rail. Don't touch any existing layout — append to body and
+  // let CSS handle positioning + the page shift.
+  document.body.appendChild(rail);
+  document.body.classList.add("shell-v95");
+
+  // Highlight the active section on scroll
+  _shellV95InstallScrollSpy(rail);
 }
-function setShellActiveSection(sectionId) {
-  document.body.dataset.activeSection = sectionId;
-  const shell = document.getElementById("app-shell");
-  if (!shell) return;
-  shell.querySelectorAll(".shell-rail-tab").forEach(t => {
-    t.classList.toggle("active", t.dataset.section === sectionId);
+
+// Scroll-spy: when a section's header crosses the top of the viewport, mark
+// its rail tab as active. Uses IntersectionObserver for performance.
+function _shellV95InstallScrollSpy(rail) {
+  if (!("IntersectionObserver" in window)) return;
+  const tabsByAnchor = new Map();
+  rail.querySelectorAll(".nearnity-rail-tab").forEach(t => {
+    const id = (t.getAttribute("href") || "").replace(/^#/, "");
+    if (id) tabsByAnchor.set(id, t);
   });
-  shell.querySelectorAll(".shell-map-col .section-map").forEach(m => {
-    m.classList.toggle("shell-active-map", m.dataset.shellSection === sectionId);
-  });
-  shell.querySelectorAll("[data-shell-section]").forEach(el => {
-    if (el.classList.contains("section-map")) return;
-    el.classList.toggle("shell-active-list", el.dataset.shellSection === sectionId);
-  });
-  shell.querySelectorAll("[data-shell-subnav]").forEach(s => {
-    s.classList.toggle("shell-active-subnav", s.dataset.shellSubnav === sectionId);
-  });
-  const activeTab = shell.querySelector(`.shell-rail-tab[data-section="${sectionId}"]`);
-  const hasMap = activeTab && activeTab.dataset.hasMap === "true";
-  shell.classList.toggle("no-map", !hasMap);
-  _shellInvalidateActiveMap();
-}
-function _shellInvalidateActiveMap() {
-  setTimeout(() => {
-    const activeMap = document.querySelector(".shell-map-col .section-map.shell-active-map");
-    if (!activeMap) return;
-    if (typeof _sectionMaps !== "undefined" && _sectionMaps[activeMap.id]) {
-      try { _sectionMaps[activeMap.id].invalidateSize(true); } catch (e) {}
+  const io = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) {
+        const id = entry.target.id;
+        rail.querySelectorAll(".nearnity-rail-tab.active").forEach(t => t.classList.remove("active"));
+        const tab = tabsByAnchor.get(id);
+        if (tab) tab.classList.add("active");
+      }
     }
-  }, 100);
+  }, { rootMargin: "-30% 0px -60% 0px" });   // mark active when section is in middle third
+  for (const anchorId of tabsByAnchor.keys()) {
+    const el = document.getElementById(anchorId);
+    if (el) io.observe(el);
+  }
 }
-// v0.94.1.1: shell is OPT-IN only. Add ?shell=1 to the URL to activate it
-// while I debug what broke in v0.94.1. Without the param, the page falls
-// back to v0.85's working layout via setupV85Layout above.
+
+// v0.95.0: opt-in via ?shell=1. Safe to ship — if the rail breaks, removing
+// the URL param restores legacy behavior immediately.
 if (typeof document !== "undefined" && /[?&]shell=1\b/.test(location.search)) {
-  if (document.readyState === "complete" || document.readyState === "interactive") setupAppShell();
-  else document.addEventListener("DOMContentLoaded", setupAppShell);
+  if (document.readyState === "complete" || document.readyState === "interactive") setupShellV95Rail();
+  else document.addEventListener("DOMContentLoaded", setupShellV95Rail);
 }
+
+// --- v0.94 shell code removed in v0.95.0. Replaced by setupShellV95Rail above. ---
 
 // v0.86: enhanced right rail — Quick context + Recently saved + CTA.
 // Multiple sections in one card so the right column feels purposeful, not
@@ -7964,64 +8036,109 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   }
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
-  // v0.94.1: install Search-this-area hook on supported maps. Currently
-  // wired for events; other section maps will follow.
-  if (elId === "events-map") {
-    _installSearchThisAreaHook(map, el, "events-map");
-  }
+  // v0.95.0: install Search-this-area control on EVERY section map (not just
+  // events). Survives map.innerHTML wipes because Leaflet manages its own DOM.
+  _installSearchThisAreaControl(map, elId);
 }
 
-// v0.94.1: Map-driven "Search this area" flow.
-// When user pans the map > 0.25mi from where it was last fetched, or zooms
-// in/out by >= 1 level, a floating "Search this area" button appears at
-// the top-center of the map. Clicking it re-fetches the section's data
-// using the map's current center + radius derived from visible bounds.
-const _mapAnchors = new Map();  // elId → { lat, lon, zoom }
-function _installSearchThisAreaHook(map, mapEl, elId) {
-  if (mapEl.dataset.searchThisAreaInstalled) return;
-  mapEl.dataset.searchThisAreaInstalled = "1";
-
-  // Remember where this map was last anchored (where we last fetched for)
-  const c0 = map.getCenter();
-  _mapAnchors.set(elId, { lat: c0.lat, lon: c0.lng, zoom: map.getZoom() });
-
-  // Build the floating button (hidden by default)
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.className = "search-this-area-btn";
-  btn.innerHTML = "🔍 Search this area";
-  btn.setAttribute("aria-label", "Search this area");
-  btn.style.cssText = "position:absolute;top:10px;left:50%;transform:translateX(-50%);z-index:600;background:#0050c2;color:#fff;border:none;border-radius:24px;padding:9px 18px;font-size:14px;font-weight:600;box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;display:none;";
-  mapEl.style.position = "relative";
-  mapEl.appendChild(btn);
-
-  const showOrHide = () => {
-    const anchor = _mapAnchors.get(elId);
-    if (!anchor) return;
-    const c = map.getCenter();
-    const z = map.getZoom();
-    const moved = typeof haversineMiles === "function"
-      ? haversineMiles(anchor.lat, anchor.lon, c.lat, c.lng)
-      : 0;
-    const zoomChanged = Math.abs(z - anchor.zoom) >= 1;
-    btn.style.display = (moved > 0.25 || zoomChanged) ? "block" : "none";
-  };
-  map.on("moveend", showOrHide);
-  map.on("zoomend", showOrHide);
-
-  btn.addEventListener("click", () => {
-    btn.style.display = "none";
-    const c = map.getCenter();
-    const radius = _radiusFromMapBounds(map);
-    // Anchor at the new center so the button only re-appears after the
-    // NEXT pan/zoom — not immediately because the data re-fit shifted the map.
-    _mapAnchors.set(elId, { lat: c.lat, lon: c.lng, zoom: map.getZoom() });
-    // Dispatch to the section's reload function with the new geo.
-    _reloadSectionAtMapBounds(elId, c.lat, c.lng, radius);
+// v0.95.0: Map-driven "Search this area" — REBUILT as a Leaflet Control.
+// Previously a raw absolute-positioned DOM child of the map container, which
+// (a) only installed on events-map, (b) collided with marker-pane z-index,
+// (c) was fragile to any innerHTML reset. The Leaflet Control approach is
+// the supported pattern: Leaflet manages the DOM, z-index lives in the
+// dedicated control container (z-index 800, above all panes), and clicks
+// are handled via L.DomEvent so touch + mouse both work.
+//
+// Behavior:
+// - Anchor stored at the map's center+zoom right after the control mounts
+//   AND each time the section is reloaded with a new fitted view.
+// - moveend / zoomend → if moved > 0.25 mi OR zoom changed by >= 1, show.
+// - Click → re-anchor at current view + dispatch to the section's reload fn.
+// - ?debug=1 → button starts visible with "(debug)" so you can confirm it
+//   renders at all when troubleshooting.
+let _SearchThisAreaCtl = null;
+function _ensureSearchThisAreaCtl() {
+  if (_SearchThisAreaCtl || typeof L === "undefined") return _SearchThisAreaCtl;
+  _SearchThisAreaCtl = L.Control.extend({
+    options: { position: "topleft" },
+    onAdd: function(map) {
+      this._map = map;
+      const c = L.DomUtil.create("div", "leaflet-bar nearnity-search-area-control");
+      const btn = L.DomUtil.create("button", "nearnity-search-area-btn", c);
+      btn.type = "button";
+      btn.setAttribute("aria-label", "Search this map area");
+      btn.innerHTML = "🔍 Search this area";
+      this._container = c;
+      this._btn = btn;
+      // Anchor at current view
+      const ctr = map.getCenter();
+      this._anchor = { lat: ctr.lat, lon: ctr.lng, zoom: map.getZoom() };
+      // Debug mode: visible from the start so we can verify rendering
+      this._debug = /[?&]debug=1\b/.test(location.search);
+      if (this._debug) {
+        c.style.display = "block";
+        btn.innerHTML = "🔍 Search this area (debug)";
+      } else {
+        c.style.display = "none";
+      }
+      // Map listeners
+      map.on("moveend", this._onMapMove, this);
+      map.on("zoomend", this._onMapMove, this);
+      // Click — stop propagation so the map doesn't pan when the button is clicked
+      L.DomEvent.on(btn, "click", this._handleClick, this);
+      L.DomEvent.disableClickPropagation(c);
+      L.DomEvent.disableScrollPropagation(c);
+      return c;
+    },
+    onRemove: function(map) {
+      map.off("moveend", this._onMapMove, this);
+      map.off("zoomend", this._onMapMove, this);
+    },
+    _onMapMove: function() {
+      if (this._debug) return;
+      const c = this._map.getCenter();
+      const z = this._map.getZoom();
+      const moved = (typeof haversineMiles === "function")
+        ? haversineMiles(this._anchor.lat, this._anchor.lon, c.lat, c.lng)
+        : 0;
+      const zoomChanged = Math.abs(z - this._anchor.zoom) >= 1;
+      this._container.style.display = (moved > 0.25 || zoomChanged) ? "block" : "none";
+    },
+    _handleClick: function(e) {
+      L.DomEvent.stop(e);
+      this._container.style.display = "none";
+      const c = this._map.getCenter();
+      const radius = _radiusFromMapBounds(this._map);
+      this._anchor = { lat: c.lat, lon: c.lng, zoom: this._map.getZoom() };
+      if (typeof this.options.elId === "string") {
+        _reloadSectionAtMapBounds(this.options.elId, c.lat, c.lng, radius);
+      }
+    },
+    // Called from setupSectionMap after a programmatic fitBounds/setView so
+    // the button doesn't appear from the data-driven re-fit (only user moves).
+    resetAnchor: function() {
+      if (!this._map) return;
+      const c = this._map.getCenter();
+      this._anchor = { lat: c.lat, lon: c.lng, zoom: this._map.getZoom() };
+      if (!this._debug) this._container.style.display = "none";
+    },
   });
+  return _SearchThisAreaCtl;
+}
+function _installSearchThisAreaControl(map, elId) {
+  const Ctl = _ensureSearchThisAreaCtl();
+  if (!Ctl) return;
+  if (map._searchThisAreaControl) {
+    // Already installed — reset anchor to the new fitted view
+    map._searchThisAreaControl.resetAnchor();
+    return;
+  }
+  const control = new Ctl({ elId });
+  control.addTo(map);
+  map._searchThisAreaControl = control;
 }
 
-// v0.94.1: Derive a search radius (miles) from the map's visible bounds, then
+// v0.95.0: Derive a search radius (miles) from the map's visible bounds, then
 // SNAP UP to the next tier bracket. Brackets match the tier caps so every
 // map-driven search lands on a tier-aligned radius the user can reason about:
 //    2 mi = essential (fire / police / hospital / urgent care)
@@ -8056,20 +8173,48 @@ function _radiusFromMapBounds(map) {
   } catch (e) { return 25; }
 }
 
-// Re-fetch the section's data using a NEW center + radius (instead of the
-// user's home address). The home pin stays where it was; the section now
-// shows what's around the new center.
+// v0.95.0: Re-fetch the section's data using a NEW center + radius (the user
+// panned/zoomed the map and clicked "Search this area"). The home pin stays
+// where it was; the section now shows what's around the new map center.
+//
+// Registry-based so adding a section = one entry. Each entry needs:
+//   - lastGeoVar:  name of the global that stores the section's last geo
+//   - loader:      function that re-fetches given a geo object
+//   - caches:      array of Map instances to clear before re-fetch
+const _SECTION_RELOAD_REGISTRY = {
+  "events-map": {
+    getLastGeo: () => (typeof lastEventsGeo !== "undefined") ? lastEventsGeo : null,
+    loader:     (geo) => (typeof loadNearbyEvents === "function") && loadNearbyEvents(geo),
+    caches:     () => [
+      typeof _apiEventsCache !== "undefined" ? _apiEventsCache : null,
+      typeof _apiFarmCache   !== "undefined" ? _apiFarmCache   : null,
+    ].filter(Boolean),
+  },
+  "schools-map": {
+    getLastGeo: () => (typeof lastSchoolGeo !== "undefined") ? lastSchoolGeo : null,
+    loader:     (geo) => (typeof loadNearbySchools === "function") && loadNearbySchools(geo),
+    caches:     () => [],
+  },
+  "parks-map": {
+    getLastGeo: () => (typeof lastParksGeo !== "undefined") ? lastParksGeo : null,
+    loader:     (geo) => (typeof loadNearbyParks === "function") && loadNearbyParks(geo),
+    caches:     () => [],
+  },
+};
 function _reloadSectionAtMapBounds(elId, lat, lon, radius) {
-  if (elId === "events-map") {
-    if (typeof lastEventsGeo !== "undefined" && lastEventsGeo) {
-      const newGeo = { ...lastEventsGeo, lat, lon, _mapRadius: radius, _searchedFromMap: true };
-      // Invalidate the per-keyword cache so we re-query the Worker
-      if (typeof _apiEventsCache !== "undefined") _apiEventsCache.clear();
-      if (typeof _apiFarmCache   !== "undefined") _apiFarmCache.clear();
-      loadNearbyEvents(newGeo);
-    }
+  const entry = _SECTION_RELOAD_REGISTRY[elId];
+  if (!entry) {
+    console.warn(`[search-this-area] no reload registered for ${elId}`);
+    return;
   }
-  // Other sections will be wired in follow-up iterations.
+  const last = entry.getLastGeo();
+  if (!last) {
+    console.warn(`[search-this-area] no last geo for ${elId} — user must search first`);
+    return;
+  }
+  for (const cache of entry.caches()) { try { cache.clear(); } catch (_) {} }
+  const newGeo = { ...last, lat, lon, _mapRadius: radius, _searchedFromMap: true };
+  entry.loader(newGeo);
 }
 
 /* =====================================================================
@@ -11181,7 +11326,7 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
-  // v0.94.1.1: Overpass query NARROWED to marketplace only. Worship + community
+  // v0.95.0.1: Overpass query NARROWED to marketplace only. Worship + community
   // centers were OSM venue rows masquerading as events — they had no event
   // data attached (no date, no title, no source URL beyond Google search).
   // If we want church/temple events surfaced, the path is Submit Event +
@@ -11204,7 +11349,7 @@ function classifyEventVenue(el) {
   if (am === "marketplace") {
     category = "markets";
     subtype = "Farmers market";
-  } else return null;  // v0.94.1.1: worship/community classification removed
+  } else return null;  // v0.95.0.1: worship/community classification removed
   const score = osmScore(t);
   const reasons = osmReasons(t);
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
@@ -11232,7 +11377,7 @@ async function loadNearbyEvents(geo) {
   renderEventsListings(geo, cityListings);
   renderEventsOnline(geo);
 
-  // v0.94.1.1: markets is the only OSM-dependent subtab now (worship + community
+  // v0.95.0.1: markets is the only OSM-dependent subtab now (worship + community
   // removed — they were venue cards, not events).
   const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
   ["events-markets-tbody"].forEach(id => {
@@ -11271,7 +11416,7 @@ async function loadNearbyEvents(geo) {
       ...curatedMarkets,
       ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
     ].slice(0, 40);
-    // v0.94.1.1: worship + community arrays removed; only markets remain.
+    // v0.95.0.1: worship + community arrays removed; only markets remain.
     const totalCount = mergedMarkets.length;
     const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
@@ -11321,7 +11466,7 @@ function renderEvents(grouped, total, cityKey, geo) {
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("events-markets-section",   "events-markets-tbody",   grouped.markets || []);
-  // v0.94.1.1: worship + community sections removed — they leaked OSM venue
+  // v0.95.0.1: worship + community sections removed — they leaked OSM venue
   // cards into the events tab. If those sections need to come back, they
   // need real event data (ICS feeds, admin entries), not OSM amenity tags.
 
@@ -11673,17 +11818,17 @@ function _eventEffectiveCoords(ev) {
 // distance we'll surface that type of event even if the user set a narrow
 // search radius. This lets us show concerts/sports automatically even when
 // the user is doing daily-life searches at 2-5mi.
-// v0.94.1: Tier caps reflect actual metro reality.
+// v0.95.0: Tier caps reflect actual metro reality.
 //   - daily bumped 5→25 because urban farmers markets are routinely 10-25 mi away
 //   - day_trip added at 75 mi for farm experiences / u-pick / orchards / agritourism
 //     (no farm is 5mi from a Bay Area house — they're day trips)
 //   - destination remains "unlimited" for iconic places (national parks)
 const TIER_CAPS = {
   essential:    2,    // fire, police, hospital, urgent care, clinic
-  daily:       25,    // farmers market, food bank, library, school (v0.94.1: was 5)
+  daily:       25,    // farmers market, food bank, library, school (v0.95.0: was 5)
   nearby:      15,    // parks, community events, kids, local festivals, art
   regional:    50,    // music concerts, sports, comedy, theater, big festivals
-  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.94.1: new)
+  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.95.0: new)
   destination: 9999,  // iconic spots (Golden Gate Park, Yosemite, etc.) — unlimited
 };
 const TIER_ORDER = ["essential", "daily", "nearby", "regional", "day_trip", "destination"];
@@ -11707,7 +11852,7 @@ function tierForCategory(cat) {
   const c = (cat || "").toLowerCase();
   // Essential — emergency services
   if (["fire","police","hospital","clinic","pharmacy","urgent","ems","ambulance"].some(x => c.includes(x))) return "essential";
-  // v0.94.1: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
+  // v0.95.0: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
   // daily/regional so a "u-pick farm" doesn't fall into market/daily by mistake.
   if (["u_pick","u-pick","upick","pumpkin patch","cherry pick","strawberry pick","apple pick","berry pick","farm fair","petting zoo","wagon ride","hayride","agritour","farm stand","farm tour","farm_u_pick"].some(x => c.includes(x))) return "day_trip";
   // Daily — services people use weekly
@@ -12322,7 +12467,7 @@ const NEARNITY_FARM_API_BASE = "/api/farm-experiences";
 const _apiEventsCache = new Map();    // session-scoped cache, keyed by lat/lon/radius/keyword
 const _apiFarmCache   = new Map();    // session-scoped cache for farm experiences
 
-// v0.94.1.1: Fetch farm experiences from /api/farm-experiences and normalize
+// v0.95.0.1: Fetch farm experiences from /api/farm-experiences and normalize
 // them into event-shaped rows so they merge into the events listing. Farm
 // rows are SEASONAL — they don't have a specific start time. We synthesize
 // `starts` to today so the row passes through downstream date-grouping,
@@ -12333,7 +12478,7 @@ async function fetchFarmExperiences(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.94.1: farm experiences default to 75mi (day-trip tier) but accept a
+  // v0.95.0: farm experiences default to 75mi (day-trip tier) but accept a
   // map-driven override when user clicks "Search this area" on the events map.
   const r = radiusMi || geo._mapRadius || 75;
   const kw = (keyword || "").trim().toLowerCase();
@@ -12405,7 +12550,7 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.94.1: radius comes from EITHER an explicit override OR the map-driven
+  // v0.95.0: radius comes from EITHER an explicit override OR the map-driven
   // radius (when user clicked "Search this area") OR the regional-tier cap
   // as a safe default (so concerts/farms still surface on initial load).
   const r = radiusMi
@@ -12445,7 +12590,7 @@ function mergeAndDedupeEvents(a, b) {
   for (const ev of [...(a || []), ...(b || [])]) {
     if (!ev || !ev.title) continue;
     if (!ev.starts && !ev.is_farm_experience) continue;
-    // v0.94.1.1: Publishable-row guard. An event MUST have a real source URL
+    // v0.95.0.1: Publishable-row guard. An event MUST have a real source URL
     // that isn't a Google/Bing search query. Without this, OSM venues with
     // no website would fall back to /maps/search/<name> URLs and pretend
     // to be events. That's the redirect-portal anti-pattern we banned.
@@ -12497,7 +12642,7 @@ function renderEventsListings(geo, eventsArg) {
   _renderEventsCalendar(geo, curated, tb);
 
   // Async: fetch API events + farm experiences in parallel, merge, re-render.
-  // v0.94.1.1: Farm experiences come from /api/farm-experiences (seasonal
+  // v0.95.0.1: Farm experiences come from /api/farm-experiences (seasonal
   // directory). When user types "cherry picking" / "pumpkin patch" /
   // "u-pick", the events listing now actually has farm rows to show
   // instead of dumping OSM venue cards.
@@ -12774,7 +12919,7 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
-    // v0.94.1: new buckets from Source Network spec
+    // v0.95.0: new buckets from Source Network spec
     if (b === "kids_family") {
       return sec.includes("kids_family") ||
         /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
@@ -12814,7 +12959,7 @@ function eventsInWindow(events, w) {
   const now = new Date();
   const todayKey = now.toDateString();
   return events.filter((ev) => {
-    // v0.94.1.1: Farm experiences are seasonal — they don't belong in
+    // v0.95.0.1: Farm experiences are seasonal — they don't belong in
     // Today/Tonight/Weekend filters. They surface via the Farm & u-pick
     // bucket filter and in the unfiltered month view.
     if (ev.is_farm_experience) return w === "month";
