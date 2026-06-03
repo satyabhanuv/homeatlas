@@ -3939,22 +3939,18 @@
     /* Cards inside results-main keep their existing single-column flow */
   }
 
-  /* v0.95.0: Search-this-area Leaflet Control. Custom-positioned at top
-     center via absolute positioning override. Z-index 1000 sits above all
-     Leaflet panes (max 700) and the control container (800). */
-  .leaflet-top .leaflet-control.nearnity-search-area-control {
+  /* v0.95.0.1.1: Search-this-area button. Appended directly to
+     .leaflet-control-container (Leaflet's full-map-sized wrapper with
+     top/left/right/bottom: 0). Bypasses the corner-positioning system
+     that was clipping the button behind the v0.95 left rail.
+     `left: 50%` is now genuinely the map's horizontal center. */
+  .nearnity-search-area-btn {
+    display: none;        /* hidden by default; .visible class shows */
     position: absolute;
     top: 10px;
     left: 50%;
     transform: translateX(-50%);
-    margin: 0;
-    float: none;
     z-index: 1000;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-  }
-  .nearnity-search-area-btn {
     background: #0050c2;
     color: #fff;
     border: none;
@@ -3966,20 +3962,22 @@
     cursor: pointer;
     line-height: 1.2;
     white-space: nowrap;
+    pointer-events: auto;
     transition: transform 0.12s ease, background 0.12s ease;
   }
+  .nearnity-search-area-btn.visible { display: block; }
   .nearnity-search-area-btn:hover {
     background: #003c92;
-    transform: translateY(-1px);
+    transform: translateX(-50%) translateY(-1px);
   }
   .nearnity-search-area-btn:focus {
     outline: 3px solid rgba(0, 80, 194, 0.35);
     outline-offset: 2px;
   }
-  .nearnity-search-area-btn:active { transform: translateY(0); }
+  .nearnity-search-area-btn:active { transform: translateX(-50%) translateY(0); }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.95.0: 3-COLUMN APP SHELL
+     v0.95.0.1: 3-COLUMN APP SHELL
      -------------------------
      Sticky section rail (col 1) + active section's map (col 2) + active
      section's list/content (col 3). Both map + list always fit the viewport
@@ -4216,7 +4214,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.95.0 — RAIL-ONLY SHELL (Phase B)
+     v0.95.0.1 — RAIL-ONLY SHELL (Phase B)
      -------------------------------------
      Sticky left sidebar with all sections, grouped by cat-tab. Clicking a tab
      scrolls to the section anchor. No content is hidden or moved. Page below
@@ -4336,7 +4334,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.95.0</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.95.0.1</span>
     </div>
   </header>
 
@@ -4572,7 +4570,7 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
-      <!-- v0.95.0: radius buttons REMOVED. Search radius is now driven by the
+      <!-- v0.95.0.1: radius buttons REMOVED. Search radius is now driven by the
            section maps themselves — pan or zoom and a "Search this area"
            button surfaces on the map. Default radius is tier-based per
            category (daily=25, nearby=15, regional=50, day_trip=75). -->
@@ -5083,7 +5081,7 @@
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
         </div>
-        <!-- v0.95.0.1: REMOVED worship + community-center sections. Those rendered
+        <!-- v0.95.0.1.1: REMOVED worship + community-center sections. Those rendered
              OSM venue cards (place_of_worship + community_centre amenities) with
              no event data — clicking through went to Google search results
              because the venues didn't carry websites. That's the exact
@@ -5572,7 +5570,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.95.0</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.95.0.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7255,7 +7253,7 @@ window.NEARNITY_DEBUG = false;
 // v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
 // v0.34.4: default 5→2 — matches "daily-use range" framing better
 const RADIUS_OPTIONS = [2, 5, 10];               // miles
-// v0.95.0: Default base radius bumped 2→25 because metro reality means most
+// v0.95.0.1: Default base radius bumped 2→25 because metro reality means most
 // useful results aren't within 2mi. Radius is now driven by the section
 // maps via the "Search this area" flow — pan/zoom the map and re-query
 // the visible bounds. This DEFAULT_RADIUS_MI is just the initial fallback
@@ -7377,7 +7375,7 @@ function refetchAllRadialSections() {
     }
   }, 80);
 }
-// v0.95.0: radius-button click delegator retained as a no-op. The buttons
+// v0.95.0.1: radius-button click delegator retained as a no-op. The buttons
 // themselves are gone, but external links / cached HTML / browser-restored
 // state might still produce stray .radius-btn clicks. Swallow them silently.
 document.addEventListener("click", (e) => {
@@ -7597,7 +7595,7 @@ if (typeof document !== "undefined") {
 // move on page load. All click handlers still work (delegated).
 // Also adds the right-rail container + body.v85-layout class to activate
 // the new 3-column layout.
-// v0.95.0.1: setupV85Layout RESTORED. v0.95.0's shell shipped broken (some
+// v0.95.0.1.1: setupV85Layout RESTORED. v0.95.0.1's shell shipped broken (some
 // expected map/card IDs don't exist in the DOM, causing the shell to mount
 // partially while the CSS hid the legacy layout — left the page half-blank).
 // Rolled back to v0.85's working layout as the default. The new shell still
@@ -7629,12 +7627,12 @@ if (typeof document !== "undefined") {
   else document.addEventListener("DOMContentLoaded", setupV85Layout);
 }
 
-// v0.95.0: 3-column app shell.
+// v0.95.0.1: 3-column app shell.
 // Sticky section rail (col 1) + active section's map (col 2) + active
 // section's subnav + list content (col 3). Mobile collapses to single
 // column with [📋 List | 🗺 Map] toggle pill. Both columns always fit
 // the viewport — no scrolling past the map to see results.
-// v0.95.0: Section table built from Phase-A DOM audit (ground truth, not guesses).
+// v0.95.0.1: Section table built from Phase-A DOM audit (ground truth, not guesses).
 // `secHeaderId` is the anchor we scroll to in Phase B. Sections without a card
 // (saved, services-as-container) are kept in the rail as scroll targets only.
 const SHELL_V95_SECTIONS = [
@@ -7667,7 +7665,7 @@ const SHELL_V95_GROUPS = {
   "saved":     "⭐ Saved",
 };
 
-// v0.95.0 — Phase B: rail-only shell. Adds a sticky left sidebar listing all
+// v0.95.0.1 — Phase B: rail-only shell. Adds a sticky left sidebar listing all
 // audited sections, grouped by cat-tab. NO content is moved. NO global hides.
 // Rail click scrolls smoothly to the section's header anchor. Page below
 // renders identically to legacy. The rail is purely additive navigation.
@@ -7752,14 +7750,14 @@ function _shellV95InstallScrollSpy(rail) {
   }
 }
 
-// v0.95.0: opt-in via ?shell=1. Safe to ship — if the rail breaks, removing
+// v0.95.0.1: opt-in via ?shell=1. Safe to ship — if the rail breaks, removing
 // the URL param restores legacy behavior immediately.
 if (typeof document !== "undefined" && /[?&]shell=1\b/.test(location.search)) {
   if (document.readyState === "complete" || document.readyState === "interactive") setupShellV95Rail();
   else document.addEventListener("DOMContentLoaded", setupShellV95Rail);
 }
 
-// --- v0.94 shell code removed in v0.95.0. Replaced by setupShellV95Rail above. ---
+// --- v0.94 shell code removed in v0.95.0.1. Replaced by setupShellV95Rail above. ---
 
 // v0.86: enhanced right rail — Quick context + Recently saved + CTA.
 // Multiple sections in one card so the right column feels purposeful, not
@@ -7994,24 +7992,27 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     if (!_sectionClusters) window._sectionClusters = _sectionClusters;
     _sectionClusters[elId] = clusterGroup;
   }
-  // v0.67: Smart fit — only fit bounds to pins WITHIN the user's search radius.
-  // Previously fit to all pins, which would zoom out to include outliers and
-  // make the user's location feel "off-screen / centered on the wrong city."
-  // Now: pins within radius drive the fit (map stays close to user); outlier
-  // pins are still placed but reachable via pan/zoom.
-  const userRadius = (typeof CURRENT_RADIUS_MI === "number") ? CURRENT_RADIUS_MI : 5;
-  const inRadius = validItems.filter(it => {
-    if (typeof haversineMiles !== "function") return true;
-    return haversineMiles(centerLat, centerLon, it.lat, it.lon) <= userRadius + 2;
+  // v0.95.0.1.1: Smart fit with a HARD VISUAL CAP — the home stays the anchor.
+  // Previously this used `CURRENT_RADIUS_MI + 2` (which is 25 + 2 = 27 mi after
+  // the v0.93 default-radius bump), so the fit-bounds box was metro-wide and
+  // the auto-fit centered between far-out pins instead of on the user's home.
+  //
+  // New logic: VISUAL_FIT_CAP_MI = 8 mi. Only pins within 8 mi of the home
+  // drive the fitBounds. Anything farther is placed on the map but not used
+  // to compute the initial zoom. The user can pan/zoom to reach far pins,
+  // and the v0.94.2 "Search this area" button will re-query for the new view.
+  const VISUAL_FIT_CAP_MI = 8;
+  const inFit = validItems.filter(it => {
+    if (typeof haversineMiles !== "function") return false;
+    return haversineMiles(centerLat, centerLon, it.lat, it.lon) <= VISUAL_FIT_CAP_MI;
   });
-  if (inRadius.length > 0) {
-    const bounds = L.latLngBounds([[centerLat, centerLon], ...inRadius.map(it => [it.lat, it.lon])]);
-    map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 });
+  if (inFit.length > 0) {
+    // Always include the home pin in the bounds so the home is visible.
+    const bounds = L.latLngBounds([[centerLat, centerLon], ...inFit.map(it => [it.lat, it.lon])]);
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
   } else {
-    // No pins within the user's radius — center on user at a zoom that
-    // shows their radius circle comfortably. User can pan to find far pins.
-    const zoom = userRadius <= 2 ? 14 : userRadius <= 5 ? 13 : userRadius <= 10 ? 12 : 11;
-    map.setView([centerLat, centerLon], zoom);
+    // No pins within 8 mi — center on home at a comfortable neighborhood zoom.
+    map.setView([centerLat, centerLon], 13);
   }
   // v0.34.1/v0.34.4/v0.35.2: empty-state overlay with Retry + Google Maps fallback.
   // OSM coverage is inevitably uneven — Google Maps is the user's escape hatch.
@@ -8036,12 +8037,12 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   }
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
-  // v0.95.0: install Search-this-area control on EVERY section map (not just
+  // v0.95.0.1: install Search-this-area control on EVERY section map (not just
   // events). Survives map.innerHTML wipes because Leaflet manages its own DOM.
   _installSearchThisAreaControl(map, elId);
 }
 
-// v0.95.0: Map-driven "Search this area" — REBUILT as a Leaflet Control.
+// v0.95.0.1: Map-driven "Search this area" — REBUILT as a Leaflet Control.
 // Previously a raw absolute-positioned DOM child of the map container, which
 // (a) only installed on events-map, (b) collided with marker-pane z-index,
 // (c) was fragile to any innerHTML reset. The Leaflet Control approach is
@@ -8056,89 +8057,71 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
 // - Click → re-anchor at current view + dispatch to the section's reload fn.
 // - ?debug=1 → button starts visible with "(debug)" so you can confirm it
 //   renders at all when troubleshooting.
-let _SearchThisAreaCtl = null;
-function _ensureSearchThisAreaCtl() {
-  if (_SearchThisAreaCtl || typeof L === "undefined") return _SearchThisAreaCtl;
-  _SearchThisAreaCtl = L.Control.extend({
-    options: { position: "topleft" },
-    onAdd: function(map) {
-      this._map = map;
-      const c = L.DomUtil.create("div", "leaflet-bar nearnity-search-area-control");
-      const btn = L.DomUtil.create("button", "nearnity-search-area-btn", c);
-      btn.type = "button";
-      btn.setAttribute("aria-label", "Search this map area");
-      btn.innerHTML = "🔍 Search this area";
-      this._container = c;
-      this._btn = btn;
-      // Anchor at current view
-      const ctr = map.getCenter();
-      this._anchor = { lat: ctr.lat, lon: ctr.lng, zoom: map.getZoom() };
-      // Debug mode: visible from the start so we can verify rendering
-      this._debug = /[?&]debug=1\b/.test(location.search);
-      if (this._debug) {
-        c.style.display = "block";
-        btn.innerHTML = "🔍 Search this area (debug)";
-      } else {
-        c.style.display = "none";
-      }
-      // Map listeners
-      map.on("moveend", this._onMapMove, this);
-      map.on("zoomend", this._onMapMove, this);
-      // Click — stop propagation so the map doesn't pan when the button is clicked
-      L.DomEvent.on(btn, "click", this._handleClick, this);
-      L.DomEvent.disableClickPropagation(c);
-      L.DomEvent.disableScrollPropagation(c);
-      return c;
-    },
-    onRemove: function(map) {
-      map.off("moveend", this._onMapMove, this);
-      map.off("zoomend", this._onMapMove, this);
-    },
-    _onMapMove: function() {
-      if (this._debug) return;
-      const c = this._map.getCenter();
-      const z = this._map.getZoom();
-      const moved = (typeof haversineMiles === "function")
-        ? haversineMiles(this._anchor.lat, this._anchor.lon, c.lat, c.lng)
-        : 0;
-      const zoomChanged = Math.abs(z - this._anchor.zoom) >= 1;
-      this._container.style.display = (moved > 0.25 || zoomChanged) ? "block" : "none";
-    },
-    _handleClick: function(e) {
-      L.DomEvent.stop(e);
-      this._container.style.display = "none";
-      const c = this._map.getCenter();
-      const radius = _radiusFromMapBounds(this._map);
-      this._anchor = { lat: c.lat, lon: c.lng, zoom: this._map.getZoom() };
-      if (typeof this.options.elId === "string") {
-        _reloadSectionAtMapBounds(this.options.elId, c.lat, c.lng, radius);
-      }
-    },
-    // Called from setupSectionMap after a programmatic fitBounds/setView so
-    // the button doesn't appear from the data-driven re-fit (only user moves).
-    resetAnchor: function() {
-      if (!this._map) return;
-      const c = this._map.getCenter();
-      this._anchor = { lat: c.lat, lon: c.lng, zoom: this._map.getZoom() };
-      if (!this._debug) this._container.style.display = "none";
-    },
-  });
-  return _SearchThisAreaCtl;
-}
+// v0.95.0.1.1: Append button directly to `.leaflet-control-container` (Leaflet's
+// full-map-sized wrapper, CSS top/left/right/bottom: 0). Bypasses Leaflet's
+// corner positioning system that was clipping the button behind the v0.95 rail.
+// `left: 50%` now genuinely centers the button across the visible map width.
 function _installSearchThisAreaControl(map, elId) {
-  const Ctl = _ensureSearchThisAreaCtl();
-  if (!Ctl) return;
+  if (typeof L === "undefined") return;
   if (map._searchThisAreaControl) {
-    // Already installed — reset anchor to the new fitted view
     map._searchThisAreaControl.resetAnchor();
     return;
   }
-  const control = new Ctl({ elId });
-  control.addTo(map);
-  map._searchThisAreaControl = control;
+  const mapEl = map.getContainer();
+  const host = mapEl.querySelector(".leaflet-control-container") || mapEl;
+
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "nearnity-search-area-btn";
+  btn.setAttribute("aria-label", "Search this map area");
+  btn.innerHTML = "🔍 Search this area";
+  host.appendChild(btn);
+
+  const isDebug = /[?&]debug=1\b/.test(location.search);
+  let anchor = (() => {
+    const c = map.getCenter();
+    return { lat: c.lat, lon: c.lng, zoom: map.getZoom() };
+  })();
+  if (isDebug) {
+    btn.classList.add("visible", "debug");
+    btn.innerHTML = "🔍 Search this area (debug)";
+  }
+
+  const onMapMove = () => {
+    if (isDebug) return;
+    const c = map.getCenter();
+    const z = map.getZoom();
+    const moved = (typeof haversineMiles === "function")
+      ? haversineMiles(anchor.lat, anchor.lon, c.lat, c.lng)
+      : 0;
+    const zoomChanged = Math.abs(z - anchor.zoom) >= 1;
+    btn.classList.toggle("visible", moved > 0.25 || zoomChanged);
+  };
+  map.on("moveend", onMapMove);
+  map.on("zoomend", onMapMove);
+
+  L.DomEvent.on(btn, "click", (e) => {
+    L.DomEvent.stop(e);
+    if (!isDebug) btn.classList.remove("visible");
+    const c = map.getCenter();
+    const radius = _radiusFromMapBounds(map);
+    anchor = { lat: c.lat, lon: c.lng, zoom: map.getZoom() };
+    _reloadSectionAtMapBounds(elId, c.lat, c.lng, radius);
+  });
+  L.DomEvent.disableClickPropagation(btn);
+  L.DomEvent.disableScrollPropagation(btn);
+
+  map._searchThisAreaControl = {
+    resetAnchor: () => {
+      const c = map.getCenter();
+      anchor = { lat: c.lat, lon: c.lng, zoom: map.getZoom() };
+      if (!isDebug) btn.classList.remove("visible");
+    },
+    _btn: btn,
+  };
 }
 
-// v0.95.0: Derive a search radius (miles) from the map's visible bounds, then
+// v0.95.0.1: Derive a search radius (miles) from the map's visible bounds, then
 // SNAP UP to the next tier bracket. Brackets match the tier caps so every
 // map-driven search lands on a tier-aligned radius the user can reason about:
 //    2 mi = essential (fire / police / hospital / urgent care)
@@ -8173,7 +8156,7 @@ function _radiusFromMapBounds(map) {
   } catch (e) { return 25; }
 }
 
-// v0.95.0: Re-fetch the section's data using a NEW center + radius (the user
+// v0.95.0.1: Re-fetch the section's data using a NEW center + radius (the user
 // panned/zoomed the map and clicked "Search this area"). The home pin stays
 // where it was; the section now shows what's around the new map center.
 //
@@ -11326,7 +11309,7 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
-  // v0.95.0.1: Overpass query NARROWED to marketplace only. Worship + community
+  // v0.95.0.1.1: Overpass query NARROWED to marketplace only. Worship + community
   // centers were OSM venue rows masquerading as events — they had no event
   // data attached (no date, no title, no source URL beyond Google search).
   // If we want church/temple events surfaced, the path is Submit Event +
@@ -11349,7 +11332,7 @@ function classifyEventVenue(el) {
   if (am === "marketplace") {
     category = "markets";
     subtype = "Farmers market";
-  } else return null;  // v0.95.0.1: worship/community classification removed
+  } else return null;  // v0.95.0.1.1: worship/community classification removed
   const score = osmScore(t);
   const reasons = osmReasons(t);
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
@@ -11377,7 +11360,7 @@ async function loadNearbyEvents(geo) {
   renderEventsListings(geo, cityListings);
   renderEventsOnline(geo);
 
-  // v0.95.0.1: markets is the only OSM-dependent subtab now (worship + community
+  // v0.95.0.1.1: markets is the only OSM-dependent subtab now (worship + community
   // removed — they were venue cards, not events).
   const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
   ["events-markets-tbody"].forEach(id => {
@@ -11416,7 +11399,7 @@ async function loadNearbyEvents(geo) {
       ...curatedMarkets,
       ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
     ].slice(0, 40);
-    // v0.95.0.1: worship + community arrays removed; only markets remain.
+    // v0.95.0.1.1: worship + community arrays removed; only markets remain.
     const totalCount = mergedMarkets.length;
     const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
@@ -11466,7 +11449,7 @@ function renderEvents(grouped, total, cityKey, geo) {
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("events-markets-section",   "events-markets-tbody",   grouped.markets || []);
-  // v0.95.0.1: worship + community sections removed — they leaked OSM venue
+  // v0.95.0.1.1: worship + community sections removed — they leaked OSM venue
   // cards into the events tab. If those sections need to come back, they
   // need real event data (ICS feeds, admin entries), not OSM amenity tags.
 
@@ -11818,17 +11801,17 @@ function _eventEffectiveCoords(ev) {
 // distance we'll surface that type of event even if the user set a narrow
 // search radius. This lets us show concerts/sports automatically even when
 // the user is doing daily-life searches at 2-5mi.
-// v0.95.0: Tier caps reflect actual metro reality.
+// v0.95.0.1: Tier caps reflect actual metro reality.
 //   - daily bumped 5→25 because urban farmers markets are routinely 10-25 mi away
 //   - day_trip added at 75 mi for farm experiences / u-pick / orchards / agritourism
 //     (no farm is 5mi from a Bay Area house — they're day trips)
 //   - destination remains "unlimited" for iconic places (national parks)
 const TIER_CAPS = {
   essential:    2,    // fire, police, hospital, urgent care, clinic
-  daily:       25,    // farmers market, food bank, library, school (v0.95.0: was 5)
+  daily:       25,    // farmers market, food bank, library, school (v0.95.0.1: was 5)
   nearby:      15,    // parks, community events, kids, local festivals, art
   regional:    50,    // music concerts, sports, comedy, theater, big festivals
-  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.95.0: new)
+  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.95.0.1: new)
   destination: 9999,  // iconic spots (Golden Gate Park, Yosemite, etc.) — unlimited
 };
 const TIER_ORDER = ["essential", "daily", "nearby", "regional", "day_trip", "destination"];
@@ -11852,7 +11835,7 @@ function tierForCategory(cat) {
   const c = (cat || "").toLowerCase();
   // Essential — emergency services
   if (["fire","police","hospital","clinic","pharmacy","urgent","ems","ambulance"].some(x => c.includes(x))) return "essential";
-  // v0.95.0: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
+  // v0.95.0.1: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
   // daily/regional so a "u-pick farm" doesn't fall into market/daily by mistake.
   if (["u_pick","u-pick","upick","pumpkin patch","cherry pick","strawberry pick","apple pick","berry pick","farm fair","petting zoo","wagon ride","hayride","agritour","farm stand","farm tour","farm_u_pick"].some(x => c.includes(x))) return "day_trip";
   // Daily — services people use weekly
@@ -12467,7 +12450,7 @@ const NEARNITY_FARM_API_BASE = "/api/farm-experiences";
 const _apiEventsCache = new Map();    // session-scoped cache, keyed by lat/lon/radius/keyword
 const _apiFarmCache   = new Map();    // session-scoped cache for farm experiences
 
-// v0.95.0.1: Fetch farm experiences from /api/farm-experiences and normalize
+// v0.95.0.1.1: Fetch farm experiences from /api/farm-experiences and normalize
 // them into event-shaped rows so they merge into the events listing. Farm
 // rows are SEASONAL — they don't have a specific start time. We synthesize
 // `starts` to today so the row passes through downstream date-grouping,
@@ -12478,7 +12461,7 @@ async function fetchFarmExperiences(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.95.0: farm experiences default to 75mi (day-trip tier) but accept a
+  // v0.95.0.1: farm experiences default to 75mi (day-trip tier) but accept a
   // map-driven override when user clicks "Search this area" on the events map.
   const r = radiusMi || geo._mapRadius || 75;
   const kw = (keyword || "").trim().toLowerCase();
@@ -12550,7 +12533,7 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.95.0: radius comes from EITHER an explicit override OR the map-driven
+  // v0.95.0.1: radius comes from EITHER an explicit override OR the map-driven
   // radius (when user clicked "Search this area") OR the regional-tier cap
   // as a safe default (so concerts/farms still surface on initial load).
   const r = radiusMi
@@ -12590,7 +12573,7 @@ function mergeAndDedupeEvents(a, b) {
   for (const ev of [...(a || []), ...(b || [])]) {
     if (!ev || !ev.title) continue;
     if (!ev.starts && !ev.is_farm_experience) continue;
-    // v0.95.0.1: Publishable-row guard. An event MUST have a real source URL
+    // v0.95.0.1.1: Publishable-row guard. An event MUST have a real source URL
     // that isn't a Google/Bing search query. Without this, OSM venues with
     // no website would fall back to /maps/search/<name> URLs and pretend
     // to be events. That's the redirect-portal anti-pattern we banned.
@@ -12642,7 +12625,7 @@ function renderEventsListings(geo, eventsArg) {
   _renderEventsCalendar(geo, curated, tb);
 
   // Async: fetch API events + farm experiences in parallel, merge, re-render.
-  // v0.95.0.1: Farm experiences come from /api/farm-experiences (seasonal
+  // v0.95.0.1.1: Farm experiences come from /api/farm-experiences (seasonal
   // directory). When user types "cherry picking" / "pumpkin patch" /
   // "u-pick", the events listing now actually has farm rows to show
   // instead of dumping OSM venue cards.
@@ -12919,7 +12902,7 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
-    // v0.95.0: new buckets from Source Network spec
+    // v0.95.0.1: new buckets from Source Network spec
     if (b === "kids_family") {
       return sec.includes("kids_family") ||
         /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
@@ -12959,7 +12942,7 @@ function eventsInWindow(events, w) {
   const now = new Date();
   const todayKey = now.toDateString();
   return events.filter((ev) => {
-    // v0.95.0.1: Farm experiences are seasonal — they don't belong in
+    // v0.95.0.1.1: Farm experiences are seasonal — they don't belong in
     // Today/Tonight/Weekend filters. They surface via the Farm & u-pick
     // bucket filter and in the unfiltered month view.
     if (ev.is_farm_experience) return w === "month";
