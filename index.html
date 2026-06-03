@@ -3939,10 +3939,10 @@
     /* Cards inside results-main keep their existing single-column flow */
   }
 
-  /* v0.96.1: Search-this-area button. Appended directly to
+  /* v1.0.1: Search-this-area button. Appended directly to
      .leaflet-control-container (Leaflet's full-map-sized wrapper with
      top/left/right/bottom: 0). Bypasses the corner-positioning system
-     that was clipping the button behind the v0.96 left rail.
+     that was clipping the button behind the v1.0 left rail.
      `left: 50%` is now genuinely the map's horizontal center. */
   .nearnity-search-area-btn {
     display: none;        /* hidden by default; .visible class shows */
@@ -3977,7 +3977,7 @@
   .nearnity-search-area-btn:active { transform: translateX(-50%) translateY(0); }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.96: 3-COLUMN APP SHELL
+     v1.0: 3-COLUMN APP SHELL
      -------------------------
      Sticky section rail (col 1) + active section's map (col 2) + active
      section's list/content (col 3). Both map + list always fit the viewport
@@ -4214,7 +4214,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.96 — RAIL-ONLY SHELL (Phase B)
+     v1.0 — RAIL-ONLY SHELL (Phase B)
      -------------------------------------
      Sticky left sidebar with all sections, grouped by cat-tab. Clicking a tab
      scrolls to the section anchor. No content is hidden or moved. Page below
@@ -4291,7 +4291,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.96 — PHASE C: ACTIVE-SECTION MODE
+     v1.0 — PHASE C: ACTIVE-SECTION MODE
      ----------------------------------------
      When the user clicks a rail tab, body gains `.shell-active-mode`. In this
      mode, only the active section's card is visible. If that card has a map,
@@ -4383,7 +4383,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.96.2 — POLISH: card visual reset + sticky subnav + clean show-all
+     v1.0.2 — POLISH: card visual reset + sticky subnav + clean show-all
      ═══════════════════════════════════════════════════════════════════════════ */
 
   /* In active-mode the card IS the layout shell — strip its own padding/
@@ -4433,7 +4433,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.96.3 — MOBILE Map/List toggle + non-map section polish
+     v1.0.3 — MOBILE Map/List toggle + non-map section polish
      ═══════════════════════════════════════════════════════════════════════════ */
 
   /* Mobile Map/List toggle pill — injected by JS at activation time */
@@ -4494,18 +4494,18 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
-     v0.96 — COURSE-CORRECT after Satya's Figma feedback
+     v1.0 — COURSE-CORRECT after Satya's Figma feedback
      ----------------------------------------------------
      Satya's Figma showed the cat-nav (Around me / My home / Help / Official /
      Safety / Saved) as the left rail with section-tabs (Events / Schools /
      Parks) horizontal at the top of main content. v0.85 already does this.
-     v0.96 rolls back the custom nearnity-rail and uses v0.85's layout.
+     v1.0 rolls back the custom nearnity-rail and uses v0.85's layout.
      The shell-v95 body class still drives the 2-col map+list layout for
      individual section cards — that's the part of v0.95 worth keeping.
      ═══════════════════════════════════════════════════════════════════════════ */
 
   /* Disable the custom rail entirely (still in the JS dictionary but never
-     mounted to the DOM in v0.96; this CSS makes any stale copy invisible). */
+     mounted to the DOM in v1.0; this CSS makes any stale copy invisible). */
   .nearnity-rail { display: none !important; }
 
   /* Undo v0.95's body padding-left + banner negation — neither needed now
@@ -4517,7 +4517,7 @@
     padding-left: 0 !important;
   }
 
-  /* v0.96: Per-section 2-column layout (map sticky-left, list scroll-right)
+  /* v1.0: Per-section 2-column layout (map sticky-left, list scroll-right)
      when the section card is visible. Uses the legacy [hidden] attribute
      state — when legacy code shows the card (hidden=false), CSS picks up
      the 2-col layout. No JS "active-mode" needed.
@@ -4581,6 +4581,167 @@
       grid-row: auto;
     }
   }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v0.97 — Verified-help form modal (Recommend/Claim/Request)
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .vh-form-modal { position: fixed; inset: 0; z-index: 1000; display: none; }
+  .vh-form-modal.open { display: block; }
+  .vh-form-modal-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, 0.55); }
+  .vh-form-modal-card {
+    position: relative;
+    max-width: 560px;
+    margin: 6vh auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.3);
+    padding: 24px 28px;
+    max-height: 86vh;
+    overflow-y: auto;
+  }
+  .vh-form-modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .vh-form-modal-head h3 { margin: 0; font-size: 18px; font-weight: 700; color: #0f172a; }
+  .vh-form-modal-close {
+    background: transparent; border: none; font-size: 24px; cursor: pointer;
+    color: #6b7280; line-height: 1; padding: 4px 8px;
+  }
+  .vh-form-modal-close:hover { color: #0f172a; }
+  .vh-form-sub { color: #475569; font-size: 14px; margin: 0 0 16px; line-height: 1.5; }
+  .vh-form-field {
+    display: block;
+    margin-bottom: 14px;
+  }
+  .vh-form-field > span {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #344054;
+    margin-bottom: 4px;
+  }
+  .vh-form-field input,
+  .vh-form-field select,
+  .vh-form-field textarea {
+    width: 100%;
+    padding: 9px 11px;
+    border: 1px solid #d4dee8;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .vh-form-field input:focus,
+  .vh-form-field select:focus,
+  .vh-form-field textarea:focus {
+    outline: none;
+    border-color: var(--blue-dark);
+    box-shadow: 0 0 0 3px rgba(0, 80, 194, 0.15);
+  }
+  .vh-form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+  .vh-form-status {
+    margin-top: 12px;
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 8px;
+  }
+  .vh-form-status:empty { display: none; }
+  .vh-form-status.success { background: #ecfdf5; color: #047857; }
+  .vh-form-status.error   { background: #fef2f2; color: #b91c1c; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v0.97.1 — City coverage badge + health filter chips
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .city-coverage-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .city-coverage-badge.high   { background: #ecfdf5; color: #047857; }
+  .city-coverage-badge.medium { background: #fef9c3; color: #92400e; }
+  .city-coverage-badge.limited{ background: #f1f5f9; color: #475569; }
+
+  .help-filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 8px 0 14px;
+  }
+  .help-filter-chip {
+    padding: 6px 12px;
+    border-radius: 16px;
+    border: 1px solid #d4dee8;
+    background: #fff;
+    color: #344054;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .help-filter-chip:hover { background: #f1f5fa; }
+  .help-filter-chip.active {
+    background: var(--blue-dark);
+    color: #fff;
+    border-color: var(--blue-dark);
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v1.0 Phase 1 — Hide pre-search loading messages
+     Body gets `has-location` class only AFTER a location resolves. Until then
+     we hide all per-section loading placeholders to avoid the half-loaded look.
+     ═══════════════════════════════════════════════════════════════════════════ */
+  body:not(.has-location) .parks-loading,
+  body:not(.has-location) #events-loading,
+  body:not(.has-location) #school-loading,
+  body:not(.has-location) #hs-loading,
+  body:not(.has-location) #ps-loading,
+  body:not(.has-location) #ch-loading,
+  body:not(.has-location) #health-loading,
+  body:not(.has-location) #yard-loading,
+  body:not(.has-location) #civic-loading,
+  body:not(.has-location) .section-map-empty,
+  body:not(.has-location) .section-map {
+    display: none !important;
+  }
+  /* Show a single intentional empty state at the top instead */
+  body:not(.has-location) .pre-search-prompt {
+    display: block;
+    padding: 36px 24px;
+    text-align: center;
+    color: #475569;
+    font-size: 15px;
+    background: #f7f9fc;
+    border-radius: 12px;
+    margin: 16px 0;
+  }
+  body.has-location .pre-search-prompt { display: none; }
+
+  /* Phase 5 — Risk card severity tags */
+  .risk-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-right: 6px;
+  }
+  .risk-tag.address-specific { background: #dbeafe; color: #1e40af; }
+  .risk-tag.area-estimate    { background: #fef9c3; color: #854d0e; }
+  .risk-tag.general-guidance { background: #f1f5f9; color: #475569; }
 </style>
 </head>
 <body class="single-view">
@@ -4626,7 +4787,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.96</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v1.0</span>
     </div>
   </header>
 
@@ -4696,7 +4857,7 @@
         <a class="cat-dd-link" data-target="sec-parks"   role="menuitem"><span class="dd-em">🌳</span><span class="dd-tx"><b>Parks &amp; rec</b><i>Playgrounds, trails, national parks, federal rec sites</i></span></a>
       </div>
       <div class="cat-dd-panel" data-panel="my-home" hidden role="menu">
-        <a class="cat-dd-link" data-target="sec-myhome"        role="menuitem"><span class="dd-em">📋</span><span class="dd-tx"><b>Property details</b><i>Address resolved, year built, lot &amp; building</i></span></a>
+        <a class="cat-dd-link" data-target="sec-myhome"        role="menuitem"><span class="dd-em">📋</span><span class="dd-tx"><b>Property details</b><i>Address resolution + your saved property notes (year built, lot, etc. — you fill in)</i></span></a>
         <a class="cat-dd-link" data-target="sec-services"      role="menuitem"><span class="dd-em">⚡</span><span class="dd-tx"><b>Utilities &amp; internet</b><i>Electric, gas, water, ISPs at this address</i></span></a>
         <a class="cat-dd-link" data-target="sec-yard"          role="menuitem"><span class="dd-em">🌱</span><span class="dd-tx"><b>Gardening</b><i>USDA zone, plants, watering, soil</i></span></a>
         <a class="cat-dd-link" data-target="sec-home-services" role="menuitem"><span class="dd-em">🔧</span><span class="dd-tx"><b>Home services</b><i>Handyman, plumber, electrician, HVAC near you</i></span></a>
@@ -4774,7 +4935,7 @@
         <a class="product-card" data-cat="civic" tabindex="0">
           <div class="product-card-eyebrow">Public services</div>
           <div class="product-card-title">Vote, DMV, officials</div>
-          <div class="product-card-desc">Voter registration with the right state portal, DMV / permits / courts for your jurisdiction, and direct links to elected officials. Updated quarterly.</div>
+          <div class="product-card-desc">Voter registration with the right state portal, DMV / permits / courts for your jurisdiction, and direct links to elected officials. Source URLs shown on every card — verify directly with the official portal.</div>
           <span class="product-card-cta">Explore</span>
         </a>
         <a class="product-card" data-cat="safety" tabindex="0">
@@ -4862,7 +5023,7 @@
     <!-- v0.30: Radius filter row sits on top of the section-nav (also sticky) -->
     <!-- v0.47: each sec-tab tagged with data-category so the cat-nav can filter visibility -->
     <nav class="section-nav" id="section-nav" aria-label="Sections">
-      <!-- v0.96: radius buttons REMOVED. Search radius is now driven by the
+      <!-- v1.0: radius buttons REMOVED. Search radius is now driven by the
            section maps themselves — pan or zoom and a "Search this area"
            button surfaces on the map. Default radius is tier-based per
            category (daily=25, nearby=15, regional=50, day_trip=75). -->
@@ -5366,14 +5527,14 @@
       <div class="parks-loading" id="events-loading" hidden>Finding nearby event venues…</div>
       <div id="events-sections" hidden>
         <div class="school-section" id="events-listings-section" hidden>
-          <h4>📅 Happening this month <span class="hint">— curated public listings, next 30 days</span></h4>
+          <h4>📅 Events near you <span class="hint">— filter by tab above</span></h4>
           <div id="events-listings-tbody"></div>
         </div>
         <div class="school-section" id="events-markets-section" hidden>
           <h4>🥬 Farmers markets <span class="hint">— check operating hours</span></h4>
           <div id="events-markets-tbody"></div>
         </div>
-        <!-- v0.96.1: REMOVED worship + community-center sections. Those rendered
+        <!-- v1.0.1: REMOVED worship + community-center sections. Those rendered
              OSM venue cards (place_of_worship + community_centre amenities) with
              no event data — clicking through went to Google search results
              because the venues didn't carry websites. That's the exact
@@ -5862,7 +6023,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v0.96</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v1.0</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -7545,7 +7706,7 @@ window.NEARNITY_DEBUG = false;
 // v0.33.4: tighter radius options — daily-use services don't make sense at 60mi
 // v0.34.4: default 5→2 — matches "daily-use range" framing better
 const RADIUS_OPTIONS = [2, 5, 10];               // miles
-// v0.96: Default base radius bumped 2→25 because metro reality means most
+// v1.0: Default base radius bumped 2→25 because metro reality means most
 // useful results aren't within 2mi. Radius is now driven by the section
 // maps via the "Search this area" flow — pan/zoom the map and re-query
 // the visible bounds. This DEFAULT_RADIUS_MI is just the initial fallback
@@ -7667,7 +7828,7 @@ function refetchAllRadialSections() {
     }
   }, 80);
 }
-// v0.96: radius-button click delegator retained as a no-op. The buttons
+// v1.0: radius-button click delegator retained as a no-op. The buttons
 // themselves are gone, but external links / cached HTML / browser-restored
 // state might still produce stray .radius-btn clicks. Swallow them silently.
 document.addEventListener("click", (e) => {
@@ -7887,12 +8048,12 @@ if (typeof document !== "undefined") {
 // move on page load. All click handlers still work (delegated).
 // Also adds the right-rail container + body.v85-layout class to activate
 // the new 3-column layout.
-// v0.96.1: setupV85Layout RESTORED. v0.96's shell shipped broken (some
+// v1.0.1: setupV85Layout RESTORED. v1.0's shell shipped broken (some
 // expected map/card IDs don't exist in the DOM, causing the shell to mount
 // partially while the CSS hid the legacy layout — left the page half-blank).
 // Rolled back to v0.85's working layout as the default. The new shell still
 // exists below but only activates with `?shell=1` URL param so I can debug
-// the missing-element issue in v0.96 without keeping the live site broken.
+// the missing-element issue in v1.0 without keeping the live site broken.
 function setupV85Layout() {
   const grid = document.querySelector(".results-grid");
   const catNav = document.getElementById("cat-nav");
@@ -7919,15 +8080,15 @@ if (typeof document !== "undefined") {
   else document.addEventListener("DOMContentLoaded", setupV85Layout);
 }
 
-// v0.96: 3-column app shell.
+// v1.0: 3-column app shell.
 // Sticky section rail (col 1) + active section's map (col 2) + active
 // section's subnav + list content (col 3). Mobile collapses to single
 // column with [📋 List | 🗺 Map] toggle pill. Both columns always fit
 // the viewport — no scrolling past the map to see results.
-// v0.96: Section table built from Phase-A DOM audit (ground truth, not guesses).
+// v1.0: Section table built from Phase-A DOM audit (ground truth, not guesses).
 // `secHeaderId` is the anchor we scroll to in Phase B. Sections without a card
 // (saved, services-as-container) are kept in the rail as scroll targets only.
-// v0.96.4: Emojis removed. Corporate look; rail is the primary nav.
+// v1.0.4: Emojis removed. Corporate look; rail is the primary nav.
 const SHELL_V95_SECTIONS = [
   // Around me
   { id: "events",         label: "Events",          group: "around-me", cardId: "card-events",          mapId: "events-map",  subnavSel: '.subnav[data-subnav-for="card-events"]',          secHeaderId: "sec-events" },
@@ -7958,17 +8119,17 @@ const SHELL_V95_GROUPS = {
   "saved":     "Saved",
 };
 
-// v0.96 — Phase B: rail-only shell. Adds a sticky left sidebar listing all
+// v1.0 — Phase B: rail-only shell. Adds a sticky left sidebar listing all
 // audited sections, grouped by cat-tab. NO content is moved. NO global hides.
 // Rail click scrolls smoothly to the section's header anchor. Page below
 // renders identically to legacy. The rail is purely additive navigation.
 //
 // Behind ?shell=1 URL param. Default page is unchanged.
-// v0.96 — Course-correct after Satya's Figma feedback. The custom rail with
+// v1.0 — Course-correct after Satya's Figma feedback. The custom rail with
 // flattened sections was the wrong granularity. The Figma shows the cat-nav
 // (Around me / My home / Help / Official / Safety / Saved) as the left rail,
 // with section-tabs (Events / Schools / Parks) horizontal at the top of main
-// content. v0.85 already does this. v0.96 stops building a custom rail and
+// content. v0.85 already does this. v1.0 stops building a custom rail and
 // lets v0.85 handle the left column. shell-v95 body class still drives the
 // 2-col map+list CSS for sections with maps — that's the part worth keeping.
 function setupShellV95Rail() {
@@ -7981,9 +8142,9 @@ function setupShellV95Rail() {
   console.log("[shell-v96] activated — cat-nav as left rail (v0.85), section-nav as top tabs, 2-col map+list for sections with maps");
 }
 
-function _shellV95InstallScrollSpy() { /* no-op in v0.96 — cat-nav handles its own active state */ }
+function _shellV95InstallScrollSpy() { /* no-op in v1.0 — cat-nav handles its own active state */ }
 
-/// v0.96 Phase C: enter active-section mode and lay out the chosen section
+/// v1.0 Phase C: enter active-section mode and lay out the chosen section
 // as 2-col grid (map | list). Hides all other section cards. Adds an
 // "✕ Show all" exit affordance. Triggers the section's loader if needed.
 function _activateShellSection(sectionId) {
@@ -8024,7 +8185,7 @@ function _activateShellSection(sectionId) {
       exit.addEventListener("click", (e) => { e.preventDefault(); _exitShellActiveMode(); });
       card.insertBefore(exit, card.firstChild);
     }
-    // v0.96.3: Inject mobile Map/List toggle pill (visible only <900px)
+    // v1.0.3: Inject mobile Map/List toggle pill (visible only <900px)
     if (sec.mapId && !card.querySelector(":scope > .shell-mobile-toggle")) {
       const tg = document.createElement("div");
       tg.className = "shell-mobile-toggle";
@@ -8057,7 +8218,7 @@ function _activateShellSection(sectionId) {
       else card.insertBefore(tg, card.firstChild);
     }
   }
-  // v0.96.3: Default mobile to list view (the more common entry point)
+  // v1.0.3: Default mobile to list view (the more common entry point)
   document.body.classList.add("shell-mobile-list");
   document.body.classList.remove("shell-mobile-map");
   const secHeader = document.getElementById(sec.secHeaderId);
@@ -8066,7 +8227,7 @@ function _activateShellSection(sectionId) {
   document.body.classList.add("shell-active-mode");
   console.log(`[shell-v95] active: ${sec.id} (cards: ${cardIds.join(", ")})`);
 
-  // v0.96.4: To trigger the section's loader, we need the legacy state
+  // v1.0.4: To trigger the section's loader, we need the legacy state
   // machine in the right spot. (1) Programmatically activate the cat-tab
   // for this section's group so the cat-tab gating is satisfied. (2) Click
   // the sec-tab so the section-specific load handler fires with the user's
@@ -8096,7 +8257,7 @@ function _exitShellActiveMode() {
   console.log("[shell-v95] exited active-section mode → legacy scroll layout");
 }
 
-// v0.96 final: shell is now the DEFAULT (no URL flag needed). `?shell=0` is
+// v1.0 final: shell is now the DEFAULT (no URL flag needed). `?shell=0` is
 // the escape hatch back to legacy v0.94.1 layout for fallback testing.
 //
 // Activation conditions:
@@ -8112,7 +8273,7 @@ if (typeof document !== "undefined" && !_shellOptOut && _shellViewportOk) {
   else document.addEventListener("DOMContentLoaded", setupShellV95Rail);
 }
 
-// --- v0.94 shell code removed in v0.96. Replaced by setupShellV95Rail above. ---
+// --- v0.94 shell code removed in v1.0. Replaced by setupShellV95Rail above. ---
 
 // v0.86: enhanced right rail — Quick context + Recently saved + CTA.
 // Multiple sections in one card so the right column feels purposeful, not
@@ -8347,11 +8508,11 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     if (!_sectionClusters) window._sectionClusters = _sectionClusters;
     _sectionClusters[elId] = clusterGroup;
   }
-  // v0.96: HOME IS ALWAYS THE CENTER. Dropped fitBounds entirely.
+  // v1.0: HOME IS ALWAYS THE CENTER. Dropped fitBounds entirely.
   //
   // Why: fitBounds always centers on the bounding-box midpoint, which is
   // halfway between home and the farthest pin. If pins are 6mi west of
-  // home, the map centers ~3mi west. The previous v0.96 cap of 8mi
+  // home, the map centers ~3mi west. The previous v1.0 cap of 8mi
   // reduced the offset but didn't eliminate it — Satya's screenshot showed
   // the home pin off to the right because the box midpoint was still west.
   //
@@ -8387,12 +8548,12 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   }
   // Force a re-layout in case the map div was hidden when initialized
   setTimeout(() => map.invalidateSize(), 50);
-  // v0.96: install Search-this-area control on EVERY section map (not just
+  // v1.0: install Search-this-area control on EVERY section map (not just
   // events). Survives map.innerHTML wipes because Leaflet manages its own DOM.
   _installSearchThisAreaControl(map, elId);
 }
 
-// v0.96: Map-driven "Search this area" — REBUILT as a Leaflet Control.
+// v1.0: Map-driven "Search this area" — REBUILT as a Leaflet Control.
 // Previously a raw absolute-positioned DOM child of the map container, which
 // (a) only installed on events-map, (b) collided with marker-pane z-index,
 // (c) was fragile to any innerHTML reset. The Leaflet Control approach is
@@ -8407,9 +8568,9 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
 // - Click → re-anchor at current view + dispatch to the section's reload fn.
 // - ?debug=1 → button starts visible with "(debug)" so you can confirm it
 //   renders at all when troubleshooting.
-// v0.96.1: Append button directly to `.leaflet-control-container` (Leaflet's
+// v1.0.1: Append button directly to `.leaflet-control-container` (Leaflet's
 // full-map-sized wrapper, CSS top/left/right/bottom: 0). Bypasses Leaflet's
-// corner positioning system that was clipping the button behind the v0.96 rail.
+// corner positioning system that was clipping the button behind the v1.0 rail.
 // `left: 50%` now genuinely centers the button across the visible map width.
 function _installSearchThisAreaControl(map, elId) {
   if (typeof L === "undefined") return;
@@ -8474,7 +8635,7 @@ function _installSearchThisAreaControl(map, elId) {
   };
 }
 
-// v0.96: Derive a search radius (miles) from the map's visible bounds, then
+// v1.0: Derive a search radius (miles) from the map's visible bounds, then
 // SNAP UP to the next tier bracket. Brackets match the tier caps so every
 // map-driven search lands on a tier-aligned radius the user can reason about:
 //    2 mi = essential (fire / police / hospital / urgent care)
@@ -8509,7 +8670,7 @@ function _radiusFromMapBounds(map) {
   } catch (e) { return 25; }
 }
 
-// v0.96: Re-fetch the section's data using a NEW center + radius (the user
+// v1.0: Re-fetch the section's data using a NEW center + radius (the user
 // panned/zoomed the map and clicked "Search this area"). The home pin stays
 // where it was; the section now shows what's around the new map center.
 //
@@ -9561,12 +9722,37 @@ function compactCardHtml(r, opts = {}) {
 // Renders city/county/state + utility/internet/schools/climate facts as
 // click-through chips. Called once geo is resolved; each chip jumps to
 // the relevant deep section.
+// v0.97.1: City coverage labels per Launch_Ready_W1 LB Goal 5.
+// "high" = we have curated PCFMA markets + civic iCal + curated event listings
+// "medium" = some curated data, mostly OSM + ticketed APIs
+// "limited" = OSM + ticketed APIs only, no curated content yet
+const CITY_COVERAGE = {
+  // CA Bay Area (high coverage — full curated content)
+  "san jose,ca": "high", "fremont,ca": "high", "milpitas,ca": "high",
+  "sunnyvale,ca": "high", "santa clara,ca": "high", "mountain view,ca": "high",
+  "palo alto,ca": "high", "cupertino,ca": "high", "saratoga,ca": "high",
+  "campbell,ca": "high", "los gatos,ca": "high", "berkeley,ca": "high",
+  "oakland,ca": "high", "san francisco,ca": "high",
+  // PA (Phoenixville pilot)
+  "phoenixville,pa": "high", "king of prussia,pa": "medium",
+  // Default everywhere else falls to "limited"
+};
+function getCityCoverage(geo) {
+  if (!geo || !geo.address) return "limited";
+  const a = geo.address;
+  const city = (a.city || a.town || a.village || "").toLowerCase().trim();
+  const state = ((typeof getStateCode === "function" ? getStateCode(a) : a.state) || "").toLowerCase().trim();
+  return CITY_COVERAGE[`${city},${state}`] || "limited";
+}
 function renderAddressOverview(geo) {
   const a = geo.address || {};
   const container = document.getElementById("address-overview");
   const subEl = document.getElementById("address-overview-sub");
   const chipsEl = document.getElementById("address-overview-chips");
   if (!container || !chipsEl) return;
+  // v0.97.1: prepend coverage badge so users know data depth for their city
+  const coverage = getCityCoverage(geo);
+  const coverageLabel = coverage === "high" ? "Coverage: High" : coverage === "medium" ? "Coverage: Medium" : "Coverage: Limited";
   const city = a.city || a.town || a.village || a.hamlet || "";
   const countyMeta = (typeof getCountyMeta === "function") ? getCountyMeta(a) : { name: a.county || "" };
   const stateCode = (typeof getStateCode === "function" ? getStateCode(a) : "") || a.state || "";
@@ -9576,6 +9762,8 @@ function renderAddressOverview(geo) {
   // Some values (utility, school district, climate) get populated later when
   // their respective lookups complete — we'll re-call this function then.
   const chips = [];
+  // v0.97.1: lead with coverage badge so users see data depth at a glance
+  chips.push({ label: "", value: coverageLabel, target: null, _coverageClass: coverage });
   if (city)       chips.push({ label: "City",         value: city,           target: "sec-civic" });
   if (countyMeta.name) chips.push({ label: "County",  value: `${countyMeta.name} County`, target: "sec-civic" });
   if (stateCode)  chips.push({ label: "State",        value: stateCode,      target: "sec-civic" });
@@ -9603,12 +9791,16 @@ function renderAddressOverview(geo) {
     container.hidden = true;
     return;
   }
-  chipsEl.innerHTML = chips.map(c =>
-    `<button type="button" class="ao-chip" data-ao-target="${escapeHtml(c.target)}" title="Jump to ${escapeHtml(c.label)} details">
+  chipsEl.innerHTML = chips.map(c => {
+    // v0.97.1: coverage badge gets its own pill style, no click target
+    if (c._coverageClass) {
+      return `<span class="city-coverage-badge ${c._coverageClass}">${escapeHtml(c.value)}</span>`;
+    }
+    return `<button type="button" class="ao-chip" data-ao-target="${escapeHtml(c.target || "")}" title="Jump to ${escapeHtml(c.label)} details">
       <span class="ao-chip-label">${escapeHtml(c.label)}</span>
       <span class="ao-chip-value">${escapeHtml(c.value)}</span>
-    </button>`
-  ).join("");
+    </button>`;
+  }).join("");
   container.hidden = false;
   // v0.85: also update the right rail with the same info, condensed
   try { renderV85RightRail(geo); } catch (e) {}
@@ -10729,53 +10921,169 @@ function resolveRisks(addr, lat, lon, zone) {
   };
 }
 
-// v0.82: Verified local help action buttons (Recommend a pro / Claim a business
-// / Request help) — open the corrections modal with pre-filled context per
-// QA2. Same backend storage, different intent labels.
+// v0.97: Real Recommend / Claim / Request forms — replaces v0.82's mailto-stub
+// reuse of the correction modal. Each action gets its own form with the fields
+// spec'd in Launch_Ready_W1 LB Goal 8, posting to the right Worker endpoint.
+const VH_FORMS = {
+  recommend: {
+    title: "Recommend a local pro",
+    sub: "Tell us about a service provider who's done good work for you. We'll show neighbor-recommended pros with a verified badge once we have a few.",
+    endpoint: "/api/recommend-pro",
+    fields: [
+      { name: "pro_name",         label: "Pro / business name",       type: "text",     required: true,  placeholder: "e.g. Mike's Plumbing" },
+      { name: "category",         label: "Category",                  type: "select",   required: true,  options: ["Plumber","Electrician","Handyman","HVAC","Roofer","Painter","Landscaping","Cleaning","Moving","Other"] },
+      { name: "phone",            label: "Phone (optional)",          type: "tel" },
+      { name: "email",            label: "Email (optional)",          type: "email" },
+      { name: "website",          label: "Website (optional)",        type: "url" },
+      { name: "personally_hired", label: "Did you personally hire them?", type: "select", required: true, options: ["yes","no"] },
+      { name: "approx_date",      label: "Approximate date hired",    type: "month" },
+      { name: "job_type",         label: "What did they do?",         type: "text",     placeholder: "Replaced water heater" },
+      { name: "would_hire_again", label: "Would you hire them again?",type: "select",   options: ["yes","no","maybe"] },
+      { name: "proof_url",        label: "Optional proof URL (invoice / photo / receipt)", type: "url" },
+      { name: "submitter_contact",label: "Your email (so we can follow up if needed)",     type: "email" },
+    ],
+  },
+  claim: {
+    title: "Claim a business",
+    sub: "Own a local trade business? Tell us the basics and we'll add a Verified badge once we've confirmed.",
+    endpoint: "/api/claim-organizer",   // existing endpoint, repurposed
+    fields: [
+      { name: "organizer_name",   label: "Business name",                type: "text",  required: true },
+      { name: "category",         label: "Category",                     type: "select", required: true, options: ["Plumber","Electrician","Handyman","HVAC","Roofer","Painter","Landscaping","Cleaning","Other"] },
+      { name: "email",            label: "Owner / contact email",        type: "email", required: true },
+      { name: "phone",            label: "Phone",                        type: "tel" },
+      { name: "website",          label: "Website",                      type: "url" },
+      { name: "license_number",   label: "License number (optional)",    type: "text" },
+      { name: "insurance_carrier",label: "Insurance carrier (optional)", type: "text" },
+      { name: "proof_url",        label: "Proof URL (license doc, business filing)", type: "url" },
+    ],
+  },
+  request: {
+    title: "Request help",
+    sub: "Describe what you need help with. We'll route to neighbors who've recommended pros in that category.",
+    endpoint: "/api/request-help",
+    fields: [
+      { name: "category",         label: "Category",         type: "select", required: true, options: ["Plumber","Electrician","Handyman","HVAC","Roofer","Painter","Landscaping","Cleaning","Moving","Other"] },
+      { name: "description",      label: "What do you need help with?", type: "textarea", required: true, placeholder: "Describe the job, urgency, any constraints..." },
+      { name: "urgency",          label: "Urgency",          type: "select", options: ["normal","this_week","urgent","emergency"] },
+      { name: "zip_area",         label: "ZIP / area",       type: "text", placeholder: "e.g. 95035 or San Jose" },
+      { name: "contact_method",   label: "How should we contact you?", type: "select", required: true, options: ["email","phone","text"] },
+      { name: "contact_value",    label: "Email or phone number",      type: "text", required: true },
+    ],
+  },
+};
+
 document.addEventListener("click", (e) => {
   const btn = e.target.closest("[data-vh-action]");
   if (!btn) return;
   e.preventDefault();
   const action = btn.dataset.vhAction;
-  const labelMap = {
-    recommend: { title: "Recommend a local pro", issue: "recommendation",
-      sub: "Tell us about a local pro (plumber, electrician, handyman, etc.) who's done good work for you. We'll show neighbor-recommended pros with a verified badge once we have a few." },
-    claim:     { title: "Claim a business", issue: "claim_business",
-      sub: "Own a local trade business? Tell us the business name + your contact, and we'll add a Verified badge once we've confirmed." },
-    request:   { title: "Request help", issue: "help_request",
-      sub: "Describe what you need help with. We'll route to neighbors who've recommended pros in that trade." },
-  };
-  const cfg = labelMap[action] || labelMap.recommend;
-  // Reuse the correction modal — same backend, different intent
-  _correctionContextPayload = { card_id: `vh::${action}`, category: action, source_url: "", title_hint: cfg.title };
-  const modal = document.getElementById("correctionModal");
-  if (modal) {
-    const form = document.getElementById("correctionForm");
-    const status = document.getElementById("correctionStatus");
-    const submit = document.getElementById("correctionSubmit");
-    if (form) form.reset();
-    if (status) { status.textContent = ""; status.className = "correction-status"; }
-    if (submit) { submit.disabled = false; submit.textContent = "Submit"; }
-    const title = document.getElementById("correctionModalTitle");
-    const sub = document.getElementById("correctionModalSub");
-    if (title) title.textContent = cfg.title;
-    if (sub) sub.textContent = cfg.sub;
-    // Pre-fill issue type
-    const issueSelect = form && form.querySelector("select[name=issue_type]");
-    if (issueSelect) {
-      // Add the option if it doesn't exist (action-specific value)
-      if (!Array.from(issueSelect.options).some(o => o.value === cfg.issue)) {
-        const opt = document.createElement("option");
-        opt.value = cfg.issue;
-        opt.textContent = cfg.title;
-        issueSelect.insertBefore(opt, issueSelect.children[1]);
-      }
-      issueSelect.value = cfg.issue;
-    }
-    modal.hidden = false;
-    document.body.style.overflow = "hidden";
-  }
+  const cfg = VH_FORMS[action];
+  if (!cfg) return;
+  _openVhFormModal(cfg, action);
 });
+
+function _openVhFormModal(cfg, action) {
+  // Build modal lazily once; reuse on subsequent opens
+  let modal = document.getElementById("vhFormModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "vhFormModal";
+    modal.className = "vh-form-modal";
+    modal.innerHTML = `
+      <div class="vh-form-modal-backdrop" data-close></div>
+      <div class="vh-form-modal-card" role="dialog" aria-modal="true">
+        <div class="vh-form-modal-head">
+          <h3 id="vhFormTitle"></h3>
+          <button type="button" class="vh-form-modal-close" data-close aria-label="Close">×</button>
+        </div>
+        <p id="vhFormSub" class="vh-form-sub"></p>
+        <form id="vhFormBody" novalidate></form>
+        <div class="vh-form-actions">
+          <button type="button" class="btn-secondary" data-close>Cancel</button>
+          <button type="button" id="vhFormSubmit" class="btn-primary">Submit</button>
+        </div>
+        <div id="vhFormStatus" class="vh-form-status" aria-live="polite"></div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    modal.addEventListener("click", (ev) => {
+      if (ev.target.matches("[data-close]")) _closeVhFormModal();
+    });
+  }
+  document.getElementById("vhFormTitle").textContent = cfg.title;
+  document.getElementById("vhFormSub").textContent = cfg.sub;
+  const status = document.getElementById("vhFormStatus");
+  status.textContent = "";
+  status.className = "vh-form-status";
+  const form = document.getElementById("vhFormBody");
+  form.innerHTML = cfg.fields.map(f => {
+    const req = f.required ? " required" : "";
+    const ph = f.placeholder ? ` placeholder="${f.placeholder}"` : "";
+    if (f.type === "select") {
+      return `<label class="vh-form-field"><span>${f.label}${f.required ? ' *' : ''}</span>
+        <select name="${f.name}"${req}>
+          <option value="">— pick one —</option>
+          ${f.options.map(o => `<option value="${o}">${o.charAt(0).toUpperCase() + o.slice(1).replace(/_/g,' ')}</option>`).join("")}
+        </select></label>`;
+    }
+    if (f.type === "textarea") {
+      return `<label class="vh-form-field"><span>${f.label}${f.required ? ' *' : ''}</span>
+        <textarea name="${f.name}" rows="4"${req}${ph}></textarea></label>`;
+    }
+    return `<label class="vh-form-field"><span>${f.label}${f.required ? ' *' : ''}</span>
+      <input type="${f.type}" name="${f.name}"${req}${ph}></label>`;
+  }).join("");
+  // Wire submit
+  const submitBtn = document.getElementById("vhFormSubmit");
+  submitBtn.disabled = false;
+  submitBtn.textContent = "Submit";
+  submitBtn.onclick = async () => {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting…";
+    status.textContent = "";
+    const data = {};
+    for (const f of cfg.fields) {
+      const el = form.querySelector(`[name="${f.name}"]`);
+      const val = el ? el.value.trim() : "";
+      if (f.required && !val) {
+        status.textContent = `${f.label} is required.`;
+        status.className = "vh-form-status error";
+        submitBtn.disabled = false; submitBtn.textContent = "Submit";
+        if (el) el.focus();
+        return;
+      }
+      if (val) data[f.name] = val;
+    }
+    try {
+      const resp = await fetch(cfg.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.error || "Submission failed");
+      status.textContent = result.message || "Thanks — we received your submission.";
+      status.className = "vh-form-status success";
+      submitBtn.textContent = "Submitted";
+      setTimeout(_closeVhFormModal, 2000);
+    } catch (err) {
+      status.textContent = "Couldn't submit: " + err.message;
+      status.className = "vh-form-status error";
+      submitBtn.disabled = false; submitBtn.textContent = "Submit";
+    }
+  };
+  modal.hidden = false;
+  modal.classList.add("open");
+  document.body.style.overflow = "hidden";
+  const firstInput = form.querySelector("input, select, textarea");
+  if (firstInput) setTimeout(() => firstInput.focus(), 50);
+}
+function _closeVhFormModal() {
+  const modal = document.getElementById("vhFormModal");
+  if (modal) { modal.hidden = true; modal.classList.remove("open"); }
+  document.body.style.overflow = "";
+}
 
 // v0.72 ─── Corrections modal + digest signup wiring ──────────────────
 // Open the modal when any [data-report-payload] element is clicked. Modal
@@ -11662,7 +11970,7 @@ function renderPublicServices(grouped, total, cityKey) {
    Phase 5 with paid integrations.
    ===================================================================== */
 async function fetchEventVenues(lat, lon, radiusMeters, onProgress) {
-  // v0.96.1: Overpass query NARROWED to marketplace only. Worship + community
+  // v1.0.1: Overpass query NARROWED to marketplace only. Worship + community
   // centers were OSM venue rows masquerading as events — they had no event
   // data attached (no date, no title, no source URL beyond Google search).
   // If we want church/temple events surfaced, the path is Submit Event +
@@ -11685,7 +11993,7 @@ function classifyEventVenue(el) {
   if (am === "marketplace") {
     category = "markets";
     subtype = "Farmers market";
-  } else return null;  // v0.96.1: worship/community classification removed
+  } else return null;  // v1.0.1: worship/community classification removed
   const score = osmScore(t);
   const reasons = osmReasons(t);
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50,
@@ -11713,7 +12021,7 @@ async function loadNearbyEvents(geo) {
   renderEventsListings(geo, cityListings);
   renderEventsOnline(geo);
 
-  // v0.96.1: markets is the only OSM-dependent subtab now (worship + community
+  // v1.0.1: markets is the only OSM-dependent subtab now (worship + community
   // removed — they were venue cards, not events).
   const osmLoadingMsg = `<div class="schools-empty" style="padding:14px;">Loading nearby venues from OpenStreetMap…</div>`;
   ["events-markets-tbody"].forEach(id => {
@@ -11752,7 +12060,7 @@ async function loadNearbyEvents(geo) {
       ...curatedMarkets,
       ...osmMarkets.filter(m => !seenMarketNames.has((m.name || "").toLowerCase()))
     ].slice(0, 40);
-    // v0.96.1: worship + community arrays removed; only markets remain.
+    // v1.0.1: worship + community arrays removed; only markets remain.
     const totalCount = mergedMarkets.length;
     const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
@@ -11802,7 +12110,7 @@ function renderEvents(grouped, total, cityKey, geo) {
     tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
   };
   fill("events-markets-section",   "events-markets-tbody",   grouped.markets || []);
-  // v0.96.1: worship + community sections removed — they leaked OSM venue
+  // v1.0.1: worship + community sections removed — they leaked OSM venue
   // cards into the events tab. If those sections need to come back, they
   // need real event data (ICS feeds, admin entries), not OSM amenity tags.
 
@@ -12154,17 +12462,17 @@ function _eventEffectiveCoords(ev) {
 // distance we'll surface that type of event even if the user set a narrow
 // search radius. This lets us show concerts/sports automatically even when
 // the user is doing daily-life searches at 2-5mi.
-// v0.96: Tier caps reflect actual metro reality.
+// v1.0: Tier caps reflect actual metro reality.
 //   - daily bumped 5→25 because urban farmers markets are routinely 10-25 mi away
 //   - day_trip added at 75 mi for farm experiences / u-pick / orchards / agritourism
 //     (no farm is 5mi from a Bay Area house — they're day trips)
 //   - destination remains "unlimited" for iconic places (national parks)
 const TIER_CAPS = {
   essential:    2,    // fire, police, hospital, urgent care, clinic
-  daily:       25,    // farmers market, food bank, library, school (v0.96: was 5)
+  daily:       25,    // farmers market, food bank, library, school (v1.0: was 5)
   nearby:      15,    // parks, community events, kids, local festivals, art
   regional:    50,    // music concerts, sports, comedy, theater, big festivals
-  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v0.96: new)
+  day_trip:    75,    // farm u-pick, orchards, pumpkin patches, agritourism (v1.0: new)
   destination: 9999,  // iconic spots (Golden Gate Park, Yosemite, etc.) — unlimited
 };
 const TIER_ORDER = ["essential", "daily", "nearby", "regional", "day_trip", "destination"];
@@ -12188,7 +12496,7 @@ function tierForCategory(cat) {
   const c = (cat || "").toLowerCase();
   // Essential — emergency services
   if (["fire","police","hospital","clinic","pharmacy","urgent","ems","ambulance"].some(x => c.includes(x))) return "essential";
-  // v0.96: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
+  // v1.0: Day trip — farm experiences, u-pick, orchards. Checked BEFORE
   // daily/regional so a "u-pick farm" doesn't fall into market/daily by mistake.
   if (["u_pick","u-pick","upick","pumpkin patch","cherry pick","strawberry pick","apple pick","berry pick","farm fair","petting zoo","wagon ride","hayride","agritour","farm stand","farm tour","farm_u_pick"].some(x => c.includes(x))) return "day_trip";
   // Daily — services people use weekly
@@ -12803,7 +13111,7 @@ const NEARNITY_FARM_API_BASE = "/api/farm-experiences";
 const _apiEventsCache = new Map();    // session-scoped cache, keyed by lat/lon/radius/keyword
 const _apiFarmCache   = new Map();    // session-scoped cache for farm experiences
 
-// v0.96.1: Fetch farm experiences from /api/farm-experiences and normalize
+// v1.0.1: Fetch farm experiences from /api/farm-experiences and normalize
 // them into event-shaped rows so they merge into the events listing. Farm
 // rows are SEASONAL — they don't have a specific start time. We synthesize
 // `starts` to today so the row passes through downstream date-grouping,
@@ -12814,7 +13122,7 @@ async function fetchFarmExperiences(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.96: farm experiences default to 75mi (day-trip tier) but accept a
+  // v1.0: farm experiences default to 75mi (day-trip tier) but accept a
   // map-driven override when user clicks "Search this area" on the events map.
   const r = radiusMi || geo._mapRadius || 75;
   const kw = (keyword || "").trim().toLowerCase();
@@ -12886,7 +13194,7 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
   const lat = parseFloat(geo.lat);
   const lon = parseFloat(geo.lon);
   if (!isFinite(lat) || !isFinite(lon)) return [];
-  // v0.96: radius comes from EITHER an explicit override OR the map-driven
+  // v1.0: radius comes from EITHER an explicit override OR the map-driven
   // radius (when user clicked "Search this area") OR the regional-tier cap
   // as a safe default (so concerts/farms still surface on initial load).
   const r = radiusMi
@@ -12926,7 +13234,7 @@ function mergeAndDedupeEvents(a, b) {
   for (const ev of [...(a || []), ...(b || [])]) {
     if (!ev || !ev.title) continue;
     if (!ev.starts && !ev.is_farm_experience) continue;
-    // v0.96.1: Publishable-row guard. An event MUST have a real source URL
+    // v1.0.1: Publishable-row guard. An event MUST have a real source URL
     // that isn't a Google/Bing search query. Without this, OSM venues with
     // no website would fall back to /maps/search/<name> URLs and pretend
     // to be events. That's the redirect-portal anti-pattern we banned.
@@ -12978,7 +13286,7 @@ function renderEventsListings(geo, eventsArg) {
   _renderEventsCalendar(geo, curated, tb);
 
   // Async: fetch API events + farm experiences in parallel, merge, re-render.
-  // v0.96.1: Farm experiences come from /api/farm-experiences (seasonal
+  // v1.0.1: Farm experiences come from /api/farm-experiences (seasonal
   // directory). When user types "cherry picking" / "pumpkin patch" /
   // "u-pick", the events listing now actually has farm rows to show
   // instead of dumping OSM venue cards.
@@ -13255,7 +13563,7 @@ function eventsByBucket(events, b) {
     if (b === "official") return bucket === "official";
     if (b === "community") return bucket === "community";
     if (b === "ticketed") return bucket === "ticketed";
-    // v0.96: new buckets from Source Network spec
+    // v1.0: new buckets from Source Network spec
     if (b === "kids_family") {
       return sec.includes("kids_family") ||
         /\b(kid|kids|family|children|toddler|story[- ]?time|baby|preschool|pta|school fair)\b/i.test(titleCat);
@@ -13295,7 +13603,7 @@ function eventsInWindow(events, w) {
   const now = new Date();
   const todayKey = now.toDateString();
   return events.filter((ev) => {
-    // v0.96.1: Farm experiences are seasonal — they don't belong in
+    // v1.0.1: Farm experiences are seasonal — they don't belong in
     // Today/Tonight/Weekend filters. They surface via the Farm & u-pick
     // bucket filter and in the unfiltered month view.
     if (ev.is_farm_experience) return w === "month";
@@ -13949,7 +14257,66 @@ async function loadCommunityHelp(geo) {
   $("ch-loading").hidden = true;
   $("ch-sections").hidden = false;
   $("ch-summary").hidden = true;
+  // v0.97.1: inject help-filter chips per Launch_Ready_W1 LB Goal 5
+  _injectHelpFilterChips("card-community-help");
   renderCommunityHelp(geo);
+}
+
+// v0.97.1: Help filter chips — text-keyword matching against rendered cards.
+// Click a chip → cards whose textContent doesn't match its category regex
+// are hidden. Click again to clear.
+const HELP_FILTER_KEYWORDS = {
+  food:       /food|meal|grocery|pantry|hunger|nutrition|snap|wic|free meal/i,
+  housing:    /housing|shelter|rent|eviction|homeless|tenant|landlord/i,
+  utility:    /utility|electric|gas|water|liheap|energy assistance|heating|cooling/i,
+  legal:      /legal|attorney|lawyer|court|tenant rights|immigration|advocacy|aid/i,
+  health:     /clinic|doctor|hospital|primary care|telehealth|medical|wellness|hrsa/i,
+  mental:     /mental|psych|counseling|therapy|988|crisis line|emotional/i,
+  substance:  /substance|drug|alcohol|addiction|recovery|treatment|samhsa|sober/i,
+};
+const HELP_FILTER_LABELS = {
+  food: "Food", housing: "Housing", utility: "Utility help", legal: "Legal",
+  health: "Health", mental: "Mental health", substance: "Substance use",
+};
+function _injectHelpFilterChips(cardId) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  if (card.querySelector(":scope > .help-filter-chips")) return;   // idempotent
+  const chipsBar = document.createElement("div");
+  chipsBar.className = "help-filter-chips";
+  chipsBar.setAttribute("role", "group");
+  chipsBar.setAttribute("aria-label", "Filter help resources by category");
+  chipsBar.innerHTML = Object.entries(HELP_FILTER_LABELS).map(([id, label]) =>
+    `<button type="button" class="help-filter-chip" data-help-filter="${id}">${label}</button>`
+  ).join("");
+  chipsBar.addEventListener("click", (e) => {
+    const btn = e.target.closest("button[data-help-filter]");
+    if (!btn) return;
+    const cat = btn.dataset.helpFilter;
+    const wasActive = btn.classList.contains("active");
+    // Single-active behavior: clicking one deactivates others
+    chipsBar.querySelectorAll(".help-filter-chip.active").forEach(b => b.classList.remove("active"));
+    if (!wasActive) btn.classList.add("active");
+    _applyHelpFilter(cardId, wasActive ? null : cat);
+  });
+  // Insert near top of the card (after first child if it's a header)
+  const firstSection = card.querySelector(":scope > .school-section, :scope > .ch-section");
+  if (firstSection) card.insertBefore(chipsBar, firstSection);
+  else card.appendChild(chipsBar);
+}
+function _applyHelpFilter(cardId, category) {
+  const card = document.getElementById(cardId);
+  if (!card) return;
+  const rows = card.querySelectorAll(".community-resource-row, .help-row, .schools-row");
+  if (!category) {
+    rows.forEach(r => r.style.display = "");
+    return;
+  }
+  const re = HELP_FILTER_KEYWORDS[category];
+  if (!re) return;
+  rows.forEach(r => {
+    r.style.display = re.test(r.textContent) ? "" : "none";
+  });
 }
 
 // v0.47: tier badges are now compact colored dots (8px). Tooltip carries
@@ -14106,6 +14473,8 @@ async function loadHealthWellness(geo) {
   $("health-loading").hidden = true;
   renderHealthStatic(geo);                // mental + substance — synchronous
   await renderHealthClinics(geo);         // FQHCs — fetches HRSA
+  // v0.97.1: inject help-filter chips
+  _injectHelpFilterChips("card-health");
 }
 
 function renderHealthStatic(geo) {
@@ -14561,6 +14930,10 @@ function setLoading() {
 
 function renderResults(geo) {
   lastGeo = geo;   // v0.12: row builders use this for "Map" icon URLs
+  // v1.0 Phase 1: mark page as having resolved a location. CSS uses this to
+  // un-hide loading placeholders that should ONLY appear after a search.
+  document.body.classList.add("has-location");
+  document.body.classList.remove("idle-state");
   renderResolved(geo);
   const a = geo.address || {};
   const e = resolveElectric(a); renderElectric(e, geo);
