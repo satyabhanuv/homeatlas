@@ -1491,6 +1491,9 @@
   }
   .risk-spec-addr { background: rgba(15,110,86,0.10); color: #0F6E56; border: 1px solid rgba(15,110,86,0.24); }
   .risk-spec-area { background: rgba(180,83,9,0.10); color: #B45309; border: 1px solid rgba(180,83,9,0.22); }
+  /* v2.1: third specificity tier — guidance that isn't address- or area-specific
+     (emergency prep best practices, "always verify with X", etc.) */
+  .risk-spec-gen  { background: rgba(71,85,105,0.10); color: #475569; border: 1px solid rgba(71,85,105,0.22); }
   .risk-row {
     display: flex; align-items: center; gap: 16px;
     padding: 14px 4px; border-bottom: 1px solid var(--line);
@@ -2053,7 +2056,7 @@
     margin: 0 8px;
   }
 
-  /* v0.48: Calendar view for Happening this month. Around-me teal accent. */
+  /* v0.48: Calendar view for the Events section. Around-me teal accent. */
   .cal-wrap {
     background: var(--surface);
     border: 1px solid var(--line);
@@ -5334,6 +5337,495 @@
     .near-me-btn { width: 100%; }
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v2.1 — Shared next-step ACTION ROW (.nrny-action). Used on event, help,
+     official, utility, and home-service cards. Each card gets a primary
+     action plus the 4 next-steps from the spec (Add to calendar / Directions
+     / Source / Report issue) — Save lives in the title row separately.
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .cal-event-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0,0,0,0.06);
+  }
+  .nrny-action,
+  .nrny-action:visited {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f4f7fb;
+    color: #344054;
+    border: 1px solid #e1e7ef;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.08s;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .nrny-action:hover {
+    background: #e6efff;
+    border-color: #b9cdec;
+    color: #0050c2;
+    transform: translateY(-1px);
+  }
+  .nrny-action-icon {
+    font-size: 12px;
+    line-height: 1;
+  }
+  .nrny-action-primary {
+    background: #0050c2;
+    color: #fff;
+    border-color: #0050c2;
+  }
+  .nrny-action-primary:hover {
+    background: #003d99;
+    color: #fff;
+    border-color: #003d99;
+  }
+  .nrny-action-source {
+    color: #475569;
+    background: #fff;
+    font-weight: 500;
+  }
+  .nrny-action-report {
+    background: #fff;
+    color: #b45309;
+    border-color: #f3e3c4;
+  }
+  .nrny-action-report:hover {
+    background: #fff7e6;
+    color: #92400e;
+    border-color: #e9c97a;
+  }
+  .nrny-action-disabled {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: #f4f7fb;
+    color: #8b94a3;
+    border: 1px dashed #d1dbe8;
+    font-size: 12px;
+    font-weight: 500;
+    font-style: italic;
+  }
+  /* v2.1 — Tail used on help / official / utility / risk rows
+     (Save / Source / Verify / Report). Lighter visual weight than the
+     event card pills since it sits next to existing call/directions buttons. */
+  .nrny-tail {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-left: 6px;
+  }
+  .nrny-tail-btn,
+  .nrny-tail-btn:visited {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: #fafbfd;
+    color: #475569;
+    border: 1px solid #e1e7ef;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .nrny-tail-btn:hover {
+    background: #e6efff;
+    border-color: #b9cdec;
+    color: #0050c2;
+  }
+  .nrny-tail-verify {
+    background: #ecfdf5;
+    color: #15803d;
+    border-color: #b8e1c6;
+  }
+  .nrny-tail-verify:hover { background: #d1fae5; color: #166534; }
+  .nrny-tail-report {
+    color: #b45309;
+    background: #fff;
+    border-color: #f3e3c4;
+  }
+  .nrny-tail-report:hover { background: #fff7e6; color: #92400e; border-color: #e9c97a; }
+  .nrny-tail-source-missing {
+    color: #8b94a3;
+    border-style: dashed;
+    font-style: italic;
+    cursor: help;
+  }
+  /* v2.1 — Section footers (Verify / Save / Report) on civic / risks / utility */
+  .nrny-section-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line, #e4e8ee);
+  }
+  .nrny-section-footer-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin-right: 4px;
+  }
+
+  /* v2.1 — Saved-place callout under resolved address */
+  .nrny-saved-callout {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin: 14px 0 4px;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #fff7e6 0%, #fafbfd 100%);
+    border: 1px solid #f3e3c4;
+    border-left: 4px solid #d97706;
+    border-radius: 12px;
+  }
+  .nrny-saved-callout-icon { font-size: 22px; line-height: 1; }
+  .nrny-saved-callout-body { flex: 1; min-width: 0; }
+  .nrny-saved-callout-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .nrny-saved-callout-sub {
+    font-size: 13px;
+    color: var(--ink-soft, #4a5263);
+    margin-bottom: 10px;
+    line-height: 1.45;
+  }
+  .nrny-saved-callout-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+  }
+  .nrny-saved-callout-star {
+    font-size: 18px !important;
+    padding: 2px 6px !important;
+  }
+  /* v2.1 — Digest preview panel + actions */
+  .digest-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+  .digest-preview {
+    margin-top: 10px;
+  }
+  .digest-preview-card {
+    border: 1px solid #e1e7ef;
+    border-radius: 10px;
+    padding: 14px 16px;
+    background: #fff;
+  }
+  .digest-preview-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    color: #0050c2;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .digest-preview-headline {
+    font-size: 16px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--ink);
+  }
+  .digest-preview-list {
+    margin: 0 0 10px;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  .digest-preview-foot {
+    font-size: 12px;
+    color: var(--ink-soft, #4a5263);
+    font-style: italic;
+  }
+  .digest-status-info {
+    color: #0050c2;
+    font-size: 13px;
+    margin-top: 6px;
+  }
+
+  .nrny-action-addons {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: #fff7e6;
+    color: #92400e;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    border: 1px solid #f3e3c4;
+  }
+
+  /* v2.1 — Per-tab count badges for Events subnav. Each .subtab gets a
+     trailing pill showing the matching event count, so users can pick the
+     bucket with the most relevant results without first clicking through. */
+  .subtab .subtab-count {
+    display: inline-block;
+    margin-left: 4px;
+    padding: 1px 7px;
+    background: #e6efff;
+    color: #0050c2;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 999px;
+    line-height: 1.55;
+    vertical-align: 1px;
+  }
+  .subtab.active .subtab-count {
+    background: #0050c2;
+    color: #fff;
+  }
+  .subtab .subtab-count-zero {
+    background: #f1f3f7;
+    color: #8b94a3;
+  }
+  .subtab .subtab-count-muted {
+    background: #f5e9d8;
+    color: #7a5a2e;
+    font-weight: 600;
+    text-transform: lowercase;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v2.1 — SHARED EMPTY STATE component (.nearnity-card-empty)
+     One element per section card. Shows pre-search and hides everything else
+     in the card until body.has-location is set.
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .nearnity-card-empty {
+    padding: 28px 24px;
+    border: 1px dashed #d1dbe8;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #fafbfd 0%, #f4f7fb 100%);
+    text-align: left;
+    margin: 0;
+  }
+  .nearnity-card-empty-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 6px;
+    letter-spacing: -0.005em;
+  }
+  .nearnity-card-empty-desc {
+    font-size: 14px;
+    color: var(--ink-soft, #4a5263);
+    line-height: 1.5;
+    margin: 0 0 14px;
+    max-width: 56ch;
+  }
+  .nearnity-card-empty-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .nearnity-card-empty-actions .btn-primary {
+    background: var(--blue-dark, #0050c2);
+    color: #fff;
+    border: none;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.12s, transform 0.1s, box-shadow 0.12s;
+  }
+  .nearnity-card-empty-actions .btn-primary:hover {
+    background: #003d99;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,80,194,0.18);
+  }
+  .nearnity-card-empty-or {
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  /* Visibility: empty state only shows pre-search; all other card content
+     is hidden pre-search. Once body.has-location is set, the inverse happens. */
+  body.has-location .nearnity-card-empty { display: none !important; }
+  body:not(.has-location) .nearnity-card-empty { display: block; }
+
+  /* Hide every direct child of the major cards EXCEPT the empty state pre-search.
+     This kills "Finding…" / "Loading map…" / placeholder dashes in one sweep. */
+  body:not(.has-location) #card-home > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-public-services > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-school > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-parks > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-events > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-community-help > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-health > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-yard > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-home-services > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-civic > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-risks > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-electric > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-internet > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-tv > *:not(.nearnity-card-empty),
+  body:not(.has-location) #card-security > *:not(.nearnity-card-empty) {
+    display: none !important;
+  }
+
+  /* Belt-and-suspenders: even where loading nodes live outside the major
+     cards (alerts banner, civic map, section maps), don't paint them
+     until a search has resolved. */
+  body:not(.has-location) #alerts-banner,
+  body:not(.has-location) #live-alerts,
+  body:not(.has-location) #civic-map,
+  body:not(.has-location) .section-map-empty,
+  body:not(.has-location) .section-map,
+  body:not(.has-location) [data-loader],
+  body:not(.has-location) .parks-loading,
+  body:not(.has-location) #events-loading,
+  body:not(.has-location) #school-loading,
+  body:not(.has-location) #hs-loading,
+  body:not(.has-location) #ps-loading,
+  body:not(.has-location) #ch-loading,
+  body:not(.has-location) #health-loading,
+  body:not(.has-location) #yard-loading,
+  body:not(.has-location) #civic-loading,
+  body:not(.has-location) #risks-loading {
+    display: none !important;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v2.1 — INTENT-FIRST search banner + Explore-more divider + related chips
+     The banner is inserted BEFORE the matched section. The divider goes AFTER
+     the matched section's card. Body gets data-intent="<key>" so future
+     polish can style per-intent (e.g. health banner accent = green).
+     ═══════════════════════════════════════════════════════════════════════════ */
+  .intent-focused-banner {
+    margin: 18px auto 12px;
+    max-width: 1180px;
+    padding: 20px 24px 18px;
+    background: linear-gradient(135deg, #e8eff9 0%, #f7f9fc 100%);
+    border: 1px solid #d1dbe8;
+    border-left: 5px solid var(--blue-dark);
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  body[data-intent="health"]     .intent-focused-banner { border-left-color: #16a34a; background: linear-gradient(135deg, #ecfdf5 0%, #f7f9fc 100%); }
+  body[data-intent="food_help"]  .intent-focused-banner { border-left-color: #ea580c; background: linear-gradient(135deg, #fff7ed 0%, #f7f9fc 100%); }
+  body[data-intent="safety"]     .intent-focused-banner { border-left-color: #dc2626; background: linear-gradient(135deg, #fef2f2 0%, #f7f9fc 100%); }
+  body[data-intent="parks"]      .intent-focused-banner { border-left-color: #16a34a; }
+  body[data-intent="schools"]    .intent-focused-banner { border-left-color: #0284c7; }
+  body[data-intent="markets"]    .intent-focused-banner { border-left-color: #16a34a; background: linear-gradient(135deg, #ecfdf5 0%, #f7f9fc 100%); }
+  body[data-intent="farm_u_pick"].intent-focused-banner { border-left-color: #ca8a04; background: linear-gradient(135deg, #fefce8 0%, #f7f9fc 100%); }
+
+  .intent-focused-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--blue-dark);
+    margin-bottom: 6px;
+  }
+  .intent-focused-eyebrow b {
+    text-transform: capitalize;
+    letter-spacing: 0;
+  }
+  .intent-focused-title {
+    font-size: clamp(22px, 3vw, 30px);
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 14px;
+    line-height: 1.18;
+    letter-spacing: -0.01em;
+  }
+  .intent-related-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .intent-related-label {
+    font-size: 13px;
+    color: #475569;
+    font-weight: 600;
+    margin-right: 2px;
+  }
+  .intent-related-chip {
+    padding: 6px 12px;
+    border-radius: 999px;
+    border: 1px solid #d4dee8;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    color: #344054;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, color 0.12s, transform 0.1s;
+  }
+  .intent-related-chip:hover {
+    background: #f1f5fa;
+    border-color: var(--blue-dark);
+    color: var(--blue-dark);
+    transform: translateY(-1px);
+  }
+  .intent-clear-link {
+    background: none;
+    border: none;
+    padding: 0;
+    color: #475569;
+    font-size: 13px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .intent-clear-link:hover { color: var(--blue-dark); }
+
+  .explore-more-divider {
+    margin: 36px auto 18px;
+    max-width: 1180px;
+    padding: 18px 0 0;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .explore-more-divider h2 {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #6b7280;
+    margin: 0;
+    white-space: nowrap;
+  }
+  .explore-more-divider::before,
+  .explore-more-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e5eaf0;
+  }
+
   /* Phase 5 — Risk card severity tags */
   .risk-tag {
     display: inline-block;
@@ -5393,7 +5885,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.0.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.1</span>
     </div>
   </header>
 
@@ -5476,7 +5968,7 @@
         <a class="cat-dd-link" data-target="sec-parks"   role="menuitem"><span class="dd-em">🌳</span><span class="dd-tx"><b>Parks &amp; rec</b><i>Playgrounds, trails, national parks, federal rec sites</i></span></a>
       </div>
       <div class="cat-dd-panel" data-panel="my-home" hidden role="menu">
-        <a class="cat-dd-link" data-target="sec-myhome"        role="menuitem"><span class="dd-em">📋</span><span class="dd-tx"><b>Property details</b><i>Address resolution + your saved property notes (year built, lot, etc. — you fill in)</i></span></a>
+        <a class="cat-dd-link" data-target="sec-myhome"        role="menuitem"><span class="dd-em">📋</span><span class="dd-tx"><b>Property links / saved notes</b><i>Links to your county assessor + room to save your own notes — Nearnity doesn't sell property data</i></span></a>
         <a class="cat-dd-link" data-target="sec-services"      role="menuitem"><span class="dd-em">⚡</span><span class="dd-tx"><b>Utilities &amp; internet</b><i>Electric, gas, water, ISPs at this address</i></span></a>
         <a class="cat-dd-link" data-target="sec-yard"          role="menuitem"><span class="dd-em">🌱</span><span class="dd-tx"><b>Gardening</b><i>USDA zone, plants, watering, soil</i></span></a>
         <a class="cat-dd-link" data-target="sec-home-services" role="menuitem"><span class="dd-em">🔧</span><span class="dd-tx"><b>Home services</b><i>Handyman, plumber, electrician, HVAC near you</i></span></a>
@@ -5676,7 +6168,7 @@
     <!-- Sub-nav for My Home — true tabs (v0.33.1): swap content, not scroll -->
     <div class="subnav">
       <a href="#sub-myhome-address"  class="subtab" data-subtarget="sub-myhome-address">Address</a>
-      <a href="#card-home"            class="subtab" data-subtarget="card-home">Property details</a>
+      <a href="#card-home"            class="subtab" data-subtarget="card-home">Property links / saved notes</a>
     </div>
 
     <!-- v0.82: state-aware label — was "Address resolved" always, even when
@@ -5708,10 +6200,12 @@
       <div id="ra-precision-notice"></div>
     </div>
 
-    <!-- v0.29: Property details — now part of the My Home section above -->
+    <!-- v0.29 / v2.1: Property links + saved notes. Renamed from "Property
+         details" to clarify Nearnity doesn't sell property data — it links
+         out to county assessor portals and stores your own notes locally. -->
     <div class="home-card" id="card-home" hidden>
       <div id="sub-myhome-details" style="display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:13px;font-weight:600;color:var(--ink-soft);text-transform:uppercase;letter-spacing:0.5px;">
-        <span>Property details</span>
+        <span>Property links / saved notes</span>
         <span style="flex:1;height:1px;background:var(--line-2);"></span>
       </div>
       <div class="home-grid" id="home-grid"></div>
@@ -6160,12 +6654,12 @@
         <div class="summary-pill" id="events-summary" hidden></div>
       </div>
       <div class="info-popover" id="events-info-popover" hidden>
-        <b>What this is:</b> nearby venues that host weekend events — farmers markets, religious services, community-center programs. <b>Recurring schedules</b> come from OSM <code>opening_hours</code> tags where available. <b>Live event listings</b> are powered by Ticketmaster + SeatGeek and merged into the "Happening this month" calendar above. For community-specific events not covered by major APIs, the "Find events online" tab links to free aggregators.
+        <b>What this is:</b> live events near you, organized by what you're looking for. Tabs split results into <b>Today / Tonight / This weekend</b> (time-windowed), <b>Free &amp; community</b> and <b>Kids &amp; family</b> (civic + community sources), <b>Markets</b> and <b>Farm &amp; u-pick</b> (public datasets + curated seasonal calendars), <b>Volunteer</b> (community service), <b>Ticketed</b> and <b>Sports</b> (Ticketmaster / SeatGeek), and <b>Where to watch</b> (confirmed watch parties). <b>External sites</b> is a fallback set of broader aggregators, not Nearnity's primary source.
       </div>
-      <div class="parks-loading" id="events-loading" hidden>Finding nearby event venues…</div>
+      <div class="parks-loading" id="events-loading" hidden>Loading events for the active tab…</div>
       <div id="events-sections" hidden>
         <div class="school-section" id="events-listings-section" hidden>
-          <h4>Events near you <span class="hint">— filter by tab above</span></h4>
+          <h4>Events near you <span class="hint">— pick a tab above to filter by time, audience, or type</span></h4>
           <div id="events-listings-tbody"></div>
         </div>
         <div class="school-section" id="events-markets-section" hidden>
@@ -6180,18 +6674,18 @@
              /community-center events should arrive via Submit Event flow or
              ICS feeds added to EVENT_SOURCES in the Worker. -->
         <div class="school-section" id="events-online-section">
-          <h4>External event sites <span class="hint">— search beyond Nearnity's curated data</span></h4>
+          <h4>External event sites <span class="hint">— fallback only, not Nearnity's primary source</span></h4>
           <div style="font-size:13px;color:var(--ink-soft);margin-bottom:10px;line-height:1.5;">
-            Nearnity surfaces curated civic + ticketed events from public sources. For broader event search (concerts, classes, meetups, community events), these external sites have wider coverage but include ads and aren't source-linked the way Nearnity is. Each opens pre-filtered to your area.
+            Nearnity's primary buckets above pull from public datasets, civic iCal feeds, and ticketed APIs — each event is source-linked. The aggregators below are a <b>fallback</b> for niche local events Nearnity hasn't indexed yet; they have wider coverage but include ads and aren't source-linked. Each opens pre-filtered to your area.
           </div>
           <div id="events-online-body" class="civic-grid"></div>
         </div>
       </div>
-      <!-- v0.35.0: Unified map for event venues -->
-      <div class="section-map" id="events-map" style="margin-top:14px;"><div class="section-map-empty">Map shows event venues once results load.</div></div>
-      <a class="submit-missing" id="events-submit-missing" href="#" target="_blank" rel="noopener">Know an event venue we missed? Submit it on OpenStreetMap</a>
+      <!-- v0.35.0: Unified map for events in the active bucket -->
+      <div class="section-map" id="events-map" style="margin-top:14px;"><div class="section-map-empty">Map shows events for the active bucket once results load.</div></div>
+      <a class="submit-missing" id="events-submit-missing" href="#" target="_blank" rel="noopener">Know an event we missed? Submit it to Nearnity</a>
       <div class="source" style="margin-top:14px;">
-        Locations from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a>. Service times and operating hours come from OSM <code>opening_hours</code> tags — coverage varies. <b>Always verify directly with the venue</b> before showing up — schedules change.
+        Events are aggregated from public datasets, civic iCal feeds, and ticketed APIs (Ticketmaster / SeatGeek). Each card shows its source label. <b>Always verify directly with the organizer</b> before showing up — schedules change.
       </div>
     </div>
 
@@ -6417,6 +6911,7 @@
               <button type="button" class="btn-secondary vh-action" data-vh-action="recommend">👍 Recommend a pro</button>
               <button type="button" class="btn-secondary vh-action" data-vh-action="claim">🏷️ Claim a business</button>
               <button type="button" class="btn-secondary vh-action" data-vh-action="request">🙋 Request help</button>
+              <button type="button" class="btn-secondary vh-action nrny-action-report" data-report-payload="%7B%22card_id%22%3A%22card-home-services%22%2C%22category%22%3A%22home-services%22%2C%22title_hint%22%3A%22Home%20services%20panel%22%7D" aria-label="Report an issue with home services">⚠ Report issue</button>
             </div>
           </div>
         </div>
@@ -6578,7 +7073,7 @@
     <div class="correction-modal-panel">
       <button type="button" class="correction-modal-close" data-correction-close aria-label="Close">&times;</button>
       <h3 id="correctionModalTitle">Report wrong info</h3>
-      <p class="correction-modal-sub" id="correctionModalSub">Tell us what's off about this card. We review every submission.</p>
+      <p class="correction-modal-sub" id="correctionModalSub">Tell us what's off about this card. Reports go to the founder's inbox — we read every one, but can't always reply individually.</p>
       <form id="correctionForm">
         <label class="correction-field">
           <span>What's wrong?</span>
@@ -6661,7 +7156,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.0.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
       </p>
     </div>
@@ -8271,6 +8766,275 @@ function osmReasons(t) {
 // Banding: places within the same 0.3-mi band are treated as equivalent
 // distance and broken by completeness score (so within the closest band,
 // the best-tagged place wins). Beyond that, raw distance dominates.
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.1 — SHARED EMPTY STATES (from Satya's prompt 2026-06-17)
+// Fresh page load must look intentional — no "Finding…", no "Loading map…",
+// no placeholder dashes. Each section gets a clean per-section empty state
+// pre-search. The existing card content (subnav, tbody, map, loaders) only
+// reveals once a location resolves (body.has-location).
+// ═══════════════════════════════════════════════════════════════════════════
+const SECTION_EMPTY_STATES = [
+  { cardId: "card-home",            title: "Property links / saved notes", desc: "Search an address to surface county assessor / property-tax links and to start a local-only notes block for this address." },
+  { cardId: "card-public-services", title: "Safety & emergency",       desc: "Search to find ER, urgent care, hospitals, police, fire stations, pharmacies." },
+  { cardId: "card-school",          title: "Schools near you",         desc: "Search an address to see your school district plus nearby public, private, and charter schools." },
+  { cardId: "card-parks",           title: "Parks & recreation",       desc: "Search to find parks, playgrounds, trails, and federal recreation sites near you." },
+  { cardId: "card-events",          title: "Local events",             desc: "Search a city to see events from public sources, civic iCal feeds, and ticketed venues." },
+  { cardId: "card-community-help",  title: "Community help",           desc: "Search a city to see free clinics, food banks, and the 211 / 988 / SAMHSA helplines." },
+  { cardId: "card-health",          title: "Health & wellness",        desc: "Search to find free or sliding-scale clinics (HRSA Federally Qualified Health Centers) and mental-health resources." },
+  { cardId: "card-yard",            title: "Gardening",                desc: "Search an address to see your USDA hardiness zone and plant recommendations for your soil and microclimate." },
+  { cardId: "card-home-services",   title: "Home services",            desc: "Search a city to see neighbor-recommended pros, claimed businesses, and OSM map listings." },
+  { cardId: "card-civic",           title: "Official links",           desc: "Search to see your DMV, voter registration, courthouse, building permits, and elected officials." },
+  { cardId: "card-risks",           title: "Climate & risks",          desc: "Search an address to see FEMA flood zone, CAL FIRE hazard zone, and live NWS / USGS / AirNow alerts." },
+  { cardId: "card-electric",        title: "Electric utility",         desc: "Search an address to see your electric utility provider from the HIFLD national dataset." },
+  { cardId: "card-internet",        title: "Internet providers",       desc: "Search an address to see broadband providers from the FCC National Broadband Map." },
+  { cardId: "card-tv",              title: "TV / cable",               desc: "Search an address to see the cable / TV providers serving your area." },
+  { cardId: "card-security",        title: "Home security",            desc: "Search an address to see ADT and other security providers in your area." },
+];
+
+function _renderEmptyStateHTML(title, desc) {
+  return `<div class="nearnity-card-empty" aria-live="polite">
+    <h3 class="nearnity-card-empty-title">${escapeHtml(title)}</h3>
+    <p class="nearnity-card-empty-desc">${escapeHtml(desc)}</p>
+    <div class="nearnity-card-empty-actions">
+      <button type="button" class="btn-primary" data-empty-near-me>Use my location</button>
+      <span class="nearnity-card-empty-or">or search above ↑</span>
+    </div>
+  </div>`;
+}
+
+// v2.1: append a section-level next-step footer (Verify source · Save · Report)
+// to cards whose individual tiles are anchor-only and can't carry a per-tile
+// action row (civic, risks, utility). Idempotent.
+const SECTION_FOOTER_SPECS = [
+  { cardId: "card-civic",   type: "official", verifyUrl: null,                                          verifyLabel: "Verify with official source",     reportPayload: { card_id: "card-civic",    category: "civic",    title_hint: "Civic links panel"    } },
+  { cardId: "card-risks",   type: "risk",     verifyUrl: "https://msc.fema.gov/portal/home",            verifyLabel: "Verify FEMA flood zone",          reportPayload: { card_id: "card-risks",    category: "risk",     title_hint: "Climate risks panel"  } },
+  { cardId: "card-electric",type: "service",  verifyUrl: "https://hifld-geoplatform.opendata.arcgis.com/", verifyLabel: "Verify with HIFLD",            reportPayload: { card_id: "card-electric", category: "service",  title_hint: "Electric utility"     } },
+  { cardId: "card-internet",type: "service",  verifyUrl: "https://broadbandmap.fcc.gov/",               verifyLabel: "Verify with FCC Broadband Map",   reportPayload: { card_id: "card-internet",category: "service",  title_hint: "Internet providers"   } },
+  { cardId: "card-tv",      type: "service",  verifyUrl: null,                                          verifyLabel: null,                              reportPayload: { card_id: "card-tv",       category: "service",  title_hint: "TV / cable"           } },
+  { cardId: "card-security",type: "service",  verifyUrl: null,                                          verifyLabel: null,                              reportPayload: { card_id: "card-security", category: "service",  title_hint: "Home security"        } },
+];
+function applySectionFooters() {
+  for (const s of SECTION_FOOTER_SPECS) {
+    const card = document.getElementById(s.cardId);
+    if (!card) continue;
+    if (card.querySelector(":scope > .nrny-section-footer")) continue;
+    const payload = encodeURIComponent(JSON.stringify(s.reportPayload));
+    const verifyHtml = s.verifyUrl
+      ? `<a class="nrny-tail-btn nrny-tail-verify" href="${escapeHtml(s.verifyUrl)}" target="_blank" rel="noopener" aria-label="${escapeHtml(s.verifyLabel || "Verify with official source")}">🔎 ${escapeHtml(s.verifyLabel || "Verify with official source")}</a>`
+      : "";
+    const wrap = document.createElement("div");
+    wrap.className = "nrny-section-footer";
+    wrap.innerHTML = `
+      <span class="nrny-section-footer-label">Next steps</span>
+      ${verifyHtml}
+      <button type="button" class="nrny-tail-btn nrny-tail-report" data-report-payload="${payload}" aria-label="Report an issue with this section">⚠ Report issue</button>
+    `;
+    card.appendChild(wrap);
+  }
+}
+
+function applyEmptyStates() {
+  // If body already has a resolved location (returning visitor with cached geo,
+  // v1.1 fast-path), skip empty-state injection entirely — CSS would hide them
+  // anyway, but injecting still costs reflow and risks a flash. Bail clean.
+  if (document.body.classList.contains("has-location")) {
+    console.log("[empty-state] skip — has-location already set");
+    return;
+  }
+  for (const s of SECTION_EMPTY_STATES) {
+    const card = document.getElementById(s.cardId);
+    if (!card) continue;
+    if (card.querySelector(":scope > .nearnity-card-empty")) continue;   // already injected
+    // Inject empty state at the TOP of the card
+    const wrap = document.createElement("div");
+    wrap.innerHTML = _renderEmptyStateHTML(s.title, s.desc);
+    card.insertBefore(wrap.firstElementChild, card.firstChild);
+    // Show the card so the empty state is visible. CSS hides all OTHER
+    // children (subnav, tbody, map) until body.has-location.
+    card.removeAttribute("hidden");
+  }
+  // Wire the "Use my location" buttons (delegated, fired once)
+  if (!document.body.dataset.emptyStateWired) {
+    document.body.dataset.emptyStateWired = "1";
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-empty-near-me]");
+      if (!btn) return;
+      e.preventDefault();
+      const nm = document.getElementById("nearMeBtn");
+      if (nm) nm.click();
+      else document.getElementById("addr")?.focus();
+    });
+  }
+  console.log(`[empty-state] applied to ${SECTION_EMPTY_STATES.length} sections`);
+}
+
+// Run at page bootstrap so the empty states appear immediately. Idempotent.
+if (typeof document !== "undefined") {
+  const _bootstrap = () => { try { applyEmptyStates(); } catch(e){} try { applySectionFooters(); } catch(e){} };
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(_bootstrap, 0);
+  } else {
+    document.addEventListener("DOMContentLoaded", _bootstrap);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.1 — INTENT-FIRST SEARCH (from Satya's prompt 2026-06-17)
+// Detect the user's intent from the LOOKING FOR query and route the result
+// page to the matching answer section. Full dashboard becomes secondary
+// under "Explore more around this place".
+// ═══════════════════════════════════════════════════════════════════════════
+const INTENT_KEYWORDS = {
+  // Order matters — most specific first so e.g. "farmers market" matches
+  // markets, not events.
+  health:         /\b(free clinic|sliding scale|clinic|doctor|primary care|hospital|urgent care|emergency room|\ber\b|medical|fqhc|hrsa|telehealth|pharmacy|dental|dentist|mental health|therapist|counseling)\b/i,
+  food_help:      /\b(food bank|food pantry|free meal|hunger|\bsnap\b|\bwic\b|soup kitchen|community fridge|food assistance|food help)\b/i,
+  markets:        /\b(farmers? market|farmer's market|fresh produce|local produce|\bcsa\b)\b/i,
+  farm_u_pick:    /\b(u-?pick|pick your own|cherry pick|apple pick|strawberry pick|pumpkin patch|farm fair|orchard|farm tour|agritour)\b/i,
+  events:         /\b(events?|concerts?|festivals?|shows?|performances?|things to do|tonight|this weekend|live music|open mic|comedy|theater|theatre|nightlife)\b/i,
+  utility:        /\b(electric utility|electricity provider|gas company|water service|broadband|internet provider|isp|utilities?\b)\b/i,
+  official_links: /\b(dmv|driver license|driver's license|vehicle registration|voter registration|vote\b|election|courthouse|permits?\b|government office|civic|official portal)\b/i,
+  schools:        /\b(schools?|school district|elementary|middle school|high school|kindergarten|education|preschool|childcare)\b/i,
+  parks:          /\b(parks?|playgrounds?|trails?|hiking|recreation|outdoors?|national park|state park)\b/i,
+  safety:         /\b(emergency services?|police station|fire station|911|alerts?|hazards?|flood risk|earthquake|crime|safety risk)\b/i,
+  home_services:  /\b(plumber|electrician|handyman|hvac|roofer|painter|landscaper|home services?|contractor|local pro)\b/i,
+  property:       /\b(property details|home details|my house|my property|address details|year built|lot size)\b/i,
+};
+
+const INTENT_TO_SECTION = {
+  health:         { secId: "sec-community-help",  cardId: "card-community-help", subtab: "ch-helplines-section" },
+  food_help:      { secId: "sec-community-help",  cardId: "card-community-help", subtab: "ch-food-section" },
+  markets:        { secId: "sec-events",          cardId: "card-events", subtab: "events-markets-section" },
+  farm_u_pick:    { secId: "sec-events",          cardId: "card-events", filterBucket: "farm_u_pick" },
+  events:         { secId: "sec-events",          cardId: "card-events" },
+  utility:        { secId: "sec-services",        cardId: null },
+  official_links: { secId: "sec-civic",           cardId: "card-civic" },
+  schools:        { secId: "sec-schools",         cardId: "card-school" },
+  parks:          { secId: "sec-parks",           cardId: "card-parks" },
+  safety:         { secId: "sec-public-services", cardId: "card-public-services" },
+  home_services:  { secId: "sec-home-services",   cardId: "card-home-services" },
+  property:       { secId: "sec-myhome",          cardId: "card-home" },
+};
+
+const INTENT_HEADING = {
+  health:         (p) => `Free or sliding-scale clinics near ${p}`,
+  food_help:      (p) => `Food assistance near ${p}`,
+  markets:        (p) => `Farmers markets near ${p}`,
+  farm_u_pick:    (p) => `Farms & u-pick near ${p}`,
+  events:         (p) => `Events near ${p}`,
+  utility:        (p) => `Utility providers for your address`,
+  official_links: (p) => `Official links for ${p}`,
+  schools:        (p) => `Schools near ${p}`,
+  parks:          (p) => `Parks & recreation near ${p}`,
+  safety:         (p) => `Emergency services near ${p}`,
+  home_services:  (p) => `Home services near ${p}`,
+  property:       (p) => `Property links / saved notes for your address`,
+};
+
+const INTENT_RELATED = {
+  health:         ["food_help", "safety"],
+  food_help:      ["health", "safety"],
+  events:         ["markets", "farm_u_pick", "parks"],
+  markets:        ["events", "food_help", "farm_u_pick"],
+  farm_u_pick:    ["markets", "events"],
+  utility:        ["home_services", "property"],
+  official_links: ["safety", "property"],
+  schools:        ["parks", "events"],
+  parks:          ["events", "schools"],
+  safety:         ["health", "official_links"],
+  home_services:  ["utility", "property"],
+  property:       ["utility", "home_services", "official_links"],
+};
+
+const INTENT_RELATED_LABEL = {
+  health: "Clinics", food_help: "Food help", events: "Events", markets: "Markets",
+  farm_u_pick: "U-pick", utility: "Utilities", official_links: "Official",
+  schools: "Schools", parks: "Parks", safety: "Emergency", home_services: "Home services",
+  property: "Property",
+};
+
+function detectQueryIntent(query) {
+  if (!query || typeof query !== "string") return null;
+  const q = query.trim().toLowerCase();
+  if (!q) return null;
+  for (const [intent, re] of Object.entries(INTENT_KEYWORDS)) {
+    if (re.test(q)) return intent;
+  }
+  return null;
+}
+
+function applyIntentFocus(intent, geo) {
+  // Clean any previous intent state
+  document.body.removeAttribute("data-intent");
+  document.querySelectorAll(".intent-focused-banner, .explore-more-divider").forEach(el => el.remove());
+
+  if (!intent) return;
+
+  const sec = INTENT_TO_SECTION[intent];
+  if (!sec) return;
+
+  document.body.dataset.intent = intent;
+  const placeName = (typeof getDisplayCityForHeadline === "function" ? getDisplayCityForHeadline(geo) : "") || "this place";
+
+  // Focused heading + related-intent chips ("Also try:")
+  const heading = (INTENT_HEADING[intent] || ((p) => `Showing ${intent} near ${p}`))(placeName);
+  const relatedHtml = (INTENT_RELATED[intent] || []).map(r =>
+    `<button type="button" class="intent-related-chip" data-related-intent="${r}">${INTENT_RELATED_LABEL[r] || r}</button>`
+  ).join("");
+  const banner = document.createElement("div");
+  banner.className = "intent-focused-banner";
+  banner.setAttribute("role", "banner");
+  banner.innerHTML = `
+    <div class="intent-focused-eyebrow">Showing your answer first · <b>${escapeHtml(intent.replace(/_/g, " "))}</b></div>
+    <h2 class="intent-focused-title">${escapeHtml(heading)}</h2>
+    ${relatedHtml ? `<div class="intent-related-row"><span class="intent-related-label">Also try:</span>${relatedHtml}</div>` : ""}
+    <button type="button" class="intent-clear-link" data-intent-clear>Show full dashboard instead</button>
+  `;
+
+  // Insert banner BEFORE the primary section's header
+  const secEl = document.getElementById(sec.secId);
+  if (!secEl || !secEl.parentElement) return;
+  secEl.parentElement.insertBefore(banner, secEl);
+
+  // Insert "Explore more around this place" divider AFTER the primary section's card.
+  // If the primary section has no card (utility group with sub-cards), insert
+  // after the section header itself.
+  const cardEl = sec.cardId ? document.getElementById(sec.cardId) : null;
+  const dividerAnchor = cardEl || secEl;
+  if (dividerAnchor.parentElement) {
+    const divider = document.createElement("div");
+    divider.className = "explore-more-divider";
+    divider.innerHTML = `<h2>Explore more around this place</h2>`;
+    // Insert AFTER dividerAnchor (next sibling)
+    dividerAnchor.parentElement.insertBefore(divider, dividerAnchor.nextSibling);
+  }
+
+  // Wire related-intent chips + clear button
+  banner.querySelectorAll(".intent-related-chip[data-related-intent]").forEach(btn => {
+    btn.addEventListener("click", () => applyIntentFocus(btn.dataset.relatedIntent, geo));
+  });
+  banner.querySelector("[data-intent-clear]")?.addEventListener("click", () => applyIntentFocus(null, geo));
+
+  // Scroll to focused section AFTER paint
+  setTimeout(() => secEl.scrollIntoView({ behavior: "smooth", block: "start" }), 200);
+
+  // Trigger sub-tab activation if intent specifies one
+  if (sec.subtab) {
+    setTimeout(() => {
+      const subtab = document.querySelector(`.subtab[data-subtarget="${sec.subtab}"]`);
+      if (subtab) try { subtab.click(); } catch (e) {}
+    }, 350);
+  }
+  if (sec.filterBucket) {
+    setTimeout(() => {
+      const subtab = document.querySelector(`.subtab[data-filter-bucket="${sec.filterBucket}"]`);
+      if (subtab) try { subtab.click(); } catch (e) {}
+    }, 350);
+  }
+
+  console.log(`[intent] focused on "${intent}" → ${sec.secId}`);
+}
+
 function rankByScoreThenDistance(arr) {
   return arr.slice().sort((a, b) => {
     const da = a.dist || 0;
@@ -9473,7 +10237,7 @@ function refreshActiveSubtabFor(cardId) {
   if (!activeSubtab) return;
   const allSubtabs = Array.from(subnav.querySelectorAll(".subtab[data-subtarget]"));
 
-  // v0.38: special-case the Events "Happening this month" tab. It uses curated
+  // v0.38: special-case the Events default listings tab. It uses curated
   // listings (no lat/lon → no map) and we don't want the auto-switch logic to
   // jump away from it just because state.grouped.listings is short.
   const isCuratedListings = cardId === "card-events"
@@ -11749,12 +12513,24 @@ function resolveRisks(addr, lat, lon, zone) {
       // (heat zone, regional AQ). Don't make rough scores sound address-specific.
       { glyph:"💧", title:`${floodScore}/10 Flood Factor`, score:floodScore, desc:floodDesc, url:femaUrl,
         specificity: "Address-specific", specificity_note: "FEMA NFHL flood map — verify on FEMA Map Service Center for exact zone" },
+      // v2.1: Fire score is address-specific ONLY in CA (Cal Fire FHSZ is
+      // parcel-level there). Outside CA it's a state/region rough score, so
+      // label it Area-estimate to keep the trust signal honest.
       { glyph:"🔥", title:`${fireScore}/10 Fire Factor`,   score:fireScore,  desc:fireDesc,  url:wildfireUrl,
-        specificity: "Address-specific in CA", specificity_note: "Cal Fire FHSZ is parcel-level in CA; rougher zones elsewhere" },
+        specificity: (stateCode === "CA" ? "Address-specific" : "Area estimate"),
+        specificity_note: (stateCode === "CA"
+          ? "Cal Fire Fire Hazard Severity Zone — parcel-level in CA"
+          : "Rough state-level wildfire risk — verify on the state forestry agency portal for parcel-level zones") },
       { glyph:"☀️", title:`${heatScore}/10 Heat Factor`,    score:heatScore,  desc:heatDesc,  url:heatUrl,
         specificity: "Area estimate", specificity_note: "Based on climate zone, not your specific address" },
       { glyph:"🌬️", title:`${airScore}/10 Air Factor`,      score:airScore,   desc:airDesc,   url:airUrl,
-        specificity: "Area estimate", specificity_note: "Regional baseline — for live readings see Live Alerts → Air quality" }
+        specificity: "Area estimate", specificity_note: "Regional baseline — for live readings see Live Alerts → Air quality" },
+      // v2.1: General-guidance row — not tied to address or area, just
+      // best-practice for any household. Demonstrates the third specificity
+      // tier and gives users an unambiguous next step.
+      { glyph:"🎒", title: "Emergency prep guidance", score: 0, desc: "Build a 72-hour kit, sign up for local alerts (Nixle / WEA), and know two evacuation routes — applies to any address.",
+        url: "https://www.ready.gov/kit",
+        specificity: "General guidance", specificity_note: "Not address- or area-specific — applies to any household" }
     ]
   };
 }
@@ -11950,8 +12726,8 @@ document.addEventListener("click", (e) => {
       const sub = document.getElementById("correctionModalSub");
       const titleHint = _correctionContextPayload?.title_hint || "";
       if (sub) sub.textContent = titleHint
-        ? `Reporting: "${titleHint.slice(0, 60)}${titleHint.length > 60 ? "…" : ""}". We review every submission.`
-        : "Tell us what's off about this card. We review every submission.";
+        ? `Reporting: "${titleHint.slice(0, 60)}${titleHint.length > 60 ? "…" : ""}". Reports go to the founder's inbox — we read every one, but can't always reply individually.`
+        : "Tell us what's off about this card. Reports go to the founder's inbox — we read every one, but can't always reply individually.";
       modal.hidden = false;
       document.body.style.overflow = "hidden";
     }
@@ -12294,9 +13070,14 @@ function renderRisks(risks) {
                                 : `Generally low risk (max ${maxScore}/10)`;
   setText("risks-headline", `Climate risks · max ${maxScore}/10`);
   setText("risks-summary", summary);
-  // v0.82: per-factor specificity pill (Address-specific vs Area estimate)
-  // makes it visually obvious which scores are parcel-level vs regional rough.
-  const specClass = (s) => /^Address/i.test(s) ? "risk-spec-addr" : "risk-spec-area";
+  // v0.82 / v2.1: per-factor specificity pill — three tiers per Satya's spec.
+  //   Address-specific  → parcel-level data (FEMA NFHL, Cal Fire FHSZ in CA)
+  //   Area estimate     → regional / climate-zone rough scores
+  //   General guidance  → not tied to address or area (emergency-prep tips)
+  const specClass = (s) =>
+    /^Address/i.test(s) ? "risk-spec-addr"
+      : /^General/i.test(s) ? "risk-spec-gen"
+      : "risk-spec-area";
   const html = risks.rows.map(r => `
     <a class="risk-row" href="${r.url}" target="_blank" rel="noopener">
       <div class="risk-glyph">${r.glyph}</div>
@@ -12905,8 +13686,11 @@ async function loadNearbyEvents(geo) {
   // USPS-flavored "San Jose" if they typed Milpitas).
   const cityName = getDisplayCityForHeadline(geo);
   setText("events-value", cityListings.length
-    ? `${cityListings.length} curated event${cityListings.length === 1 ? "" : "s"} for ${cityName} this month`
-    : `Curated listings coming soon for ${cityName} — see venue tabs below`);
+    ? `${cityListings.length} event${cityListings.length === 1 ? "" : "s"} near ${cityName} — pick a tab to filter`
+    : `No source-linked events found yet near ${cityName} — try External sites as a fallback`);
+  // v2.1: refresh per-tab count badges so users see how many events sit
+  // behind each filter before they click.
+  try { _refreshEventTabCounts(cityListings); } catch (e) { console.warn("[event-tab-counts]", e); }
 
   try {
     const elements = await fetchEventVenues(lat, lon);
@@ -12934,13 +13718,13 @@ async function loadNearbyEvents(geo) {
     const grouped = { markets: mergedMarkets };
     renderEvents(grouped, totalCount, getCityKey(geo.address || {}), geo);
     // v0.38: also stash curated listings so refreshActiveSubtabFor can size
-    // the per-subtab pill correctly when "Happening this month" is active.
+    // the per-subtab pill correctly when the default listings tab is active.
     sectionState["card-events"] = { grouped: { ...grouped, listings: cityListings }, geo: { lat, lon } };
     refreshActiveSubtabFor("card-events");
   } catch (err) {
     // v0.37.1: OSM failure — show inline error in OSM-dependent subtabs only.
     // Curated + deep-links are already rendered up front, so they stay valid.
-    const evErr = `<div class="schools-empty" style="padding:14px;line-height:1.55;">Couldn't load OSM venues for this address: ${escapeHtml(err.message || "network error")}.<br>The <b>Happening this month</b> tab still has curated events, and <b>Find events online</b> works as well.</div>`;
+    const evErr = `<div class="schools-empty" style="padding:14px;line-height:1.55;">Couldn't load supplementary OpenStreetMap data: ${escapeHtml(err.message || "network error")}.<br>Curated events still load via the <b>Today / Tonight / This weekend</b> tabs, and <b>External sites</b> remains available as a fallback.</div>`;
     ["events-markets-tbody", "events-worship-tbody", "events-community-tbody"].forEach(id => {
       const el = $(id); if (el) el.innerHTML = evErr;
     });
@@ -13519,6 +14303,10 @@ const EVENT_CAT_META = {
   art:      { icon: "🎨", label: "Art" },
   festival: { icon: "🎉", label: "Festival" },
   library:  { icon: "📚", label: "Library" },
+  // v2.1: dedicated comedy category — "Open Mic", stand-up, improv shouldn't
+  // fall to "other". Both the Worker (tmCategory) and the title-icon rules
+  // map these to "comedy" so the bucket pill + emoji match.
+  comedy:   { icon: "🎭", label: "Comedy" },
   other:    { icon: "📅", label: "Event" }
 };
 
@@ -13794,15 +14582,44 @@ function watchChipHtml(ev) {
   const evId = saveIdForEvent(ev);
   // v0.83: clearer label + auto-expanded state for sports
   const autoExpand = _isSportsEvent(ev);
-  return `<button type="button" class="watch-chip ${autoExpand ? "watch-chip-open" : ""}" data-watch-toggle="${escapeHtml(evId)}"
+  // v2.1: semantic split per Satya's spec.
+  //   confirmed       — the EVENT itself is a watch party / viewing party,
+  //                     Worker sets watch_status="confirmed"
+  //   candidate       — sports game; broadcasters carry the league, but
+  //                     can't guarantee this game is on every option
+  //   ticketed_sports — the underlying record is the in-person ticket
+  const status = ev.watch_status === "confirmed" ? "confirmed"
+    : ev.source_bucket === "ticketed" && _isSportsEvent(ev) ? "ticketed_sports"
+    : "candidate";
+  const labels = {
+    confirmed:        `📺 Confirmed watch event (${ways.length})`,
+    candidate:        `📺 Possible places to watch (${ways.length})`,
+    ticketed_sports:  `📺 Watch from home — broadcaster options (${ways.length})`,
+  };
+  const titles = {
+    confirmed:       "This event is itself a confirmed watch party / viewing party.",
+    candidate:       "These broadcasters carry this league; the specific game may not be on every option — verify before tuning in.",
+    ticketed_sports: "In-person tickets shown on the card. These broadcasters carry the league for at-home viewing.",
+  };
+  return `<button type="button" class="watch-chip watch-chip-${status} ${autoExpand ? "watch-chip-open" : ""}" data-watch-toggle="${escapeHtml(evId)}"
     aria-expanded="${autoExpand ? "true" : "false"}"
-    title="Where to watch this from home — broadcasters that carry this league"
-  >📺 Where to watch (${ways.length})</button>`;
+    title="${escapeHtml(titles[status])}"
+  >${labels[status]}</button>`;
 }
 function watchPanelHtml(ev) {
   const ways = waysToWatchForEvent(ev);
   if (!ways.length) return "";
   const evId = saveIdForEvent(ev);
+  // v2.1: same status taxonomy as the chip — drives the header copy so the
+  // panel content matches the chip the user just opened.
+  const status = ev.watch_status === "confirmed" ? "confirmed"
+    : ev.source_bucket === "ticketed" && _isSportsEvent(ev) ? "ticketed_sports"
+    : "candidate";
+  const headerSubs = {
+    confirmed:       "— this event itself is a watch party / viewing party",
+    candidate:       "— broadcasters that carry this league; specific game may not be on every option, verify before tuning in",
+    ticketed_sports: "— in-person tickets shown above; these broadcasters carry the league for at-home viewing",
+  };
   const rows = ways.map(w => `
     <a class="watch-row" href="${escapeHtml(w.url)}" target="_blank" rel="noopener">
       <span class="watch-badge" style="background:${escapeHtml(w.hue)};">${escapeHtml(w.name.slice(0, 2).toUpperCase())}</span>
@@ -13810,11 +14627,9 @@ function watchPanelHtml(ev) {
       <span class="watch-go">Watch ↗</span>
     </a>
   `).join("");
-  // v0.83: auto-expand for sports events so the user sees options immediately
-  // (per QA2 — wanted "where to watch" more prominent, not behind a toggle).
   const autoExpand = _isSportsEvent(ev);
-  return `<div class="watch-panel" id="watch-panel-${escapeHtml(evId)}"${autoExpand ? "" : " hidden"}>
-    <div class="watch-panel-header">Where to watch <span class="watch-panel-sub">— broadcasters that carry this league; specific game may not be on every option</span></div>
+  return `<div class="watch-panel watch-panel-${status}" id="watch-panel-${escapeHtml(evId)}"${autoExpand ? "" : " hidden"}>
+    <div class="watch-panel-header">Where to watch <span class="watch-panel-sub">${escapeHtml(headerSubs[status])}</span></div>
     ${rows}
   </div>`;
 }
@@ -14243,6 +15058,87 @@ function toggleSaved(item) {
   setSavedItems(current);
   return true;
 }
+// v2.1: shared next-step action row used across event cards. Every event
+// gets at least one primary action (Details), plus the four next-steps
+// from Satya's spec: Add to calendar, Directions, Source, Report issue,
+// plus Save (which lives in the title row, not here). Each control is a
+// real link or button — no ghosts. Empty values gracefully no-render.
+function _gcalLinkForEvent(ev) {
+  // Google Calendar "TEMPLATE" deep-link works across desktop + mobile
+  // browsers and triggers the add-event flow on Android. We use it as
+  // a universal "Add to calendar" affordance (no .ics download dance).
+  if (!ev || !ev.starts) return null;
+  const fmt = (iso) => {
+    try {
+      const d = new Date(iso);
+      if (isNaN(d)) return null;
+      const pad = (n) => String(n).padStart(2, "0");
+      return `${d.getUTCFullYear()}${pad(d.getUTCMonth()+1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
+    } catch (_) { return null; }
+  };
+  const start = fmt(ev.starts);
+  // Default end to start + 2h when worker didn't send one
+  let endIso = ev.ends;
+  if (!endIso) {
+    try { endIso = new Date(new Date(ev.starts).getTime() + 2 * 3600 * 1000).toISOString(); }
+    catch (_) { endIso = ev.starts; }
+  }
+  const end = fmt(endIso);
+  if (!start || !end) return null;
+  const u = new URL("https://www.google.com/calendar/render");
+  u.searchParams.set("action", "TEMPLATE");
+  u.searchParams.set("text", ev.title || "");
+  u.searchParams.set("dates", `${start}/${end}`);
+  if (ev.venue) u.searchParams.set("location", ev.venue);
+  const det = [ev.source ? `Source: ${ev.source}` : "", ev.url ? ev.url : ""].filter(Boolean).join("\n");
+  if (det) u.searchParams.set("details", det);
+  return u.toString();
+}
+function _directionsLinkForEvent(ev) {
+  // Google Maps "directions" URL — works in any browser. Use venue + city
+  // as destination text; the user's current device handles geolocation.
+  if (!ev) return null;
+  const dest = [ev.venue, ev.city, ev.state].filter(Boolean).join(", ");
+  if (!dest && !(ev.lat && ev.lon)) return null;
+  const u = new URL("https://www.google.com/maps/dir/");
+  u.searchParams.set("api", "1");
+  if (ev.lat && ev.lon) u.searchParams.set("destination", `${ev.lat},${ev.lon}`);
+  else u.searchParams.set("destination", dest);
+  return u.toString();
+}
+function _reportPayloadForEvent(ev) {
+  return encodeURIComponent(JSON.stringify({
+    card_id: "card-events",
+    category: "event",
+    title_hint: ev.title || "",
+    venue: ev.venue || "",
+    starts: ev.starts || "",
+    source: ev.source || "",
+    source_url: ev.url || ev.source_url || "",
+  }));
+}
+function eventActionRowHtml(ev) {
+  const cal = _gcalLinkForEvent(ev);
+  const dir = _directionsLinkForEvent(ev);
+  const src = ev.url || ev.source_url;
+  const srcLabel = ev.source || "Source";
+  const verifTag = (ev.source_verified === true || ev.verified === true)
+    ? `<span class="cal-event-verif" title="Source-linked — pulled from a known feed, not Nearnity-reviewed">✓ Source-linked</span>`
+    : "";
+  const buttons = [
+    src ? `<a class="nrny-action nrny-action-primary" href="${escapeHtml(src)}" target="_blank" rel="noopener" aria-label="Open event details">Details →</a>` : "",
+    cal ? `<a class="nrny-action" href="${escapeHtml(cal)}" target="_blank" rel="noopener" aria-label="Add to calendar"><span class="nrny-action-icon">📅</span> Add to calendar</a>` : "",
+    dir ? `<a class="nrny-action" href="${escapeHtml(dir)}" target="_blank" rel="noopener" aria-label="Get directions"><span class="nrny-action-icon">🧭</span> Directions</a>` : "",
+    src ? `<a class="nrny-action nrny-action-source" href="${escapeHtml(src)}" target="_blank" rel="noopener" aria-label="View source — ${escapeHtml(srcLabel)}"><span class="nrny-action-icon">🔗</span> Source: ${escapeHtml(srcLabel)}</a>` : `<span class="nrny-action-disabled" title="No source link available">No source URL</span>`,
+    `<button type="button" class="nrny-action nrny-action-report" data-report-payload="${_reportPayloadForEvent(ev)}" aria-label="Report an issue with this event"><span class="nrny-action-icon">⚠</span> Report issue</button>`,
+  ].filter(Boolean).join("");
+  // Add-ons available pill: when worker grafts add-ons onto a primary card.
+  const addonsPill = (ev.addons_count > 0 || (Array.isArray(ev.add_ons) && ev.add_ons.length))
+    ? `<span class="nrny-action-addons" title="Add-ons (parking, VIP, etc.) bundled with this event">+${ev.addons_count || ev.add_ons.length} add-on${(ev.addons_count || ev.add_ons.length) === 1 ? "" : "s"} available</span>`
+    : "";
+  return `<div class="cal-event-actions">${buttons}${addonsPill}${verifTag}</div>`;
+}
+
 // Build a stable id for an event card so toggle persistence works.
 function saveIdForEvent(ev) {
   const t = (ev.title || "").trim();
@@ -14279,6 +15175,8 @@ document.addEventListener("click", (e) => {
 });
 
 // v0.72: Digest signup widget — appended to Saved view. Sends to /api/digest-signup.
+// v2.1: extended with Preview + Unsubscribe per Satya's "next-step actions"
+// spec — the saved-place workflow has all four primary controls visible.
 function digestSignupWidgetHtml() {
   return `<div class="digest-widget" id="digestWidget">
     <div class="digest-widget-icon">📬</div>
@@ -14289,9 +15187,94 @@ function digestSignupWidgetHtml() {
         <input type="email" name="email" placeholder="you@example.com" required />
         <button type="submit" class="btn-primary">Subscribe</button>
       </form>
+      <div class="digest-actions">
+        <button type="button" class="nrny-tail-btn" id="digestPreviewBtn" aria-label="Preview the weekly digest">📰 Preview weekly digest</button>
+        <button type="button" class="nrny-tail-btn nrny-tail-report" id="digestUnsubBtn" aria-label="Unsubscribe from weekly updates">🚫 Unsubscribe</button>
+      </div>
       <div class="digest-status" id="digestStatus"></div>
+      <div class="digest-preview" id="digestPreview" hidden></div>
     </div>
   </div>`;
+}
+
+// v2.1: Preview / Unsubscribe handlers — wired once at load.
+document.addEventListener("click", (e) => {
+  if (e.target.id === "digestPreviewBtn") {
+    const preview = document.getElementById("digestPreview");
+    if (!preview) return;
+    const items = getSavedItems();
+    const cityName = (typeof getDisplayCityForHeadline === "function" && lastGeo)
+      ? getDisplayCityForHeadline(lastGeo) : "your saved place";
+    const sample = items.slice(0, 5).map(it => `<li><b>${escapeHtml(it.title || "")}</b>${it.subtitle ? ` — <span style="color:#475569;">${escapeHtml(it.subtitle)}</span>` : ""}</li>`).join("") || `<li class="hint">Save some events or resources first — they'll preview here.</li>`;
+    preview.hidden = false;
+    preview.innerHTML = `<div class="digest-preview-card">
+      <div class="digest-preview-eyebrow">Sample Weekly Digest for ${escapeHtml(cityName)}</div>
+      <div class="digest-preview-headline">This week near you</div>
+      <ul class="digest-preview-list">${sample}</ul>
+      <div class="digest-preview-foot">Each Sunday morning — events for the upcoming week, plus any active alerts or new resources.</div>
+    </div>`;
+    return;
+  }
+  if (e.target.id === "digestUnsubBtn") {
+    try { localStorage.setItem("nearnity:digest:unsubscribed:v1", "1"); } catch (_) {}
+    const status = document.getElementById("digestStatus");
+    if (status) {
+      status.className = "digest-status digest-status-info";
+      status.textContent = "Unsubscribed on this device. If you previously subscribed by email, also click the unsubscribe link in any digest email.";
+    }
+    return;
+  }
+});
+
+// v2.1: Saved-place callout — appears under the resolved address after a
+// search resolves. Surfaces the saved-place workflow without forcing users
+// to navigate to the Saved tab first. Visible only when a search has
+// resolved (body.has-location) AND when the user has not already saved a
+// place at this address (idempotent — avoids nagging).
+function renderSavedPlaceCallout(geo) {
+  if (!geo) return;
+  const host = document.getElementById("sub-myhome-address");
+  if (!host) return;
+  const existing = document.getElementById("nrnySavedPlaceCallout");
+  if (existing) existing.remove();
+  const placeName = (typeof getDisplayCityForHeadline === "function" ? getDisplayCityForHeadline(geo) : "") || "this place";
+  const saveId = `place::${(geo.display_name || "").trim()}`;
+  const item = {
+    id: saveId,
+    type: "place",
+    title: placeName,
+    subtitle: geo.display_name || "",
+    url: null,
+    lat: geo.lat, lon: geo.lon,
+  };
+  const saved = isSaved(saveId);
+  const callout = document.createElement("div");
+  callout.id = "nrnySavedPlaceCallout";
+  callout.className = "nrny-saved-callout";
+  callout.innerHTML = `
+    <div class="nrny-saved-callout-icon">📍</div>
+    <div class="nrny-saved-callout-body">
+      <div class="nrny-saved-callout-title">${saved ? `Saved · ${escapeHtml(placeName)}` : `Save ${escapeHtml(placeName)} as your place`}</div>
+      <div class="nrny-saved-callout-sub">Keep this address for one-tap lookup later, and opt in to a free weekly digest of events + alerts.</div>
+      <div class="nrny-saved-callout-actions">
+        ${saveStarButtonHtml(item).replace('class="save-star ', 'class="save-star nrny-saved-callout-star ')}
+        <a class="nrny-tail-btn" href="#sec-saved" data-jump-saved>📬 Email me weekly updates</a>
+        <button type="button" class="nrny-tail-btn" data-jump-saved-preview>📰 Preview weekly digest</button>
+      </div>
+    </div>
+  `;
+  host.appendChild(callout);
+  callout.querySelector("[data-jump-saved]")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    const tab = document.querySelector('.cat-tab[data-cat="saved"], .sec-tab[data-target="sec-saved"]');
+    if (tab) tab.click();
+    setTimeout(() => document.getElementById("digestForm")?.querySelector('input[type=email]')?.focus(), 250);
+  });
+  callout.querySelector("[data-jump-saved-preview]")?.addEventListener("click", () => {
+    const tab = document.querySelector('.cat-tab[data-cat="saved"], .sec-tab[data-target="sec-saved"]');
+    if (tab) tab.click();
+    setTimeout(() => document.getElementById("digestPreviewBtn")?.click(), 250);
+  });
 }
 
 // Render the "Saved" tab content. Called when user activates the Saved category.
@@ -14473,6 +15456,51 @@ function eventsByBucket(events, b) {
 }
 function setEventsTimeWindow(w) {
   try { localStorage.setItem(TIME_WINDOW_KEY, w); } catch (e) {}
+}
+
+// v2.1: Per-tab event-count badges. Each subtab in the Events subnav gets a
+// `(N)` suffix showing how many events live behind that filter. Refresh once
+// per search after events resolve. Tabs already carry data-filter-window
+// (today / tonight / weekend / month) and data-filter-bucket (community /
+// kids_family / markets / farm_u_pick / volunteer / ticketed / ticketed_sports
+// / watch) so we can compute counts the same way the active-tab filter does.
+function _refreshEventTabCounts(events) {
+  const subnav = document.querySelector('.subnav[data-subnav-for="card-events"]');
+  if (!subnav) return;
+  const all = Array.isArray(events) ? events : [];
+  const subtabs = subnav.querySelectorAll(".subtab");
+  subtabs.forEach(tab => {
+    let count = null;
+    const win = tab.dataset.filterWindow;
+    const bucket = tab.dataset.filterBucket;
+    const target = tab.dataset.subtarget;
+    if (win || bucket) {
+      let pool = all;
+      if (win) pool = eventsInWindow(pool, win);
+      if (bucket && bucket !== "all") pool = eventsByBucket(pool, bucket);
+      count = pool.length;
+    } else if (target === "events-markets-section") {
+      // Markets tab uses OSM venues, not the curated events list. We don't
+      // have those at this point — leave the count off (the user will see
+      // a separate "N markets" header inside the panel itself).
+      count = null;
+    } else if (target === "events-online-section") {
+      // External sites is a fallback set of deep-links — show "fallback"
+      // pill instead of a count to underline that it isn't a primary source.
+      count = "fallback";
+    }
+    // Re-render the label: strip any existing badge, then append.
+    const baseLabel = (tab.dataset.baseLabel || tab.textContent || "").replace(/\s*\([\d,]+\)\s*$/, "").replace(/\s*\(fallback\)\s*$/, "").trim();
+    if (!tab.dataset.baseLabel) tab.dataset.baseLabel = baseLabel;
+    if (count === null || count === undefined) {
+      tab.innerHTML = escapeHtml(baseLabel);
+    } else if (count === "fallback") {
+      tab.innerHTML = `${escapeHtml(baseLabel)} <span class="subtab-count subtab-count-muted">fallback</span>`;
+    } else {
+      const cls = count === 0 ? "subtab-count subtab-count-zero" : "subtab-count";
+      tab.innerHTML = `${escapeHtml(baseLabel)} <span class="${cls}">${count}</span>`;
+    }
+  });
 }
 function eventsInWindow(events, w) {
   if (!events || !events.length || !w || w === "month") return events;
@@ -14812,7 +15840,7 @@ function _renderFlatEventList(events, timeWindow) {
         <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${trustPill} ${star} ${watchChip}</div>
         ${venue}
         ${metaRow}
-        <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
+        ${eventActionRowHtml(ev)}
         ${watchPanel}
       </div>
     </div>`;
@@ -14963,7 +15991,7 @@ function _renderCalendarAgenda(byDate, selectedDate, todayKey) {
       <div class="cal-event-body">
         <div class="cal-event-title">${iconForEvent(ev)} ${escapeHtml(ev.title)} ${free}${distTag}${seriesTag}${bucketTag} ${star} ${watchChip}</div>
         ${venue}
-        <div class="cal-event-actions">${link}<span class="hint">via ${escapeHtml(ev.source || "")} ${verifTag}</span></div>
+        ${eventActionRowHtml(ev)}
         ${watchPanel}
       </div>
     </div>`;
@@ -15295,7 +16323,57 @@ function rowActionsHtml(r) {
     if (ph) secondary.push(`<a href="tel:${escapeHtml(ph)}" title="Call ${escapeHtml(r.phone)}" aria-label="Call">📞</a>`);
   }
   const secHtml = secondary.length ? `<span class="act-secondary">${secondary.join("")}</span>` : "";
-  return primaryHtml + secHtml;
+  // v2.1: Append the standard next-step tail (Save / Source / Report) to
+  // every help/health card per Satya's spec. Save uses the existing
+  // localStorage star system, Source falls back to the row's source URL or
+  // upstream agency, Report opens the existing correction modal.
+  const tail = rowActionsTailHtml(r, "help");
+  return primaryHtml + secHtml + tail;
+}
+
+// v2.1: shared tail for help / official / utility / risk cards.
+// `type` controls the report-payload routing + verify-source label nuance.
+function rowActionsTailHtml(r, type) {
+  // SAVE — only when we have enough to identify the item later.
+  const saveId = (r.id || r.url || r.name)
+    ? `poi::${(r.name || r.title || "").trim()}::${(r.url || "").trim()}`
+    : null;
+  const saveItem = saveId ? {
+    id: saveId,
+    type: type === "help" ? "help" : (type === "service" ? "service" : "place"),
+    title: r.name || r.title || "Saved item",
+    subtitle: [r.address, r.scope].filter(Boolean).join(" · ") || (r.url || ""),
+    url: r.url || null,
+    phone: r.phone || null,
+  } : null;
+  const saveBtn = saveItem ? saveStarButtonHtml(saveItem) : "";
+  // SOURCE — preferred order: explicit source_url, then url, then known agency.
+  const srcUrl = r.source_url || r.url || null;
+  const srcLabel = r.source || (type === "official" ? "Official source" : "Source");
+  let sourceBtn = "";
+  if (srcUrl) {
+    sourceBtn = `<a class="nrny-tail-btn nrny-tail-source" href="${escapeHtml(srcUrl)}" target="_blank" rel="noopener" aria-label="View source — ${escapeHtml(srcLabel)}" title="${escapeHtml(srcLabel)}">🔗 Source</a>`;
+  } else {
+    sourceBtn = `<span class="nrny-tail-btn nrny-tail-source-missing" title="No source URL on this card">🔗 No source</span>`;
+  }
+  // VERIFY (only for official-link / utility / risk cards — distinct from Source)
+  let verifyBtn = "";
+  if (type === "official" || type === "service" || type === "risk") {
+    if (srcUrl) {
+      verifyBtn = `<a class="nrny-tail-btn nrny-tail-verify" href="${escapeHtml(srcUrl)}" target="_blank" rel="noopener" aria-label="Verify with official source"><span class="nrny-action-icon">🔎</span> Verify with official source</a>`;
+    }
+  }
+  // REPORT — always wired
+  const payload = encodeURIComponent(JSON.stringify({
+    card_id: r._card_id || `card-${type}`,
+    category: type,
+    title_hint: r.name || r.title || "",
+    address: r.address || "",
+    source: r.source || "",
+    source_url: srcUrl || "",
+  }));
+  const reportBtn = `<button type="button" class="nrny-tail-btn nrny-tail-report" data-report-payload="${payload}" aria-label="Report an issue with this item">⚠ Report issue</button>`;
+  return `<span class="nrny-tail">${verifyBtn}${sourceBtn}${saveBtn}${reportBtn}</span>`;
 }
 
 // v0.89: add explicit trust_label rendering. Falls back to inferring from
@@ -15918,6 +16996,9 @@ function renderResults(geo) {
   // un-hide loading placeholders that should ONLY appear after a search.
   document.body.classList.add("has-location");
   document.body.classList.remove("idle-state");
+  // v2.1: surface the saved-place workflow under the resolved address so
+  // users can star/subscribe/preview without first navigating to Saved.
+  try { renderSavedPlaceCallout(geo); } catch (e) { console.warn("[saved-callout]", e); }
   // v2.0.1: cache the resolved geo so returning visitors land on results
   // instantly (no re-search needed). Capped to address + lat/lon — no PII.
   try {
@@ -15972,9 +17053,9 @@ function renderResults(geo) {
   // Reset loaded flags so any new search starts fresh
   for (const k of Object.keys(sectionLoadedOnce)) delete sectionLoadedOnce[k];
 
-  // v0.38: Force Events subtab back to "Happening this month" on every new
-  // search. Otherwise the user's previous subtab choice (e.g., Farmers markets)
-  // sticks across address changes and hides the curated answer behind a click.
+  // v0.38: Force Events subtab back to the default "Today" listings on every
+  // new search. Otherwise the user's previous subtab choice (e.g. Farmers
+  // markets) sticks across address changes and hides the default answer.
   // This way every new address lands on the most-informative tab.
   const eventsSubnav = document.querySelector('.subnav[data-subnav-for="card-events"]');
   if (eventsSubnav) {
@@ -16000,6 +17081,15 @@ function renderResults(geo) {
       try { runLandingFromDropdown(intent.catKey, intent.targetSection, intent.scrollTo); } catch (e) { dlog("[intent] error", e); }
     }, 250);
   }
+
+  // v2.1: INTENT-FIRST search. Detect what the user is asking for and route
+  // the result page to the matching answer section. Full dashboard becomes
+  // secondary under "Explore more around this place".
+  try {
+    const q = (document.getElementById("q-input")?.value || "").trim();
+    const intent = detectQueryIntent(q);
+    applyIntentFocus(intent, geo);
+  } catch (e) { console.warn("[intent-first]", e); }
 }
 
 // v0.35.5: lazy-load registry — section header id → load fn that needs the
@@ -16169,8 +17259,8 @@ document.addEventListener("click", (e) => {
 // desc = one-line hint.
 const SERVICE_QUERIES = [
   { q: "farmers market",        target: "sec-events",           subtab: "events-markets-section",    desc: "Local farmers markets + farm stands" },
-  { q: "events",                target: "sec-events",           subtab: "events-listings-section",   desc: "What's happening this month" },
-  { q: "what's happening",      target: "sec-events",           subtab: "events-listings-section",   desc: "Calendar of curated events" },
+  { q: "events",                target: "sec-events",           subtab: "events-listings-section",   desc: "Today, Tonight, This weekend + Free / Kids / Markets / Ticketed" },
+  { q: "what's happening",      target: "sec-events",           subtab: "events-listings-section",   desc: "Events near you — pick a tab to filter" },
   { q: "church",                target: "sec-events",           subtab: "events-worship-section",    desc: "Churches, temples, mosques" },
   { q: "community center",      target: "sec-events",           subtab: "events-community-section",  desc: "Community centers + programs" },
   { q: "school",                target: "sec-schools",          subtab: null,                        desc: "Schools — public, private, charter" },
