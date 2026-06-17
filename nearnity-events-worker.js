@@ -1,0 +1,3085 @@
+/**
+ * Nearnity Events Aggregator — Cloudflare Worker
+ *
+ * Aggregates public events from multiple sources for a given lat/lon/radius:
+ *   1. Ticketmaster Discovery API   (concerts, sports, theater, family)
+ *   2. SeatGeek Events API           (concerts, sports, theater)
+ *   3. City iCal feeds (CivicPlus / other gov platforms) for civic events
+ *
+ * Endpoint:
+ *   GET /api/events?lat=37.55&lon=-122.05&radius=10[&city=fremont&state=CA]
+ *
+ * Bindings (set in Cloudflare dashboard):
+ *   - TICKETMASTER_KEY   (env var, Ticketmaster Discovery API consumer key)
+ *   - SEATGEEK_CLIENT_ID (env var, SeatGeek client ID)
+ *   - EVENTS_KV          (KV namespace binding, for response caching)
+ *
+ * Cache strategy:
+ *   - Each request is keyed by rounded lat/lon + radius
+ *   - Cached responses live 1 hour (events change frequently)
+ *   - ?nocache=1 query bypasses the cache (useful for debugging)
+ *
+ * Response shape:
+ *   {
+ *     events: [
+ *       { title, venue, city, state, lat, lon, starts, ends, category, url, source, verified, free },
+ *       ...
+ *     ],
+ *     cached: boolean,
+ *     sources: { ticketmaster: <count|"error">, seatgeek: ..., civic: ... }
+ *   }
+ *
+ * Author: Satya (with Claude) — v1, 2026-05-25
+ */
+
+export default {
+  // v0.98: Cloudflare cron trigger fires this on the schedule defined in
+  // wrangler.toml's [triggers] crons array. Set to weekly Mondays at 6am PT.
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(scheduledDigest(event, env, ctx));
+  },
+  async fetch(request, env, ctx) {
+    if (request.method === "OPTIONS") return cors();
+
+    const url = new URL(request.url);
+
+    // Health check — v0.74: includes `worker_version` so you can verify the
+    // Worker actually got redeployed after pasting + Save and deploy.
+    if (url.pathname.endsWith("/health")) {
+      return json({
+        status: "ok",
+        worker_version: "v2.0",   // bump this every time worker changes — v2.0: + 22 more non-ticketed seed events (libraries, museums, volunteer) + distance secondary sort
+        endpoints: [
+          "/health", "/events", "/alerts", "/quakes", "/aqi",
+          "/parks-nps", "/recreation", "/correction", "/digest-signup",
+          "/electric-hifld",
+          // v0.92 — Source Network + Farm + Community Capture
+          "/sources", "/farm-experiences",
+          "/submit-event", "/claim-organizer",
+          "/admin/queue", "/admin/approve",
+        ],
+        ticketmaster:  env.TICKETMASTER_KEY  ? "configured" : "missing",
+        seatgeek:      env.SEATGEEK_CLIENT_ID ? "configured" : "missing",
+        airnow:        env.AIRNOW_KEY        ? "configured" : "missing (optional)",
+        nps:           env.NPS_KEY           ? "configured" : "missing (optional)",
+        ridb:          env.RIDB_KEY          ? "configured" : "missing (optional)",
+        resend:        env.RESEND_API_KEY    ? "configured" : "missing (optional)",
+        admin:         env.ADMIN_SECRET      ? "configured" : "missing (admin queue endpoints will 401)",
+        kv:            env.EVENTS_KV         ? "bound" : "missing",
+        time: new Date().toISOString(),
+      });
+    }
+
+    // v0.70: NWS active weather alerts (free, no key)
+    if (url.pathname.endsWith("/alerts")) {
+      return await handleAlerts(url, env, ctx);
+    }
+    // v0.70: USGS earthquakes near a point (free, no key)
+    if (url.pathname.endsWith("/quakes")) {
+      return await handleQuakes(url, env, ctx);
+    }
+    // v0.70: AirNow current AQI (needs AIRNOW_KEY)
+    if (url.pathname.endsWith("/aqi")) {
+      return await handleAirNow(url, env, ctx);
+    }
+    // v0.70: NPS parks near point (needs NPS_KEY)
+    if (url.pathname.endsWith("/parks-nps")) {
+      return await handleNPS(url, env, ctx);
+    }
+    // v0.70: RIDB recreation sites near point (needs RIDB_KEY)
+    if (url.pathname.endsWith("/recreation")) {
+      return await handleRIDB(url, env, ctx);
+    }
+    // v0.72: Corrections / Report / Submit endpoint (POST)
+    if (url.pathname.endsWith("/correction")) {
+      return await handleCorrection(request, env, ctx);
+    }
+    // v0.72: Digest signup endpoint (POST) — saves email to KV for weekly send
+    if (url.pathname.endsWith("/digest-signup")) {
+      return await handleDigestSignup(request, env, ctx);
+    }
+    // v0.72: HIFLD electric retail service territory lookup (free, no key)
+    if (url.pathname.endsWith("/electric-hifld")) {
+      return await handleElectricHIFLD(url, env, ctx);
+    }
+    // v0.92: Community Capture — submission endpoints (write to KV pools, no auto-publish)
+    if (url.pathname.endsWith("/submit-event"))     { return await handleSubmitEvent(request, env, ctx); }
+    if (url.pathname.endsWith("/claim-organizer"))  { return await handleClaimOrganizer(request, env, ctx); }
+    if (url.pathname.endsWith("/admin/queue"))      { return await handleAdminQueue(request, env, ctx); }
+    if (url.pathname.endsWith("/admin/approve"))    { return await handleAdminApprove(request, env, ctx); }
+    // v0.97: Real Recommend/Claim/Request forms (per Launch_Ready_W1 LB Goal 8)
+    if (url.pathname.endsWith("/recommend-pro"))    { return await handleRecommendPro(request, env, ctx); }
+    if (url.pathname.endsWith("/request-help"))     { return await handleRequestHelp(request, env, ctx); }
+    // v0.92: Farm & U-Pick — seasonal directory
+    if (url.pathname.endsWith("/farm-experiences")) { return await handleFarmExperiences(url, env, ctx); }
+    // v0.92: Source Network introspection — adapter registry status
+    if (url.pathname.endsWith("/sources"))          { return await handleSourcesIntrospection(url, env, ctx); }
+    // v1.5: Watch candidates (Phase 4 part 2) — OSM bars/pubs/sports-centers
+    // that MIGHT show sports. Always labeled "call to confirm" — never claimed.
+    if (url.pathname.endsWith("/watch-candidates")) { return await handleWatchCandidates(url, env, ctx); }
+
+    // Main route — anything ending in /events
+    if (!url.pathname.endsWith("/events")) {
+      return json({ error: "Not found. See /api/health for available endpoints." }, 404);
+    }
+
+    const lat = parseFloat(url.searchParams.get("lat"));
+    const lon = parseFloat(url.searchParams.get("lon"));
+    const radius = clamp(parseInt(url.searchParams.get("radius") || "10"), 1, 50);
+    const city = (url.searchParams.get("city") || "").toLowerCase().trim();
+    const state = (url.searchParams.get("state") || "").toUpperCase().trim();
+    // v2: user's search query — when present, narrows results to matching events
+    const keyword = (url.searchParams.get("q") || url.searchParams.get("keyword") || "").trim().slice(0, 80);
+    const nocache = url.searchParams.has("nocache");
+
+    if (!isFinite(lat) || !isFinite(lon)) {
+      return json({ error: "lat and lon required (numeric)" }, 400);
+    }
+
+    // Cache key: bucket by 0.01° (~1km) so nearby queries hit the same cache.
+    // Include keyword so a "football" search caches separately from generic events.
+    const kwKey = keyword ? `:q=${keyword.toLowerCase().replace(/\s+/g, "_")}` : "";
+    // v2.1: bump cache prefix v2→v3→v4 to invalidate entries written before
+    // (a) hard-radius enforcement and (b) add-on partitioning. Old entries
+    // may contain rows outside the requested radius OR is_addon_or_package
+    // upsells that we now filter from the primary stream. Letting them
+    // replay would leak into the frontend's cards.
+    const cacheKey = `events:v4:${lat.toFixed(2)}:${lon.toFixed(2)}:${radius}:${state}:${city}${kwKey}`;
+
+    if (!nocache && env.EVENTS_KV) {
+      const cached = await env.EVENTS_KV.get(cacheKey, "json");
+      if (cached) {
+        // v2.1: on cache hit, partition by (a) add-on flag and (b) radius
+        // so the response shape matches a fresh fetch. Cache writes already
+        // store `primary_events` (not `publishable`), so add-on partitioning
+        // is largely a no-op here, but we re-run the filter as belt-and-
+        // suspenders against any pre-v4 entries that might survive.
+        let _cachedAddons = 0;
+        const _primary = [];
+        for (const e of (cached.events || [])) {
+          if (e.is_addon_or_package === true) { _cachedAddons++; continue; }
+          _primary.push(e);
+        }
+        const _within = [];
+        const _far = [];
+        let _excluded = 0;
+        for (const e of _primary) {
+          if (typeof e.distance_miles === "number" && e.distance_miles > radius) {
+            _far.push(e);
+            _excluded++;
+          } else {
+            _within.push(e);
+          }
+        }
+        return json({
+          events: _within,
+          cached: true,
+          sources: cached.sources,
+          radius_miles_requested: radius,
+          radius_filter_applied: true,
+          excluded_by_radius_count: _excluded,
+          regional_day_trip_count: _far.filter(e => (e.distance_miles || 0) <= radius * 2).length,
+          weekend_trip_count: _far.filter(e => (e.distance_miles || 0) > radius * 2).length,
+          hidden_counts: {
+            add_ons: _cachedAddons,
+            add_ons_attached_to_parent: 0,
+            add_ons_hidden_no_parent: _cachedAddons,
+          },
+        });
+      }
+    }
+
+    // Fetch from all three sources in parallel — partial failures don't kill the response.
+    // v0.92: ALSO pull manual_admin events from KV (approved community submissions),
+    // generic ICS/RSS feeds declared in EVENT_SOURCES, plus farm-experience flagged
+    // entries. Adapter framework lives at the bottom of this file. Existing fetchers
+    // remain so the route stays backward-compatible.
+    const [tm, sg, civic, manualAdmin, extraAdapters] = await Promise.allSettled([
+      fetchTicketmaster(lat, lon, radius, env.TICKETMASTER_KEY, keyword),
+      fetchSeatGeek(lat, lon, radius, env.SEATGEEK_CLIENT_ID, keyword),
+      city && state ? fetchCityCivic(city, state, keyword) : Promise.resolve([]),
+      fetchManualAdminEvents(env, { lat, lon, radius, city, state, keyword }),
+      runExtraAdapters(env, { lat, lon, radius, city, state, keyword }),
+    ]);
+
+    const tmEvents = tm.status === "fulfilled" ? tm.value : [];
+    const sgEvents = sg.status === "fulfilled" ? sg.value : [];
+    const civicEvents = civic.status === "fulfilled" ? civic.value : [];
+    const manualEvents = manualAdmin.status === "fulfilled" ? manualAdmin.value : [];
+    const extraEvents = extraAdapters.status === "fulfilled" ? extraAdapters.value : [];
+
+    const all = [...tmEvents, ...sgEvents, ...civicEvents, ...manualEvents, ...extraEvents];
+
+    // v2.1: Normalize strings — trim whitespace, title-case city. Small dirty-data
+    // issues (e.g. " san jose" with leading space) make the whole product feel
+    // less trustworthy. Flagged by ChatGPT review of v0.65.
+    for (const e of all) {
+      if (e.title) e.title = String(e.title).trim();
+      if (e.venue) e.venue = String(e.venue).trim().replace(/\s+/g, " ");
+      if (e.city) e.city = String(e.city).trim().toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+      if (e.state) e.state = String(e.state).trim().toUpperCase().slice(0, 2);
+    }
+
+    // v2.1: Filter add-on / experience / parking / VIP events. Ticketmaster
+    // returns standalone records for "Sierra Nevada Concert Experience: Mana"
+    // (an add-on, not a separate neighborhood event). Drop these so the feed
+    // doesn't get cluttered with promotional upsells.
+    const ADDON_KEYWORDS = /\b(parking|VIP package|VIP experience|lounge|add[- ]?on|upgrade|prepaid pass|sponsor experience|meet[- ]and[- ]greet|VIP entry)\b/i;
+    const addonsFiltered = all.filter(e => !ADDON_KEYWORDS.test(e.title || ""));
+
+    // v2.1: Compute distance_miles per event from user's lat/lon. ChatGPT
+    // flagged this as essential — frontend ranks/displays distance and
+    // shouldn't have to recompute it per item.
+    const haversineMiles = (lat1, lon1, lat2, lon2) => {
+      const R = 3958.8;
+      const toRad = d => (d * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    };
+    for (const e of addonsFiltered) {
+      if (typeof e.lat === "number" && typeof e.lon === "number") {
+        e.distance_miles = +(haversineMiles(lat, lon, e.lat, e.lon)).toFixed(2);
+      } else {
+        e.distance_miles = null;
+      }
+    }
+
+    // v0.79: add local-time display fields per ChatGPT QA2 review.
+    // Frontend was getting only UTC `starts`; "Today/Tonight/This weekend"
+    // logic was fragile because of TZ conversion. Now we infer a per-state
+    // timezone (defaults to user's lat/lon-derived guess) and emit:
+    //   starts_utc      — same as `starts` for backwards compat
+    //   starts_local    — ISO with the local offset
+    //   timezone        — IANA tz string e.g. "America/Los_Angeles"
+    //   display_date    — "Fri, May 29"
+    //   display_time    — "7:30 PM"
+    const tzForState = (st) => {
+      const map = {
+        CA:"America/Los_Angeles", WA:"America/Los_Angeles", OR:"America/Los_Angeles", NV:"America/Los_Angeles",
+        AZ:"America/Phoenix", UT:"America/Denver", CO:"America/Denver", NM:"America/Denver", MT:"America/Denver", WY:"America/Denver", ID:"America/Denver",
+        TX:"America/Chicago", OK:"America/Chicago", KS:"America/Chicago", NE:"America/Chicago", SD:"America/Chicago", ND:"America/Chicago",
+        MN:"America/Chicago", IA:"America/Chicago", MO:"America/Chicago", AR:"America/Chicago", LA:"America/Chicago",
+        WI:"America/Chicago", IL:"America/Chicago", AL:"America/Chicago", MS:"America/Chicago", TN:"America/Chicago",
+        IN:"America/Indiana/Indianapolis", KY:"America/New_York", OH:"America/New_York", MI:"America/Detroit",
+        FL:"America/New_York", GA:"America/New_York", SC:"America/New_York", NC:"America/New_York", VA:"America/New_York", WV:"America/New_York",
+        PA:"America/New_York", NY:"America/New_York", NJ:"America/New_York", DE:"America/New_York", MD:"America/New_York",
+        CT:"America/New_York", RI:"America/New_York", MA:"America/New_York", VT:"America/New_York", NH:"America/New_York", ME:"America/New_York", DC:"America/New_York",
+        AK:"America/Anchorage", HI:"Pacific/Honolulu",
+      };
+      return map[(st || "").toUpperCase()] || "America/Los_Angeles";
+    };
+    const fmtInTz = (iso, tz, opts) => {
+      try { return new Date(iso).toLocaleString("en-US", { ...opts, timeZone: tz }); }
+      catch (_) { return ""; }
+    };
+    for (const e of addonsFiltered) {
+      if (!e.starts) { continue; }
+      const tz = tzForState(e.state);
+      e.timezone = tz;
+      e.starts_utc = e.starts;
+      // For display, format in the event's local tz
+      try {
+        e.display_date = fmtInTz(e.starts, tz, { weekday: "short", month: "short", day: "numeric" });
+        e.display_time = fmtInTz(e.starts, tz, { hour: "numeric", minute: "2-digit", hour12: true });
+      } catch (_) {}
+      // Build a starts_local string with the local offset. Best-effort.
+      // v0.90: ALSO add local_day_key + local_weekend_key for time-window
+      // grouping. Spec from Launch_Ready_W1 Goal 3.
+      try {
+        const d = new Date(e.starts);
+        // Offset for that tz at that instant
+        const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(d);
+        const offPart = parts.find(p => p.type === "timeZoneName");
+        let off = offPart ? offPart.value.replace("GMT", "") : "";
+        // v0.90: normalize offset to "-07:00" / "+05:30" format. Was "-7".
+        if (off) {
+          const offM = off.match(/^([+-])(\d{1,2})(?::?(\d{2}))?$/);
+          if (offM) {
+            off = `${offM[1]}${offM[2].padStart(2, "0")}:${offM[3] || "00"}`;
+          } else {
+            off = "";
+          }
+        }
+        // ISO local: format Y-M-DTH:M:S then append offset
+        const local = fmtInTz(e.starts, tz, { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false });
+        // local is like "05/30/2026, 07:30:00" — normalize
+        const m = local.match(/(\d{2})\/(\d{2})\/(\d{4}),?\s+(\d{2}):(\d{2}):(\d{2})/);
+        if (m) {
+          e.starts_local = `${m[3]}-${m[1]}-${m[2]}T${m[4]}:${m[5]}:${m[6]}${off || ""}`;
+          e.starts_local_iso = e.starts_local;  // alias per spec
+          // local_day_key — YYYY-MM-DD in event's local tz
+          e.local_day_key = `${m[3]}-${m[1]}-${m[2]}`;
+          // local_weekend_key — ISO week (YYYY-Www) of the event in local tz
+          try {
+            const localDate = new Date(`${m[3]}-${m[1]}-${m[2]}T${m[4]}:${m[5]}:${m[6]}${off || "+00:00"}`);
+            // ISO week calculation
+            const dd = new Date(Date.UTC(localDate.getFullYear(), localDate.getMonth(), localDate.getDate()));
+            const dayNum = dd.getUTCDay() || 7;
+            dd.setUTCDate(dd.getUTCDate() + 4 - dayNum);
+            const yearStart = new Date(Date.UTC(dd.getUTCFullYear(), 0, 1));
+            const weekNum = Math.ceil((((dd - yearStart) / 86400000) + 1) / 7);
+            e.local_weekend_key = `${dd.getUTCFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+          } catch (_) {}
+        }
+      } catch (_) {}
+
+      // v0.90: add-on / package detection per spec. Mark `is_addon_or_package`
+      // when title/source matches add-on keywords. The deduper above already
+      // FILTERS most addons out, but flagging here is belt-and-suspenders.
+      const ADDON_KW = /\b(parking|vip|lounge|experience|upgrade|add[- ]?on|package|hospitality|presale|pass)\b/i;
+      const _title = (e.title || "") + " " + (e.source || "");
+      e.is_addon_or_package = ADDON_KW.test(_title);
+    }
+
+    // v2.1: Rename ambiguous `verified` field. ChatGPT correctly flagged that
+    // every Ticketmaster row being "verified: true" reads as "Nearnity-verified
+    // community event" — overpromising. Now:
+    //   source_verified: API returned a structured record from a known source
+    //   nearnity_verified: human-reviewed by Nearnity (always false at V1)
+    //
+    // v2.2: source_bucket — Satya picked the 3-bucket taxonomy. Each event
+    // gets labeled by where it came from so the frontend can color-pill it
+    // and offer "Show only Official/Community/Ticketed" filtering later.
+    const _nowIso = new Date().toISOString();
+    for (const e of addonsFiltered) {
+      e.source_verified = e.verified === true;
+      e.nearnity_verified = false;
+      // Bucket inference from the event's source string + title/category.
+      // v0.92: STRICT rule per Source Network spec — Ticketmaster/SeatGeek
+      // ONLY land in "ticketed". They never leak into community/free/markets
+      // even if their title says "Free outdoor concert" — those rows can't
+      // be trusted as free without secondary verification.
+      const src = (e.source || "").toLowerCase();
+      const titleCat = ((e.title || "") + " " + (e.category || "")).toLowerCase();
+      if (src.includes("ticketmaster") || src.includes("seatgeek") || src.includes("ticketweb")) {
+        e.source_bucket = "ticketed";
+        e.trust_label = "Ticketed event source";
+        e.confidence = "high";
+      } else if (src.includes("nearnity-reviewed") || src.includes("nearnity reviewed")) {
+        // Approved community submission — admin reviewed, gets a higher trust label
+        e.source_bucket = "community";
+        e.trust_label = "Nearnity reviewed";
+        e.confidence = "high";
+        e.nearnity_verified = true;
+      } else if (src.includes("community submitted") || src.includes("user-submitted")) {
+        e.source_bucket = "community";
+        e.trust_label = "Community submitted";
+        e.confidence = "low";
+      } else if (src.includes("city calendar") || src.includes("city events") || src.includes("parks") || src.includes("library")) {
+        e.source_bucket = "official";
+        e.trust_label = "Official source";
+        e.confidence = "high";
+      } else if (src.includes("pcfma") || src.includes("cfma") || src.includes("foodwise") || src.includes("usda") || src.includes("agriculture commissioner") || src.includes("state department of agriculture")) {
+        e.source_bucket = "community";
+        e.trust_label = "Public dataset";
+        e.confidence = "high";
+      } else {
+        // Curated seed (city-specific orgs / community calendars) → community
+        e.source_bucket = "community";
+        e.trust_label = "Source-linked";
+        e.confidence = "medium";
+      }
+      // v0.92: secondary tags — an event can carry MULTIPLE bucket tags
+      // (e.g. a Saturday farmers market with kids' activities is both
+      // markets + kids_family). `secondary_buckets` is an array the
+      // grouping logic uses to cross-list.
+      const sec = new Set();
+      if (/u[- ]pick|pick[- ]your[- ]own|pumpkin patch|cherry pick|strawberry pick|apple pick|berry pick|farm fair|petting zoo|wagon ride|hayride|agritour|farm stand|farm tour/i.test(titleCat)) {
+        sec.add("farm_u_pick");
+        sec.add("seasonal");
+      }
+      if (/\b(kid|kids|family|children|toddler|story[- ]?time|story hour|baby|preschool|pta|parent[- ]teacher|school fair|library kids)\b/i.test(titleCat)) {
+        sec.add("kids_family");
+      }
+      if (/\b(volunteer|cleanup|clean[- ]up|donation drive|food drive|coat drive|toy drive|community service|park clean|beach clean|trash pickup)\b/i.test(titleCat)) {
+        sec.add("volunteer");
+      }
+      if (/\b(farmers market|farmer's market|farm market|market day)\b/i.test(titleCat)) {
+        sec.add("markets");
+      }
+      if (/\b(seasonal|harvest|fall festival|spring fair|christmas tree farm|halloween|haunted)\b/i.test(titleCat)) {
+        sec.add("seasonal");
+      }
+      e.secondary_buckets = Array.from(sec);
+      // v2.1: upgrade category from "other" using title keywords (Open Mic →
+      // comedy, story time → kids, etc.). Idempotent — only runs when the
+      // current category is missing or "other".
+      e.category = _normalizeCategoryFromTitle(e.title, e.category);
+      // v0.70: when checked. The whole response is cached 1h so this is also
+      // when the cache row was written. Frontend renders a "Checked X mins ago" line.
+      e.last_checked = _nowIso;
+      delete e.verified;
+    }
+
+    // v2.1: Dedupe by (title + starts + venue prefix), but also GROUP
+    // repeating series (e.g. Becky Robinson 4 showtimes at San Jose Improv,
+    // San Jose Giants weekly games). Group key = title + venue, collapse
+    // showtimes into the earliest record + meta.related_count + related_starts.
+    const seriesMap = new Map();
+    for (const e of addonsFiltered) {
+      const key = `${e.title}|${(e.venue || "").slice(0, 50)}`;
+      const existing = seriesMap.get(key);
+      if (!existing) {
+        seriesMap.set(key, { ...e, _related: [] });
+      } else {
+        // Track the additional showtime, keep earliest as canonical
+        if ((e.starts || "") < (existing.starts || "")) {
+          existing._related.push({ starts: existing.starts, ends: existing.ends, url: existing.url });
+          existing.starts = e.starts;
+          existing.ends = e.ends;
+          existing.url = e.url || existing.url;
+        } else {
+          existing._related.push({ starts: e.starts, ends: e.ends, url: e.url });
+        }
+      }
+    }
+    const deduped = [];
+    for (const e of seriesMap.values()) {
+      if (e._related.length > 0) {
+        e.related_count = e._related.length;
+        e.related_starts = e._related.map(r => r.starts).filter(Boolean).sort();
+      }
+      delete e._related;
+      deduped.push(e);
+    }
+
+    // Sort by start time (primary) then by distance (secondary).
+    // v2.0: distance secondary sort fixes "far results shown before near" —
+    // when two events start at the same minute, the closer one wins.
+    deduped.sort((a, b) => {
+      const t = (a.starts || "").localeCompare(b.starts || "");
+      if (t !== 0) return t;
+      const da = (typeof a.distance_miles === "number") ? a.distance_miles : 9999;
+      const db = (typeof b.distance_miles === "number") ? b.distance_miles : 9999;
+      return da - db;
+    });
+
+    const sources = {
+      ticketmaster: tm.status === "fulfilled" ? tmEvents.length : `error: ${tm.reason?.message || tm.reason}`,
+      seatgeek: sg.status === "fulfilled" ? sgEvents.length : `error: ${sg.reason?.message || sg.reason}`,
+      civic: civic.status === "fulfilled" ? civicEvents.length : `error: ${civic.reason?.message || civic.reason}`,
+    };
+    // v0.92: source_summary by BUCKET — adds kids_family/farm_u_pick/volunteer/
+    // seasonal per Source Network + Farm modules. Replaces the provider-only
+    // summary with semantic buckets so frontend can group events.
+    const source_summary = {
+      today: 0,
+      tonight: 0,
+      this_weekend: 0,
+      free_community: 0,
+      kids_family: 0,
+      markets: 0,
+      farm_u_pick: 0,
+      parks_rec: 0,
+      library: 0,
+      volunteer: 0,
+      seasonal: 0,
+      official_local: 0,
+      library_parks: 0,        // legacy alias — kept for v0.91 frontend compat
+      ticketed: 0,
+      ticketed_sports: 0,      // v1.0 Phase 4: split sports from generic ticketed
+      watch: 0,                // v1.0 Phase 4: now confirmed watch parties only
+      external: 0,
+      regional_day_trip: 0,    // v2.1: > radius, <= 2 * radius
+      weekend_trip: 0,         // v2.1: > 2 * radius
+    };
+    const todayKey = new Date().toISOString().slice(0, 10);
+    const todayDow = new Date().getDay();
+    // Compute "this weekend" key from today's date (Fri/Sat/Sun)
+    const _now = new Date();
+    const _weekendKeys = new Set();
+    {
+      const offsetToFri = (5 - _now.getDay() + 7) % 7;
+      for (let i = 0; i < 3; i++) {
+        const d = new Date(_now);
+        d.setDate(d.getDate() + offsetToFri + i);
+        _weekendKeys.add(d.toISOString().slice(0, 10));
+      }
+    }
+    for (const e of deduped) {
+      const dayKey = e.local_day_key || (e.starts ? e.starts.slice(0, 10) : "");
+      const isToday = dayKey === todayKey;
+      const isWeekend = _weekendKeys.has(dayKey);
+      const titleSrc = (e.title || "").toLowerCase() + " " + (e.source || "").toLowerCase();
+      // v1.0 Phase 4: confirmed-watch only; sports go to ticketed_sports
+      const isWatch = /\b(watch party|viewing party|live screening|watch[- ]along)\b/i.test(titleSrc);
+      const isSports = /\b(nba|nfl|nhl|mlb|ufc|world cup|super bowl|finals|playoffs|championship)\b/i.test(titleSrc);
+      if (e.source_bucket === "ticketed") {
+        // v1.9: count in BOTH buckets when applicable so World Cup is visible
+        // under the default Ticketed tab.
+        source_summary.ticketed++;
+        if (isSports && !isWatch) source_summary.ticketed_sports++;
+      }
+      else if (e.source_bucket === "official") source_summary.official_local++;
+      else if (e.source_bucket === "community") source_summary.free_community++;
+      if (/market/i.test(titleSrc)) source_summary.markets++;
+      if (/library/i.test(titleSrc)) source_summary.library++;
+      if (/\bpark|rec center|parks & rec|parks and rec/i.test(titleSrc)) source_summary.parks_rec++;
+      if (/library|park/i.test(titleSrc)) source_summary.library_parks++;  // legacy
+      if (isWatch) source_summary.watch++;
+      if (isToday) source_summary.today++;
+      if (isWeekend) source_summary.this_weekend++;
+      // v0.92: secondary buckets — already computed per-event
+      if (Array.isArray(e.secondary_buckets)) {
+        for (const sb of e.secondary_buckets) {
+          if (sb in source_summary) source_summary[sb]++;
+        }
+      }
+      // tonight = today AND start hour >= 17:00 local
+      if (isToday && e.display_time && /PM/i.test(e.display_time)) {
+        const hr = parseInt((e.display_time.match(/^(\d+)/) || ["0", "0"])[1], 10);
+        if (hr >= 5 && hr <= 11) source_summary.tonight++;
+        if (hr === 12) source_summary.tonight++;
+      }
+    }
+
+    // Cache 1h in KV — v0.92: only cache PUBLISHABLE events (passed source_url
+    // enforcement), so cache hits don't replay events we'd have dropped.
+    // Note: this runs BEFORE the publishable filter on first request because
+    // of code ordering — the next cache write below uses publishable.
+
+    // v0.92: source_url enforcement per Source Network acceptance criteria —
+    // "Events without source_url cannot be published." We track how many we
+    // dropped + why so the diagnostics block can surface it. The frontend will
+    // never see these rows.
+    // v2.1: REMOVED the `!== "ticketed"` carve-out. Add-ons used to slip
+    // through when their source_bucket was "ticketed" (e.g. "Sierra Nevada
+    // Concert Experience: Shakira" — a Ticketmaster upsell that rendered as
+    // a standalone card). They are now partitioned out further below into
+    // `add_on_events` and either grafted onto a parent or hidden.
+    const _dropped = { no_source_url: 0 };
+    const publishable = [];
+    for (const e of deduped) {
+      const url = e.url || e.source_url;
+      if (!url) { _dropped.no_source_url++; continue; }
+      // Canonicalize the field name used by NearnityEvent model
+      e.source_url = url;
+      publishable.push(e);
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // v2.1: ADD-ON / PACKAGE PARTITIONING
+    // ────────────────────────────────────────────────────────────────────
+    // Satya filed a P0 in the v2.1 QA checklist: "Sierra Nevada Concert
+    // Experience: Shakira" (a Ticketmaster upsell, not a separate event)
+    // was still showing as a standalone card. The is_addon_or_package
+    // flag was already being computed but the publishable filter only
+    // dropped non-ticketed add-ons, letting ticketed upsells through.
+    //
+    // Rule: ANY event with is_addon_or_package=true is excluded from the
+    // primary event stream. We try to graft each add-on onto a parent
+    // primary event matched by (venue prefix + local_day_key + ≥1 shared
+    // 4+ char title token). If a parent is found, the add-on lands in
+    // parent.add_ons[] so the UI can render "Add-ons available". If no
+    // parent is found, it goes into `hidden_addons` — diagnostics only,
+    // never rendered as a card.
+    const primary_events = [];
+    const add_on_events = [];
+    for (const e of publishable) {
+      if (e.is_addon_or_package === true) add_on_events.push(e);
+      else primary_events.push(e);
+    }
+
+    const _tokens = (s) =>
+      (s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(t => t.length >= 4);
+    const _venueDayKey = (e) =>
+      `${((e.venue || "").slice(0, 40)).toLowerCase().trim()}|${e.local_day_key || (e.starts || "").slice(0, 10)}`;
+
+    // Index primary by (venue prefix + day) for O(addons + primary) lookup
+    const _primaryByVenueDay = new Map();
+    for (const p of primary_events) {
+      const k = _venueDayKey(p);
+      if (!_primaryByVenueDay.has(k)) _primaryByVenueDay.set(k, []);
+      _primaryByVenueDay.get(k).push(p);
+    }
+
+    const hidden_addons = [];
+    let _addonsAttached = 0;
+    for (const a of add_on_events) {
+      const k = _venueDayKey(a);
+      const candidates = _primaryByVenueDay.get(k) || [];
+      const aTokens = new Set(_tokens(a.title));
+      const parent = candidates.find(p => _tokens(p.title).some(t => aTokens.has(t)));
+      if (parent) {
+        parent.add_ons = parent.add_ons || [];
+        parent.add_ons.push({
+          title: a.title,
+          url: a.url || a.source_url,
+          source: a.source,
+          starts: a.starts,
+          distance_miles: a.distance_miles,
+        });
+        parent.addons_count = parent.add_ons.length;
+        _addonsAttached++;
+      } else {
+        hidden_addons.push(a);
+      }
+    }
+    const hidden_counts = {
+      add_ons: add_on_events.length,
+      add_ons_attached_to_parent: _addonsAttached,
+      add_ons_hidden_no_parent: hidden_addons.length,
+    };
+
+    // Cache 1h in KV — v0.92: cache the publishable list so cache hits never
+    // surface dropped/non-publishable rows.
+    // v2.1: cache `primary_events` (NOT the broader `publishable`) so cache
+    // replays don't leak add-ons as standalone cards either. Add-ons grafted
+    // onto parents travel via `parent.add_ons[]` in the cached payload.
+    if (env.EVENTS_KV) {
+      ctx.waitUntil(
+        env.EVENTS_KV.put(cacheKey, JSON.stringify({ events: primary_events, sources }), { expirationTtl: 3600 })
+      );
+    }
+
+    // ────────────────────────────────────────────────────────────────────
+    // v2.1: HARD RADIUS ENFORCEMENT on primary buckets
+    // ────────────────────────────────────────────────────────────────────
+    // Satya filed a P0 in the v2.1 QA checklist: a search at radius=25
+    // was returning Berkeley/SF library results at 38-40 miles in the
+    // standard buckets. Root cause: iCal feeds + seed events bypass the
+    // upstream `radius` param (Ticketmaster respects it; the rest don't),
+    // and the bucketing logic below took `publishable` straight through
+    // without any distance check.
+    //
+    // Rule: primary buckets (today/tonight/this_weekend/free_community/
+    // kids_family/markets/farm_u_pick/volunteer/official_local/library_parks/
+    // ticketed/watch) must obey distance_miles <= radius. Anything farther
+    // away can only show up in explicitly-labeled regional buckets:
+    //   regional_day_trip  → distance_miles <= radius * 2  (and > radius)
+    //   weekend_trip       → distance_miles >  radius * 2
+    // Events with null distance (no venue coords) are kept in primary
+    // since we can't prove they're far — better to surface than to drop.
+    // v2.1: iterate `primary_events` (post-addon-partition) so the radius
+    // split + downstream bucketing never sees add-ons. Add-ons attached to
+    // parents ride along inside parent.add_ons[] — never as top-level rows.
+    const withinRadius = [];
+    const regional = [];
+    let _excludedByRadius = 0;
+    for (const e of primary_events) {
+      if (typeof e.distance_miles === "number" && e.distance_miles > radius) {
+        regional.push(e);
+        _excludedByRadius++;
+      } else {
+        withinRadius.push(e);
+      }
+    }
+
+    // v0.92: group events by bucket — events can appear in MULTIPLE groups
+    // because secondary_buckets is an array (a Saturday u-pick farm event
+    // shows up in markets + farm_u_pick + this_weekend + kids_family). The
+    // primary `source_bucket` still determines the trust pill / color, but
+    // grouping is multi-tag.
+    // v2.1: groups are now built from `withinRadius` only. The trips block
+    // below adds `regional_day_trip` + `weekend_trip` separately.
+    const groups = {
+      today: [], tonight: [], this_weekend: [],
+      free_community: [], kids_family: [],
+      markets: [], farm_u_pick: [], parks_rec: [], library: [],
+      volunteer: [], seasonal: [],
+      official_local: [], library_parks: [],   // library_parks legacy
+      ticketed: [], ticketed_sports: [],       // v1.0 Phase 4: sports split
+      watch: [],                                // v1.0 Phase 4: confirmed watch parties ONLY
+      external: [],
+      // v2.1: regional escape hatches — populated from `regional` events only.
+      regional_day_trip: [],   // > radius and <= 2 * radius
+      weekend_trip: [],        // > 2 * radius
+    };
+    const pushUnique = (arr, ev) => { if (arr.indexOf(ev) === -1) arr.push(ev); };
+    // v1.0 Phase 4: tightened watch detection. Watch bucket ONLY includes
+    // events whose title explicitly says "watch party" or "viewing party"
+    // or "live screening" — these are CONFIRMED watch experiences. Sports
+    // games (NBA Finals, World Cup, etc.) go to ticketed_sports, not watch.
+    // The frontend can show "where might I watch this?" as a derived option.
+    const RE_CONFIRMED_WATCH = /\b(watch party|viewing party|live screening|watch[- ]along)\b/i;
+    const RE_SPORTS_TITLE = /\b(nba|nfl|nhl|mlb|ufc|world cup|super bowl|finals|playoffs|championship|game \d|vs\.)\b/i;
+    // v2.1: iterate `withinRadius` (not `publishable`) so primary buckets
+    // are radius-bounded. Regional events get their own buckets afterward.
+    for (const e of withinRadius) {
+      const dayKey = e.local_day_key || (e.starts ? e.starts.slice(0, 10) : "");
+      const isToday = dayKey === todayKey;
+      const isWeekend = _weekendKeys.has(dayKey);
+      const titleSrc = ((e.title || "") + " " + (e.source || "")).toLowerCase();
+      const isConfirmedWatch = RE_CONFIRMED_WATCH.test(titleSrc);
+      const isSportsTitle = RE_SPORTS_TITLE.test(titleSrc);
+      // Primary
+      if (e.source_bucket === "ticketed") {
+        // v1.9: World Cup / NBA Finals / NFL events were getting routed to
+        // ticketed_sports ONLY in v1.0, which hid them because the frontend
+        // had no Sports tab. Now they appear in BOTH buckets — main Ticketed
+        // tab shows everything (so World Cup matches surface by default),
+        // and ticketed_sports stays for power-users wanting sports-only.
+        pushUnique(groups.ticketed, e);
+        if (isSportsTitle && !isConfirmedWatch) pushUnique(groups.ticketed_sports, e);
+      }
+      else if (e.source_bucket === "official") pushUnique(groups.official_local, e);
+      else if (e.source_bucket === "community") pushUnique(groups.free_community, e);
+      // Secondary (multi-tag)
+      if (Array.isArray(e.secondary_buckets)) {
+        for (const sb of e.secondary_buckets) {
+          if (sb in groups) pushUnique(groups[sb], e);
+        }
+      }
+      // Source/title-derived
+      if (/library/i.test((e.source || "") + (e.title || ""))) pushUnique(groups.library, e);
+      if (/\bpark|rec center|parks & rec|parks and rec/i.test((e.source || "") + (e.title || ""))) pushUnique(groups.parks_rec, e);
+      if (/library|park/i.test((e.source || ""))) pushUnique(groups.library_parks, e);  // legacy
+      // v1.0 Phase 4: WATCH bucket is now confirmed-only. Ticketed-sports
+      // don't leak in. Caveat added below for candidate places.
+      if (isConfirmedWatch) {
+        e.watch_status = "confirmed";
+        pushUnique(groups.watch, e);
+      }
+      if (isToday) pushUnique(groups.today, e);
+      if (isWeekend) pushUnique(groups.this_weekend, e);
+      if (isToday && e.display_time && /PM/i.test(e.display_time)) {
+        const hr = parseInt((e.display_time.match(/^(\d+)/) || ["0", "0"])[1], 10);
+        if (hr >= 5 && hr <= 12) pushUnique(groups.tonight, e);
+      }
+    }
+
+    // v2.1: regional escape hatches. Anything that exceeded the requested
+    // radius lands ONLY here — never in today/tonight/free_community/etc.
+    // The frontend renders these under explicitly labeled "Day trip nearby"
+    // and "Weekend trip" headings so users can opt into broader results
+    // without polluting the primary radius-bound feed.
+    for (const e of regional) {
+      const d = typeof e.distance_miles === "number" ? e.distance_miles : Infinity;
+      if (d > radius * 2) {
+        pushUnique(groups.weekend_trip, e);
+      } else {
+        pushUnique(groups.regional_day_trip, e);
+      }
+    }
+
+    // v0.92: ADAPTER REGISTRY — every named adapter from the Source Network
+    // spec is declared here. Status reflects what the live fetch returned:
+    //   fulfilled = data returned (count > 0 means populated)
+    //   rejected  = adapter errored (frontend can show a degraded badge)
+    //   stub      = adapter exists but isn't wired to a real source yet
+    //   disabled  = adapter known to be unfetchable in this environment
+    //               (e.g. Eventbrite public search API was deprecated 2019)
+    // The registry is also returned by /api/sources for introspection.
+    const adapters = {
+      ticketmaster:        { adapter_type: "API",       bucket: "ticketed",       status: tm.status,    count: tmEvents.length,                                                  enabled: !!env.TICKETMASTER_KEY,    trust_label: "Ticketed event source", confidence: "high", note: "ticketed-only by spec; never leaks to community/free" },
+      seatgeek:            { adapter_type: "API",       bucket: "ticketed",       status: sg.status,    count: sgEvents.length,                                                  enabled: !!env.SEATGEEK_CLIENT_ID,  trust_label: "Ticketed event source", confidence: "high" },
+      eventbrite:          { adapter_type: "API",       bucket: "free_community", status: "disabled",   count: 0,                                                                enabled: false,                     trust_label: "Source-linked",         confidence: "medium", note: "Eventbrite public events search API was deprecated 2019. Only org-owned events are retrievable. Re-enable if/when Eventbrite re-opens or admin owns relevant orgs." },
+      city_calendar:       { adapter_type: "ICS",       bucket: "official_local", status: civic.status, count: civicEvents.filter(e => /city/i.test(e.source || "")).length,     enabled: true,                      trust_label: "Official source",       confidence: "high" },
+      library_calendar:    { adapter_type: "ICS",       bucket: "library",        status: civic.status, count: civicEvents.filter(e => /library/i.test(e.source || "")).length, enabled: true,                      trust_label: "Official source",       confidence: "high",   note: "Wired via the same GenericICS path as city_calendar; library URLs filtered by source field" },
+      parks_rec_calendar:  { adapter_type: "ICS",       bucket: "parks_rec",      status: "stub",       count: 0,                                                                enabled: false,                     trust_label: "Official source",       confidence: "high",   note: "Placeholder — wire to city parks-rec iCal feeds (Fremont CA: fremont.gov/calendar, San Jose CA: sanjoseca.gov/calendar)" },
+      generic_ics:         { adapter_type: "ICS",       bucket: "official_local", status: extraAdapters.status, count: (extraEvents.filter(e => e._adapter === "generic_ics") || []).length, enabled: true,           trust_label: "Source-linked",         confidence: "medium", note: "Any source declared with adapter_type=ICS in EVENT_SOURCES registry" },
+      generic_rss:         { adapter_type: "RSS",       bucket: "free_community", status: extraAdapters.status, count: (extraEvents.filter(e => e._adapter === "generic_rss") || []).length, enabled: true,           trust_label: "Source-linked",         confidence: "medium", note: "Any source declared with adapter_type=RSS in EVENT_SOURCES registry" },
+      generic_html_cal:    { adapter_type: "HTML",      bucket: "free_community", status: "stub",       count: 0,                                                                enabled: false,                     trust_label: "Source-linked",         confidence: "medium", note: "Placeholder — needs per-source CSS selector config; scraping ToS-sensitive" },
+      pdf_table:           { adapter_type: "PDF",       bucket: "free_community", status: "stub",       count: 0,                                                                enabled: false,                     trust_label: "Source-linked",         confidence: "low",    note: "Placeholder — PDF newsletters & flyers; OCR pipeline not built" },
+      usda_farmers_market: { adapter_type: "API",       bucket: "markets",        status: "stub",       count: 0,                                                                enabled: false,                     trust_label: "Public dataset",        confidence: "high",   note: "Placeholder — wire to USDA Local Food Directory API (search.ams.usda.gov/farmersmarkets)" },
+      nps:                 { adapter_type: "API",       bucket: "official_local", status: "fulfilled",  count: 0,                                                                enabled: !!env.NPS_KEY,             trust_label: "Official source",       confidence: "high",   note: "Park metadata only; not event feed (use /parks-nps for park lookup)" },
+      recreation_gov:      { adapter_type: "API",       bucket: "parks_rec",      status: "fulfilled",  count: 0,                                                                enabled: !!env.RIDB_KEY,            trust_label: "Official source",       confidence: "high",   note: "Recreation.gov RIDB; campsite + permit metadata, not event feed" },
+      manual_admin_events: { adapter_type: "Manual",    bucket: "free_community", status: manualAdmin.status, count: manualEvents.length,                                        enabled: !!env.EVENTS_KV,           trust_label: "Nearnity reviewed",     confidence: "high",   note: "Reads admin-approved community submissions from KV pool nearnity:admin_events:v1" },
+    };
+
+    // v0.92: diagnostics block — surfaces drop counts + adapter status for
+    // admin debugging. Frontend can hide it (and should, for users) but
+    // /api/sources can also read this.
+    const diagnostics = {
+      total_fetched: all.length,
+      after_addon_filter: addonsFiltered.length,
+      after_dedup: deduped.length,
+      published: publishable.length,
+      primary_events: primary_events.length,
+      add_on_events: add_on_events.length,
+      add_ons_attached: _addonsAttached,
+      hidden_addons: hidden_addons.length,
+      dropped: _dropped,
+      adapters_status: Object.fromEntries(Object.entries(adapters).map(([k, v]) => [k, v.status])),
+    };
+
+    // v2.1: rebuild source_summary from `groups` so counts reflect the
+    // post-radius-filter reality (today/tonight/etc. only count within-radius
+    // events). Then add the regional counts from groups.
+    for (const k of Object.keys(source_summary)) {
+      if (Array.isArray(groups[k])) source_summary[k] = groups[k].length;
+    }
+
+    // v2.1: API metadata for radius enforcement — clients can rely on
+    // `radius_filter_applied` to know primary buckets are clean.
+    const radius_metadata = {
+      radius_miles_requested: radius,
+      radius_filter_applied: true,
+      excluded_by_radius_count: _excludedByRadius,
+      regional_day_trip_count: groups.regional_day_trip.length,
+      weekend_trip_count: groups.weekend_trip.length,
+    };
+
+    // v2.1: `events` array is the within-radius set only. Regional events
+    // are accessible via `groups.regional_day_trip` + `groups.weekend_trip`
+    // and as a flat list at `regional_events`. The frontend renders from
+    // `events` directly, so this is what enforces the acceptance criterion:
+    // radius=25 will not include 38-40 mile Berkeley/SF rows here.
+    return json({
+      events: withinRadius,
+      regional_events: regional,
+      cached: false,
+      sources,
+      source_summary,
+      groups,
+      adapters,
+      diagnostics,
+      hidden_counts,
+      ...radius_metadata,
+    });
+  },
+};
+
+// ─── Helpers ────────────────────────────────────────────────────────────
+
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*",
+      "Cache-Control": status === 200 ? "public, max-age=300" : "no-store",
+    },
+  });
+}
+
+function cors() {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",   // v0.72: POST for /correction + /digest-signup
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400",
+    },
+  });
+}
+
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, isFinite(n) ? n : lo));
+}
+
+// ─── Ticketmaster Discovery API ─────────────────────────────────────────
+// Docs: https://developer.ticketmaster.com/products-and-docs/apis/discovery-api/v2/
+async function fetchTicketmaster(lat, lon, radiusMi, apiKey, keyword) {
+  if (!apiKey) return [];
+
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
+
+  const u = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
+  u.searchParams.set("apikey", apiKey);
+  u.searchParams.set("latlong", `${lat},${lon}`);
+  u.searchParams.set("radius", String(radiusMi));
+  u.searchParams.set("unit", "miles");
+  u.searchParams.set("size", "100");
+  u.searchParams.set("sort", keyword ? "relevance,desc" : "date,asc");
+  u.searchParams.set("startDateTime", isoSec(now));
+  u.searchParams.set("endDateTime", isoSec(horizon));
+  if (keyword) u.searchParams.set("keyword", keyword);
+
+  const resp = await fetch(u.toString(), { cf: { cacheTtl: 1800 } });
+  if (!resp.ok) throw new Error(`Ticketmaster ${resp.status}`);
+  const data = await resp.json();
+  const events = data._embedded?.events || [];
+
+  return events
+    .map((e) => {
+      const venue = e._embedded?.venues?.[0];
+      if (!venue?.location?.latitude || !venue?.location?.longitude) return null;
+      const startISO = e.dates?.start?.dateTime
+        || (e.dates?.start?.localDate ? `${e.dates.start.localDate}T${e.dates.start.localTime || "19:00"}` : null);
+      if (!startISO) return null;
+      return {
+        title: e.name,
+        venue: [venue.name, venue.address?.line1].filter(Boolean).join(", "),
+        city: venue.city?.name?.toLowerCase() || "",
+        state: venue.state?.stateCode || "",
+        lat: parseFloat(venue.location.latitude),
+        lon: parseFloat(venue.location.longitude),
+        starts: startISO,
+        ends: null,
+        category: tmCategory(e.classifications?.[0]?.segment?.name),
+        url: e.url,
+        source: `Ticketmaster — ${e.promoter?.name || e.classifications?.[0]?.segment?.name || "Discovery"}`,
+        verified: true,
+        free: false,
+      };
+    })
+    .filter(Boolean);
+}
+
+function tmCategory(seg) {
+  if (!seg) return "other";
+  const s = seg.toLowerCase();
+  if (s.includes("music")) return "music";
+  if (s.includes("sport")) return "sports";
+  // v2.1: Comedy / Stand-up / Improv get their own category so they don't
+  // fall into "other". Ticketmaster reports these under several segment
+  // names; we normalize all of them here.
+  if (s.includes("comedy") || s.includes("comedian") || s.includes("improv") || s.includes("stand-up") || s.includes("standup") || s.includes("open mic")) return "comedy";
+  if (s.includes("arts") || s.includes("theatre") || s.includes("theater")) return "art";
+  if (s.includes("film")) return "film";
+  if (s.includes("family") || s.includes("kid")) return "kids";
+  return "other";
+}
+
+// v2.1: title-based category fallback. Events arriving from civic iCal /
+// seed feeds typically don't carry a TM-style segment. When `category`
+// resolves to "other" (or is missing), run the title through these patterns
+// to upgrade it. Same regex shape as the frontend EVENT_ICON_RULES so the
+// pill + emoji stay consistent.
+function _normalizeCategoryFromTitle(title, category) {
+  if (category && category !== "other") return category;
+  const t = (title || "").toLowerCase();
+  if (!t) return category || "other";
+  if (/\b(open mic|stand-?up|standup|comedy|comedian|improv)\b/.test(t)) return "comedy";
+  if (/\b(farmers?\s*market|farm stand)\b/.test(t)) return "market";
+  if (/\b(story\s*time|story\s*hour|toddler|kids?|family fun)\b/.test(t)) return "kids";
+  if (/\b(festival|fair|parade|celebration)\b/.test(t)) return "festival";
+  if (/\b(library)\b/.test(t)) return "library";
+  if (/\b(concert|symphony|orchestra|live music|band)\b/.test(t)) return "music";
+  if (/\b(art|gallery|exhibit|exhibition|museum)\b/.test(t)) return "art";
+  if (/\b(game|vs\.?|championship|playoffs|tournament)\b/.test(t)) return "sports";
+  return category || "other";
+}
+
+function isoSec(d) {
+  return d.toISOString().split(".")[0] + "Z";
+}
+
+// ─── SeatGeek API ───────────────────────────────────────────────────────
+// Docs: https://platform.seatgeek.com/
+async function fetchSeatGeek(lat, lon, radiusMi, clientId, keyword) {
+  if (!clientId) return [];
+
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
+
+  const u = new URL("https://api.seatgeek.com/2/events");
+  u.searchParams.set("client_id", clientId);
+  u.searchParams.set("lat", String(lat));
+  u.searchParams.set("lon", String(lon));
+  u.searchParams.set("range", `${radiusMi}mi`);
+  u.searchParams.set("per_page", "50");
+  u.searchParams.set("sort", keyword ? "score.desc" : "datetime_local.asc");
+  u.searchParams.set("datetime_utc.gte", isoSec(now));
+  u.searchParams.set("datetime_utc.lte", isoSec(horizon));
+  if (keyword) u.searchParams.set("q", keyword);
+
+  const resp = await fetch(u.toString(), { cf: { cacheTtl: 1800 } });
+  if (!resp.ok) throw new Error(`SeatGeek ${resp.status}`);
+  const data = await resp.json();
+
+  return (data.events || [])
+    .map((e) => {
+      if (!e.venue?.location?.lat || !e.venue?.location?.lon) return null;
+      return {
+        title: e.title,
+        venue: [e.venue.name, e.venue.address].filter(Boolean).join(", "),
+        city: e.venue.city?.toLowerCase() || "",
+        state: e.venue.state || "",
+        lat: e.venue.location.lat,
+        lon: e.venue.location.lon,
+        starts: e.datetime_local,
+        ends: null,
+        category: sgCategory(e.type),
+        url: e.url,
+        source: "SeatGeek",
+        verified: true,
+        free: false,
+      };
+    })
+    .filter(Boolean);
+}
+
+function sgCategory(type) {
+  if (!type) return "other";
+  if (type.includes("concert")) return "music";
+  if (["nfl", "nba", "mlb", "nhl", "ncaa", "sports"].some((s) => type.includes(s))) return "sports";
+  if (type.includes("theater")) return "art";
+  return "other";
+}
+
+// ─── City Civic Events (iCal/RSS) ───────────────────────────────────────
+// Each city's official events calendar URL. Most are CivicPlus RSS feeds
+// (calendar.xml or similar); some are iCal (.ics). The fetcher tries to
+// parse both formats. To add a new city, append to this map and re-deploy.
+//
+// Key format: "city,STATE" — lowercase city, uppercase 2-letter state.
+const CITY_CALENDAR_FEEDS = {
+  // ── California ──────────────────────────────────────────────────────
+  "cupertino,CA": {
+    url: "https://www.cupertino.gov/RSSFeed.aspx?ModID=58&CID=Parks-and-Recreation-Event-Calendar-7",
+    fmt: "rss",
+    fallback: "https://www.cupertino.gov/Parks-Recreation/Events/Parks-and-Recreation-Event-Calendar",
+  },
+  "sunnyvale,CA": {
+    url: "https://www.sunnyvale.ca.gov/community-recreation/events.rss",
+    fmt: "rss",
+    fallback: "https://www.sunnyvale.ca.gov/community-recreation/events",
+  },
+  "mountain view,CA": {
+    url: "https://www.mountainview.gov/events.rss",
+    fmt: "rss",
+    fallback: "https://www.mountainview.gov/events",
+  },
+  "palo alto,CA": {
+    url: "https://www.cityofpaloalto.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofpaloalto.org/calendar",
+  },
+  "santa clara,CA": {
+    url: "https://www.santaclaraca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.santaclaraca.gov/calendar",
+  },
+  "san jose,CA": {
+    url: "https://www.sanjoseca.gov/Calendar.aspx?CID=14&Display=ICAL",
+    fmt: "ical",
+    fallback: "https://www.sanjoseca.gov/your-government/departments/parks-recreation-neighborhood-services/things-to-do/events",
+  },
+  "fremont,CA": {
+    url: "https://www.fremont.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.fremont.gov/calendar.aspx",
+  },
+  "berkeley,CA": {
+    url: "https://berkeleyca.gov/community-recreation/events.rss",
+    fmt: "rss",
+    fallback: "https://berkeleyca.gov/community-recreation/events",
+  },
+  "oakland,CA": {
+    url: "https://www.oaklandca.gov/topics/calendar-of-events.rss",
+    fmt: "rss",
+    fallback: "https://www.oaklandca.gov/topics/calendar-of-events",
+  },
+  "san francisco,CA": {
+    url: "https://sfrecpark.org/events.rss",
+    fmt: "rss",
+    fallback: "https://sfrecpark.org/events",
+  },
+  "san mateo,CA": {
+    url: "https://www.cityofsanmateo.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofsanmateo.org/calendar.aspx",
+  },
+  "redwood city,CA": {
+    url: "https://www.redwoodcity.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.redwoodcity.org/calendar.aspx",
+  },
+  "walnut creek,CA": {
+    url: "https://www.walnut-creek.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.walnut-creek.org/calendar.aspx",
+  },
+  "pleasanton,CA": {
+    url: "https://www.cityofpleasantonca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofpleasantonca.gov/calendar.aspx",
+  },
+  "milpitas,CA": {
+    url: "https://www.ci.milpitas.ca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.ci.milpitas.ca.gov/calendar.aspx",
+  },
+  // ── Pennsylvania ────────────────────────────────────────────────────
+  // v0.72: Philadelphia — launch city pick #3. Free Library + city calendar.
+  "philadelphia,PA": {
+    url: "https://www.phila.gov/calendar/feed.rss",
+    fmt: "rss",
+    fallback: "https://www.phila.gov/calendar/",
+  },
+  "phoenixville,PA": {
+    url: "https://www.phoenixville.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.phoenixville.org/calendar.aspx",
+  },
+};
+// v0.72: Library calendar feeds — separate from city/parks feeds. Libraries
+// have rich community-event programming (storytime, book clubs, tech help,
+// citizenship classes) that doesn't show up on city calendars. Pulled in
+// parallel with the main civic feed when the user's city matches.
+const LIBRARY_CALENDAR_FEEDS = {
+  "san jose,CA":      "https://sjpl.bibliocommons.com/events/search/index.rss",
+  "san francisco,CA": "https://sfpl.bibliocommons.com/events/search/index.rss",
+  "philadelphia,PA":  "https://libwww.freelibrary.org/calendar/feed.rss",
+  "oakland,CA":       "https://oaklandlibrary.org/events/feed/",
+  "berkeley,CA":      "https://berkeleypubliclibrary.libcal.com/rss.php?l=15891",
+};
+
+async function fetchCityCivic(city, state, keyword) {
+  const key = `${city},${state}`;
+  const feed = CITY_CALENDAR_FEEDS[key];
+  const libraryUrl = LIBRARY_CALENDAR_FEEDS[key];   // v0.72: optional library overlay
+
+  // Fetch city + library in parallel — both are optional
+  const tasks = [];
+  if (feed) tasks.push(fetchFeed(feed.url, feed.fmt, city, state, "city"));
+  if (libraryUrl) tasks.push(fetchFeed(libraryUrl, "rss", city, state, "library"));
+  if (!tasks.length) return [];
+
+  const results = await Promise.allSettled(tasks);
+  let events = [];
+  for (const r of results) {
+    if (r.status === "fulfilled" && Array.isArray(r.value)) events = events.concat(r.value);
+  }
+  // v2: if user typed a keyword, filter civic events by title/venue match
+  if (keyword) {
+    const kw = keyword.toLowerCase();
+    events = events.filter(e =>
+      (e.title || "").toLowerCase().includes(kw) ||
+      (e.venue || "").toLowerCase().includes(kw)
+    );
+  }
+  return events;
+}
+
+// v0.72: shared fetch+parse for civic feeds; tagged with "kind" so the source
+// string can read "Philadelphia library calendar" vs "Philadelphia city calendar".
+async function fetchFeed(url, fmt, city, state, kind) {
+  try {
+    const resp = await fetch(url, {
+      cf: { cacheTtl: 3600 },
+      headers: { "User-Agent": "Nearnity/1.0 (events aggregator)" },
+    });
+    if (!resp.ok) return [];
+    const text = await resp.text();
+    const events = fmt === "ical"
+      ? parseICalEvents(text, city, state, url)
+      : parseRSSEvents(text, city, state, url);
+    // Re-label source string by kind so frontend can render the right pill
+    if (kind === "library") {
+      for (const e of events) e.source = `${city.replace(/\b\w/g, c => c.toUpperCase())} library calendar`;
+    }
+    return events;
+  } catch (e) {
+    return [];
+  }
+}
+
+// ─── RSS / Atom parser (lightweight, handles CivicPlus calendar feeds) ──
+function parseRSSEvents(text, city, state, sourceUrl) {
+  const out = [];
+  const itemRe = /<item\b[^>]*>([\s\S]*?)<\/item>/gi;
+  let m;
+  while ((m = itemRe.exec(text)) !== null) {
+    const block = m[1];
+    const title = pickXML(block, "title");
+    if (!title) continue;
+    const link = pickXML(block, "link");
+    const desc = pickXML(block, "description") || "";
+    const pubDate = pickXML(block, "pubDate") || pickXML(block, "dc:date") || "";
+
+    // CivicPlus RSS often packs the event date into the title or description like:
+    // "[Event Name] - 5/29/2026" or includes "Date: Friday, May 29, 2026"
+    // Try multiple extraction strategies.
+    const startISO = extractEventDateFromText(`${title} ${desc} ${pubDate}`);
+    if (!startISO) continue;  // skip if we can't determine a date — RSS pubDate is publish date, not event date
+
+    out.push({
+      title: title.replace(/\s*-\s*\d{1,2}\/\d{1,2}\/\d{4}\s*$/, "").trim(),
+      venue: city.replace(/\b\w/g, (c) => c.toUpperCase()) + ", " + state,
+      city: city,
+      state: state,
+      lat: null,
+      lon: null,
+      starts: startISO,
+      ends: null,
+      category: "community",
+      url: link || sourceUrl,
+      source: `${city.replace(/\b\w/g, (c) => c.toUpperCase())} city calendar`,
+      verified: true,
+      free: true,
+    });
+  }
+  return out;
+}
+
+function pickXML(block, tag) {
+  const re = new RegExp(`<${tag}\\b[^>]*>(?:<!\\[CDATA\\[)?([\\s\\S]*?)(?:\\]\\]>)?<\/${tag}>`, "i");
+  const m = block.match(re);
+  return m ? m[1].trim().replace(/<[^>]+>/g, "").trim() : null;
+}
+
+// Best-effort event-date extraction from free text
+function extractEventDateFromText(text) {
+  if (!text) return null;
+  // Look for ISO 8601 first
+  let m = text.match(/\b(\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?)?)/);
+  if (m) {
+    const d = new Date(m[1]);
+    if (!isNaN(d)) return d.toISOString().split(".")[0];
+  }
+  // M/D/YYYY [H:MM AM/PM]
+  m = text.match(/\b(\d{1,2})\/(\d{1,2})\/(20\d{2})(?:\s+(\d{1,2}):(\d{2})\s*(AM|PM|am|pm))?/);
+  if (m) {
+    let h = m[4] ? parseInt(m[4]) : 12;
+    if (m[6] && /pm/i.test(m[6]) && h < 12) h += 12;
+    if (m[6] && /am/i.test(m[6]) && h === 12) h = 0;
+    const d = new Date(parseInt(m[3]), parseInt(m[1]) - 1, parseInt(m[2]), h, m[5] ? parseInt(m[5]) : 0);
+    if (!isNaN(d)) return d.toISOString().split(".")[0];
+  }
+  // "Friday, May 29, 2026" or "May 29, 2026"
+  m = text.match(/\b(?:(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),?\s+)?(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{1,2}),?\s+(20\d{2})/i);
+  if (m) {
+    const d = new Date(`${m[1]} ${m[2]}, ${m[3]}`);
+    if (!isNaN(d)) return d.toISOString().split(".")[0];
+  }
+  return null;
+}
+
+// ─── iCalendar (.ics RFC 5545) parser — handles VEVENT blocks ──────────
+function parseICalEvents(text, city, state, sourceUrl) {
+  const out = [];
+  // Unfold continuation lines per RFC 5545: lines starting with space/tab continue the previous
+  const unfolded = text.replace(/\r?\n[ \t]/g, "");
+  const veventRe = /BEGIN:VEVENT([\s\S]*?)END:VEVENT/g;
+  let m;
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 30 * 24 * 3600 * 1000);
+
+  while ((m = veventRe.exec(unfolded)) !== null) {
+    const block = m[1];
+    const lines = block.split(/\r?\n/);
+    const props = {};
+    for (const line of lines) {
+      const colonIdx = line.indexOf(":");
+      if (colonIdx === -1) continue;
+      const head = line.slice(0, colonIdx);
+      const value = line.slice(colonIdx + 1);
+      const name = head.split(";")[0].toUpperCase();
+      props[name] = value.trim();
+    }
+
+    const title = unescapeIcal(props.SUMMARY);
+    if (!title) continue;
+    const dtStart = parseIcalDateTime(props.DTSTART);
+    if (!dtStart) continue;
+    if (dtStart < now || dtStart > horizon) continue;
+    const dtEnd = parseIcalDateTime(props.DTEND);
+
+    out.push({
+      title: title,
+      venue: unescapeIcal(props.LOCATION) || city + ", " + state,
+      city: city,
+      state: state,
+      lat: null,
+      lon: null,
+      starts: dtStart.toISOString().split(".")[0],
+      ends: dtEnd ? dtEnd.toISOString().split(".")[0] : null,
+      category: "community",
+      url: props.URL || sourceUrl,
+      source: `${city.replace(/\b\w/g, (c) => c.toUpperCase())} city calendar`,
+      verified: true,
+      free: true,
+    });
+  }
+  return out;
+}
+
+function parseIcalDateTime(v) {
+  if (!v) return null;
+  // YYYYMMDD (date-only)
+  let m = v.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if (m) return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+  // YYYYMMDDTHHMMSS[Z]
+  m = v.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})(Z?)$/);
+  if (m) {
+    if (m[7] === "Z") {
+      return new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+    }
+    return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]);
+  }
+  return null;
+}
+
+function unescapeIcal(s) {
+  if (!s) return "";
+  return s.replace(/\\n/g, " ").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// v0.70: New endpoint handlers — live alerts, earthquakes, AQI, parks, recreation
+// ─────────────────────────────────────────────────────────────────────────
+
+// Common helper: read lat/lon from query, validate, return null on bad input.
+function readLatLon(url) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  if (!isFinite(lat) || !isFinite(lon)) return null;
+  return { lat, lon };
+}
+
+// Common helper: cache wrapper for sub-API endpoints. ttl in seconds.
+async function withCache(env, cacheKey, ttl, fetchFn) {
+  if (env.EVENTS_KV) {
+    const hit = await env.EVENTS_KV.get(cacheKey, "json");
+    if (hit) return { ...hit, cached: true };
+  }
+  const fresh = await fetchFn();
+  if (env.EVENTS_KV) {
+    await env.EVENTS_KV.put(cacheKey, JSON.stringify(fresh), { expirationTtl: ttl });
+  }
+  return { ...fresh, cached: false };
+}
+
+// ─── NWS Active Alerts ─────────────────────────────────────────────────
+// Docs: https://www.weather.gov/documentation/services-web-api
+// Free, no key. User-Agent required.
+async function handleAlerts(url, env, ctx) {
+  const ll = readLatLon(url);
+  if (!ll) return json({ error: "lat and lon required" }, 400);
+  const cacheKey = `alerts:${ll.lat.toFixed(2)}:${ll.lon.toFixed(2)}`;
+  try {
+    const out = await withCache(env, cacheKey, 600, async () => {
+      const u = `https://api.weather.gov/alerts/active?point=${ll.lat.toFixed(4)},${ll.lon.toFixed(4)}`;
+      const r = await fetch(u, {
+        headers: {
+          "User-Agent": "Nearnity (feedback@nearnity.com)",
+          "Accept": "application/geo+json",
+        },
+      });
+      if (!r.ok) throw new Error(`NWS ${r.status}`);
+      const data = await r.json();
+      const alerts = (data.features || []).map(f => {
+        const p = f.properties || {};
+        return {
+          id: p.id,
+          event: p.event,             // e.g. "Heat Advisory"
+          headline: p.headline,
+          severity: p.severity,       // Extreme | Severe | Moderate | Minor | Unknown
+          urgency: p.urgency,
+          certainty: p.certainty,
+          area: p.areaDesc,
+          sent: p.sent,
+          effective: p.effective,
+          expires: p.expires,
+          instruction: p.instruction || null,
+          sender: p.senderName || "NWS",
+          url: p.web || `https://www.weather.gov/`,
+          trust_label: "Official source",
+          confidence: "high",
+        };
+      });
+      return { alerts, source: "NWS api.weather.gov", last_checked: new Date().toISOString() };
+    });
+    return json(out);
+  } catch (e) {
+    return json({ alerts: [], error: String(e.message || e), source: "NWS api.weather.gov" }, 200);
+  }
+}
+
+// ─── USGS Earthquakes ──────────────────────────────────────────────────
+// Docs: https://earthquake.usgs.gov/fdsnws/event/1/
+// Free, no key.
+async function handleQuakes(url, env, ctx) {
+  const ll = readLatLon(url);
+  if (!ll) return json({ error: "lat and lon required" }, 400);
+  const radiusKm = clamp(parseFloat(url.searchParams.get("radius_km") || "200"), 10, 1000);
+  const minMag = clamp(parseFloat(url.searchParams.get("min_mag") || "2.5"), 0, 9);
+  const days = clamp(parseInt(url.searchParams.get("days") || "30"), 1, 365);
+  const cacheKey = `quakes:${ll.lat.toFixed(2)}:${ll.lon.toFixed(2)}:${radiusKm}:${minMag}:${days}`;
+  try {
+    const out = await withCache(env, cacheKey, 1800, async () => {
+      const start = new Date(Date.now() - days * 86400 * 1000).toISOString().slice(0, 10);
+      const u = new URL("https://earthquake.usgs.gov/fdsnws/event/1/query");
+      u.searchParams.set("format", "geojson");
+      u.searchParams.set("latitude", String(ll.lat));
+      u.searchParams.set("longitude", String(ll.lon));
+      u.searchParams.set("maxradiuskm", String(radiusKm));
+      u.searchParams.set("minmagnitude", String(minMag));
+      u.searchParams.set("starttime", start);
+      u.searchParams.set("orderby", "time");
+      const r = await fetch(u.toString());
+      if (!r.ok) throw new Error(`USGS ${r.status}`);
+      const data = await r.json();
+      const quakes = (data.features || []).map(f => {
+        const p = f.properties || {};
+        const c = f.geometry?.coordinates || [];
+        return {
+          id: f.id,
+          magnitude: p.mag,
+          place: p.place,
+          time: p.time ? new Date(p.time).toISOString() : null,
+          depth_km: c[2],
+          lat: c[1],
+          lon: c[0],
+          alert: p.alert,             // green | yellow | orange | red (PAGER)
+          tsunami: p.tsunami,
+          status: p.status,
+          felt: p.felt,
+          url: p.url || `https://earthquake.usgs.gov/`,
+          trust_label: "Official source",
+          confidence: "high",
+        };
+      });
+      return { quakes, source: "USGS earthquake feed", last_checked: new Date().toISOString() };
+    });
+    return json(out);
+  } catch (e) {
+    return json({ quakes: [], error: String(e.message || e), source: "USGS earthquake feed" }, 200);
+  }
+}
+
+// ─── AirNow Current Observation ────────────────────────────────────────
+// Docs: https://docs.airnowapi.org/
+// Requires AIRNOW_KEY env var. Returns "no key" status if missing.
+//
+// v0.72: AQI doesn't vary much within a city (it's a county/reporting-area
+// metric, not a per-block one). Strategy:
+//   1. If `zip` is provided, try the ZIP-code endpoint first (matches the
+//      reporting area used by EPA — most reliable).
+//   2. Fall back to the lat/lon endpoint with a 100mi radius (was 25mi —
+//      tightening that hard caused empty responses in suburbs).
+//   3. Cache 30 min per ZIP or per 0.1° tile.
+async function handleAirNow(url, env, ctx) {
+  if (!env.AIRNOW_KEY) return json({ aqi: null, status: "no_key", note: "Set AIRNOW_KEY in Worker env to enable" }, 200);
+  const ll = readLatLon(url);
+  const zip = (url.searchParams.get("zip") || "").trim().slice(0, 10);
+  const nocache = url.searchParams.has("nocache");
+  if (!ll && !zip) return json({ error: "lat/lon or zip required" }, 400);
+  const cacheKey = zip
+    ? `aqi:zip:${zip}`
+    : `aqi:ll:${ll.lat.toFixed(1)}:${ll.lon.toFixed(1)}`;
+  // v0.73: bypass cache on nocache=1 for debugging stale empty responses
+  if (nocache && env.EVENTS_KV) {
+    try { await env.EVENTS_KV.delete(cacheKey); } catch (_) {}
+  }
+  try {
+    const out = await withCache(env, cacheKey, 1800, async () => {
+      let obs = [];
+      let usedSource = "";
+      // v0.73: collect debug per-attempt so frontend / user can see what happened
+      const debug = { tried: [] };
+      // Shared headers — AirNow doesn't strictly require UA but it helps with
+      // shared-IP rate-limiting on Cloudflare's egress pool.
+      const headers = { "User-Agent": "Nearnity/1.0 (+https://nearnity.com)", "Accept": "application/json" };
+
+      // ─── Attempt 1: ZIP-based (preferred when available) ─────────────
+      if (zip) {
+        const u = new URL("https://www.airnowapi.org/aq/observation/zipCode/current/");
+        u.searchParams.set("format", "application/json");
+        u.searchParams.set("zipCode", zip);
+        u.searchParams.set("distance", "50");
+        u.searchParams.set("API_KEY", env.AIRNOW_KEY);
+        try {
+          const r = await fetch(u.toString(), { headers });
+          const status = r.status;
+          let count = 0;
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data) && data.length) {
+              obs = data;
+              usedSource = `AirNow (ZIP ${zip}, 50mi)`;
+              count = data.length;
+            }
+          }
+          debug.tried.push({ method: "zip", zip, distance: 50, status, count });
+        } catch (e) {
+          debug.tried.push({ method: "zip", zip, error: String(e.message || e) });
+        }
+      }
+      // ─── Attempt 2: lat/lon at 100mi ─────────────────────────────────
+      if (!obs.length && ll) {
+        const u = new URL("https://www.airnowapi.org/aq/observation/latLong/current/");
+        u.searchParams.set("format", "application/json");
+        u.searchParams.set("latitude", String(ll.lat));
+        u.searchParams.set("longitude", String(ll.lon));
+        u.searchParams.set("distance", "100");
+        u.searchParams.set("API_KEY", env.AIRNOW_KEY);
+        try {
+          const r = await fetch(u.toString(), { headers });
+          const status = r.status;
+          let count = 0;
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data) && data.length) {
+              obs = data;
+              usedSource = "AirNow (lat/lon 100mi)";
+              count = data.length;
+            }
+          }
+          debug.tried.push({ method: "latlon", distance: 100, status, count });
+        } catch (e) {
+          debug.tried.push({ method: "latlon", distance: 100, error: String(e.message || e) });
+        }
+      }
+      // ─── Attempt 3: lat/lon at 250mi (covers rural areas) ─
+      if (!obs.length && ll) {
+        const u = new URL("https://www.airnowapi.org/aq/observation/latLong/current/");
+        u.searchParams.set("format", "application/json");
+        u.searchParams.set("latitude", String(ll.lat));
+        u.searchParams.set("longitude", String(ll.lon));
+        u.searchParams.set("distance", "250");
+        u.searchParams.set("API_KEY", env.AIRNOW_KEY);
+        try {
+          const r = await fetch(u.toString(), { headers });
+          const status = r.status;
+          let count = 0;
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data) && data.length) {
+              obs = data;
+              usedSource = "AirNow (lat/lon 250mi — wide fallback)";
+              count = data.length;
+            }
+          }
+          debug.tried.push({ method: "latlon", distance: 250, status, count });
+        } catch (e) {
+          debug.tried.push({ method: "latlon", distance: 250, error: String(e.message || e) });
+        }
+      }
+      // ─── Attempt 4: AirNow FORECAST endpoint (covers cases where current
+      // observations are unavailable but a daily forecast exists). v0.88. ─
+      if (!obs.length && (zip || ll)) {
+        const u = new URL(zip
+          ? "https://www.airnowapi.org/aq/forecast/zipCode/"
+          : "https://www.airnowapi.org/aq/forecast/latLong/");
+        u.searchParams.set("format", "application/json");
+        if (zip) u.searchParams.set("zipCode", zip);
+        else {
+          u.searchParams.set("latitude", String(ll.lat));
+          u.searchParams.set("longitude", String(ll.lon));
+        }
+        u.searchParams.set("distance", "100");
+        u.searchParams.set("API_KEY", env.AIRNOW_KEY);
+        try {
+          const r = await fetch(u.toString(), { headers });
+          const status = r.status;
+          let count = 0;
+          if (r.ok) {
+            const data = await r.json();
+            if (Array.isArray(data) && data.length) {
+              // Forecasts come with DateForecast field — only use today's
+              const today = new Date().toISOString().slice(0, 10);
+              const filtered = data.filter(o => (o.DateForecast || "").trim().startsWith(today));
+              if (filtered.length) {
+                obs = filtered;
+                usedSource = "AirNow forecast (today)";
+                count = filtered.length;
+              }
+            }
+          }
+          debug.tried.push({ method: "forecast", zip: zip || undefined, status, count });
+        } catch (e) {
+          debug.tried.push({ method: "forecast", error: String(e.message || e) });
+        }
+      }
+      // Normalize and pick primary (max AQI across pollutants)
+      const observations = obs.map(o => ({
+        parameter: o.ParameterName,
+        aqi: o.AQI,
+        category: o.Category?.Name,
+        reporting_area: o.ReportingArea,
+        state: o.StateCode,
+        date: o.DateObserved,
+        hour: o.HourObserved,
+        latitude: o.Latitude,
+        longitude: o.Longitude,
+      }));
+      const primary = observations.reduce((m, x) => (x.aqi > (m?.aqi ?? -1) ? x : m), null);
+      return {
+        observations,
+        primary,
+        source: usedSource || "AirNow",
+        debug,    // v0.73: returned so frontend can show "tried ZIP / lat-lon / etc." for transparency
+        last_checked: new Date().toISOString(),
+        trust_label: "Official source",
+        confidence: "high",
+      };
+    });
+    return json(out);
+  } catch (e) {
+    return json({ aqi: null, error: String(e.message || e), source: "AirNow" }, 200);
+  }
+}
+
+// ─── NPS — National Park Service ───────────────────────────────────────
+// Docs: https://www.nps.gov/subjects/developer/api-documentation.htm
+// Requires NPS_KEY env var.
+async function handleNPS(url, env, ctx) {
+  if (!env.NPS_KEY) return json({ parks: [], status: "no_key", note: "Set NPS_KEY in Worker env to enable" }, 200);
+  const ll = readLatLon(url);
+  if (!ll) return json({ error: "lat and lon required" }, 400);
+  // v0.82.1: extended max to 350mi so Weekend trip band (up to 300mi) actually
+  // works. Was capping at 250mi which excluded ~half the Weekend-trip range.
+  const radiusMi = clamp(parseFloat(url.searchParams.get("radius") || "75"), 5, 350);
+  const cacheKey = `nps:${ll.lat.toFixed(2)}:${ll.lon.toFixed(2)}:${radiusMi}`;
+  try {
+    const out = await withCache(env, cacheKey, 86400, async () => {
+      // NPS doesn't have a true geo-near endpoint; we pull all parks and filter
+      // by haversine distance. ~470 parks total — small and cacheable for 24h.
+      const u = new URL("https://developer.nps.gov/api/v1/parks");
+      u.searchParams.set("limit", "500");
+      u.searchParams.set("api_key", env.NPS_KEY);
+      const r = await fetch(u.toString());
+      if (!r.ok) throw new Error(`NPS ${r.status}`);
+      const data = await r.json();
+      const haver = (la1, lo1, la2, lo2) => {
+        const R = 3958.8, toRad = d => (d * Math.PI) / 180;
+        const dLa = toRad(la2 - la1), dLo = toRad(lo2 - lo1);
+        const a = Math.sin(dLa / 2) ** 2 + Math.cos(toRad(la1)) * Math.cos(toRad(la2)) * Math.sin(dLo / 2) ** 2;
+        return R * 2 * Math.asin(Math.sqrt(a));
+      };
+      const parks = (data.data || [])
+        .map(p => {
+          const plat = parseFloat(p.latitude), plon = parseFloat(p.longitude);
+          if (!isFinite(plat) || !isFinite(plon)) return null;
+          const dist = haver(ll.lat, ll.lon, plat, plon);
+          if (dist > radiusMi) return null;
+          return {
+            id: p.parkCode,
+            name: p.fullName,
+            designation: p.designation,
+            states: p.states,
+            lat: plat,
+            lon: plon,
+            distance_miles: +dist.toFixed(2),
+            url: p.url,
+            description: p.description?.slice(0, 280),
+            trust_label: "Official source",
+            confidence: "high",
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.distance_miles - b.distance_miles);
+      return { parks, source: "National Park Service", last_checked: new Date().toISOString() };
+    });
+    return json(out);
+  } catch (e) {
+    return json({ parks: [], error: String(e.message || e), source: "National Park Service" }, 200);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// v0.72: Corrections + Digest signup + HIFLD electric
+// ─────────────────────────────────────────────────────────────────────────
+
+// Read JSON POST body safely. Returns {} on parse error.
+async function readJsonBody(req) {
+  try {
+    const txt = await req.text();
+    if (!txt) return {};
+    return JSON.parse(txt);
+  } catch (e) { return {}; }
+}
+
+// ─── Corrections / Report / Submit ─────────────────────────────────────
+// POST /api/correction with JSON body:
+//   { card_id, issue_type, message, source_url?, contact_email?, category? }
+// Writes to KV with key `correction:<timestamp>:<random>`. Admin reads from KV.
+// Also fires a fire-and-forget email to feedback@nearnity.com (when SMTP/Resend
+// is configured); falls through silently if not. Always returns 200 if the KV
+// write succeeded — we don't want users to see an error if email send fails.
+async function handleCorrection(req, env, ctx) {
+  if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  const body = await readJsonBody(req);
+  const card_id = String(body.card_id || "").slice(0, 200);
+  const issue_type = String(body.issue_type || "").slice(0, 60);
+  const message = String(body.message || "").slice(0, 2000);
+  const source_url = String(body.source_url || "").slice(0, 400);
+  const contact_email = String(body.contact_email || "").slice(0, 200);
+  const category = String(body.category || "").slice(0, 40);
+
+  if (!message || message.length < 5) {
+    return json({ error: "message required (min 5 chars)" }, 400);
+  }
+
+  const record = {
+    card_id, issue_type, message, source_url, contact_email, category,
+    received_at: new Date().toISOString(),
+    user_agent: (req.headers.get("user-agent") || "").slice(0, 200),
+    ip_country: req.cf?.country || "",
+  };
+  const key = `correction:${Date.now()}:${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    if (env.EVENTS_KV) {
+      await env.EVENTS_KV.put(key, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 365 });   // 1y retention
+    }
+  } catch (e) {
+    return json({ error: "storage failed", detail: String(e.message || e) }, 500);
+  }
+
+  // Optional: send email via Resend if RESEND_API_KEY is configured.
+  if (env.RESEND_API_KEY) {
+    ctx.waitUntil(sendResendEmail(env, {
+      from: "Nearnity Reports <noreply@nearnity.com>",
+      to: ["feedback@nearnity.com"],
+      subject: `[Nearnity correction] ${issue_type || "report"} — ${category || "card"}`,
+      text: `Card ID: ${card_id}\nIssue: ${issue_type}\nCategory: ${category}\nSource URL: ${source_url}\nFrom: ${contact_email || "(anonymous)"}\n\nMessage:\n${message}\n\nReceived: ${record.received_at}\nUA: ${record.user_agent}\nCountry: ${record.ip_country}\n`,
+    }));
+  }
+
+  return json({ ok: true, id: key });
+}
+
+// ─── Digest signup (weekly "what's near your saved place" email) ───────
+// POST /api/digest-signup with JSON body:
+//   { email, lat, lon, place_label?, zip? }
+// Writes one row per email to KV with key `digest:<email>`. Scheduled cron
+// later iterates and sends. Validates email + dedupes. Returns 200 with
+// {ok: true} on success.
+async function handleDigestSignup(req, env, ctx) {
+  if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  const body = await readJsonBody(req);
+  const email = String(body.email || "").trim().toLowerCase().slice(0, 200);
+  const lat = parseFloat(body.lat);
+  const lon = parseFloat(body.lon);
+  const place_label = String(body.place_label || "").slice(0, 120);
+  const zip = String(body.zip || "").trim().slice(0, 10);
+
+  // Cheap email validation — enough to catch obvious typos
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+    return json({ error: "valid email required" }, 400);
+  }
+  if (!isFinite(lat) || !isFinite(lon)) {
+    return json({ error: "lat and lon required" }, 400);
+  }
+
+  const record = {
+    email, lat, lon, zip, place_label,
+    subscribed_at: new Date().toISOString(),
+    confirmed: false,   // future: send confirmation email + flip this
+    last_sent: null,
+    unsubscribed: false,
+  };
+  const key = `digest:${email}`;
+  try {
+    if (env.EVENTS_KV) {
+      // Don't expire — these are durable subscriptions
+      await env.EVENTS_KV.put(key, JSON.stringify(record));
+    }
+  } catch (e) {
+    return json({ error: "storage failed", detail: String(e.message || e) }, 500);
+  }
+
+  // Send a "thanks, you're signed up" confirmation if Resend is configured
+  if (env.RESEND_API_KEY) {
+    ctx.waitUntil(sendResendEmail(env, {
+      from: "Nearnity Digest <digest@nearnity.com>",
+      to: [email],
+      subject: "You're signed up for Nearnity weekly updates",
+      text: `Thanks for signing up! Each week we'll email you what's new near ${place_label || "your saved place"}:\n  • Things to do this weekend\n  • New free resources in your area\n  • Active weather/safety alerts\n\nWe never share your email. Unsubscribe anytime by replying STOP.\n\n— Nearnity\n`,
+    }));
+  }
+
+  return json({ ok: true });
+}
+
+// Tiny Resend client — used by /correction and /digest-signup.
+// Resend docs: https://resend.com/docs/api-reference/emails/send-email
+async function sendResendEmail(env, { from, to, subject, text, html }) {
+  if (!env.RESEND_API_KEY) return { skipped: true };
+  try {
+    const r = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ from, to, subject, text, html }),
+    });
+    if (!r.ok) {
+      const errTxt = await r.text();
+      return { error: `Resend ${r.status}: ${errTxt.slice(0, 200)}` };
+    }
+    return await r.json();
+  } catch (e) {
+    return { error: String(e.message || e) };
+  }
+}
+
+// ─── HIFLD Electric Retail Service Territories ─────────────────────────
+// HIFLD publishes a national feature service for electric retail service
+// territories. ArcGIS REST query: returns the utility whose polygon contains
+// the given point. Free, no key required.
+//
+// Docs: https://hifld-geoplatform.opendata.arcgis.com/
+async function handleElectricHIFLD(url, env, ctx) {
+  const ll = readLatLon(url);
+  if (!ll) return json({ error: "lat and lon required" }, 400);
+  const cacheKey = `electric-hifld:${ll.lat.toFixed(3)}:${ll.lon.toFixed(3)}`;
+  try {
+    const out = await withCache(env, cacheKey, 86400 * 7, async () => {
+      // Build ArcGIS spatial query (point-in-polygon) against HIFLD feature service
+      const u = new URL("https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/rest/services/Electric_Retail_Service_Territories/FeatureServer/0/query");
+      u.searchParams.set("f", "json");
+      u.searchParams.set("geometry", `${ll.lon},${ll.lat}`);
+      u.searchParams.set("geometryType", "esriGeometryPoint");
+      u.searchParams.set("inSR", "4326");
+      u.searchParams.set("spatialRel", "esriSpatialRelIntersects");
+      u.searchParams.set("returnGeometry", "false");
+      u.searchParams.set("outFields", "NAME,TYPE,STATE,WEBSITE,SOURCE");
+      u.searchParams.set("where", "1=1");
+      const r = await fetch(u.toString());
+      if (!r.ok) throw new Error(`HIFLD ${r.status}`);
+      const data = await r.json();
+      const feats = data.features || [];
+      const utilities = feats.map(f => {
+        const p = f.attributes || {};
+        return {
+          name: p.NAME || "",
+          type: p.TYPE || "",
+          state: p.STATE || "",
+          website: p.WEBSITE || "",
+          source_dataset: p.SOURCE || "",
+        };
+      });
+      return {
+        utilities,
+        primary: utilities[0] || null,
+        source: "HIFLD Electric Retail Service Territories (national)",
+        source_url: "https://hifld-geoplatform.opendata.arcgis.com/",
+        last_checked: new Date().toISOString(),
+        trust_label: "Public dataset",
+        confidence: utilities.length === 1 ? "high" : utilities.length > 1 ? "medium" : "low",
+      };
+    });
+    return json(out);
+  } catch (e) {
+    return json({ utilities: [], error: String(e.message || e), source: "HIFLD" }, 200);
+  }
+}
+
+// ─── RIDB — Recreation.gov ─────────────────────────────────────────────
+// Docs: https://ridb.recreation.gov/landing
+// Requires RIDB_KEY env var.
+async function handleRIDB(url, env, ctx) {
+  if (!env.RIDB_KEY) return json({ sites: [], status: "no_key", note: "Set RIDB_KEY in Worker env to enable" }, 200);
+  const ll = readLatLon(url);
+  if (!ll) return json({ error: "lat and lon required" }, 400);
+  // v0.82.1: extended max to 350mi so Weekend trip band (up to 300mi) works.
+  const radiusMi = clamp(parseFloat(url.searchParams.get("radius") || "50"), 5, 350);
+  const cacheKey = `ridb:${ll.lat.toFixed(2)}:${ll.lon.toFixed(2)}:${radiusMi}`;
+  try {
+    const out = await withCache(env, cacheKey, 21600, async () => {
+      // RIDB facilities endpoint supports geo search
+      const u = new URL("https://ridb.recreation.gov/api/v1/facilities");
+      u.searchParams.set("latitude", String(ll.lat));
+      u.searchParams.set("longitude", String(ll.lon));
+      u.searchParams.set("radius", String(radiusMi));
+      u.searchParams.set("limit", "50");
+      const r = await fetch(u.toString(), {
+        headers: { "apikey": env.RIDB_KEY, "accept": "application/json" },
+      });
+      if (!r.ok) throw new Error(`RIDB ${r.status}`);
+      const data = await r.json();
+      const sites = (data.RECDATA || []).map(f => ({
+        id: f.FacilityID,
+        name: f.FacilityName,
+        type: f.FacilityTypeDescription,
+        lat: f.FacilityLatitude,
+        lon: f.FacilityLongitude,
+        phone: f.FacilityPhone,
+        url: f.FacilityReservationURL || `https://www.recreation.gov/`,
+        description: (f.FacilityDescription || "").replace(/<[^>]+>/g, "").slice(0, 280),
+        trust_label: "Official source",
+        confidence: "high",
+      }));
+      return { sites, source: "Recreation.gov RIDB", last_checked: new Date().toISOString() };
+    });
+    return json(out);
+  } catch (e) {
+    return json({ sites: [], error: String(e.message || e), source: "Recreation.gov RIDB" }, 200);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v0.92 — NEARNITY LOCAL EVENTS SOURCE NETWORK
+//
+// Implements the data models, adapter framework, and endpoints described in
+// the Source Network v1 spec, the Farm & U-Pick module spec, and the
+// Community Event Capture spec. Everything below this banner is new in v0.92.
+//
+// Architecture overview:
+//
+//   EventSource (data model, see EVENT_SOURCES registry below)
+//     ↓ dispatched via adapter_type
+//   Adapter (API / ICS / RSS / HTML / PDF / Manual)
+//     ↓ returns raw rows
+//   normalizeToNearnityEvent()
+//     ↓ canonicalizes shape, enforces required fields
+//   Main /api/events pipeline (existing) → dedup → group → publish
+//
+//   FarmExperience: separate model — /api/farm-experiences endpoint
+//   Submissions: write-only POST endpoints → KV pools → admin queue
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── EventSource registry ──────────────────────────────────────────────────
+// Each entry declares a single data source. Add new sources here without
+// touching the dispatcher — `runExtraAdapters` iterates this list.
+//
+// trust_label values: Official source / Public dataset / Public map data /
+//                     Ticketed event source / Community submitted /
+//                     Nearnity reviewed / Source-linked
+//
+// adapter_type values: API / ICS / RSS / HTML / PDF / Manual
+//
+// default_bucket maps to the bucket the source primarily feeds. Secondary
+// buckets are inferred per-event from title/category keywords.
+const EVENT_SOURCES = [
+  // Seeded city iCal feeds — these are already pulled via fetchCityCivic.
+  // Declared here for introspection / /api/sources output. The dispatcher
+  // skips entries that have a `legacy_dispatch: true` flag so we don't
+  // double-fetch them.
+  { id: "fremont_ca_city",       name: "City of Fremont Calendar (CA)",        adapter_type: "ICS",    url: "https://www.fremont.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml", city: "fremont",       state: "CA", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: true,  legacy_dispatch: true, notes: "Fed via fetchCityCivic" },
+  { id: "san_jose_ca_city",      name: "City of San Jose Calendar (CA)",       adapter_type: "ICS",    url: "",                                                                 city: "san jose",      state: "CA", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: true,  legacy_dispatch: true, notes: "Fed via fetchCityCivic" },
+
+  // Generic ICS slots — drop a URL here and it'll be fetched by GenericICSAdapter
+  // on every /api/events request whose geo matches the source's metro.
+  // EXAMPLES (commented; uncomment as URLs are verified live):
+  // { id: "fremont_library_ca",  name: "Fremont Main Library",                 adapter_type: "ICS",    url: "https://aclibrary.org/calendar/list.ics?library=fremont", city: "fremont", state: "CA", trust_label: "Official source", default_bucket: "library",     cache_ttl_hours: 6, enabled: false, notes: "Library calendar — verify URL" },
+  // { id: "fremont_parks_ca",    name: "Fremont Parks & Rec",                  adapter_type: "ICS",    url: "https://www.fremont.gov/calendar/parks.ics",              city: "fremont", state: "CA", trust_label: "Official source", default_bucket: "parks_rec",   cache_ttl_hours: 6, enabled: false, notes: "Parks/rec — verify URL" },
+
+  // Generic RSS slots — community newsletters, local org feeds.
+  // { id: "patch_fremont",       name: "Patch.com — Fremont",                  adapter_type: "RSS",    url: "https://patch.com/california/fremont/rss",                city: "fremont", state: "CA", trust_label: "Source-linked",   default_bucket: "free_community", cache_ttl_hours: 3, enabled: false, notes: "RSS of local news + event posts" },
+
+  // Stub adapters — declared so introspection shows them, fetched as no-ops.
+  { id: "usda_farmers_market",   name: "USDA Local Food Directory",            adapter_type: "API",    url: "https://search.ams.usda.gov/farmersmarkets/", city: "",  county: "", state: "", trust_label: "Public dataset",  default_bucket: "markets",       cache_ttl_hours: 24, enabled: false, notes: "Placeholder — USDA API integration pending" },
+  { id: "pickyourown_directory", name: "PickYourOwn.org-style directory",      adapter_type: "HTML",   url: "",                                            city: "",  county: "", state: "", trust_label: "Source-linked",   default_bucket: "farm_u_pick",   cache_ttl_hours: 24, enabled: false, notes: "Placeholder — scrape ToS sensitive; prefer direct farm URLs + county ag pages" },
+  { id: "localharvest_directory",name: "LocalHarvest-style directory",         adapter_type: "HTML",   url: "",                                            city: "",  county: "", state: "", trust_label: "Source-linked",   default_bucket: "markets",       cache_ttl_hours: 24, enabled: false, notes: "Placeholder — same ToS rationale" },
+  { id: "eventbrite_public",     name: "Eventbrite public events",             adapter_type: "API",    url: "https://www.eventbriteapi.com/v3/",           city: "",  county: "", state: "", trust_label: "Source-linked",   default_bucket: "free_community",cache_ttl_hours: 6,  enabled: false, notes: "DISABLED — public events search deprecated 2019; only org-owned events retrievable" },
+
+  // v1.5: Civic iCal slot declarations for non-Bay metros. All enabled:false
+  // until the URLs are verified live (cities change their calendar systems
+  // frequently). Flip enabled:true after verifying each one returns valid ICS.
+  // Pattern: official city calendar URL inferred from typical CivicPlus / Granicus / Plone deployments.
+  { id: "philadelphia_pa_city",  name: "City of Philadelphia Calendar (PA)",   adapter_type: "ICS",    url: "https://www.phila.gov/calendar/",                city: "philadelphia",   state: "PA", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Phila.gov uses a custom calendar; verify ICS export endpoint" },
+  { id: "pittsburgh_pa_city",    name: "City of Pittsburgh Calendar (PA)",     adapter_type: "ICS",    url: "https://pittsburghpa.gov/events/",               city: "pittsburgh",     state: "PA", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS export" },
+  { id: "chicago_il_city",       name: "City of Chicago Calendar (IL)",        adapter_type: "ICS",    url: "https://www.chicago.gov/city/en/depts/dca/supp_info/special_events.html", city: "chicago", state: "IL", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Chicago has many micro-calendars; verify aggregator" },
+  { id: "nyc_ny_city",           name: "NYC Government Calendar (NY)",         adapter_type: "ICS",    url: "https://www.nyc.gov/site/cau/community/community-events.page", city: "new york", state: "NY", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "NYC.gov aggregator; verify ICS endpoint" },
+  { id: "austin_tx_city",        name: "City of Austin Calendar (TX)",         adapter_type: "ICS",    url: "https://www.austintexas.gov/calendar",           city: "austin",         state: "TX", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Austintexas.gov; verify ICS" },
+  { id: "dallas_tx_city",        name: "City of Dallas Calendar (TX)",         adapter_type: "ICS",    url: "https://dallascityhall.com/Pages/Calendar.aspx", city: "dallas",         state: "TX", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS" },
+  { id: "houston_tx_city",       name: "City of Houston Calendar (TX)",        adapter_type: "ICS",    url: "https://www.houstontx.gov/events.html",          city: "houston",        state: "TX", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS" },
+  { id: "columbus_oh_city",      name: "City of Columbus Calendar (OH)",       adapter_type: "ICS",    url: "https://www.columbus.gov/events/",               city: "columbus",       state: "OH", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS" },
+  { id: "cleveland_oh_city",     name: "City of Cleveland Calendar (OH)",      adapter_type: "ICS",    url: "https://www.clevelandohio.gov/events",           city: "cleveland",      state: "OH", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS" },
+  { id: "miami_fl_city",         name: "City of Miami Calendar (FL)",          adapter_type: "ICS",    url: "https://www.miamigov.com/Calendar",              city: "miami",          state: "FL", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS" },
+  { id: "orlando_fl_city",       name: "City of Orlando Calendar (FL)",        adapter_type: "ICS",    url: "https://www.orlando.gov/Calendar",               city: "orlando",        state: "FL", trust_label: "Official source", default_bucket: "official_local", cache_ttl_hours: 1, enabled: false, notes: "Verify ICS" },
+  // Library calendar slots — also declared for major metros
+  { id: "nypl_ny_library",       name: "New York Public Library Calendar",     adapter_type: "ICS",    url: "https://www.nypl.org/events",                    city: "new york",       state: "NY", trust_label: "Official source", default_bucket: "library",        cache_ttl_hours: 6, enabled: false, notes: "NYPL has rich calendar; verify ICS export" },
+  { id: "freelibrary_phila",     name: "Free Library of Philadelphia Calendar", adapter_type: "ICS",   url: "https://libwww.freelibrary.org/calendar",        city: "philadelphia",   state: "PA", trust_label: "Official source", default_bucket: "library",        cache_ttl_hours: 6, enabled: false, notes: "Verify ICS" },
+  { id: "cpl_il_library",        name: "Chicago Public Library Calendar",      adapter_type: "ICS",    url: "https://www.chipublib.org/events/",              city: "chicago",        state: "IL", trust_label: "Official source", default_bucket: "library",        cache_ttl_hours: 6, enabled: false, notes: "Verify ICS" },
+  { id: "apl_tx_library",        name: "Austin Public Library Calendar",       adapter_type: "ICS",    url: "https://library.austintexas.gov/events",         city: "austin",         state: "TX", trust_label: "Official source", default_bucket: "library",        cache_ttl_hours: 6, enabled: false, notes: "Verify ICS" },
+];
+
+// ─── Adapter implementations ──────────────────────────────────────────────
+// Each adapter: async fetch(source, geo, env) → raw rows. Output is
+// normalized to NearnityEvent shape by `normalizeToNearnityEvent`.
+
+const ADAPTERS = {
+  ICS: async function adapterICS(source, geo, env) {
+    if (!source.url) return [];
+    try {
+      const resp = await fetch(source.url, { cf: { cacheTtl: (source.cache_ttl_hours || 1) * 3600 } });
+      if (!resp.ok) return [];
+      const ics = await resp.text();
+      return parseICS(ics).map(ev => ({
+        ...ev,
+        source: source.name,
+        source_url: ev.url || source.url,
+        _adapter: "generic_ics",
+        _source_id: source.id,
+        trust_label: source.trust_label || "Source-linked",
+        default_bucket: source.default_bucket,
+      }));
+    } catch (e) { return []; }
+  },
+
+  RSS: async function adapterRSS(source, geo, env) {
+    if (!source.url) return [];
+    try {
+      const resp = await fetch(source.url, { cf: { cacheTtl: (source.cache_ttl_hours || 3) * 3600 } });
+      if (!resp.ok) return [];
+      const xml = await resp.text();
+      return parseRSS(xml).map(item => ({
+        title: item.title,
+        starts: item.pubDate,
+        venue: source.name,
+        url: item.link,
+        source: source.name,
+        source_url: item.link,
+        category: source.default_bucket || "other",
+        _adapter: "generic_rss",
+        _source_id: source.id,
+        trust_label: source.trust_label || "Source-linked",
+      }));
+    } catch (e) { return []; }
+  },
+
+  HTML: async function adapterHTML(source, geo, env) {
+    // Placeholder — would require per-source CSS selector config. Returns
+    // empty array; declared so introspection shows the adapter type exists.
+    return [];
+  },
+
+  PDF: async function adapterPDF(source, geo, env) {
+    // Placeholder — OCR pipeline not built. Same rationale as HTML.
+    return [];
+  },
+
+  API: async function adapterAPI(source, geo, env) {
+    // Generic API adapter — only handles known source.id values. Unknown
+    // API sources need a dedicated function (TicketmasterAdapter already
+    // exists, others would be added here).
+    if (source.id === "usda_farmers_market") {
+      // TODO: wire to https://search.ams.usda.gov/farmersmarkets/v1/data.svc/zipSearch
+      return [];
+    }
+    if (source.id === "eventbrite_public") {
+      // DISABLED — public search deprecated. Would call /v3/events/search/
+      // with token, but search endpoint is no longer available.
+      return [];
+    }
+    return [];
+  },
+
+  Manual: async function adapterManual(source, geo, env) {
+    // Manual admin adapter reads from KV. Already handled by
+    // fetchManualAdminEvents; this is a no-op in the dispatch loop to avoid
+    // double-fetching.
+    return [];
+  },
+};
+
+// ─── Adapter dispatcher ──────────────────────────────────────────────────
+// Iterates EVENT_SOURCES, calls the matching adapter for each enabled +
+// non-legacy source, returns flat array. Partial failures don't kill the
+// run — each adapter is wrapped in Promise.allSettled.
+async function runExtraAdapters(env, geo) {
+  const active = EVENT_SOURCES.filter(s => s.enabled && !s.legacy_dispatch);
+  const results = await Promise.allSettled(active.map(s => {
+    const adapter = ADAPTERS[s.adapter_type];
+    return adapter ? adapter(s, geo, env) : Promise.resolve([]);
+  }));
+  const flat = [];
+  for (const r of results) {
+    if (r.status === "fulfilled" && Array.isArray(r.value)) flat.push(...r.value);
+  }
+  return flat;
+}
+
+// ─── Manual admin events (approved community submissions) ──────────────────
+// Reads from KV pool `nearnity:admin_events:v1` (a list-key map of approved
+// events). Filtered to geo + keyword in code (KV doesn't support geo queries).
+// v1.0 Phase 3: SEED_BAY_AREA_EVENTS — recurring real events with verified
+// source URLs. Returned by fetchManualAdminEvents alongside any admin-curated
+// events in KV. Unblocks the "75 ticketed, 0 community" problem in source
+// summary. Each event is a real, source-linked recurring event in South Bay.
+// Times reflect typical weekly recurrence; the next-30-days projection
+// happens in the loop below.
+const SEED_BAY_AREA_EVENTS = [
+  // PCFMA farmers markets — Saturdays
+  { title: "Berryessa Farmers' Market", venue: "Berryessa Community Center, 1310 Mabury Rd", city: "San Jose", state: "CA", lat: 37.3779, lon: -121.8688, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://pcfma.org/markets/berryessa-farmers-market/", source: "PCFMA — Berryessa", category: "market", review_level: "verified" },
+  { title: "Willow Glen Farmers' Market", venue: "Lincoln Ave between Minnesota & Willow", city: "San Jose", state: "CA", lat: 37.3091, lon: -121.8989, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://www.cafarmersmkts.com/willow-glen-farmers-market", source: "CFMA — Willow Glen", category: "market", review_level: "verified" },
+  { title: "Santa Clara Farmers' Market", venue: "Jackson St near Civic Center Dr", city: "Santa Clara", state: "CA", lat: 37.3541, lon: -121.9552, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://www.cafarmersmkts.com/santa-clara-farmers-market", source: "CFMA — Santa Clara", category: "market", review_level: "verified" },
+  { title: "Saratoga Farmers' Market", venue: "West Valley College, 14000 Fruitvale Ave", city: "Saratoga", state: "CA", lat: 37.2569, lon: -122.0166, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://www.cafarmersmkts.com/saratoga-farmers-market", source: "CFMA — Saratoga", category: "market", review_level: "verified" },
+  { title: "Niles Farmers' Market", venue: "37482 Niles Blvd (plaza parking lot)", city: "Fremont", state: "CA", lat: 37.5783, lon: -121.9836, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://bayareafarmersmarkets.com/", source: "Bay Area Farmers Markets — Niles", category: "market", review_level: "verified" },
+  { title: "Sunnyvale Farmers Market", venue: "Murphy Ave between Washington & Evelyn", city: "Sunnyvale", state: "CA", lat: 37.3779, lon: -122.0306, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://urbanvillagefm.com/markets/sunnyvale", source: "Urban Village — Sunnyvale", category: "market", review_level: "verified" },
+  // Sunday markets
+  { title: "Alum Rock Village Farmers' Market", venue: "Alum Rock Ave (downtown Alum Rock)", city: "San Jose", state: "CA", lat: 37.3741, lon: -121.8295, day_of_week: 0, start_time: "08:00", end_time: "12:00", url: "https://pcfma.org/markets/alum-rock-farmers-market/", source: "PCFMA — Alum Rock", category: "market", review_level: "verified" },
+  { title: "Milpitas Farmers' Market", venue: "India Community Center, 1100 S Park Victoria Dr", city: "Milpitas", state: "CA", lat: 37.4264, lon: -121.8786, day_of_week: 0, start_time: "08:00", end_time: "13:00", url: "https://pcfma.org/markets/milpitas-farmers-market/", source: "PCFMA — Milpitas", category: "market", review_level: "verified" },
+  { title: "Evergreen Farmers' Market", venue: "4055 Evergreen Village Sq", city: "San Jose", state: "CA", lat: 37.3158, lon: -121.7821, day_of_week: 0, start_time: "09:00", end_time: "13:00", url: "https://pcfma.org/markets/evergreen-farmers-market/", source: "PCFMA — Evergreen", category: "market", review_level: "verified" },
+  { title: "Mountain View Farmers' Market", venue: "Caltrain parking lot, 600 W Evelyn Ave", city: "Mountain View", state: "CA", lat: 37.3946, lon: -122.0810, day_of_week: 0, start_time: "09:00", end_time: "13:00", url: "https://www.cafarmersmkts.com/mountain-view-farmers-market", source: "CFMA — Mountain View", category: "market", review_level: "verified" },
+  { title: "Campbell Farmers' Market", venue: "Campbell Ave between Central & 3rd", city: "Campbell", state: "CA", lat: 37.2872, lon: -121.9505, day_of_week: 0, start_time: "09:00", end_time: "13:00", url: "https://www.cafarmersmkts.com/campbell-farmers-market", source: "CFMA — Campbell", category: "market", review_level: "verified" },
+  { title: "California Avenue Farmers' Market", venue: "California Ave at El Camino Real", city: "Palo Alto", state: "CA", lat: 37.4262, lon: -122.1430, day_of_week: 0, start_time: "09:00", end_time: "13:00", url: "https://urbanvillagefm.com/markets/california-ave", source: "Urban Village — California Ave", category: "market", review_level: "verified" },
+  { title: "Blossom Hill Farmers' Market", venue: "Princeton Plaza, 1375 Blossom Hill Rd", city: "San Jose", state: "CA", lat: 37.2466, lon: -121.8709, day_of_week: 0, start_time: "10:00", end_time: "14:00", url: "https://www.cafarmersmkts.com/blossom-hill-farmers-market", source: "CFMA — Blossom Hill", category: "market", review_level: "verified" },
+  { title: "Irvington Farmers' Market", venue: "4039 Bay St", city: "Fremont", state: "CA", lat: 37.5097, lon: -121.9663, day_of_week: 0, start_time: "09:00", end_time: "14:00", url: "https://pcfma.org/markets/irvington-farmers-market/", source: "PCFMA — Irvington", category: "market", review_level: "verified" },
+  // First Friday — SoFA Art Walk (monthly, free)
+  { title: "SoFA First Friday Art Walk", venue: "South First Area, S 1st St", city: "San Jose", state: "CA", lat: 37.3294, lon: -121.8854, day_of_month: "first_friday", start_time: "18:00", end_time: "22:00", url: "https://sofadistrict.com/first-fridays", source: "SoFA District", category: "festival", review_level: "verified", free: true },
+  // Free First Sunday — Children's Discovery Museum
+  { title: "Children's Discovery Museum — Free First Sunday", venue: "180 Woz Way", city: "San Jose", state: "CA", lat: 37.3306, lon: -121.8898, day_of_month: "first_sunday", start_time: "10:00", end_time: "17:00", url: "https://www.cdm.org/visit/admission-tickets/", source: "Children's Discovery Museum", category: "kids", review_level: "verified", free: true },
+  // SF — Stern Grove Festival (summer Sundays)
+  { title: "Stern Grove Festival (free concerts)", venue: "Stern Grove, 19th Ave & Sloat Blvd", city: "San Francisco", state: "CA", lat: 37.7351, lon: -122.4783, day_of_week: 0, start_time: "14:00", end_time: "16:30", url: "https://sterngrove.org/", source: "Stern Grove Festival", category: "music", review_level: "verified", free: true, season_filter: "summer" },
+  // Library story times (sample — San Jose MLK Jr. Library)
+  { title: "Story Time for Toddlers — MLK Jr. Library", venue: "150 E San Fernando St", city: "San Jose", state: "CA", lat: 37.3358, lon: -121.8857, day_of_week: 3, start_time: "10:30", end_time: "11:00", url: "https://www.sjpl.org/calendar/", source: "San Jose Public Library", category: "kids", review_level: "verified", free: true },
+
+  // v1.5: EXPANDED beyond Bay Area — verified recurring events in major
+  // metros across the 7 live states (CA, FL, IL, NY, OH, PA, TX).
+  // All have real source URLs. Pulled from each market/library's official site.
+
+  // ── NY — NYC ──
+  { title: "Union Square Greenmarket", venue: "E 17th St & Union Sq W", city: "New York", state: "NY", lat: 40.7359, lon: -73.9911, day_of_week: 6, start_time: "08:00", end_time: "18:00", url: "https://www.grownyc.org/greenmarket/manhattan-union-square-saturday", source: "GrowNYC Greenmarket — Union Square", category: "market", review_level: "verified", free: true },
+  { title: "Union Square Greenmarket (Wednesday)", venue: "E 17th St & Union Sq W", city: "New York", state: "NY", lat: 40.7359, lon: -73.9911, day_of_week: 3, start_time: "08:00", end_time: "18:00", url: "https://www.grownyc.org/greenmarket/manhattan-union-square-wednesday", source: "GrowNYC Greenmarket — Union Square", category: "market", review_level: "verified", free: true },
+  { title: "Grand Army Plaza Greenmarket", venue: "Prospect Park West & Flatbush Ave", city: "Brooklyn", state: "NY", lat: 40.6730, lon: -73.9700, day_of_week: 6, start_time: "08:00", end_time: "15:00", url: "https://www.grownyc.org/greenmarket/brooklyn-grand-army-plaza", source: "GrowNYC Greenmarket — Grand Army", category: "market", review_level: "verified", free: true },
+  { title: "Story Time at NYPL — 53rd St Library", venue: "18 W 53rd St", city: "New York", state: "NY", lat: 40.7611, lon: -73.9779, day_of_week: 3, start_time: "10:30", end_time: "11:15", url: "https://www.nypl.org/events", source: "New York Public Library", category: "kids", review_level: "verified", free: true },
+
+  // ── PA — Philadelphia + Pittsburgh ──
+  { title: "Reading Terminal Market (daily)", venue: "51 N 12th St", city: "Philadelphia", state: "PA", lat: 39.9533, lon: -75.1592, day_of_week: 6, start_time: "08:00", end_time: "18:00", url: "https://readingterminalmarket.org/", source: "Reading Terminal Market", category: "market", review_level: "verified", free: true },
+  { title: "Headhouse Square Farmers' Market", venue: "2nd & Pine St", city: "Philadelphia", state: "PA", lat: 39.9405, lon: -75.1457, day_of_week: 0, start_time: "10:00", end_time: "14:00", url: "https://thefoodtrust.org/farmers-markets/market/headhouse/", source: "The Food Trust — Headhouse", category: "market", review_level: "verified", free: true },
+  { title: "Clark Park Farmers' Market", venue: "4398 Baltimore Ave", city: "Philadelphia", state: "PA", lat: 39.9492, lon: -75.2129, day_of_week: 6, start_time: "10:00", end_time: "14:00", url: "https://thefoodtrust.org/farmers-markets/market/clark-park/", source: "The Food Trust — Clark Park", category: "market", review_level: "verified", free: true },
+  { title: "Pittsburgh Public Market", venue: "2401 Penn Ave", city: "Pittsburgh", state: "PA", lat: 40.4543, lon: -79.9847, day_of_week: 6, start_time: "10:00", end_time: "16:00", url: "https://pittsburghpublicmarket.org/", source: "Pittsburgh Public Market", category: "market", review_level: "verified", free: true },
+
+  // ── IL — Chicago ──
+  { title: "Green City Market (Lincoln Park)", venue: "1817 N Clark St", city: "Chicago", state: "IL", lat: 41.9192, lon: -87.6371, day_of_week: 6, start_time: "07:00", end_time: "13:00", url: "https://www.greencitymarket.org/markets/lincoln-park", source: "Green City Market — Lincoln Park", category: "market", review_level: "verified", free: true },
+  { title: "Green City Market (West Loop)", venue: "Mary Bartelme Park, 115 S Sangamon St", city: "Chicago", state: "IL", lat: 41.8782, lon: -87.6517, day_of_week: 6, start_time: "08:00", end_time: "13:00", url: "https://www.greencitymarket.org/markets/west-loop", source: "Green City Market — West Loop", category: "market", review_level: "verified", free: true },
+  { title: "61st Street Farmers Market", venue: "6100 S Blackstone Ave", city: "Chicago", state: "IL", lat: 41.7841, lon: -87.5901, day_of_week: 6, start_time: "09:00", end_time: "14:00", url: "https://www.experimentalstation.org/market", source: "Experimental Station 61st St", category: "market", review_level: "verified", free: true },
+  { title: "Story Time — Harold Washington Library", venue: "400 S State St", city: "Chicago", state: "IL", lat: 41.8761, lon: -87.6280, day_of_week: 4, start_time: "10:30", end_time: "11:15", url: "https://www.chipublib.org/events/", source: "Chicago Public Library", category: "kids", review_level: "verified", free: true },
+
+  // ── TX — Austin + Dallas + Houston ──
+  { title: "SFC Farmers' Market — Downtown Austin", venue: "Republic Square Park, 422 Guadalupe", city: "Austin", state: "TX", lat: 30.2697, lon: -97.7456, day_of_week: 6, start_time: "09:00", end_time: "13:00", url: "https://sfcfarmersmarket.org/republicsquare", source: "Sustainable Food Center — Republic Square", category: "market", review_level: "verified", free: true },
+  { title: "Mueller Farmers' Market", venue: "4550 Mueller Blvd", city: "Austin", state: "TX", lat: 30.2997, lon: -97.7053, day_of_week: 0, start_time: "10:00", end_time: "14:00", url: "https://texasfarmersmarket.org/markets/mueller/", source: "Texas Farmers' Market — Mueller", category: "market", review_level: "verified", free: true },
+  { title: "Dallas Farmers Market", venue: "920 S Harwood St", city: "Dallas", state: "TX", lat: 32.7779, lon: -96.7906, day_of_week: 6, start_time: "10:00", end_time: "17:00", url: "https://www.dallasfarmersmarket.org/", source: "Dallas Farmers Market", category: "market", review_level: "verified", free: true },
+  { title: "Urban Harvest Farmers Market", venue: "2752 Buffalo Speedway", city: "Houston", state: "TX", lat: 29.7298, lon: -95.4242, day_of_week: 6, start_time: "08:00", end_time: "12:00", url: "https://www.urbanharvest.org/farmersmarket/", source: "Urban Harvest", category: "market", review_level: "verified", free: true },
+
+  // ── OH — Columbus + Cleveland + Cincinnati ──
+  { title: "North Market (daily)", venue: "59 Spruce St", city: "Columbus", state: "OH", lat: 39.9716, lon: -83.0058, day_of_week: 6, start_time: "09:00", end_time: "17:00", url: "https://northmarket.org/", source: "North Market", category: "market", review_level: "verified", free: true },
+  { title: "West Side Market", venue: "1979 W 25th St", city: "Cleveland", state: "OH", lat: 41.4853, lon: -81.7044, day_of_week: 6, start_time: "07:00", end_time: "18:00", url: "https://www.westsidemarket.org/", source: "West Side Market", category: "market", review_level: "verified", free: true },
+  { title: "Findlay Market", venue: "1801 Race St", city: "Cincinnati", state: "OH", lat: 39.1153, lon: -84.5181, day_of_week: 6, start_time: "08:00", end_time: "18:00", url: "https://findlaymarket.org/", source: "Findlay Market", category: "market", review_level: "verified", free: true },
+
+  // ── FL — Miami + Orlando + Tampa ──
+  { title: "Pinecrest Farmers Market", venue: "11000 Red Rd", city: "Pinecrest", state: "FL", lat: 25.6675, lon: -80.2997, day_of_week: 0, start_time: "09:00", end_time: "14:00", url: "https://www.pinecrest-fl.gov/our-services/parks-recreation/pinecrest-farmers-market", source: "Village of Pinecrest", category: "market", review_level: "verified", free: true },
+  { title: "Coconut Grove Farmers Market", venue: "3300 Grand Ave", city: "Miami", state: "FL", lat: 25.7281, lon: -80.2392, day_of_week: 6, start_time: "10:00", end_time: "19:00", url: "https://www.coconutgrovefarmersmarket.com/", source: "Coconut Grove Farmers Market", category: "market", review_level: "verified", free: true },
+  { title: "Audubon Park Community Market", venue: "1842 E Winter Park Rd", city: "Orlando", state: "FL", lat: 28.5743, lon: -81.3463, day_of_week: 1, start_time: "18:00", end_time: "22:00", url: "https://www.audubonmarket.com/", source: "Audubon Park Community Market", category: "market", review_level: "verified", free: true },
+  { title: "Saturday Morning Market — St. Pete", venue: "230 1st St SE", city: "St. Petersburg", state: "FL", lat: 27.7706, lon: -82.6326, day_of_week: 6, start_time: "09:00", end_time: "14:00", url: "https://saturdaymorningmarket.com/", source: "Saturday Morning Market", category: "market", review_level: "verified", free: true },
+
+  // v2.0: More NON-TICKETED community events to address "events only show
+  // ticketed/commercial" feedback. Library story times, free museum days,
+  // city movie nights, etc. — recurring events with real source URLs.
+
+  // ── Bay Area additional free events ──
+  { title: "Story Time — San Francisco Public Library (Main)", venue: "100 Larkin St", city: "San Francisco", state: "CA", lat: 37.7793, lon: -122.4156, day_of_week: 2, start_time: "10:30", end_time: "11:15", url: "https://sfpl.org/events", source: "San Francisco Public Library", category: "kids", review_level: "verified", free: true },
+  { title: "Story Time — Berkeley Public Library", venue: "2090 Kittredge St", city: "Berkeley", state: "CA", lat: 37.8694, lon: -122.2728, day_of_week: 4, start_time: "10:30", end_time: "11:00", url: "https://www.berkeleypubliclibrary.org/events", source: "Berkeley Public Library", category: "kids", review_level: "verified", free: true },
+  { title: "Story Time — Sunnyvale Public Library", venue: "665 W Olive Ave", city: "Sunnyvale", state: "CA", lat: 37.3741, lon: -122.0367, day_of_week: 2, start_time: "10:30", end_time: "11:00", url: "https://sunnyvalelibrary.org/events", source: "Sunnyvale Public Library", category: "kids", review_level: "verified", free: true },
+  { title: "Story Time — Fremont Main Library", venue: "2400 Stevenson Blvd", city: "Fremont", state: "CA", lat: 37.5485, lon: -121.9899, day_of_week: 3, start_time: "10:30", end_time: "11:00", url: "https://aclibrary.org/locations/fremont-main/", source: "Alameda County Library — Fremont", category: "kids", review_level: "verified", free: true },
+  { title: "Story Time — Milpitas Library", venue: "160 N Main St", city: "Milpitas", state: "CA", lat: 37.4326, lon: -121.9069, day_of_week: 1, start_time: "10:30", end_time: "11:00", url: "https://www.sccld.org/locations/milpitas/", source: "Santa Clara County Library — Milpitas", category: "kids", review_level: "verified", free: true },
+  { title: "Asian Art Museum — Free First Sunday", venue: "200 Larkin St", city: "San Francisco", state: "CA", lat: 37.7800, lon: -122.4163, day_of_month: "first_sunday", start_time: "10:00", end_time: "17:00", url: "https://asianart.org/visit/free-days/", source: "Asian Art Museum", category: "festival", review_level: "verified", free: true },
+  { title: "de Young Museum — Free Saturday for SF Residents", venue: "50 Hagiwara Tea Garden Dr", city: "San Francisco", state: "CA", lat: 37.7715, lon: -122.4686, day_of_week: 6, start_time: "09:30", end_time: "17:15", url: "https://www.famsf.org/de-young/visit", source: "Fine Arts Museums of SF", category: "festival", review_level: "verified", free: true },
+  { title: "Movie Night in San Pedro Square", venue: "87 N San Pedro St", city: "San Jose", state: "CA", lat: 37.3372, lon: -121.8951, day_of_week: 5, start_time: "20:00", end_time: "22:00", url: "https://sanpedrosquaremarket.com/events/", source: "San Pedro Square Market", category: "festival", review_level: "verified", free: true, season_filter: "summer" },
+
+  // ── Volunteer events (community service) ──
+  { title: "Save the Bay Volunteer Day", venue: "Bay shoreline cleanup sites", city: "Oakland", state: "CA", lat: 37.8044, lon: -122.2712, day_of_week: 6, start_time: "09:00", end_time: "12:00", url: "https://www.savesfbay.org/volunteer", source: "Save The Bay", category: "volunteer", review_level: "verified", free: true },
+  { title: "SF-Marin Food Bank Volunteer Shift", venue: "900 Pennsylvania Ave", city: "San Francisco", state: "CA", lat: 37.7506, lon: -122.3963, day_of_week: 6, start_time: "09:00", end_time: "12:00", url: "https://www.sfmfoodbank.org/volunteer/", source: "SF-Marin Food Bank", category: "volunteer", review_level: "verified", free: true },
+  { title: "Second Harvest Food Bank Volunteer", venue: "750 Curtner Ave", city: "San Jose", state: "CA", lat: 37.3072, lon: -121.8829, day_of_week: 6, start_time: "09:00", end_time: "12:00", url: "https://www.shfb.org/volunteer/", source: "Second Harvest Silicon Valley", category: "volunteer", review_level: "verified", free: true },
+
+  // ── NY: free museum + library story times ──
+  { title: "Story Time — Brooklyn Public Library (Central)", venue: "10 Grand Army Plaza", city: "Brooklyn", state: "NY", lat: 40.6727, lon: -73.9683, day_of_week: 4, start_time: "11:00", end_time: "11:45", url: "https://www.bklynlibrary.org/calendar", source: "Brooklyn Public Library", category: "kids", review_level: "verified", free: true },
+  { title: "Met Museum — Pay-What-You-Wish for NY/NJ/CT residents", venue: "1000 5th Ave", city: "New York", state: "NY", lat: 40.7794, lon: -73.9632, day_of_week: 0, start_time: "10:00", end_time: "17:00", url: "https://www.metmuseum.org/visit", source: "The Met", category: "festival", review_level: "verified", free: true },
+
+  // ── IL: library + free events ──
+  { title: "Story Time — Lincoln Park Branch CPL", venue: "1150 W Fullerton Ave", city: "Chicago", state: "IL", lat: 41.9252, lon: -87.6594, day_of_week: 2, start_time: "10:30", end_time: "11:15", url: "https://www.chipublib.org/events/", source: "Chicago Public Library", category: "kids", review_level: "verified", free: true },
+  { title: "Millennium Park Summer Music Series", venue: "201 E Randolph St", city: "Chicago", state: "IL", lat: 41.8826, lon: -87.6226, day_of_week: 1, start_time: "18:30", end_time: "20:30", url: "https://www.millenniumpark.org/programs", source: "Millennium Park", category: "music", review_level: "verified", free: true, season_filter: "summer" },
+
+  // ── TX: free events ──
+  { title: "Story Time — Austin Public Library (Central)", venue: "710 W Cesar Chavez St", city: "Austin", state: "TX", lat: 30.2670, lon: -97.7503, day_of_week: 3, start_time: "10:30", end_time: "11:15", url: "https://library.austintexas.gov/events", source: "Austin Public Library", category: "kids", review_level: "verified", free: true },
+  { title: "Blues on the Green — Free concert series", venue: "Zilker Park", city: "Austin", state: "TX", lat: 30.2670, lon: -97.7706, day_of_week: 3, start_time: "19:30", end_time: "22:00", url: "https://www.acltv.com/blues-on-the-green", source: "Austin City Limits — Blues on the Green", category: "music", review_level: "verified", free: true, season_filter: "summer" },
+
+  // ── OH: library + community ──
+  { title: "Story Time — Cleveland Public Library (Main)", venue: "325 Superior Ave NE", city: "Cleveland", state: "OH", lat: 41.5005, lon: -81.6889, day_of_week: 4, start_time: "10:30", end_time: "11:15", url: "https://cpl.org/events/", source: "Cleveland Public Library", category: "kids", review_level: "verified", free: true },
+
+  // ── FL: free + library ──
+  { title: "Story Time — Miami-Dade Main Library", venue: "101 W Flagler St", city: "Miami", state: "FL", lat: 25.7747, lon: -80.1937, day_of_week: 3, start_time: "10:30", end_time: "11:15", url: "https://www.mdpls.org/events", source: "Miami-Dade Public Library", category: "kids", review_level: "verified", free: true },
+];
+function _seedEventsForGeo(geo) {
+  const out = [];
+  const now = new Date();
+  const horizonMs = 30 * 24 * 3600 * 1000;
+  // v2.1: helper to build a UTC instant such that formatting it in the event's
+  // local timezone yields the intended hh:mm. The previous code used
+  // d.setHours(hh, mm) which interprets hh:mm in the WORKER'S local clock
+  // (UTC on Cloudflare), so a 10:30 PT story time became 10:30 UTC → 3:30 AM
+  // PT downstream. Now we iterate to find the right UTC instant for the
+  // target tz's offset (handles DST transitions correctly across two passes).
+  const _utcForLocal = (year, monthZero, day, hh, mm, tz) => {
+    let guess = new Date(Date.UTC(year, monthZero, day, hh, mm, 0));
+    for (let iter = 0; iter < 2; iter++) {
+      try {
+        const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, timeZoneName: "shortOffset" }).formatToParts(guess);
+        const offPart = (parts.find(p => p.type === "timeZoneName") || {}).value || "GMT";
+        const m = offPart.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+        if (!m) break;
+        const sign = m[1] === "+" ? 1 : -1;
+        const offMin = sign * (parseInt(m[2], 10) * 60 + parseInt(m[3] || "0", 10));
+        guess = new Date(Date.UTC(year, monthZero, day, hh, mm, 0) - offMin * 60 * 1000);
+      } catch (_) { break; }
+    }
+    return guess;
+  };
+  // Project each recurring seed into the next 30 days
+  for (const e of SEED_BAY_AREA_EVENTS) {
+    // Distance gate — 50mi from geo
+    if (e.lat != null && e.lon != null) {
+      const R = 3958.8;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(e.lat - geo.lat);
+      const dLon = toRad(e.lon - geo.lon);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(geo.lat)) * Math.cos(toRad(e.lat)) * Math.sin(dLon / 2) ** 2;
+      const dist = R * 2 * Math.asin(Math.sqrt(a));
+      if (dist > Math.max(geo.radius || 25, 50)) continue;
+    }
+    // Compute next occurrences
+    const occurrences = [];
+    // v2.1: TZ-correct projection. Use the event's state to pick the right
+    // local timezone, then construct the UTC instant whose local-tz rendering
+    // matches the seed's intended start_time.
+    const seedTz = (typeof tzForState === "function" ? tzForState(e.state) : null) || "America/Los_Angeles";
+    const [hh, mm] = (e.start_time || "00:00").split(":").map(s => parseInt(s, 10));
+    if (typeof e.day_of_week === "number") {
+      // Weekly — find next 4 occurrences (date math in UTC, then anchor the
+      // hh:mm to seedTz via _utcForLocal so DST shifts don't drift).
+      for (let week = 0; week < 5; week++) {
+        const ref = new Date(now);
+        const daysAhead = (e.day_of_week - ref.getDay() + 7) % 7 + week * 7;
+        ref.setDate(ref.getDate() + daysAhead);
+        const d = _utcForLocal(ref.getFullYear(), ref.getMonth(), ref.getDate(), hh, mm, seedTz);
+        if (d.getTime() - now.getTime() <= horizonMs && d > now) occurrences.push(d);
+      }
+    } else if (e.day_of_month === "first_friday" || e.day_of_month === "first_sunday") {
+      // First-Friday / First-Sunday of next 2 months
+      const targetDow = e.day_of_month === "first_friday" ? 5 : 0;
+      for (let monthOff = 0; monthOff < 2; monthOff++) {
+        const ref = new Date(now.getFullYear(), now.getMonth() + monthOff, 1);
+        while (ref.getDay() !== targetDow) ref.setDate(ref.getDate() + 1);
+        const d = _utcForLocal(ref.getFullYear(), ref.getMonth(), ref.getDate(), hh, mm, seedTz);
+        if (d.getTime() - now.getTime() <= horizonMs && d > now) occurrences.push(d);
+      }
+    }
+    // Keyword filter
+    if (geo.keyword) {
+      const hay = ((e.title || "") + " " + (e.venue || "") + " " + (e.category || "")).toLowerCase();
+      if (!hay.includes(geo.keyword.toLowerCase())) continue;
+    }
+    for (const startDate of occurrences) {
+      out.push({
+        title: e.title,
+        venue: e.venue,
+        city: e.city,
+        state: e.state,
+        lat: e.lat,
+        lon: e.lon,
+        starts: startDate.toISOString(),
+        ends: null,
+        category: e.category || "community",
+        url: e.url,
+        source: e.source,
+        verified: true,
+        free: e.free !== false,
+        review_level: e.review_level || "verified",
+        _adapter: "seed_bay_area",
+        _source_id: "seed_bay_area",
+      });
+    }
+  }
+  return out;
+}
+
+async function fetchManualAdminEvents(env, geo) {
+  // v1.0 Phase 3: ALWAYS include seed events alongside KV-stored admin events.
+  // Unblocks "0 markets, 0 community" by guaranteeing real verified events
+  // appear for any Bay Area search until the admin queue is populated.
+  const seedEvents = _seedEventsForGeo(geo);
+  if (!env.EVENTS_KV) return seedEvents;
+  try {
+    const raw = await env.EVENTS_KV.get("nearnity:admin_events:v1", "json");
+    if (!Array.isArray(raw)) return seedEvents;
+    const out = [];
+    const now = Date.now();
+    const horizon = now + 60 * 24 * 3600 * 1000;
+    for (const e of raw) {
+      // Geo filter — within radius+5 miles slack (some events are venue-less)
+      if (e.lat != null && e.lon != null) {
+        const R = 3958.8;
+        const toRad = d => d * Math.PI / 180;
+        const dLat = toRad(e.lat - geo.lat);
+        const dLon = toRad(e.lon - geo.lon);
+        const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(geo.lat)) * Math.cos(toRad(e.lat)) * Math.sin(dLon / 2) ** 2;
+        const dist = R * 2 * Math.asin(Math.sqrt(a));
+        if (dist > geo.radius + 5) continue;
+      }
+      // Time filter — future only, within 60 days
+      if (e.starts) {
+        const t = new Date(e.starts).getTime();
+        if (!isFinite(t) || t < now || t > horizon) continue;
+      }
+      // Keyword filter
+      if (geo.keyword) {
+        const hay = ((e.title || "") + " " + (e.description || "") + " " + (e.venue || "")).toLowerCase();
+        if (!hay.includes(geo.keyword.toLowerCase())) continue;
+      }
+      // Determine source label based on review_level set by admin at approval
+      const reviewLevel = e.review_level || "community";
+      const sourceLbl = reviewLevel === "verified"
+        ? "Nearnity reviewed"
+        : "Community submitted";
+      out.push({
+        title: e.title,
+        venue: e.venue || "",
+        city: e.city || "",
+        state: e.state || "",
+        lat: e.lat,
+        lon: e.lon,
+        starts: e.starts,
+        ends: e.ends || null,
+        category: e.category || "community",
+        url: e.source_url || e.url || "",
+        source: sourceLbl,
+        verified: reviewLevel === "verified",
+        free: e.free !== false,
+        description: e.description || "",
+        recurrence: e.recurrence || "",
+        flags: e.flags || [],
+        _adapter: "manual_admin",
+        _source_id: "manual_admin_events",
+      });
+    }
+    // v1.0 Phase 3: merge seed events with KV-stored admin events
+    return [...out, ...seedEvents];
+  } catch (_) { return seedEvents; }
+}
+
+// ─── ICS minimal parser ───────────────────────────────────────────────────
+// Existing fetchCityCivic has its own iCal parsing; this is a generic version
+// callable for arbitrary URLs. Handles VEVENT blocks with SUMMARY/DTSTART/
+// DTEND/URL/LOCATION/DESCRIPTION.
+function parseICS(text) {
+  const events = [];
+  if (!text || typeof text !== "string") return events;
+  const blocks = text.split(/BEGIN:VEVENT/i).slice(1);
+  for (const b of blocks) {
+    const end = b.indexOf("END:VEVENT");
+    const body = end >= 0 ? b.slice(0, end) : b;
+    const grab = (k) => {
+      const m = body.match(new RegExp(`(?:^|\\n)${k}(?:;[^:]*)?:([^\\n]+)`, "i"));
+      return m ? m[1].trim() : "";
+    };
+    const summary = grab("SUMMARY").replace(/\\,/g, ",");
+    if (!summary) continue;
+    const dtstart = grab("DTSTART");
+    const dtend = grab("DTEND");
+    const location = grab("LOCATION");
+    const url = grab("URL");
+    const desc = grab("DESCRIPTION").replace(/\\n/g, "\n").slice(0, 500);
+    // Parse YYYYMMDDTHHMMSS or YYYY-MM-DDTHH:MM:SS
+    const parseDt = (s) => {
+      if (!s) return null;
+      const m = s.match(/(\d{4})-?(\d{2})-?(\d{2})T?(\d{2})?(\d{2})?(\d{2})?/);
+      if (!m) return null;
+      const Y = m[1], M = m[2], D = m[3], hh = m[4] || "00", mm = m[5] || "00", ss = m[6] || "00";
+      return `${Y}-${M}-${D}T${hh}:${mm}:${ss}Z`;
+    };
+    events.push({
+      title: summary,
+      starts: parseDt(dtstart),
+      ends: parseDt(dtend),
+      venue: location,
+      url,
+      description: desc,
+    });
+  }
+  return events;
+}
+
+// ─── RSS minimal parser ───────────────────────────────────────────────────
+function parseRSS(xml) {
+  const items = [];
+  if (!xml || typeof xml !== "string") return items;
+  const itemBlocks = xml.split(/<item[\s>]/i).slice(1);
+  for (const b of itemBlocks) {
+    const end = b.search(/<\/item>/i);
+    const body = end >= 0 ? b.slice(0, end) : b;
+    const grab = (tag) => {
+      const m = body.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, "i"));
+      if (!m) return "";
+      return m[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/<[^>]+>/g, "").trim();
+    };
+    const title = grab("title");
+    if (!title) continue;
+    items.push({
+      title,
+      link: grab("link") || grab("guid"),
+      pubDate: grab("pubDate") || grab("dc:date"),
+      description: grab("description").slice(0, 280),
+    });
+  }
+  return items;
+}
+
+// ─── /api/watch-candidates — bars/pubs that may show sports ──────────────
+// v1.5 Phase 4 Part 2: per Launch_Ready_W1 Goal 5, watch-party candidates
+// from OSM. Bars + pubs + sports centers that COULD show a game, never
+// confirmed — every card labeled "May show sports — call to confirm".
+// Doesn't pollute the confirmed `watch` bucket which only contains explicit
+// "watch party" / "viewing party" events.
+async function handleWatchCandidates(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  const radius = clamp(parseInt(url.searchParams.get("radius") || "10"), 1, 30);
+  if (!isFinite(lat) || !isFinite(lon)) return json({ error: "lat and lon required" }, 400);
+  const radiusM = Math.round(radius * 1609.34);
+  const q = `[out:json][timeout:12];(`
+    + `nwr["amenity"="bar"](around:${radiusM},${lat},${lon});`
+    + `nwr["amenity"="pub"](around:${radiusM},${lat},${lon});`
+    + `nwr["leisure"="sports_centre"](around:${radiusM},${lat},${lon});`
+    + `nwr["sport"~"."](around:${radiusM},${lat},${lon});`   // anything with sport=*
+    + `);out center tags;`;
+  try {
+    const resp = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: `data=${encodeURIComponent(q)}`,
+      cf: { cacheTtl: 1800 },
+    });
+    if (!resp.ok) return json({ candidates: [], error: `Overpass ${resp.status}` }, 200);
+    const data = await resp.json();
+    const els = data.elements || [];
+    const candidates = els.map(e => {
+      const t = e.tags || {};
+      const name = t.name || t["name:en"];
+      if (!name) return null;
+      const elat = e.lat ?? (e.center && e.center.lat);
+      const elon = e.lon ?? (e.center && e.center.lon);
+      if (elat == null || elon == null) return null;
+      // Confidence signals — does the place mention sports?
+      const sportsSignal = [
+        t.sport, t["amenity:sport"], t.tv, t.bigscreen, t["bar:type"],
+        t.description || "",
+      ].some(v => v && /sport|tv|big.?screen|bigscreen|broadcast|live game|live match/i.test(String(v)));
+      const am = (t.amenity || t.leisure || "").toLowerCase();
+      let subtype = "Place";
+      if (am === "bar") subtype = "Bar";
+      else if (am === "pub") subtype = "Pub";
+      else if (am === "sports_centre") subtype = "Sports center";
+      else if (t.sport) subtype = "Sports venue";
+      return {
+        name, subtype,
+        lat: elat, lon: elon,
+        phone: t.phone || t["contact:phone"] || null,
+        website: t.website || t["contact:website"] || null,
+        opening_hours: t.opening_hours || null,
+        sport_signal: sportsSignal,
+        source: "OpenStreetMap",
+        source_url: t.website || `https://www.openstreetmap.org/${e.type}/${e.id}`,
+        trust_label: "Public map data",
+        confidence: sportsSignal ? "medium" : "low",
+        caveat: "May show sports — call to confirm before driving.",
+      };
+    }).filter(Boolean);
+    // Sort: places with sports signal first, then alphabetical
+    candidates.sort((a, b) => {
+      if (a.sport_signal !== b.sport_signal) return a.sport_signal ? -1 : 1;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    return json({
+      candidates: candidates.slice(0, 50),
+      caveat: "These are public-map candidates that may show sports. None are confirmed watch parties. Call ahead.",
+      source: "OpenStreetMap",
+      last_checked: new Date().toISOString(),
+    });
+  } catch (e) {
+    return json({ candidates: [], error: String(e.message || e) }, 200);
+  }
+}
+
+// ─── /api/sources — registry introspection ────────────────────────────────
+async function handleSourcesIntrospection(url, env, ctx) {
+  // Return the source registry + which adapter types are wired. Useful for
+  // admin debugging + the future Source Health page.
+  return json({
+    sources: EVENT_SOURCES,
+    adapter_types: Object.keys(ADAPTERS),
+    counts: {
+      total:     EVENT_SOURCES.length,
+      enabled:   EVENT_SOURCES.filter(s => s.enabled).length,
+      stub:      EVENT_SOURCES.filter(s => !s.enabled).length,
+    },
+    notes: [
+      "Ticketmaster + SeatGeek are hard-wired (not in EVENT_SOURCES) and always ticketed-only bucket.",
+      "City civic iCal feeds use the legacy fetchCityCivic dispatcher; their EVENT_SOURCES entries carry legacy_dispatch: true.",
+      "Enabling a stub source requires adding a real URL and flipping enabled: true.",
+    ],
+    last_checked: new Date().toISOString(),
+  });
+}
+
+// ─── /api/farm-experiences — seasonal farm directory ──────────────────────
+//
+// FarmExperience model (per Farm & U-Pick spec):
+//   id, farm_name, experience_type, crops, season_text, open_dates,
+//   recurring_schedule, address, city, state, lat, lon, phone, website,
+//   source_url, source_type, trust_label, confidence, caveat, last_checked
+//
+// Source ranking (highest trust first):
+//   1. Direct farm website
+//   2. County / state agriculture commissioner page
+//   3. USDA Local Food Directory
+//   4. LocalHarvest / PickYourOwn-style directories
+//   5. Manual admin entry
+//   6. Community submission (requires admin approval before publish)
+//
+// Universal caveat appended to every record: "Seasonal · Call/check source
+// before driving. Crop availability varies week to week."
+const FARM_EXPERIENCES_SEED = [
+  // Tiny hand-curated seed for the launch metros. Real entries come from
+  // KV pool `nearnity:farm_experiences:v1` (admin-managed). The seed
+  // ensures cherry-picking / pumpkin-patch queries return non-empty results
+  // even before admin entries exist.
+  {
+    id: "swanton_berry_farm_ca",
+    farm_name: "Swanton Berry Farm",
+    experience_type: ["u_pick", "farm_stand"],
+    crops: ["strawberry", "olallieberry", "blackberry"],
+    season_text: "April to October",
+    open_dates: "varies by crop; check website weekly",
+    recurring_schedule: "daily during season",
+    address: "25 Swanton Rd",
+    city: "Davenport",
+    state: "CA",
+    lat: 37.0410,
+    lon: -122.2200,
+    phone: "(831) 469-8804",
+    website: "https://swantonberryfarm.com/",
+    source_url: "https://swantonberryfarm.com/u-pick/",
+    source_type: "direct_farm_website",
+    trust_label: "Source-linked",
+    confidence: "high",
+  },
+  {
+    id: "gilroy_garlic_world_ca",
+    farm_name: "Gilroy Garlic World",
+    experience_type: ["farm_stand", "farm_fair"],
+    crops: ["garlic", "stone fruit"],
+    season_text: "summer",
+    open_dates: "year-round farm stand; Gilroy Garlic Festival in July",
+    recurring_schedule: "daily 9-6",
+    address: "4800 Monterey Rd",
+    city: "Gilroy",
+    state: "CA",
+    lat: 36.9856,
+    lon: -121.5675,
+    phone: "(408) 847-2251",
+    website: "https://garlicworld.com/",
+    source_url: "https://garlicworld.com/",
+    source_type: "direct_farm_website",
+    trust_label: "Source-linked",
+    confidence: "high",
+  },
+  {
+    id: "ardenwood_historic_farm_ca",
+    farm_name: "Ardenwood Historic Farm",
+    experience_type: ["petting_zoo", "farm_fair", "wagon_ride"],
+    crops: ["heritage produce"],
+    season_text: "year-round; pumpkin patch October",
+    open_dates: "Tue–Sun 10am–4pm; check seasonal hours",
+    recurring_schedule: "Tue–Sun",
+    address: "34600 Ardenwood Blvd",
+    city: "Fremont",
+    state: "CA",
+    lat: 37.5563,
+    lon: -122.0496,
+    phone: "(510) 544-2797",
+    website: "https://www.ebparks.org/parks/ardenwood",
+    source_url: "https://www.ebparks.org/parks/ardenwood",
+    source_type: "county_agriculture",
+    trust_label: "Official source",
+    confidence: "high",
+  },
+];
+
+async function handleFarmExperiences(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  const radius = clamp(parseInt(url.searchParams.get("radius") || "50"), 1, 200);
+  const keyword = (url.searchParams.get("q") || "").toLowerCase().trim();
+
+  // Pull admin-curated farm pool from KV, merge with seed.
+  let adminFarms = [];
+  if (env.EVENTS_KV) {
+    try { adminFarms = (await env.EVENTS_KV.get("nearnity:farm_experiences:v1", "json")) || []; } catch (_) {}
+    if (!Array.isArray(adminFarms)) adminFarms = [];
+  }
+  const all = [...adminFarms, ...FARM_EXPERIENCES_SEED];
+
+  // Filter by geo if provided
+  let filtered = all;
+  if (isFinite(lat) && isFinite(lon)) {
+    const haversine = (lat1, lon1, lat2, lon2) => {
+      const R = 3958.8;
+      const toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    };
+    filtered = filtered.map(f => ({
+      ...f,
+      distance_miles: f.lat != null && f.lon != null ? +(haversine(lat, lon, f.lat, f.lon)).toFixed(1) : null,
+    })).filter(f => f.distance_miles == null || f.distance_miles <= radius);
+  }
+
+  // Keyword (crop / experience_type / farm_name)
+  if (keyword) {
+    filtered = filtered.filter(f => {
+      const hay = (f.farm_name + " " +
+                   (f.crops || []).join(" ") + " " +
+                   (f.experience_type || []).join(" ") + " " +
+                   (f.season_text || "")).toLowerCase();
+      return hay.includes(keyword);
+    });
+  }
+
+  // Sort by source-type trust ranking (direct farm > county > USDA > directory > manual > community)
+  const TYPE_RANK = {
+    direct_farm_website: 1,
+    county_agriculture: 2,
+    state_agriculture:  2,
+    usda:               3,
+    localharvest:       4,
+    pickyourown:        4,
+    manual_admin:       5,
+    community:          6,
+  };
+  filtered.sort((a, b) => {
+    const rA = TYPE_RANK[a.source_type] || 9;
+    const rB = TYPE_RANK[b.source_type] || 9;
+    if (rA !== rB) return rA - rB;
+    return (a.distance_miles || 999) - (b.distance_miles || 999);
+  });
+
+  // Universal caveat per spec
+  const caveat = "Seasonal · Call/check source before driving. Crop availability varies week to week.";
+  const out = filtered.map(f => ({
+    ...f,
+    caveat: f.caveat || caveat,
+    last_checked: f.last_checked || new Date().toISOString(),
+  }));
+
+  return json({
+    farm_experiences: out,
+    count: out.length,
+    buckets: ["farm_u_pick", "markets", "kids_family", "seasonal", "day_trip"],
+    caveat,
+    source_ranking_used: TYPE_RANK,
+    last_checked: new Date().toISOString(),
+  });
+}
+
+// ─── /api/submit-event — community submission (no auto-publish) ───────────
+//
+// Per Community Capture spec: anyone can POST a missing event; it lands in
+// the admin queue with status="pending". Admin approval moves it into the
+// published pool (read by fetchManualAdminEvents).
+async function handleSubmitEvent(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "POST required" }, 405);
+  if (!env.EVENTS_KV) return json({ error: "KV not bound; cannot accept submissions" }, 503);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "Invalid JSON" }, 400); }
+
+  // Required fields enforcement per spec: source link OR organizer contact required.
+  const has_source = !!(body.source_link || body.source_url);
+  const has_contact = !!(body.contact_email || body.organizer_email);
+  if (!body.title) return json({ error: "title required" }, 400);
+  if (!body.date_time && !body.starts) return json({ error: "date/time required" }, 400);
+  if (!has_source && !has_contact) return json({ error: "source link OR organizer contact required" }, 400);
+
+  const id = `evtsub_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const record = {
+    id,
+    status: "pending",
+    submitted_at: new Date().toISOString(),
+    title: String(body.title).slice(0, 200),
+    description: String(body.description || "").slice(0, 2000),
+    starts: body.starts || body.date_time,
+    ends: body.ends || null,
+    recurrence: body.recurrence || "",
+    venue: body.venue || "",
+    address: body.address || "",
+    city: body.city || "",
+    state: body.state || "",
+    lat: typeof body.lat === "number" ? body.lat : null,
+    lon: typeof body.lon === "number" ? body.lon : null,
+    organizer: body.organizer || "",
+    source_link: body.source_link || body.source_url || "",
+    flyer_url: body.flyer_url || "",
+    free: body.free !== false,
+    kid_friendly: !!body.kid_friendly,
+    contact_email: body.contact_email || body.organizer_email || "",
+    flyer_only: !has_source && !!body.flyer_url,
+    notes: "",
+  };
+  await env.EVENTS_KV.put(`nearnity:submissions:v1:${id}`, JSON.stringify(record));
+  // Add to pending index list
+  await _appendKvList(env.EVENTS_KV, "nearnity:submissions_pending_index", id);
+  return json({ ok: true, id, status: "pending", message: "Thanks. We'll review and email you if more info is needed." });
+}
+
+// ─── /api/claim-organizer — organizer claim ───────────────────────────────
+async function handleClaimOrganizer(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "POST required" }, 405);
+  if (!env.EVENTS_KV) return json({ error: "KV not bound" }, 503);
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "Invalid JSON" }, 400); }
+  if (!body.organizer_name || !body.email) {
+    return json({ error: "organizer_name + email required" }, 400);
+  }
+  const id = `claim_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const record = {
+    id,
+    status: "pending",
+    submitted_at: new Date().toISOString(),
+    organizer_name: String(body.organizer_name).slice(0, 200),
+    website: body.website || "",
+    email: body.email,
+    phone: body.phone || "",
+    category: body.category || "",
+    proof_url: body.proof_url || "",
+    notes: "",
+  };
+  await env.EVENTS_KV.put(`nearnity:claims:v1:${id}`, JSON.stringify(record));
+  await _appendKvList(env.EVENTS_KV, "nearnity:claims_pending_index", id);
+  return json({ ok: true, id, status: "pending" });
+}
+
+// ─── /api/admin/queue — admin review queue (auth required) ────────────────
+async function handleAdminQueue(request, env, ctx) {
+  const auth = _checkAdminAuth(request, env);
+  if (!auth.ok) return json({ error: auth.error }, 401);
+  if (!env.EVENTS_KV) return json({ error: "KV not bound" }, 503);
+
+  if (request.method === "GET") {
+    // Return all pending + paginated history
+    const url = new URL(request.url);
+    const type = url.searchParams.get("type") || "submissions";  // submissions | claims
+    const status = url.searchParams.get("status") || "pending";
+    const indexKey = type === "claims"
+      ? (status === "pending" ? "nearnity:claims_pending_index" : "nearnity:claims_all_index")
+      : (status === "pending" ? "nearnity:submissions_pending_index" : "nearnity:submissions_all_index");
+    const ids = await _readKvList(env.EVENTS_KV, indexKey);
+    const prefix = type === "claims" ? "nearnity:claims:v1:" : "nearnity:submissions:v1:";
+    const records = await Promise.all(ids.slice(0, 100).map(async id => {
+      const r = await env.EVENTS_KV.get(prefix + id, "json");
+      return r;
+    }));
+    return json({
+      type, status,
+      count: records.filter(Boolean).length,
+      items: records.filter(r => r && (status === "all" || r.status === status)),
+    });
+  }
+
+  return json({ error: "Use GET to list, POST /admin/approve to action" }, 405);
+}
+
+// ─── /api/admin/approve — admin action on a submission ────────────────────
+async function handleAdminApprove(request, env, ctx) {
+  const auth = _checkAdminAuth(request, env);
+  if (!auth.ok) return json({ error: auth.error }, 401);
+  if (request.method !== "POST") return json({ error: "POST required" }, 405);
+  if (!env.EVENTS_KV) return json({ error: "KV not bound" }, 503);
+
+  let body;
+  try { body = await request.json(); } catch (_) { return json({ error: "Invalid JSON" }, 400); }
+  const { id, action, notes, recurring_template, review_level } = body;
+  if (!id || !action) return json({ error: "id + action required" }, 400);
+  const VALID = new Set(["approve", "reject", "needs_info", "duplicate", "make_recurring"]);
+  if (!VALID.has(action)) return json({ error: `action must be one of ${[...VALID].join(", ")}` }, 400);
+
+  const isClaim = id.startsWith("claim_");
+  const prefix = isClaim ? "nearnity:claims:v1:" : "nearnity:submissions:v1:";
+  const record = await env.EVENTS_KV.get(prefix + id, "json");
+  if (!record) return json({ error: "Not found" }, 404);
+
+  // Map action → status. "approve" + community submission also pushes the
+  // event into the published pool that fetchManualAdminEvents reads from.
+  const newStatus = action === "approve" ? "approved"
+                  : action === "reject"      ? "rejected"
+                  : action === "needs_info"  ? "needs_info"
+                  : action === "duplicate"   ? "duplicate"
+                  : action === "make_recurring" ? "approved_recurring"
+                  : "pending";
+  record.status = newStatus;
+  record.actioned_at = new Date().toISOString();
+  record.notes = (record.notes || "") + (notes ? `\n[${new Date().toISOString()}] ${notes}` : "");
+  await env.EVENTS_KV.put(prefix + id, JSON.stringify(record));
+
+  // Publish into the live admin_events pool if approved + a submission (not a claim)
+  if (!isClaim && (newStatus === "approved" || newStatus === "approved_recurring")) {
+    const pool = (await env.EVENTS_KV.get("nearnity:admin_events:v1", "json")) || [];
+    const publishedEvent = {
+      id: record.id,
+      title: record.title,
+      description: record.description,
+      starts: record.starts,
+      ends: record.ends,
+      recurrence: recurring_template || record.recurrence || "",
+      venue: record.venue,
+      city: record.city,
+      state: record.state,
+      lat: record.lat,
+      lon: record.lon,
+      url: record.source_link || "",
+      source_url: record.source_link || "",
+      free: record.free,
+      kid_friendly: record.kid_friendly,
+      review_level: review_level || (record.source_link ? "verified" : "community"),  // verified=Nearnity reviewed, community=Community submitted
+      category: record.kid_friendly ? "kids" : "community",
+      flags: record.kid_friendly ? ["kid_friendly"] : [],
+    };
+    pool.push(publishedEvent);
+    // Keep pool bounded — drop past events on every write.
+    const future = pool.filter(e => !e.starts || new Date(e.starts).getTime() > Date.now() - 24 * 3600 * 1000);
+    await env.EVENTS_KV.put("nearnity:admin_events:v1", JSON.stringify(future));
+  }
+
+  return json({ ok: true, id, new_status: newStatus });
+}
+
+// ─── Admin auth helper ────────────────────────────────────────────────────
+// Checks `?secret=...` query param OR `X-Admin-Secret` header against
+// env.ADMIN_SECRET. If ADMIN_SECRET isn't set, returns 401 (fail closed).
+function _checkAdminAuth(request, env) {
+  if (!env.ADMIN_SECRET) return { ok: false, error: "ADMIN_SECRET not configured on Worker" };
+  const url = new URL(request.url);
+  const provided = url.searchParams.get("secret") || request.headers.get("x-admin-secret") || "";
+  if (provided && provided === env.ADMIN_SECRET) return { ok: true };
+  return { ok: false, error: "Unauthorized" };
+}
+
+// ─── KV list helpers ──────────────────────────────────────────────────────
+// KV doesn't have list primitives, so we keep a JSON-array index per pool.
+async function _appendKvList(kv, key, value) {
+  try {
+    const cur = (await kv.get(key, "json")) || [];
+    cur.unshift(value);
+    await kv.put(key, JSON.stringify(cur.slice(0, 1000)));
+  } catch (_) {}
+}
+async function _readKvList(kv, key) {
+  try {
+    const cur = await kv.get(key, "json");
+    return Array.isArray(cur) ? cur : [];
+  } catch (_) { return []; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// END v0.92 Source Network / Farm / Community Capture additions
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v0.97 — Recommend a pro / Request help endpoints
+// Per Launch_Ready_W1 LB Goal 8: full forms for community trust-building.
+// All write to KV pools that the admin queue can review/approve.
+// ═══════════════════════════════════════════════════════════════════════════
+async function handleRecommendPro(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "POST required" }, 405);
+  if (!env.EVENTS_KV) return json({ error: "KV not bound" }, 503);
+  let body; try { body = await request.json(); } catch (_) { return json({ error: "Invalid JSON" }, 400); }
+  if (!body.pro_name) return json({ error: "pro_name required" }, 400);
+  if (!body.category) return json({ error: "category required" }, 400);
+  if (!body.personally_hired) return json({ error: "personally_hired (yes/no) required — community recommendations must come from real experience" }, 400);
+  const id = `rec_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const record = {
+    id,
+    type: "recommend_pro",
+    status: "pending",
+    submitted_at: new Date().toISOString(),
+    pro_name: String(body.pro_name).slice(0, 200),
+    category: String(body.category).slice(0, 60),
+    phone: body.phone || "",
+    email: body.email || "",
+    website: body.website || "",
+    personally_hired: body.personally_hired === "yes" || body.personally_hired === true,
+    approx_date: body.approx_date || "",
+    job_type: body.job_type || "",
+    would_hire_again: body.would_hire_again === "yes" || body.would_hire_again === true,
+    proof_url: body.proof_url || "",
+    notes: body.notes || "",
+    submitter_contact: body.submitter_contact || "",
+  };
+  await env.EVENTS_KV.put(`nearnity:recommendations:v1:${id}`, JSON.stringify(record));
+  await _appendKvList(env.EVENTS_KV, "nearnity:recommendations_pending_index", id);
+  return json({ ok: true, id, status: "pending", message: "Thanks. We'll review and add to neighbor-recommended pros after verification." });
+}
+
+async function handleRequestHelp(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "POST required" }, 405);
+  if (!env.EVENTS_KV) return json({ error: "KV not bound" }, 503);
+  let body; try { body = await request.json(); } catch (_) { return json({ error: "Invalid JSON" }, 400); }
+  if (!body.category) return json({ error: "category required" }, 400);
+  if (!body.description) return json({ error: "description required" }, 400);
+  if (!body.contact_method) return json({ error: "contact_method (email/phone/etc) required" }, 400);
+  const id = `req_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const record = {
+    id,
+    type: "request_help",
+    status: "pending",
+    submitted_at: new Date().toISOString(),
+    category: String(body.category).slice(0, 60),
+    description: String(body.description).slice(0, 2000),
+    urgency: body.urgency || "normal",
+    zip_area: body.zip_area || "",
+    photos: Array.isArray(body.photos) ? body.photos.slice(0, 5) : [],
+    contact_method: body.contact_method,
+    contact_value: body.contact_value || "",
+  };
+  await env.EVENTS_KV.put(`nearnity:help_requests:v1:${id}`, JSON.stringify(record));
+  await _appendKvList(env.EVENTS_KV, "nearnity:help_requests_pending_index", id);
+  return json({ ok: true, id, status: "pending", message: "Got it. We'll route this to neighbors who've recommended pros in that category." });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v0.98 — Weekly Digest scheduled handler
+// Cloudflare cron trigger fires this on a schedule (config in wrangler.toml:
+//   [triggers] crons = ["0 14 * * 1"]   # 2pm UTC every Monday = 6am PT
+// Pulls digest signups from KV, generates digest content per signup, sends
+// via Resend API. Requires RESEND_API_KEY env binding.
+// ═══════════════════════════════════════════════════════════════════════════
+async function scheduledDigest(event, env, ctx) {
+  if (!env.EVENTS_KV) { console.log("[digest] no KV, aborting"); return; }
+  if (!env.RESEND_API_KEY) { console.log("[digest] no RESEND_API_KEY, aborting"); return; }
+  // Read all digest signups
+  const signups = (await env.EVENTS_KV.get("nearnity:digest_signups:v1", "json")) || [];
+  if (!Array.isArray(signups) || signups.length === 0) { console.log("[digest] no signups"); return; }
+  let sent = 0, failed = 0;
+  for (const signup of signups) {
+    if (!signup.email || !signup.unsubscribe_token) continue;
+    try {
+      const content = await _generateDigestContent(env, signup);
+      if (!content) continue;
+      const resp = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${env.RESEND_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from: "Nearnity Digest <digest@nearnity.com>",
+          to: [signup.email],
+          subject: `Your weekly Nearnity digest — ${signup.city || "near you"}`,
+          html: content.html,
+        }),
+      });
+      if (resp.ok) sent++;
+      else { failed++; console.warn(`[digest] failed for ${signup.email}: ${resp.status}`); }
+    } catch (e) {
+      failed++; console.warn(`[digest] error for ${signup.email}:`, e.message);
+    }
+  }
+  console.log(`[digest] sent=${sent} failed=${failed} total=${signups.length}`);
+}
+
+async function _generateDigestContent(env, signup) {
+  const { lat, lon, city, state, email, unsubscribe_token } = signup;
+  if (!isFinite(lat) || !isFinite(lon)) return null;
+  // Fetch events for this weekend
+  let events = [];
+  try {
+    const eventsResp = await fetch(`https://nearnity.com/api/events?lat=${lat}&lon=${lon}&radius=25&city=${encodeURIComponent(city || "")}&state=${state || ""}`);
+    const data = await eventsResp.json();
+    events = Array.isArray(data.events) ? data.events : [];
+  } catch (_) {}
+  // Compute "this weekend" (Fri-Sun)
+  const now = new Date();
+  const friOffset = (5 - now.getDay() + 7) % 7;
+  const fri = new Date(now.getTime() + friOffset * 86400000);
+  const sun = new Date(fri.getTime() + 2 * 86400000);
+  const weekendEvents = events.filter(e => {
+    if (!e.starts) return false;
+    const d = new Date(e.starts);
+    return d >= fri && d <= sun;
+  }).slice(0, 12);
+  // Fetch live alerts
+  let alerts = [];
+  try {
+    const alertsResp = await fetch(`https://nearnity.com/api/alerts?lat=${lat}&lon=${lon}`);
+    const data = await alertsResp.json();
+    alerts = (data.alerts || []).slice(0, 5);
+  } catch (_) {}
+  // Render HTML
+  const eventHtml = weekendEvents.map(e => `
+    <tr><td style="padding:8px 0;border-bottom:1px solid #eee;">
+      <a href="${_escapeHtml(e.url || "")}" style="color:#0050c2;font-weight:600;text-decoration:none;">${_escapeHtml(e.title || "")}</a><br>
+      <span style="color:#666;font-size:13px;">${_escapeHtml(e.display_date || "")} · ${_escapeHtml(e.display_time || "")} · ${_escapeHtml(e.venue || "")}</span>
+    </td></tr>
+  `).join("");
+  const alertHtml = alerts.map(a => `
+    <tr><td style="padding:6px 0;color:#a32d2d;">
+      <b>${_escapeHtml(a.title || a.event || "Alert")}</b> · ${_escapeHtml(a.severity || "")}
+    </td></tr>
+  `).join("");
+  const html = `
+<!DOCTYPE html><html><body style="font-family:system-ui,-apple-system,sans-serif;max-width:600px;margin:0 auto;padding:24px;color:#1f2937;">
+  <h1 style="font-size:20px;margin:0 0 8px;">Your weekly Nearnity digest</h1>
+  <p style="color:#666;margin:0 0 18px;">Weekend ahead near ${_escapeHtml(city || "you")}, ${_escapeHtml(state || "")}</p>
+  ${alerts.length ? `<h2 style="font-size:16px;margin:16px 0 8px;">Active alerts</h2><table style="width:100%;border-collapse:collapse;">${alertHtml}</table>` : ""}
+  <h2 style="font-size:16px;margin:18px 0 8px;">This weekend (${weekendEvents.length} events)</h2>
+  <table style="width:100%;border-collapse:collapse;">${eventHtml || "<tr><td style=\"padding:8px 0;color:#666;\">No source-linked events this weekend. Try widening your area.</td></tr>"}</table>
+  <hr style="margin:24px 0;border:none;border-top:1px solid #e5e7eb;">
+  <p style="color:#666;font-size:12px;">
+    You're getting this because you signed up at nearnity.com. Source-linked data, no paid placement.<br>
+    <a href="https://nearnity.com/api/unsubscribe?token=${_escapeHtml(unsubscribe_token)}" style="color:#666;">Unsubscribe</a>
+  </p>
+</body></html>`;
+  return { html };
+}
+
+function _escapeHtml(s) {
+  return String(s || "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v0.98.1 — NearnityCard formal type + non-event SOURCE_REGISTRY
+// Per Launch_Ready_W1 Goal 6 + Goal 7.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * @typedef {Object} NearnityCardSource
+ * @property {string} name           — human-readable source name ("HRSA Health Centers")
+ * @property {string} source_type    — "api" | "ics" | "rss" | "html" | "pdf" | "manual" | "osm"
+ * @property {string} fetched_at     — ISO 8601 timestamp of when this card was fetched
+ *
+ * @typedef {Object} NearnityCardTrust
+ * @property {string} label          — "Official source" | "Public dataset" | "Public map data" | "Ticketed event source" | "Community submitted" | "Business claimed" | "Nearnity reviewed" | "Source-linked"
+ * @property {string} confidence     — "high" | "medium" | "low"
+ *
+ * @typedef {Object} NearnityCardActions
+ * @property {string} [source_url]   — URL to the original source
+ * @property {string} [website]      — official website if different from source
+ * @property {boolean} report_issue  — always true
+ * @property {boolean} [save]        — true if savable (places, events)
+ *
+ * @typedef {Object} NearnityCard
+ * @property {string} title                 — Primary display title
+ * @property {string} [subtitle]            — Secondary line
+ * @property {Object} [address]             — venue address fields
+ * @property {number} [lat]
+ * @property {number} [lon]
+ * @property {number} [distance_miles]
+ * @property {NearnityCardSource} source
+ * @property {NearnityCardTrust} trust
+ * @property {NearnityCardActions} actions
+ * @property {string} [why_shown]           — Optional "why ranked here" explanation
+ */
+
+const SOURCE_REGISTRY = [
+  // Geocoding + maps
+  { id: "census_geocoder",        name: "US Census Geocoder",                 category: "geocoding",        source_type: "api",  adapter_type: "API",  base_url: "https://geocoding.geo.census.gov/geocoder/locations/", cache_ttl_hours: 24, trust_label: "Official source",   enabled: true,  priority: 1, notes: "Federal address resolution" },
+  { id: "openstreetmap_overpass", name: "OpenStreetMap (via Overpass)",       category: "places",           source_type: "osm",  adapter_type: "API",  base_url: "https://overpass-api.de/api/interpreter",              cache_ttl_hours: 6,  trust_label: "Public map data",   enabled: true,  priority: 5, notes: "Community-edited places; license: ODbL" },
+  // Live alerts + weather + geology
+  { id: "nws_alerts",             name: "National Weather Service",           category: "alerts",           source_type: "api",  adapter_type: "API",  base_url: "https://api.weather.gov/alerts/active",                cache_ttl_hours: 0.25, trust_label: "Official source", enabled: true,  priority: 1, notes: "Active hazard alerts" },
+  { id: "usgs_earthquakes",       name: "USGS Earthquake Hazards",            category: "alerts",           source_type: "api",  adapter_type: "API",  base_url: "https://earthquake.usgs.gov/fdsnws/event/1/query",     cache_ttl_hours: 0.5,  trust_label: "Official source", enabled: true,  priority: 1, notes: "Real-time seismic data" },
+  { id: "airnow",                 name: "EPA AirNow",                         category: "alerts",           source_type: "api",  adapter_type: "API",  base_url: "https://www.airnowapi.org/aq/observation",             cache_ttl_hours: 1,    trust_label: "Official source", enabled: true,  priority: 2, notes: "Real-time AQI; requires AIRNOW_KEY" },
+  // Parks + outdoor
+  { id: "nps_parks",              name: "National Park Service",              category: "parks",            source_type: "api",  adapter_type: "API",  base_url: "https://developer.nps.gov/api/v1/parks",               cache_ttl_hours: 24,   trust_label: "Official source", enabled: true,  priority: 2, notes: "Park metadata; requires NPS_KEY" },
+  { id: "recreation_gov_ridb",    name: "Recreation.gov RIDB",                category: "parks",            source_type: "api",  adapter_type: "API",  base_url: "https://ridb.recreation.gov/api/v1/facilities",        cache_ttl_hours: 24,   trust_label: "Official source", enabled: true,  priority: 2, notes: "Federal recreation; requires RIDB_KEY" },
+  // Food + farming
+  { id: "usda_local_food",        name: "USDA Local Food Directory",          category: "markets",          source_type: "api",  adapter_type: "API",  base_url: "https://search.ams.usda.gov/farmersmarkets/",          cache_ttl_hours: 24,   trust_label: "Public dataset",  enabled: false, priority: 3, notes: "Stub — adapter not yet wired" },
+  // Health + social services
+  { id: "hrsa_health_centers",    name: "HRSA Health Centers",                category: "health",           source_type: "api",  adapter_type: "API",  base_url: "https://data.hrsa.gov/api/",                           cache_ttl_hours: 24,   trust_label: "Official source", enabled: true,  priority: 1, notes: "FQHC + sliding-scale clinics" },
+  { id: "two_one_one",            name: "211 Resource Directory",             category: "health",           source_type: "api",  adapter_type: "API",  base_url: "https://www.211.org/",                                 cache_ttl_hours: 24,   trust_label: "Official source", enabled: false, priority: 1, notes: "Stub — fed via mailto fallback for now" },
+  // Infrastructure
+  { id: "fcc_broadband",          name: "FCC Broadband Map",                  category: "utilities",        source_type: "api",  adapter_type: "API",  base_url: "https://broadbandmap.fcc.gov/api",                     cache_ttl_hours: 168,  trust_label: "Official source", enabled: false, priority: 2, notes: "Stub — currently using provider lookup" },
+  { id: "fema_nfhl",              name: "FEMA National Flood Hazard Layer",   category: "risks",            source_type: "api",  adapter_type: "API",  base_url: "https://hazards.fema.gov/gis/nfhl/services/public/",   cache_ttl_hours: 168,  trust_label: "Official source", enabled: true,  priority: 1, notes: "Flood zone lookup" },
+  { id: "hifld_electric",         name: "HIFLD Electric Retail Territories",  category: "utilities",        source_type: "api",  adapter_type: "API",  base_url: "https://services1.arcgis.com/Hp6G80Pky0om7QvQ/arcgis/", cache_ttl_hours: 168, trust_label: "Public dataset",  enabled: true,  priority: 2, notes: "National electric utility territories" },
+  { id: "nces_school_districts",  name: "NCES School Districts",              category: "schools",          source_type: "api",  adapter_type: "API",  base_url: "https://nces.ed.gov/programs/edge/",                   cache_ttl_hours: 168,  trust_label: "Official source", enabled: false, priority: 1, notes: "Stub — currently using OSM + curated seed" },
+  // Event sources reference event-registry separately
+];
+
+function getEnabledSources(category, location) {
+  return SOURCE_REGISTRY.filter(s => s.enabled && (!category || s.category === category));
+}
+
