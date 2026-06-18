@@ -98,12 +98,15 @@
   a { color: var(--primary); }
   .wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
   header { padding: 28px 0 12px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -0.01em; font-size: 18px; cursor: pointer; user-select: none; }
+  /* v2.2: bumped brand mark and wordmark sizes per Satya — logo 30→42px,
+     wordmark 18→24px, gap 10→14, tagline 11.5→14. Header now reads with
+     more authority on desktop without crowding the right-side controls. */
+  .brand { display: flex; align-items: center; gap: 14px; font-weight: 700; letter-spacing: -0.01em; font-size: 24px; cursor: pointer; user-select: none; }
   .brand:hover { opacity: 0.85; }
   .brand:focus { outline: 2px solid var(--primary); outline-offset: 4px; border-radius: 6px; }
-  .brand-dot { width: 22px; height: 22px; border-radius: 6px; background: linear-gradient(135deg, var(--green), var(--accent)); }
-  /* v0.35.0: logo SVG in brand area */
-  .brand-logo { width: 30px; height: 30px; display: inline-block; vertical-align: middle; }
+  .brand-dot { width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(135deg, var(--green), var(--accent)); }
+  /* v0.35.0 / v2.2: logo SVG in brand area, bumped from 30px → 42px */
+  .brand-logo { width: 42px; height: 42px; display: inline-block; vertical-align: middle; }
   /* v0.47.1: version stamp hidden from the main view by default. Reveals
      only on hover over the logo (kept in DOM for debugging — version is
      also in the footer). Don't compete with the search for attention. */
@@ -125,10 +128,11 @@
   .site-footer-disclaimer .brand-version,
   .site-footer .brand-version { display: inline-block; }
   /* v0.47.1: county-verified tag is now a subtle text accent, not a big pill */
+  /* v2.2: tagline bumped 11.5 → 14 to match the larger wordmark */
   .brand-tag {
-    margin-left: 10px;
+    margin-left: 12px;
     color: var(--ink-faint);
-    font-size: 11.5px;
+    font-size: 14px;
     letter-spacing: 0.2px;
     font-weight: 500;
     background: transparent;
