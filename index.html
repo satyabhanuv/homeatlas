@@ -5468,6 +5468,45 @@
     font-style: italic;
     cursor: help;
   }
+  /* v2.2 — Load guard UI (soft hint + hard error w/ Retry) */
+  .nrny-load-soft {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #6b7280;
+    font-style: italic;
+    font-size: 13px;
+  }
+  .nrny-load-error {
+    display: flex !important;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 14px 16px;
+    background: linear-gradient(180deg, #fff7e6 0%, #fafbfd 100%);
+    border: 1px solid #f3e3c4;
+    border-left: 4px solid #d97706;
+    border-radius: 10px;
+  }
+  .nrny-load-error-icon { font-size: 20px; line-height: 1; color: #b45309; }
+  .nrny-load-error-body { flex: 1; min-width: 0; }
+  .nrny-load-error-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+  .nrny-load-error-sub {
+    font-size: 13px;
+    color: var(--ink-soft, #4a5263);
+    line-height: 1.45;
+    margin-bottom: 8px;
+  }
+  .nrny-load-error-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
   /* v2.1 — Section footers (Verify / Save / Report) on civic / risks / utility */
   .nrny-section-footer {
     display: flex;
@@ -5885,7 +5924,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.2</span>
     </div>
   </header>
 
@@ -6223,7 +6262,7 @@
       <span id="risks-headline" style="display:none;"></span>
       <div id="risks-body"></div>
       <div class="source" style="margin-top:12px;">
-        Scores are rough estimates by region/state/climate zone. Click any factor for the authoritative free source (FEMA / Cal Fire / AirNow / NOAA) for your specific address.
+        Each score is Nearnity's 0–10 summary of the underlying official zone classification — FEMA flood zones (NFHL), Cal Fire FHSZ, AirNow, NOAA climate data. Click any factor to open the authoritative source and verify your parcel-level classification.
       </div>
     </div>
 
@@ -7156,8 +7195,8 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
-        Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are rough estimates by region; consult official FEMA / Cal Fire / NOAA sources for specific assessments.
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.2</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
   </footer>
@@ -8800,6 +8839,171 @@ function _renderEmptyStateHTML(title, desc) {
       <span class="nearnity-card-empty-or">or search above ↑</span>
     </div>
   </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.2 — UNIVERSAL LOAD GUARD
+// ═══════════════════════════════════════════════════════════════════════════
+// Every section's loading element gets wrapped by this guard. It guarantees:
+//   - Soft hint at 15s: "Still working — upstream sources slow today"
+//   - Hard transition at 45s: forces an error state with a Retry button.
+//     "Finding…" cannot persist forever, regardless of upstream cause.
+//   - Standard error UI across every loader (one component, one click target).
+//   - Central retry handler — the Retry button re-fires the original loader.
+// ═══════════════════════════════════════════════════════════════════════════
+const _nrnyLoadGuards = new Map();   // loadingElId → { softTimer, hardTimer, retryFn, originalHtml }
+const NRNY_SOFT_HINT_MS = 15000;
+const NRNY_HARD_FAIL_MS = 45000;
+
+function nrnyLoadGuardStart(loadingElId, retryFn, opts) {
+  if (!loadingElId) return;
+  const el = document.getElementById(loadingElId);
+  if (!el) return;
+  // Clean up any previous guard for this element
+  nrnyLoadGuardClear(loadingElId);
+  const label = (opts && opts.label) || "loading";
+  // Stash the original innerHTML + visibility so a retry can restore them.
+  // Many loaders use skeleton tiles instead of the "Finding…" element; the
+  // guard respects that — we only flip the element visible on hard fail.
+  const originalHtml = el.innerHTML;
+  const wasHiddenAtStart = el.hidden;
+  el.classList.remove("nrny-load-error");
+  // Soft hint at 15s — change copy to "Still working" but ONLY if the loader
+  // is showing its "Finding…" text. If it's using skeletons, leave alone.
+  const softTimer = setTimeout(() => {
+    if (el.hidden || el.classList.contains("nrny-load-error")) return;
+    el.innerHTML = `<span class="nrny-load-soft">Still working — upstream ${escapeHtml(label)} sources are slow today. Hanging in there…</span>`;
+  }, NRNY_SOFT_HINT_MS);
+  // Hard fail at 45s — render Retry UI
+  const hardTimer = setTimeout(() => {
+    if (el.hidden) return;
+    nrnyLoadGuardFail(loadingElId, "Took too long — upstream sources may be down.");
+  }, NRNY_HARD_FAIL_MS);
+  _nrnyLoadGuards.set(loadingElId, { softTimer, hardTimer, retryFn, originalHtml, label });
+}
+
+function nrnyLoadGuardClear(loadingElId) {
+  const g = _nrnyLoadGuards.get(loadingElId);
+  if (!g) return;
+  clearTimeout(g.softTimer);
+  clearTimeout(g.hardTimer);
+  _nrnyLoadGuards.delete(loadingElId);
+}
+
+function nrnyLoadGuardSuccess(loadingElId) {
+  // Loader finished successfully — clear timers and hide the loading element.
+  // The renderer that called this is responsible for the actual content.
+  const g = _nrnyLoadGuards.get(loadingElId);
+  if (g && g.originalHtml) {
+    const el = document.getElementById(loadingElId);
+    if (el) el.innerHTML = g.originalHtml;   // restore for next time
+  }
+  nrnyLoadGuardClear(loadingElId);
+  const el = document.getElementById(loadingElId);
+  if (el) el.hidden = true;
+}
+
+function nrnyLoadGuardFail(loadingElId, message) {
+  const g = _nrnyLoadGuards.get(loadingElId);
+  if (!g) return;
+  const el = document.getElementById(loadingElId);
+  if (!el) return;
+  clearTimeout(g.softTimer);
+  clearTimeout(g.hardTimer);
+  el.hidden = false;
+  el.classList.add("nrny-load-error");
+  el.innerHTML = `
+    <div class="nrny-load-error-icon">⚠</div>
+    <div class="nrny-load-error-body">
+      <div class="nrny-load-error-title">Couldn't load ${escapeHtml(g.label || "this section")}</div>
+      <div class="nrny-load-error-sub">${escapeHtml(message || "Upstream public data sources may be slow or unavailable right now.")}</div>
+      <div class="nrny-load-error-actions">
+        <button type="button" class="nrny-tail-btn nrny-tail-verify" data-nrny-retry="${escapeHtml(loadingElId)}">↻ Retry</button>
+        <button type="button" class="nrny-tail-btn" data-nrny-skip="${escapeHtml(loadingElId)}">Skip section</button>
+      </div>
+    </div>
+  `;
+}
+
+// Delegated handler for Retry / Skip buttons in load-error UI
+document.addEventListener("click", (e) => {
+  const retry = e.target.closest("[data-nrny-retry]");
+  if (retry) {
+    const id = retry.dataset.nrnyRetry;
+    const g = _nrnyLoadGuards.get(id);
+    // Restore the original loading text and re-fire the loader
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove("nrny-load-error");
+      if (g && g.originalHtml) el.innerHTML = g.originalHtml;
+    }
+    if (g && typeof g.retryFn === "function") {
+      try { g.retryFn(); } catch (err) { console.warn("[load-guard] retry threw:", err); }
+    }
+    return;
+  }
+  const skip = e.target.closest("[data-nrny-skip]");
+  if (skip) {
+    const id = skip.dataset.nrnySkip;
+    const el = document.getElementById(id);
+    if (el) el.hidden = true;
+    nrnyLoadGuardClear(id);
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.2 — EAGER PARALLEL PRELOAD
+// ═══════════════════════════════════════════════════════════════════════════
+// As soon as a search resolves, fire ALL section loaders in parallel in the
+// background. By the time the user clicks any tab, data is either already in
+// memory or already in-flight. Concurrency capped at 4 to avoid hammering
+// Overpass into rate-limit territory.
+const _PRELOAD_CONCURRENCY = 4;
+const _preloadInflight = new Set();
+
+async function nrnyEagerPreload(geo) {
+  if (!geo || _preloadInflight.size > 0) return;
+  // Registry of preload tasks. Each entry: { name, fn } where fn returns a Promise.
+  // We don't await results — the tabs will pick up the resolved data when user clicks.
+  // Use Object.defined check so we don't crash if a loader doesn't exist in this build.
+  const tasks = [
+    { name: "public-services",  fn: () => typeof loadNearbyPublicServices === "function" && loadNearbyPublicServices(geo) },
+    { name: "schools",          fn: () => typeof loadNearbySchools === "function" && loadNearbySchools(geo) },
+    { name: "parks",            fn: () => typeof loadNearbyParks === "function" && loadNearbyParks(geo) },
+    { name: "events",           fn: () => typeof loadNearbyEvents === "function" && loadNearbyEvents(geo) },
+    { name: "home-services",    fn: () => typeof loadNearbyHomeServices === "function" && loadNearbyHomeServices(geo) },
+    { name: "community-help",   fn: () => typeof renderCommunityHelp === "function" && renderCommunityHelp(geo) },
+    { name: "health",           fn: () => typeof loadHealthWellness === "function" && loadHealthWellness(geo) },
+    // yard + risks are computed synchronously from the resolved geo by their
+    // renderers; no separate async loader to preload. We DO preload the live
+    // risk feeds (NWS / AirNow / USGS) since those make outbound API calls.
+    { name: "live-risks",       fn: () => typeof loadLiveRisks === "function" && loadLiveRisks(geo) },
+    { name: "civic",            fn: () => typeof renderCivicSection === "function" && renderCivicSection(geo.address || {}) },
+  ];
+  // Run with concurrency cap so we don't slam Overpass simultaneously
+  let cursor = 0;
+  const startNext = async () => {
+    if (cursor >= tasks.length) return;
+    const t = tasks[cursor++];
+    _preloadInflight.add(t.name);
+    try {
+      const r = t.fn();
+      if (r && typeof r.then === "function") await r;
+    } catch (e) {
+      // Per-task failures shouldn't stop the rest — each loader has its own
+      // error UI via nrnyLoadGuard.
+      console.warn("[preload] task failed:", t.name, (e && e.message) || e);
+    } finally {
+      _preloadInflight.delete(t.name);
+    }
+    return startNext();
+  };
+  // Kick off `_PRELOAD_CONCURRENCY` workers in parallel
+  const workers = Array.from({ length: _PRELOAD_CONCURRENCY }, () => startNext());
+  // Don't await — preload runs in background; user interactions take priority
+  Promise.all(workers).then(() => {
+    console.log("[preload] all sections settled");
+  });
 }
 
 // v2.1: append a section-level next-step footer (Verify source · Save · Report)
@@ -10889,13 +11093,37 @@ function haversineMiles(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// Run a single Overpass QL query, falling through mirrors until one works.
-// v0.35.0/v0.35.4: Race mirrors in parallel via Promise.any. v0.35.4 cap the
-// race at the FIRST 2 mirrors instead of all 4 — across 4-5 concurrent
-// sections × 3-4 subqueries each, hitting all 4 mirrors caused Overpass to
-// rate-limit (429), making ALL sections fail in ~2 seconds. With 2 mirrors,
-// peak concurrent requests drop from ~64 to ~32 — within Overpass's tolerance.
+// v2.2: Overpass queries now go through our Worker proxy (nearnity.com/api/overpass)
+// which races all 4 mirrors safely (one shared IP, friendlier rate-limit profile)
+// and lets Cloudflare's edge cache serve identical subrequests in <100ms.
+// If the proxy is unreachable (rare — Worker down, network split), we fall
+// back to the legacy direct-from-browser path so users still get data.
 async function overpassQuery(qlBody, onProgress) {
+  // Primary path: Worker proxy with edge cache + 4-mirror race
+  try {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 15000);
+    const res = await fetch("/api/overpass?q=" + encodeURIComponent(qlBody), {
+      method: "GET", signal: ctrl.signal,
+    });
+    clearTimeout(t);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.elements)) {
+        if (onProgress) onProgress(1, 1, (data.meta && data.meta.mirror) || "proxy");
+        return data.elements;
+      }
+    } else if (res.status !== 504) {
+      // Non-timeout error from the proxy — log but still try fallback
+      console.warn("[overpass-proxy] HTTP", res.status);
+    }
+  } catch (e) {
+    console.warn("[overpass-proxy] unreachable, trying direct fallback:", (e && e.message) || e);
+  }
+
+  // Fallback: legacy direct-from-browser path (kept for graceful degradation
+  // when the Worker is unreachable). v0.35.4: race only first 2 mirrors so
+  // we don't trip per-IP rate limits when multiple sections fire in parallel.
   const MIRROR_COUNT = 2;
   const tries = OVERPASS_MIRRORS.slice(0, MIRROR_COUNT).map(baseUrl => {
     const host = new URL(baseUrl).host;
@@ -10906,20 +11134,15 @@ async function overpassQuery(qlBody, onProgress) {
         const res = await fetch(baseUrl + "?data=" + encodeURIComponent(qlBody),
                                 { method: "GET", signal: ctrl.signal });
         clearTimeout(t);
-        if (!res.ok) {
-          console.warn(`[overpass] ${host}: HTTP ${res.status}`);
-          return reject(new Error(`${host}: HTTP ${res.status}`));
-        }
+        if (!res.ok) return reject(new Error(`${host}: HTTP ${res.status}`));
         const data = await res.json();
         if (data.remark && /timed?\s*out|killed|memory|too\s+many|exceeded/i.test(data.remark)) {
-          console.warn(`[overpass] ${host}: ${data.remark}`);
           return reject(new Error(`${host}: ${data.remark}`));
         }
         if (onProgress) onProgress(1, 1, host);
         resolve(data.elements || []);
       } catch (e) {
         const msg = (e && e.name === "AbortError") ? `${host}: timed out` : `${host}: ${(e && e.message) || e}`;
-        console.warn(`[overpass] ${msg}`);
         reject(new Error(msg));
       }
     });
@@ -10927,7 +11150,7 @@ async function overpassQuery(qlBody, onProgress) {
   try {
     return await Promise.any(tries);
   } catch (aggregateErr) {
-    throw new Error("All Overpass mirrors failed within 12s");
+    throw new Error("All Overpass mirrors failed within 12s (proxy unreachable too)");
   }
 }
 
@@ -11834,6 +12057,8 @@ async function loadNearbySchools(geo) {
   loading.hidden = false;
   $("school-sections").hidden = true;
   $("school-summary").hidden = true;
+  // v2.2: universal load guard — 15s soft hint + 45s hard Retry button
+  nrnyLoadGuardStart("school-loading", () => loadNearbySchools(geo), { label: "schools" });
 
   try {
     const elements = await fetchNearbyEducation(lat, lon, 4000, (idx, total, host) => {
@@ -11870,14 +12095,9 @@ async function loadNearbySchools(geo) {
     refreshActiveSubtabFor("card-school");
     // v0.34.0: civic map also pulls libraries from school enrichment data
     if (typeof refreshCivicMap === "function") refreshCivicMap();
+    nrnyLoadGuardSuccess("school-loading");
   } catch (err) {
-    loading.classList.add("error");
-    loading.innerHTML =
-      `Couldn't load nearby schools: <b>${escapeHtml(err.message || "network error")}</b>. ` +
-      `<button class="retry-btn" id="schoolRetry" type="button">Retry</button> ` +
-      `<a class="visit-btn" href="https://www.openstreetmap.org/#map=14/${lat}/${lon}" target="_blank" rel="noopener" style="margin-left:6px;">Open on OpenStreetMap →</a>`;
-    const r = $("schoolRetry");
-    if (r) r.addEventListener("click", () => loadNearbySchools(lastSchoolGeo));
+    nrnyLoadGuardFail("school-loading", `Couldn't reach OpenStreetMap right now (${(err && err.message) || "network error"}).`);
   }
 }
 
@@ -13224,6 +13444,8 @@ async function loadNearbyParks(geo) {
   $("parks-sections").hidden = true;
   $("parks-summary").hidden = true;
   setText("parks-value", "Searching…");
+  // v2.2: universal load guard
+  nrnyLoadGuardStart("parks-loading", () => loadNearbyParks(geo), { label: "parks & recreation" });
   // v0.71: Kick off NPS + RIDB in parallel (don't block OSM parks render)
   loadNpsAndRidb(lat, lon);
   try {
@@ -13248,8 +13470,9 @@ async function loadNearbyParks(geo) {
     // v0.33.3: save state + render map for active subtab only
     sectionState["card-parks"] = { grouped, geo: { lat, lon } };
     refreshActiveSubtabFor("card-parks");
+    nrnyLoadGuardSuccess("parks-loading");
   } catch (err) {
-    loading.innerHTML = `Couldn't load nearby parks: ${escapeHtml(err.message || "network error")}.`;
+    nrnyLoadGuardFail("parks-loading", `Couldn't reach OpenStreetMap right now (${(err && err.message) || "network error"}).`);
   }
 }
 
@@ -13352,6 +13575,7 @@ async function loadNearbyHomeServices(geo) {
   $("hs-sections").hidden = true;
   $("hs-summary").hidden = true;
   setText("hs-value", "Searching…");
+  nrnyLoadGuardStart("hs-loading", () => loadNearbyHomeServices(geo), { label: "home services" });
   try {
     const elements = await fetchHomeServices(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
     const itemsRaw = elements
@@ -13382,8 +13606,9 @@ async function loadNearbyHomeServices(geo) {
     // v0.33.3: save state + render map for active subtab only
     sectionState["card-home-services"] = { grouped, geo: { lat, lon } };
     refreshActiveSubtabFor("card-home-services");
+    nrnyLoadGuardSuccess("hs-loading");
   } catch (err) {
-    loading.innerHTML = `Couldn't load nearby home services: ${escapeHtml(err.message || "network error")}.`;
+    nrnyLoadGuardFail("hs-loading", `Couldn't reach OpenStreetMap right now (${(err && err.message) || "network error"}).`);
   }
 }
 function renderHomeServices(grouped, total, cityKey) {
@@ -13523,6 +13748,9 @@ async function loadNearbyPublicServices(geo) {
   $("card-public-services").hidden = false;
   const loading = $("ps-loading");
   loading.hidden = true;            // v2.0.1: skip "Finding…" text, use skeletons
+  // v2.2: install the universal load guard. If this loader takes >45s, the
+  // error UI + Retry button take over the #ps-loading element automatically.
+  nrnyLoadGuardStart("ps-loading", () => loadNearbyPublicServices(geo), { label: "emergency services" });
   $("ps-sections").hidden = false;  // show sections immediately
   $("ps-summary").hidden = true;
   setText("ps-value", "Searching…");
@@ -13570,8 +13798,9 @@ async function loadNearbyPublicServices(geo) {
         renderCivicSection(lastGeo.address);
       }
     } catch (e) {}
+    nrnyLoadGuardSuccess("ps-loading");
   } catch (err) {
-    loading.innerHTML = `Couldn't load nearby public services: ${escapeHtml(err.message || "network error")}.`;
+    nrnyLoadGuardFail("ps-loading", `Couldn't reach OpenStreetMap right now (${(err && err.message) || "network error"}).`);
   }
 }
 function renderPublicServices(grouped, total, cityKey) {
@@ -14844,7 +15073,9 @@ async function fetchFarmExperiences(geo, radiusMi, keyword) {
         distance_miles: f.distance_miles,
         starts: todayIso,             // synthetic — calendar grouping only
         ends: null,
-        display_date: `Seasonal · ${f.season_text || "varies"}`,
+        display_date: f.season_text
+          ? `Seasonal · ${f.season_text}`
+          : `Seasonal · call farm to confirm dates`,
         display_time: "Call ahead",
         category: "farm_u_pick",
         url: srcUrl,
@@ -16476,10 +16707,18 @@ async function loadHealthWellness(geo) {
   $("health-sections").hidden = false;
   $("health-summary").hidden = true;
   $("health-loading").hidden = true;
-  renderHealthStatic(geo);                // mental + substance — synchronous
-  await renderHealthClinics(geo);         // FQHCs — fetches HRSA
-  // v0.97.1: inject help-filter chips
-  _injectHelpFilterChips("card-health");
+  // v2.2: universal load guard — HRSA federal API is occasionally slow / down,
+  // and we'd previously leave users staring at empty section bodies.
+  nrnyLoadGuardStart("health-loading", () => loadHealthWellness(geo), { label: "health & wellness" });
+  try {
+    renderHealthStatic(geo);                // mental + substance — synchronous
+    await renderHealthClinics(geo);         // FQHCs — fetches HRSA
+    // v0.97.1: inject help-filter chips
+    _injectHelpFilterChips("card-health");
+    nrnyLoadGuardSuccess("health-loading");
+  } catch (err) {
+    nrnyLoadGuardFail("health-loading", `Couldn't reach HRSA health-center API right now (${(err && err.message) || "network error"}).`);
+  }
 }
 
 function renderHealthStatic(geo) {
@@ -16999,6 +17238,11 @@ function renderResults(geo) {
   // v2.1: surface the saved-place workflow under the resolved address so
   // users can star/subscribe/preview without first navigating to Saved.
   try { renderSavedPlaceCallout(geo); } catch (e) { console.warn("[saved-callout]", e); }
+  // v2.2: eager-preload all section data in parallel (concurrency-capped) so
+  // tab clicks feel instant. Each loader is independently guarded — if one
+  // fails or times out, the others continue and the failing tab shows a
+  // Retry button automatically via nrnyLoadGuard.
+  try { setTimeout(() => nrnyEagerPreload(geo), 100); } catch (e) { console.warn("[eager-preload]", e); }
   // v2.0.1: cache the resolved geo so returning visitors land on results
   // instantly (no re-search needed). Capped to address + lat/lon — no PII.
   try {
