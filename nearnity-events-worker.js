@@ -117,6 +117,13 @@ export default {
     // v1.5: Watch candidates (Phase 4 part 2) — OSM bars/pubs/sports-centers
     // that MIGHT show sports. Always labeled "call to confirm" — never claimed.
     if (url.pathname.endsWith("/watch-candidates")) { return await handleWatchCandidates(url, env, ctx); }
+    // v2.2: Overpass proxy — frontend used to call overpass-api.de directly,
+    // which meant every visitor paid the cold-fetch tax (5-30s on slow days)
+    // and ran into per-IP rate limits. We now race all 4 public mirrors from
+    // the Worker (one shared IP, friendlier rate-limit profile) and lean on
+    // Cloudflare's edge cache via the `cf` option so identical subrequests
+    // are served in <100ms globally with zero KV writes.
+    if (url.pathname.endsWith("/overpass")) { return await handleOverpassProxy(url, env, ctx); }
 
     // Main route — anything ending in /events
     if (!url.pathname.endsWith("/events")) {
@@ -3082,4 +3089,69 @@ const SOURCE_REGISTRY = [
 function getEnabledSources(category, location) {
   return SOURCE_REGISTRY.filter(s => s.enabled && (!category || s.category === category));
 }
+
+// ─── v2.2: Overpass proxy with 4-mirror race + edge cache ──────────────
+// Frontend was hitting overpass-api.de directly from the browser, which
+// (a) paid the 5-30s cold-fetch tax on every visit, and (b) tripped per-IP
+// rate limits when one user opened many tabs in parallel. The Worker now
+// races all 4 public mirrors simultaneously, returns the first responder,
+// and tags the response with `cf: { cacheTtl: 3600 }` so identical
+// subrequests are served from Cloudflare's edge in <100ms globally.
+//
+// Endpoint: GET /api/overpass?q=<urlencoded Overpass QL>
+// Optional: &timeout_ms=12000 (default 12000, capped 25000)
+const OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://overpass.osm.ch/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+
+async function handleOverpassProxy(url, env, ctx) {
+  const ql = url.searchParams.get("q");
+  if (!ql) return json({ error: "Missing q param (Overpass QL query)" }, 400);
+  if (ql.length > 4096) return json({ error: "Query too long (4kB cap)" }, 413);
+  const timeoutMs = clamp(parseInt(url.searchParams.get("timeout_ms") || "12000"), 2000, 25000);
+
+  // Race all 4 mirrors. First success wins, others get cancelled implicitly
+  // when the response is returned. Cloudflare's `cf: { cacheTtl: 3600 }`
+  // caches the identical subrequest URL (GET + query string) at the edge.
+  const racePromises = OVERPASS_MIRRORS.map(baseUrl => {
+    const host = new URL(baseUrl).host;
+    return new Promise(async (resolve, reject) => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), timeoutMs);
+        const res = await fetch(baseUrl + "?data=" + encodeURIComponent(ql), {
+          method: "GET",
+          signal: ctrl.signal,
+          cf: { cacheTtl: 3600, cacheEverything: true },
+        });
+        clearTimeout(t);
+        if (!res.ok) return reject(new Error(`${host}: HTTP ${res.status}`));
+        const data = await res.json();
+        if (data.remark && /timed?\s*out|killed|memory|too\s+many|exceeded/i.test(data.remark)) {
+          return reject(new Error(`${host}: ${data.remark}`));
+        }
+        resolve({ host, elements: data.elements || [], generator: data.generator });
+      } catch (e) {
+        const msg = (e && e.name === "AbortError") ? `${host}: timed out` : `${host}: ${(e && e.message) || e}`;
+        reject(new Error(msg));
+      }
+    });
+  });
+
+  try {
+    const winner = await Promise.any(racePromises);
+    return json({
+      elements: winner.elements,
+      meta: { mirror: winner.host, count: winner.elements.length, cached_by_cf: true },
+    });
+  } catch (aggregate) {
+    // Promise.any throws AggregateError when ALL races reject.
+    const errs = (aggregate && aggregate.errors) ? aggregate.errors.map(e => e.message || String(e)) : [String(aggregate)];
+    return json({ error: "All Overpass mirrors failed", details: errs.slice(0, 4) }, 504);
+  }
+}
+
 

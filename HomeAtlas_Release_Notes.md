@@ -8,6 +8,70 @@ A running log of every shipped iteration. Newest version on top.
 
 ---
 
+## v2.2 — 2026-06-18 — Map perf + universal loader hygiene + trust copy + UI cleanup pass
+
+Single bundled release covering all events-track feedback plus an in-bundle UI cleanup pass (popular pill nav, duplicate chips, deadspace, subnav clutter, logo). Both `index.html` and `nearnity-events-worker.js` ship together. Larger UI restructuring (tab restructuring, tile presentation, content-within-tile layout) deferred to v2.3.
+
+### Worker (`nearnity-events-worker.js`)
+
+**New endpoint: `/api/overpass`** — proxies frontend Overpass queries through the Worker. Races all 4 public mirrors (overpass-api.de / kumi / osm.ch / private.coffee) in parallel via `Promise.any` and returns the first responder. Each subrequest carries `cf: { cacheTtl: 3600, cacheEverything: true }` so identical queries hit Cloudflare's edge cache on subsequent calls (no KV writes consumed). Previously the frontend hit Overpass directly from the browser, which (a) paid the 5-30s cold-fetch tax on every visit, and (b) tripped per-IP rate limits when one user opened many tabs in parallel. Worker-side requests share Cloudflare's IPs — friendlier rate-limit profile, plus first-of-4 race significantly cuts cold-path latency on slow days.
+
+### Frontend (`index.html`)
+
+**Universal load guard system (`nrnyLoadGuardStart` / `Success` / `Fail`).** Every section's loading element gets a 15-second soft hint ("Still working — upstream sources slow today") and a 45-second hard ceiling. At 45s, the loading element is force-transitioned to a standard error component with **Retry** and **Skip section** buttons. The Retry button re-fires the original loader; Skip hides it. "Finding…" can no longer persist indefinitely under any failure mode. Wired into Public Services, Schools, Parks, Home Services, Health & wellness — covering the high-frequency stuck-section reports.
+
+**Eager parallel preload (`nrnyEagerPreload`).** As soon as a search resolves (inside `renderResolved`, right after `body.has-location` is set), all major section loaders fire in parallel with a concurrency cap of 4 (to avoid hammering Overpass). Public Services, Schools, Parks, Events, Home Services, Community help, Health, Live risks, and Civic all start loading in the background before the user clicks any tab. By the time they navigate, data is either already in memory or already in-flight — tab clicks feel instant for the rest of the session. Each task is independently guarded; a single failure can't block the others.
+
+**Frontend Overpass switch.** `overpassQuery()` now calls `/api/overpass` first (Worker proxy, edge-cached, 4-mirror race), with the legacy direct-from-browser path retained as a graceful fallback when the Worker is unreachable. Two-tier reliability.
+
+**Trust-copy fixes** ("rough estimates" language eliminated):
+- Risks card disclaimer: "Scores are rough estimates by region/state/climate zone" → "Each score is Nearnity's 0–10 summary of the underlying official zone classification — FEMA NFHL, Cal Fire FHSZ, AirNow, NOAA. Click any factor to open the authoritative source and verify your parcel-level classification."
+- Footer: "Climate-risk scores are rough estimates by region" → "Climate-risk scores are derived from official zone classifications. Each card links to the authoritative source so you can verify your parcel-level classification."
+- Farm & U-Pick card date with missing season_text: "Seasonal · varies" → "Seasonal · call farm to confirm dates" (no longer reads as "estimate" copy).
+
+**Cloudflare config (zone settings, not code — applied via dashboard during this iteration):**
+- Bot Fight Mode: off · Block AI Bots: off · WAF Managed Free Ruleset: off (React-RCE rule was false-positive-blocking ChatGPT POSTs to `/`)
+- Security Level: Essentially Off
+- DNS record for `www.nearnity.com` created (proxied)
+- Page Rule: `www.nearnity.com/*` → 301 → `https://nearnity.com/$1` (apex canonical)
+- Closes the v2.1 punch-list "www 502" and "nearnity 403" items
+- Post-launch: flip Bot Fight Mode + Block AI Bots + Managed Free Ruleset + Security Level back to higher protection settings
+
+### In-bundle UI cleanup (additions on top of the events-track work)
+
+**Logo redesigned (Home Pin → house-as-n).** Strictly two colors now (blue + white). Outer blue map pin. Inner white house silhouette with a peaked roof + small chimney for unambiguous "this is a house" reading, plus a door cutout via `fill-rule="evenodd"` that creates the lowercase-n negative space (blue shows through the door — same blue, not a third color). The previous mark had four nested layers (blue rect → white pin → blue inner shape → white doorway = blue→white→blue→white), which Satya called out as too busy. The green verified-checkmark badge was also dropped — "Source-linked" tagline next to the wordmark carries that signal.
+
+**Popular pill navigation fixed.** Clicking "Emergency rooms" / "Urgent care" / "Hospitals" / "Schools" / etc. on the landing pill row used to scroll to a section that was hidden by the current cat-tab's CSS, so it appeared to do nothing. `_popJumpTo()` now resolves the section's group via `SHELL_V95_SECTIONS` and calls `_activateShellSection()` first (which switches the correct cat-tab, activates the sec-tab, and reveals the cards), then scrolls. Cat-tab switch happens BEFORE the scroll so the target section is actually visible.
+
+**Duplicate filter chips removed from events calendar.** The events section used to render TWO sets of filter chips — the canonical subnav at the top of the card, AND legacy `time-chips` + `bucket-chips` rendered INSIDE the calendar body. The in-calendar chips were dead code from v0.67/v0.82 that pre-dated the subnav, and they were appearing in the middle of the user's scroll (per Satya's "Today/This weekend tabs came in middle of the scroll" report). Replaced with a single tasteful `cal-count-line` showing "N events matching the active filters". The top subnav at `.subnav[data-subnav-for="card-events"]` is now the only filter UI.
+
+**Deadspace → multi-column tile grid.** When a section's map had no items with lat/lon (events, some farm experiences, etc.), the 2-col CSS grid still allocated 60% to the empty map and 40% to the list, leaving the left half blank. `setupSectionMap()` now detects this case (`items.filter(it => typeof it.lat === "number" && typeof it.lon === "number").length === 0`) and toggles a `.nrny-no-map` class on the parent card. A matching CSS rule collapses the 2-col grid to single column when present, freeing the full width for the tile grid (`.cal-flat` with `repeat(auto-fit, minmax(280px, 1fr))`). Tiles now flow into 2-3 columns based on viewport instead of stacking vertically. Plus: rebalanced the WITH-map ratio from 1.5fr map / 1fr list → 1fr map / 1.6fr list so tile cards have room to multi-column even when a map IS present. The events card always uses single-column regardless — event venues frequently lack lat/lon and the multi-column tile grid is always better there.
+
+**Events subnav grouped (clutter cleanup).** The 12-tab events subnav was a flat horizontal row that read as visual mess. Grouped into three labeled tracks via tiny inline `subnav-group-label` eyebrow text: WHEN (Today / Tonight / This weekend) · TYPE (Free & community / Kids & family / Markets / Farm & u-pick / Volunteer) · TICKETED (Ticketed / Sports / Where to watch) · then External Sites as a visually-de-emphasized fallback (dashed border). Same 12 destinations, much cleaner read. Group labels and separators hide on viewports <720px to save mobile space.
+
+### Out of scope (deferred to v2.3 — bigger UI restructuring)
+
+- Whole-section tile-presentation overhaul
+- Content-within-tile layout (info density per card)
+- Single-scroll-list-of-everything → grouped/grid layout pass
+- Cat-tab visual treatment (left rail vs top tabs)
+
+### Validation
+
+`node --check` passes on both files. `<!DOCTYPE html>` intact in `index.html`. ~653KB inline JS in `index.html`; worker ~3.1K lines after Overpass proxy + helpers landed. All five v2.2 UI markers present: `nrny-no-map`, `subnav-group-label`, `cal-count-line`, `fill-rule="evenodd"` (in logo), `_activateShellSection`.
+
+### Deploy steps (same flow as v2.1)
+
+1. `head -3 index.html` → confirm `<!DOCTYPE html>` at top.
+2. `git add index.html HomeAtlas_Release_Notes.md && git commit -m "v2.2 — Map perf + loader hygiene" && git push` → Pages auto-deploys.
+3. Open Cloudflare → Worker `homeatlas` (the one serving the apex) → confirm latest deployment is the v2.2 HTML. (If you deploy through Pages, the Worker reflects automatically; if you paste-deploy the Worker, paste the updated `index.html` into the Worker's static asset.)
+4. Open Cloudflare → Worker `nearnity-events` → paste `nearnity-events-worker.js` → Save & Deploy. (Required for the `/api/overpass` endpoint.)
+5. Verify `nearnity.com/api/health` returns JSON.
+6. Verify `nearnity.com/api/overpass?q=[out:json];node(34.05,-118.25,34.06,-118.24);out;` returns `{ elements: [...] }`.
+7. Hard-refresh `nearnity.com` to bypass browser cache; footer should show `v2.2`.
+
+---
+
 ## v2.1 — 2026-06-17 — P0 fix push: intent-first search, hard radius, add-on partition, next-step actions, copy honesty
 
 Single bundled release covering the v2.1 QA checklist. Both `index.html` and `nearnity-events-worker.js` ship together.

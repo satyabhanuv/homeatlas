@@ -3098,7 +3098,56 @@
     border: 1px solid var(--line);
   }
 
-  /* v0.67: Time-window filter chips (Today / Weekend / 7d / Month) */
+  /* v2.2: Grouped events subnav — visual separators + tiny group labels
+     so the 12 filter tabs read as three coherent groups instead of a
+     mess. Group labels are inline so the row still wraps cleanly on
+     narrow viewports. */
+  .subnav.subnav-grouped {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 8px;
+    row-gap: 6px;
+  }
+  .subnav-group-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8b94a3;
+    align-self: center;
+    padding: 0 4px 0 0;
+  }
+  .subnav-group-sep {
+    display: inline-block;
+    width: 1px;
+    height: 18px;
+    background: var(--line, #e4e8ee);
+    margin: 0 6px;
+    align-self: center;
+  }
+  /* External sites is a fallback — visually de-emphasize it */
+  .subnav .subtab-fallback {
+    color: var(--ink-soft, #4a5263);
+    background: #fafbfd;
+    border-style: dashed !important;
+  }
+  /* On narrow viewports, group labels get hidden to save space */
+  @media (max-width: 720px) {
+    .subnav-group-label,
+    .subnav-group-sep { display: none; }
+  }
+
+  /* v2.2: inline event-count line replacing the removed duplicate chip rows */
+  .cal-count-line {
+    font-size: 13px;
+    color: var(--ink-soft, #4a5263);
+    margin: 8px 0 14px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line, #e4e8ee);
+  }
+  /* v0.67: Time-window filter chips (Today / Weekend / 7d / Month) — legacy,
+     no longer rendered in calendar; CSS kept for any other consumers. */
   .time-chips {
     display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
     margin: 0 0 14px;
@@ -4398,18 +4447,21 @@
   body.shell-v95.shell-active-mode [data-shell-active-header] {
     display: flex !important;
   }
-  /* If the active card has a map, lay out as 2-col grid (map | list). */
-  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"] {
+  /* v2.2: If the active card has a map AND that map actually has markers,
+     lay out as 2-col grid (map | list). The list gets MORE room than before
+     (was 1.5fr map / 1fr list — 60% map; now 1fr map / 1.6fr list — 38% map)
+     so tile cards have enough width to flow into 2-3 columns. */
+  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"]:not(.nrny-no-map):not(#card-events) {
     display: grid !important;
-    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
     column-gap: 18px;
     align-items: start;
   }
-  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"] > * {
+  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"]:not(.nrny-no-map):not(#card-events) > * {
     grid-column: 2;       /* everything goes to col 2 (list) by default */
     min-width: 0;
   }
-  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"] > .section-map {
+  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"]:not(.nrny-no-map):not(#card-events) > .section-map {
     grid-column: 1;       /* map exclusively in col 1 */
     grid-row: 1 / -1;     /* span all rows so map can stick within list height */
     position: sticky;
@@ -4420,6 +4472,34 @@
     border-radius: 10px;
     overflow: hidden;
     align-self: start;
+  }
+  /* v2.2: When a card's map has no markers (class .nrny-no-map added by JS
+     after setupSectionMap detects empty items), OR for the Events card
+     specifically (events frequently lack lat/lon precision), drop the
+     2-col grid entirely. Tiles flow into a full-width grid via .cal-flat /
+     .schools-row layouts. The map, when present, drops to the bottom as
+     a secondary view. */
+  body.shell-v95.shell-active-mode [data-shell-active-card][data-shell-has-map="true"].nrny-no-map,
+  body.shell-v95.shell-active-mode #card-events[data-shell-active-card] {
+    display: block !important;
+    grid-template-columns: none !important;
+  }
+  body.shell-v95.shell-active-mode [data-shell-active-card].nrny-no-map > .section-map,
+  body.shell-v95.shell-active-mode #card-events[data-shell-active-card] > .section-map {
+    position: relative !important;
+    grid-column: auto !important;
+    grid-row: auto !important;
+    height: 320px !important;
+    min-height: auto !important;
+    margin-top: 18px !important;
+    top: auto !important;
+  }
+  /* Inside the now-full-width body, force any descendant grid (.cal-flat,
+     .schools-row, .home-grid, etc.) to use up the freed horizontal space
+     with multiple columns. */
+  body.shell-v95.shell-active-mode #card-events[data-shell-active-card] .cal-flat,
+  body.shell-v95.shell-active-mode #card-events[data-shell-active-card] .cal-flat-list {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)) !important;
   }
   /* "✕ Show all sections" — escape hatch out of active-mode */
   .shell-exit-active {
@@ -5908,7 +5988,14 @@
   <header>
     <!-- v0.49.3: brand is now clickable — click to reset to landing page without reload -->
     <div class="brand" id="brandReset" role="button" tabindex="0" title="Click to reset and go back to landing">
-      <!-- v0.67: Nearnity logo — map pin + verified checkmark — location-first, no paid placement -->
+      <!-- v2.2: Nearnity logo — TWO COLORS ONLY (blue + white), TWO ELEMENTS.
+           Blue map pin (outer fill). White house silhouette on top — peaked
+           roof + small chimney = unambiguous "house" reading. A door gap is
+           cut out of the white shape using fill-rule="evenodd" (single path,
+           inner subpath becomes a hole). The blue pin shows through the
+           door — that's the SAME blue, not a third color. The door gap
+           creates the lowercase 'n' negative space: two verticals with a
+           peaked arch on top, open at the bottom = n. -->
       <svg class="brand-logo" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
         <defs>
           <linearGradient id="brand-lg" x1="0" y1="0" x2="1" y2="1">
@@ -5916,11 +6003,11 @@
             <stop offset="100%" stop-color="#0050c2"/>
           </linearGradient>
         </defs>
-        <rect width="64" height="64" rx="14" fill="url(#brand-lg)"/>
-        <path d="M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z" fill="#ffffff"/>
-        <circle cx="32" cy="27" r="6" fill="url(#brand-lg)"/>
-        <circle cx="50" cy="50" r="11" fill="#2d6a4f" stroke="#ffffff" stroke-width="2"/>
-        <path d="M45 50 L48.5 53 L55 46" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        <!-- Blue map pin -->
+        <path d="M32 4 C18 4 8 14 8 26 C8 40 22 56 32 60 C42 56 56 40 56 26 C56 14 46 4 32 4 Z" fill="url(#brand-lg)"/>
+        <!-- White house with door cutout (fill-rule evenodd makes the inner
+             subpath a hole, revealing the blue pin underneath) -->
+        <path d="M22 38 L22 25 L32 15 L38 21 L38 17 L40 17 L40 23 L42 25 L42 38 Z M29 38 L29 31 L35 31 L35 38 Z" fill="#ffffff" fill-rule="evenodd"/>
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
@@ -6671,19 +6758,30 @@
          weekend / Free / Markets / Ticketed / Where to watch) instead of
          venue-type browsing. Time/source tabs route to events-listings-section
          with data-filter attributes that pre-set the time-window + bucket state. -->
-    <div class="subnav" data-subnav-for="card-events">
+    <!-- v2.2: Events subnav grouped into three labeled tracks — Time / Type /
+         Source — with visual separators between groups. Same 12 filter
+         destinations as before, but the grouping reduces the "12 random
+         tabs in a row" feel. The labels are tiny eyebrow text inside the
+         subnav itself (see .subnav-group-label in CSS). -->
+    <div class="subnav subnav-grouped" data-subnav-for="card-events">
+      <span class="subnav-group-label">When</span>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="today"   data-filter-bucket="all">Today</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="tonight" data-filter-bucket="all">Tonight</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="weekend" data-filter-bucket="all">This weekend</a>
+      <span class="subnav-group-sep" aria-hidden="true"></span>
+      <span class="subnav-group-label">Type</span>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="community">Free &amp; community</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="kids_family">Kids &amp; family</a>
       <a href="#events-markets-section"   class="subtab" data-subtarget="events-markets-section">Markets</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="farm_u_pick">Farm &amp; u-pick</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="volunteer">Volunteer</a>
+      <span class="subnav-group-sep" aria-hidden="true"></span>
+      <span class="subnav-group-label">Ticketed</span>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="ticketed">Ticketed</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="ticketed_sports">Sports</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="watch">Where to watch</a>
-      <a href="#events-online-section"    class="subtab" data-subtarget="events-online-section">External sites</a>
+      <span class="subnav-group-sep" aria-hidden="true"></span>
+      <a href="#events-online-section"    class="subtab subtab-fallback" data-subtarget="events-online-section">External sites</a>
     </div>
 
     <div class="parks-card" id="card-events" hidden>
@@ -10011,6 +10109,18 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
   // v0.83: filter items to those currently visible in the list (so map and
   // list always show the same count and the user can 1:1 associate them).
   items = _filterItemsToVisibleList(elId, items);
+  // v2.2: signal "no map data" to the parent card so the 2-col grid CSS
+  // collapses to a single full-width layout (kills the dead-space-left
+  // -of-cards problem). Items WITH coords trigger the normal side-by-side
+  // map+list; items WITHOUT coords stack the map below the list at fixed
+  // height. The class is read by CSS rules added in v2.2.
+  try {
+    const card = el.closest("[data-shell-active-card], .parks-card, .home-card, .schools-card, .yard-card");
+    if (card) {
+      const itemsWithCoords = (items || []).filter(it => it && typeof it.lat === "number" && typeof it.lon === "number");
+      card.classList.toggle("nrny-no-map", itemsWithCoords.length === 0);
+    }
+  } catch (e) {}
   // Clear empty-state placeholder if present
   const empty = el.querySelector(".section-map-empty");
   if (empty) empty.remove();
@@ -11730,14 +11840,30 @@ document.addEventListener("click", (e) => {
   _popJumpTo(secId, subId);
 });
 function _popJumpTo(secId, subId) {
-  const secEl = document.getElementById(secId);
-  if (secEl) secEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  // v2.2: when the v0.95 shell is active, sections OUTSIDE the current
+  // cat-tab are hidden by CSS. So a popular-pill click for "Hospitals"
+  // (which lives in the Safety cat-group) needs to switch cat-tabs BEFORE
+  // scrolling, otherwise scrollIntoView targets a hidden element. We
+  // resolve the section in SHELL_V95_SECTIONS by its secHeaderId, then
+  // call the existing _activateShellSection() which handles cat-tab +
+  // sec-tab + card visibility in one shot.
+  try {
+    if (typeof SHELL_V95_SECTIONS !== "undefined" && typeof _activateShellSection === "function") {
+      const sec = SHELL_V95_SECTIONS.find(s => s.secHeaderId === secId);
+      if (sec) _activateShellSection(sec.id);
+    }
+  } catch (e) { console.warn("[pop-jump] activate failed:", e); }
+  // Then scroll into view (after the cat-tab activation makes it visible).
+  setTimeout(() => {
+    const secEl = document.getElementById(secId);
+    if (secEl) secEl.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 120);
   if (subId) {
     // Find the matching sub-tab anchor and click it
     setTimeout(() => {
       const sub = document.querySelector(`.subtab[data-subtarget="${subId}"], .subtab[href="#${subId}"]`);
       if (sub) sub.click();
-    }, 250);
+    }, 350);
   }
 }
 
@@ -15869,32 +15995,14 @@ function _renderEventsCalendar(geo, events, tb) {
         </div>`
       : "";
     // v0.67: Time-window chips above the calendar — Today / Weekend / 7d / Month
-    // v0.90: Tonight chip added per Launch_Ready Goal 4 — "Tonight" is the
-    // single most-asked-for primary event lens after "Today/Weekend".
-    const chipDef = [
-      { id: "today",   label: "Today" },
-      { id: "tonight", label: "Tonight" },
-      { id: "weekend", label: "This weekend" },
-      { id: "week",    label: "Next 7 days" },
-      { id: "month",   label: "This month" },
-    ];
-    const chips = `<div class="time-chips" role="tablist" aria-label="Filter events by time window">
-      ${chipDef.map(c => `<button type="button" class="time-chip ${timeWindow === c.id ? "active" : ""}" data-window="${c.id}" role="tab" aria-selected="${timeWindow === c.id}">${escapeHtml(c.label)}</button>`).join("")}
-      <span class="time-chips-count">${totalEv} event${totalEv === 1 ? "" : "s"}</span>
-    </div>`;
-    // v0.82: source-bucket chips below time chips. Per QA2 — Ticketmaster
-    // shouldn't be the default event universe. Users pick what kind they want.
-    const bucketDef = [
-      { id: "all",       label: "All sources" },
-      { id: "free",      label: "Free" },
-      { id: "markets",   label: "Markets" },
-      { id: "official",  label: "Official / civic" },
-      { id: "community", label: "Community" },
-      { id: "ticketed",  label: "Ticketed" },
-    ];
-    const bucketChips = `<div class="time-chips" role="tablist" aria-label="Filter events by source" style="margin-top:-6px;">
-      ${bucketDef.map(c => `<button type="button" class="time-chip bucket-chip ${bucketFilter === c.id ? "active" : ""}" data-bucket="${c.id}" role="tab" aria-selected="${bucketFilter === c.id}">${escapeHtml(c.label)}</button>`).join("")}
-    </div>`;
+    // v2.2: Removed the in-calendar time-chips + source-bucket chips. They
+    // duplicated the canonical events subnav at the top of the section
+    // (see `.subnav[data-subnav-for="card-events"]` in markup), and rendering
+    // them INSIDE the calendar body made them appear in the middle of the
+    // scroll — confusing UX. The top subnav now solely owns filter state
+    // (wired via data-filter-window / data-filter-bucket on each subtab).
+    // A small inline count line replaces the old chips for context.
+    const countLine = `<div class="cal-count-line">${totalEv} event${totalEv === 1 ? "" : "s"} matching the active filters</div>`;
     // v0.68: For non-month chips, render a FLAT tiered list of all events in
     // the window. The calendar+agenda combo only makes sense for the full
     // month — for "Today" / "This weekend" / "Next 7 days" users want a
@@ -15908,7 +16016,7 @@ function _renderEventsCalendar(geo, events, tb) {
         <div>${_renderCalendarAgenda(byDate, selectedDate, todayKey)}</div>
       </div>`;
     }
-    tb.innerHTML = banner + chips + bucketChips + body;
+    tb.innerHTML = banner + countLine + body;
     // v0.82: wire bucket-chip clicks
     tb.querySelectorAll(".bucket-chip[data-bucket]").forEach(btn => {
       btn.addEventListener("click", () => {
