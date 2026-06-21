@@ -424,6 +424,131 @@
     .federal-lands-sub { width: 100%; margin-left: 0; }
   }
 
+  /* ═══════════════════════════════════════════════════════════════════════════
+     v2.3 — UI presentation pass
+     ───────────────────────────────────────────────────────────────────────────
+     Goals: (1) more cards visible on first scroll (density), (2) consistent
+     tile pattern across event/business/help/health cards, (3) cleaner mobile
+     stacking, (4) calmer visual hierarchy. Touches CSS only — no JS changes.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* v2.3: tighten card padding everywhere so more tiles fit per screen.
+     Was 16px/20px → now 14px/16px. Saves ~16px vertical per card × 6 cards
+     visible = ~96px of extra real estate above the fold. */
+  .parks-card,
+  .home-card,
+  .schools-card,
+  .yard-card {
+    padding: 14px 16px !important;
+  }
+
+  /* v2.3: bump tile grid density on wide screens. .cal-flat is the event /
+     business tile container; minmax was 280px → now 240px so wide desktop
+     fits 3-4 columns instead of 2-3. Phones still drop to 1-col gracefully. */
+  @media (min-width: 1100px) {
+    .cal-flat-list,
+    .cal-flat,
+    .cal-agenda {
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)) !important;
+      gap: 10px !important;
+    }
+  }
+  @media (min-width: 1500px) {
+    .cal-flat-list,
+    .cal-flat,
+    .cal-agenda {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)) !important;
+    }
+  }
+
+  /* v2.3: tile chrome — tighter, less padding, clearer hierarchy.
+     Was 12px 14px → 11px 12px. Title font 14 → 14 (kept). Meta font 12.5 → 12. */
+  .cal-flat > .cal-event,
+  .cal-flat-list > .cal-event {
+    padding: 11px 12px !important;
+    border-radius: 10px !important;
+  }
+  .cal-event-title {
+    font-size: 14px !important;
+    line-height: 1.35 !important;
+    margin-bottom: 4px;
+  }
+  .cal-event-meta {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+    color: var(--ink-soft);
+    margin-top: 2px;
+  }
+  .cal-event-actions {
+    margin-top: 8px !important;
+    padding-top: 6px !important;
+    gap: 4px 6px !important;
+  }
+  /* Slightly smaller action pills on tile cards so they don't dominate */
+  .cal-flat .nrny-action,
+  .cal-flat-list .nrny-action {
+    padding: 4px 8px !important;
+    font-size: 11.5px !important;
+  }
+
+  /* v2.3: row-style tile (schools-row / school-row) — slightly tighter */
+  .schools-row {
+    padding: 10px 12px !important;
+    margin-bottom: 6px !important;
+  }
+  .school-row {
+    padding: 10px 6px !important;
+  }
+
+  /* v2.3: section header — more compact, less vertical air, eyebrow accent */
+  .page-section-header {
+    padding: 14px 0 10px !important;
+    margin-top: 14px !important;
+    gap: 10px !important;
+  }
+  .psh-title {
+    font-size: 20px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+  }
+
+  /* v2.3: subnav — slightly tighter tab padding for cleaner scan */
+  .subnav .subtab {
+    padding: 7px 12px !important;
+    font-size: 13px !important;
+  }
+  .subnav-grouped {
+    padding: 6px 0 !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* v2.3: card-context-bar (the section's data summary line) — calmer */
+  .card-context-bar {
+    padding: 6px 0 10px !important;
+    border-bottom: 1px solid var(--line, #e4e8ee) !important;
+    margin-bottom: 12px !important;
+  }
+  .card-context-text {
+    font-size: 13px !important;
+    color: var(--ink-soft) !important;
+    font-weight: 500 !important;
+  }
+
+  /* v2.3: skeleton tiles — match the new tighter sizing */
+  .skel-row {
+    height: 56px !important;
+    border-radius: 10px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* v2.3: trust-pill — smaller, less visual weight (still readable). The
+     pill was competing with the event title for attention; calmer here. */
+  .trust-pill {
+    font-size: 10.5px !important;
+    padding: 2px 7px !important;
+    letter-spacing: 0.02em !important;
+  }
+
   /* v0.71: NPS / RIDB list rows in Parks section */
   .schools-row {
     display: flex; align-items: flex-start; gap: 12px;
@@ -6038,7 +6163,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.2</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.5</span>
     </div>
   </header>
 
@@ -7024,6 +7149,37 @@
     </div>
 
     <!-- v0.29: Section 7 — Home services (handyman, plumber, electrician, etc.) -->
+    <!-- v2.2: "Local businesses" — first-class search-results destination.
+         Activated when the user types a query that's not a category we have
+         dedicated data for (events / schools / parks / etc.). Runs an OSM
+         name search via the Worker /api/overpass proxy and renders POIs as
+         business cards. The point: when someone searches "violin repairs"
+         or "tailoring" or "music lessons", they land HERE and see actual
+         matching businesses — not a redirect to Google Maps. -->
+    <div class="page-section-header home-services" id="sec-businesses">
+      <div class="psh-icon">🏪</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Local businesses</h2>
+      </div>
+    </div>
+    <div class="parks-card" id="card-businesses" hidden>
+      <div class="card-context-bar">
+        <div class="card-context-text"><span id="businesses-value">—</span></div>
+        <button class="info-btn" type="button" data-info-target="businesses-info-popover" aria-label="About local business search">i</button>
+        <div class="summary-pill" id="businesses-summary" hidden></div>
+      </div>
+      <div class="info-popover" id="businesses-info-popover" hidden>
+        <b>What this is:</b> when you search for a specific business or service (violin repairs, tailor, music lessons, instrument shop, etc.), Nearnity queries OpenStreetMap for any tagged business whose name matches your query within your search radius. OSM is community-maintained — coverage is uneven and small specialty businesses are often missing. Use the <b>Report issue</b> button on a card to flag wrong data, or <b>Submit a business</b> below to add one that's missing.
+      </div>
+      <div class="parks-loading" id="businesses-loading" hidden>Searching local businesses…</div>
+      <div id="businesses-tbody"></div>
+      <div class="section-map" id="businesses-map" style="margin-top:14px;"><div class="section-map-empty">Map shows business pins once results load.</div></div>
+      <a class="submit-missing" id="businesses-submit-missing" href="https://www.openstreetmap.org/note/new" target="_blank" rel="noopener">Know a business we missed? Submit it on OpenStreetMap</a>
+      <div class="source" style="margin-top:14px;">
+        Listings from <a href="https://www.openstreetmap.org/" target="_blank" rel="noopener">OpenStreetMap</a> — community-maintained public-domain data. Verify directly with the business before showing up; hours and phone numbers may be outdated. Nearnity doesn't accept paid placement.
+      </div>
+    </div>
+
     <div class="page-section-header home-services" id="sec-home-services">
       <div class="psh-icon">🛠️</div>
       <div class="psh-text">
@@ -7321,7 +7477,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.2</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.5</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -8948,6 +9104,7 @@ const SECTION_EMPTY_STATES = [
   { cardId: "card-health",          title: "Health & wellness",        desc: "Search to find free or sliding-scale clinics (HRSA Federally Qualified Health Centers) and mental-health resources." },
   { cardId: "card-yard",            title: "Gardening",                desc: "Search an address to see your USDA hardiness zone and plant recommendations for your soil and microclimate." },
   { cardId: "card-home-services",   title: "Home services",            desc: "Search a city to see neighbor-recommended pros, claimed businesses, and OSM map listings." },
+  { cardId: "card-businesses",      title: "Local businesses",         desc: "Search any business name or service (violin repairs, tailor, music lessons, instrument shop, etc.) and we'll look it up in OpenStreetMap near your address." },
   { cardId: "card-civic",           title: "Official links",           desc: "Search to see your DMV, voter registration, courthouse, building permits, and elected officials." },
   { cardId: "card-risks",           title: "Climate & risks",          desc: "Search an address to see FEMA flood zone, CAL FIRE hazard zone, and live NWS / USGS / AirNow alerts." },
   { cardId: "card-electric",        title: "Electric utility",         desc: "Search an address to see your electric utility provider from the HIFLD national dataset." },
@@ -9229,6 +9386,11 @@ const INTENT_KEYWORDS = {
   safety:         /\b(emergency services?|police station|fire station|911|alerts?|hazards?|flood risk|earthquake|crime|safety risk)\b/i,
   home_services:  /\b(plumber|electrician|handyman|hvac|roofer|painter|landscaper|home services?|contractor|local pro)\b/i,
   property:       /\b(property details|home details|my house|my property|address details|year built|lot size)\b/i,
+  // v2.2: catch-all business / service intent. Any query that mentions a
+  // generic business type, repair/lessons/instrument/specialty service
+  // routes to the new Local businesses section which runs an OSM name
+  // search. Comes LAST so more specific intents above win first.
+  businesses:     /\b(repair|repairs|shop|store|salon|spa|barber|tailor|tutor|lessons|class|classes|cleaner|cleaning|locksmith|mechanic|auto repair|car wash|laundry|laundromat|nail|massage|gym|fitness|yoga|pilates|martial arts|karate|music|violin|guitar|piano|instrument|art studio|pottery|sewing|alterations|dry clean|coffee shop|cafe|bakery|deli|bookstore|toy store|gift shop)\b/i,
 };
 
 const INTENT_TO_SECTION = {
@@ -9244,6 +9406,7 @@ const INTENT_TO_SECTION = {
   safety:         { secId: "sec-public-services", cardId: "card-public-services" },
   home_services:  { secId: "sec-home-services",   cardId: "card-home-services" },
   property:       { secId: "sec-myhome",          cardId: "card-home" },
+  businesses:     { secId: "sec-businesses",      cardId: "card-businesses" },
 };
 
 const INTENT_HEADING = {
@@ -9259,6 +9422,7 @@ const INTENT_HEADING = {
   safety:         (p) => `Emergency services near ${p}`,
   home_services:  (p) => `Home services near ${p}`,
   property:       (p) => `Property links / saved notes for your address`,
+  businesses:     (p, q) => `Results for "${q}" near ${p}`,
 };
 
 const INTENT_RELATED = {
@@ -9293,7 +9457,7 @@ function detectQueryIntent(query) {
   return null;
 }
 
-function applyIntentFocus(intent, geo) {
+function applyIntentFocus(intent, geo, keyword) {
   // Clean any previous intent state
   document.body.removeAttribute("data-intent");
   document.querySelectorAll(".intent-focused-banner, .explore-more-divider").forEach(el => el.remove());
@@ -9306,8 +9470,16 @@ function applyIntentFocus(intent, geo) {
   document.body.dataset.intent = intent;
   const placeName = (typeof getDisplayCityForHeadline === "function" ? getDisplayCityForHeadline(geo) : "") || "this place";
 
+  // v2.2: when intent === "businesses", kick off the OSM name-search loader
+  // with the user's keyword. This is what makes "violin repairs" actually
+  // search instead of dead-end. The loader populates card-businesses
+  // independently of the rest of the intent-focus rendering below.
+  if (intent === "businesses" && keyword && typeof loadNearbyBusinesses === "function") {
+    try { loadNearbyBusinesses(geo, keyword); } catch (e) { console.warn("[businesses-search]", e); }
+  }
+
   // Focused heading + related-intent chips ("Also try:")
-  const heading = (INTENT_HEADING[intent] || ((p) => `Showing ${intent} near ${p}`))(placeName);
+  const heading = (INTENT_HEADING[intent] || ((p) => `Showing ${intent} near ${p}`))(placeName, keyword || "");
   const relatedHtml = (INTENT_RELATED[intent] || []).map(r =>
     `<button type="button" class="intent-related-chip" data-related-intent="${r}">${INTENT_RELATED_LABEL[r] || r}</button>`
   ).join("");
@@ -9842,6 +10014,8 @@ const SHELL_V95_SECTIONS = [
   { id: "services",       label: "Utilities",       group: "my-home",   cardId: null,                   mapId: null,          subnavSel: '.subnav[data-subnav-for="card-services"]',        secHeaderId: "sec-services", multiCardIds: ["card-electric","card-internet","card-tv","card-security"] },
   { id: "yard",           label: "Gardening",       group: "my-home",   cardId: "card-yard",            mapId: null,          subnavSel: '.subnav[data-subnav-for="card-yard"]',            secHeaderId: "sec-yard" },
   { id: "home-services",  label: "Home services",   group: "my-home",   cardId: "card-home-services",   mapId: "hs-map",      subnavSel: '.subnav[data-subnav-for="card-home-services"]',   secHeaderId: "sec-home-services" },
+  // v2.2: free-form business search results section. Lives in Around me cat.
+  { id: "businesses",     label: "Local businesses", group: "around-me", cardId: "card-businesses",     mapId: "businesses-map", subnavSel: null,                                         secHeaderId: "sec-businesses" },
   // Help
   { id: "community-help", label: "Community help",  group: "help",      cardId: "card-community-help",  mapId: null,          subnavSel: '.subnav[data-subnav-for="card-community-help"]',  secHeaderId: "sec-community-help" },
   { id: "health",         label: "Health & wellness", group: "help",    cardId: "card-health",          mapId: null,          subnavSel: '.subnav[data-subnav-for="card-health"]',          secHeaderId: "sec-health" },
@@ -13720,6 +13894,535 @@ function classifyHomeService(el) {
 }
 
 let lastHsGeo = null;
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.4 — FEDERAL DATA ENRICHMENT
+// ═══════════════════════════════════════════════════════════════════════════
+// Adds NPPES (healthcare providers), CSLB (CA contractors), and SAMHSA
+// (mental-health treatment) data as enrichment panels inside the existing
+// Health & wellness and Home services cards. Non-breaking — these augment
+// the existing OSM/HRSA flows rather than replacing them. Each panel
+// renders its own tile grid + load guard, and fails silently if the
+// upstream endpoint is unreachable (the original section content stays
+// intact).
+
+async function loadNPPESProviders(geo, specialty) {
+  if (!geo || !document.getElementById("card-health")) return;
+  const postal = (geo.address && geo.address.postcode) ? String(geo.address.postcode).slice(0, 5) : "";
+  const state = (typeof getStateCode === "function" ? getStateCode(geo.address || {}) : "") || "";
+  if (!postal && !state) return;
+  // Pull a small batch of common specialties — dentist, mental health,
+  // primary care, pediatrics — and append each to its own subsection in
+  // the Health card. The user sees concrete providers, not abstract data.
+  const specialtyMap = [
+    { key: "Dentist",       label: "Dentists",          sectionId: "ch-health-dentist" },
+    { key: "Counselor",     label: "Mental health counselors", sectionId: "ch-health-counselor" },
+    { key: "Family Medicine", label: "Family medicine doctors", sectionId: "ch-health-pcp" },
+  ];
+  if (specialty) specialtyMap.length = 0, specialtyMap.push({ key: specialty, label: specialty, sectionId: `ch-health-${specialty.toLowerCase().replace(/[^a-z]/g, "")}` });
+  for (const sp of specialtyMap) {
+    try {
+      const u = new URL("/api/nppes", window.location.origin);
+      u.searchParams.set("lat", String(geo.lat));
+      u.searchParams.set("lon", String(geo.lon));
+      if (postal) u.searchParams.set("postal", postal);
+      if (state) u.searchParams.set("state", state);
+      u.searchParams.set("taxonomy", sp.key);
+      u.searchParams.set("limit", "8");
+      const r = await fetch(u.toString());
+      if (!r.ok) continue;
+      const data = await r.json();
+      if (!data.providers || !data.providers.length) continue;
+      _renderNPPESPanel(sp, data.providers);
+    } catch (e) { /* silent — non-blocking enrichment */ }
+  }
+}
+
+function _renderNPPESPanel(sp, providers) {
+  // Find or create the panel inside card-health. Each specialty gets its
+  // own collapsible section so the Health card doesn't become a wall.
+  let panel = document.getElementById(`nppes-${sp.sectionId}`);
+  if (!panel) {
+    const host = document.getElementById("card-health");
+    if (!host) return;
+    panel = document.createElement("div");
+    panel.id = `nppes-${sp.sectionId}`;
+    panel.className = "school-section nppes-panel";
+    host.appendChild(panel);
+  }
+  panel.innerHTML = `<h4>${escapeHtml(sp.label)} <span class="hint">— from federal NPI registry · ${providers.length} nearby</span></h4>
+    <div class="cal-flat">${providers.slice(0, 8).map(p => _renderNPPESCard(p)).join("")}</div>`;
+}
+
+function _renderNPPESCard(p) {
+  const phoneTel = p.phone ? p.phone.replace(/[^\d+]/g, "") : null;
+  const star = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml({
+    id: `nppes::${p.npi}`, type: "healthcare-provider", title: p.name,
+    subtitle: [p.specialty, p.address].filter(Boolean).join(" · "),
+    url: p.source_url, phone: p.phone || null,
+  }) : "";
+  const reportPayload = encodeURIComponent(JSON.stringify({
+    card_id: "card-health", category: "healthcare-provider", title_hint: p.name,
+    address: p.address, source: p.source, source_url: p.source_url, npi: p.npi,
+  }));
+  return `<div class="cal-event" data-bucket="official">
+    <div class="cal-event-body">
+      <div class="cal-event-title">🩺 ${escapeHtml(p.name)}${p.credential ? `, ${escapeHtml(p.credential)}` : ""} <span class="trust-pill trust-pill-official">Official source</span> ${star}</div>
+      ${p.specialty ? `<div class="cal-event-meta">${escapeHtml(p.specialty)}</div>` : ""}
+      ${p.address ? `<div class="cal-event-meta hint">${escapeHtml(p.address)}</div>` : ""}
+      <div class="cal-event-actions">
+        ${phoneTel ? `<a class="nrny-action nrny-action-primary" href="tel:${escapeHtml(phoneTel)}">📞 Call ${escapeHtml(p.phone)}</a>` : ""}
+        ${p.address ? `<a class="nrny-action" href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(p.address)}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+        <a class="nrny-action nrny-action-source" href="${escapeHtml(p.source_url)}" target="_blank" rel="noopener">🔗 NPI ${escapeHtml(p.npi)}</a>
+        <button type="button" class="nrny-action nrny-action-report" data-report-payload="${reportPayload}">⚠ Report issue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadCSLBContractors(geo, trade) {
+  if (!geo || !document.getElementById("card-home-services")) return;
+  const state = (typeof getStateCode === "function" ? getStateCode(geo.address || {}) : "") || "";
+  if (state !== "CA") return; // CSLB is California-only
+  const postal = (geo.address && geo.address.postcode) ? String(geo.address.postcode).slice(0, 5) : "";
+  if (!postal) return;
+  try {
+    const u = new URL("/api/cslb", window.location.origin);
+    u.searchParams.set("zip", postal);
+    if (trade) u.searchParams.set("trade", trade);
+    u.searchParams.set("limit", "20");
+    const r = await fetch(u.toString());
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.contractors || !data.contractors.length) return;
+    _renderCSLBPanel(data.contractors, trade);
+  } catch (e) { /* silent */ }
+}
+
+function _renderCSLBPanel(contractors, trade) {
+  let panel = document.getElementById("cslb-panel");
+  if (!panel) {
+    const host = document.getElementById("card-home-services");
+    if (!host) return;
+    panel = document.createElement("div");
+    panel.id = "cslb-panel";
+    panel.className = "school-section cslb-panel";
+    host.insertBefore(panel, host.firstChild);
+  }
+  panel.innerHTML = `<h4>🛡️ State-licensed CA contractors <span class="hint">— from CA CSLB · verified by state board · ${contractors.length} active license${contractors.length === 1 ? "" : "s"} in your ZIP</span></h4>
+    <div class="cal-flat">${contractors.slice(0, 12).map(c => _renderCSLBCard(c)).join("")}</div>`;
+}
+
+function _renderCSLBCard(c) {
+  const star = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml({
+    id: `cslb::${c.license_num}`, type: "contractor", title: c.name,
+    subtitle: [c.classification, c.city, `License #${c.license_num}`].filter(Boolean).join(" · "),
+    url: c.source_url,
+  }) : "";
+  const reportPayload = encodeURIComponent(JSON.stringify({
+    card_id: "card-home-services", category: "contractor", title_hint: c.name,
+    license_num: c.license_num, source: c.source, source_url: c.source_url,
+  }));
+  return `<div class="cal-event" data-bucket="official">
+    <div class="cal-event-body">
+      <div class="cal-event-title">🔧 ${escapeHtml(c.name)} <span class="trust-pill trust-pill-official">Official source</span> ${star}</div>
+      <div class="cal-event-meta">${escapeHtml(c.classification || "")} ${c.status ? `· <b>${escapeHtml(c.status)}</b>` : ""}</div>
+      ${c.city ? `<div class="cal-event-meta hint">${escapeHtml(c.city)} · License #${escapeHtml(c.license_num)}</div>` : ""}
+      <div class="cal-event-actions">
+        <a class="nrny-action nrny-action-primary" href="${escapeHtml(c.source_url)}" target="_blank" rel="noopener">🔎 Verify on CSLB</a>
+        <button type="button" class="nrny-action nrny-action-report" data-report-payload="${reportPayload}">⚠ Report issue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadSAMHSATreatment(geo) {
+  if (!geo || !document.getElementById("card-health")) return;
+  try {
+    const u = new URL("/api/samhsa", window.location.origin);
+    u.searchParams.set("lat", String(geo.lat));
+    u.searchParams.set("lon", String(geo.lon));
+    u.searchParams.set("radius", "15");
+    u.searchParams.set("limit", "10");
+    const r = await fetch(u.toString());
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.facilities || !data.facilities.length) return;
+    _renderSAMHSAPanel(data.facilities);
+  } catch (e) { /* silent */ }
+}
+
+function _renderSAMHSAPanel(facilities) {
+  let panel = document.getElementById("samhsa-panel");
+  if (!panel) {
+    const host = document.getElementById("card-health");
+    if (!host) return;
+    panel = document.createElement("div");
+    panel.id = "samhsa-panel";
+    panel.className = "school-section samhsa-panel";
+    host.appendChild(panel);
+  }
+  panel.innerHTML = `<h4>💚 Mental health &amp; substance use treatment <span class="hint">— from SAMHSA Treatment Locator · federal · ${facilities.length} nearby</span></h4>
+    <div class="cal-flat">${facilities.slice(0, 8).map(f => _renderSAMHSACard(f)).join("")}</div>`;
+}
+
+function _renderSAMHSACard(f) {
+  const phoneTel = f.phone ? f.phone.replace(/[^\d+]/g, "") : null;
+  const distLabel = f.distance_mi != null
+    ? `<span class="cal-event-dist">${f.distance_mi < 1 ? f.distance_mi.toFixed(1) : Math.round(f.distance_mi)} mi</span>`
+    : "";
+  const star = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml({
+    id: `samhsa::${f.name}::${f.address}`, type: "treatment-facility", title: f.name,
+    subtitle: f.address, url: f.source_url, phone: f.phone || null,
+  }) : "";
+  const reportPayload = encodeURIComponent(JSON.stringify({
+    card_id: "card-health", category: "treatment-facility", title_hint: f.name,
+    address: f.address, source: f.source, source_url: f.source_url,
+  }));
+  return `<div class="cal-event" data-bucket="official">
+    <div class="cal-event-body">
+      <div class="cal-event-title">${escapeHtml(f.name)} ${distLabel} <span class="trust-pill trust-pill-official">Official source</span> ${star}</div>
+      ${f.address ? `<div class="cal-event-meta">${escapeHtml(f.address)}</div>` : ""}
+      ${(f.services || []).length ? `<div class="cal-event-meta hint">${escapeHtml((f.services || []).slice(0, 3).join(" · "))}</div>` : ""}
+      <div class="cal-event-actions">
+        ${phoneTel ? `<a class="nrny-action nrny-action-primary" href="tel:${escapeHtml(phoneTel)}">📞 Call ${escapeHtml(f.phone)}</a>` : ""}
+        ${f.website ? `<a class="nrny-action" href="${escapeHtml(f.website)}" target="_blank" rel="noopener">↗ Website</a>` : ""}
+        <a class="nrny-action nrny-action-source" href="${escapeHtml(f.source_url)}" target="_blank" rel="noopener">🔗 SAMHSA</a>
+        <button type="button" class="nrny-action nrny-action-report" data-report-payload="${reportPayload}">⚠ Report issue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// v2.4: hook the enrichment loaders into the existing section flows.
+// Both fire when their host section becomes visible — non-blocking, fail-silent.
+function _wireV24Enrichment(geo) {
+  if (!geo) return;
+  // Stagger so we don't fire all federal endpoints at once
+  setTimeout(() => { try { loadNPPESProviders(geo); } catch (e) {} }, 800);
+  setTimeout(() => { try { loadSAMHSATreatment(geo); } catch (e) {} }, 1600);
+  setTimeout(() => { try { loadCSLBContractors(geo); } catch (e) {} }, 2400);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.2 — LOCAL BUSINESSES (free-form OSM name search)
+// ═══════════════════════════════════════════════════════════════════════════
+// First-class search-results section. Triggered when the user's query
+// doesn't match any predefined category intent (i.e. it's not "free clinic"
+// or "farmers market" or "events" — it's "violin repairs" or "tailor" or
+// any specific business name). Runs an Overpass query for POIs whose
+// `name` matches the keyword (case-insensitive regex), then filters to
+// those that have a business-ish tag (shop / craft / amenity / office).
+//
+// The point: when a user searches a specific service/business, they land
+// HERE and see actual matching businesses on the map + as cards. No
+// "go elsewhere and search" instructions. No Google Maps redirect.
+let lastBusinessesGeo = null;
+let lastBusinessesKeyword = "";
+async function loadNearbyBusinesses(geo, keyword) {
+  lastBusinessesGeo = geo;
+  lastBusinessesKeyword = (keyword || "").trim();
+  if (!geo || !lastBusinessesKeyword) {
+    // No keyword → hide the section. This loader requires a real search term.
+    const card = document.getElementById("card-businesses");
+    if (card) card.hidden = true;
+    return;
+  }
+  const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
+  const card = document.getElementById("card-businesses");
+  if (card) card.hidden = false;
+  const loading = document.getElementById("businesses-loading");
+  if (loading) { loading.hidden = false; loading.textContent = `Searching OpenStreetMap + city license registries for "${lastBusinessesKeyword}" near you…`; }
+  const tbody = document.getElementById("businesses-tbody");
+  if (tbody) tbody.innerHTML = "";
+  setText("businesses-value", `Searching for "${lastBusinessesKeyword}"…`);
+  // v2.2: universal load guard
+  nrnyLoadGuardStart("businesses-loading", () => loadNearbyBusinesses(geo, lastBusinessesKeyword), { label: `"${lastBusinessesKeyword}" businesses` });
+  try {
+    // v2.5: race OSM (via /api/overpass) AND city business-license registry
+    // in parallel. Merge results, dedupe by name+address. City license data
+    // is FAR more comprehensive for legally-registered small businesses
+    // (the "violin repairs in Dublin" case) — OSM fills the gap for
+    // businesses that registered with the city but weren't tagged in OSM.
+    const [osmItems, cityItems] = await Promise.all([
+      fetchBusinessesByKeyword(lat, lon, lastBusinessesKeyword).catch(() => []),
+      fetchCityBusinessLicenses(geo, lastBusinessesKeyword).catch(() => []),
+    ]);
+    // Merge: city licenses first (authoritative), then OSM as fallback for
+    // matches not already in the city set. Dedupe by lowercase name.
+    const seenNames = new Set();
+    const merged = [];
+    for (const b of cityItems) {
+      const k = (b.name || "").toLowerCase().trim();
+      if (k && !seenNames.has(k)) { seenNames.add(k); merged.push(b); }
+    }
+    // Convert OSM raw elements to the same flat shape used by renderBusinesses,
+    // then merge the OSM ones whose names aren't already in the city set.
+    const osmFlat = (osmItems || []).map(el => {
+      const t = el.tags || {};
+      if (!t.name) return null;
+      const isBusiness = t.shop || t.craft || t.amenity || t.office || t.leisure;
+      if (!isBusiness) return null;
+      const lat2 = el.lat || (el.center && el.center.lat);
+      const lon2 = el.lon || (el.center && el.center.lon);
+      if (!lat2 || !lon2) return null;
+      return el;   // keep original element shape — renderBusinesses handles it
+    }).filter(Boolean);
+    // For OSM dedupe, we keep raw elements for renderBusinesses but track names
+    const osmUnique = osmFlat.filter(el => !seenNames.has((el.tags.name || "").toLowerCase().trim()));
+    // renderBusinesses expects raw Overpass elements OR our normalized city objects.
+    // It already filters/normalizes — just pass both pools.
+    renderBusinessesMerged(merged, osmUnique, lastBusinessesKeyword, geo);
+    nrnyLoadGuardSuccess("businesses-loading");
+  } catch (err) {
+    nrnyLoadGuardFail("businesses-loading", `Couldn't reach OpenStreetMap right now (${(err && err.message) || "network error"}). Try Retry.`);
+  }
+}
+
+// v2.5: fetch city business licenses for the user's resolved city.
+async function fetchCityBusinessLicenses(geo, keyword) {
+  if (!geo || !geo.address) return [];
+  const city = (geo.address.city || geo.address.town || geo.address.village || "").toLowerCase().trim();
+  const state = (typeof getStateCode === "function" ? getStateCode(geo.address || {}) : "") || "";
+  if (!city || !state) return [];
+  const u = new URL("/api/city-businesses", window.location.origin);
+  u.searchParams.set("city", city);
+  u.searchParams.set("state", state);
+  u.searchParams.set("q", keyword);
+  u.searchParams.set("lat", String(geo.lat));
+  u.searchParams.set("lon", String(geo.lon));
+  u.searchParams.set("radius", "15");
+  u.searchParams.set("limit", "30");
+  try {
+    const r = await fetch(u.toString());
+    if (!r.ok) return [];
+    const data = await r.json();
+    return Array.isArray(data.businesses) ? data.businesses : [];
+  } catch (e) { return []; }
+}
+
+// v2.5: render merged city-license + OSM results. City licenses get an
+// authoritative trust pill ("Official source"); OSM gets "Public map data".
+function renderBusinessesMerged(cityItems, osmElements, keyword, geo) {
+  const cityName = (typeof getDisplayCityForHeadline === "function") ? getDisplayCityForHeadline(geo) : "your area";
+  const tbody = document.getElementById("businesses-tbody");
+  if (!tbody) return;
+
+  // Normalize OSM elements to the same shape
+  const osmFlat = (osmElements || []).map(el => {
+    const t = el.tags || {};
+    const lat = el.lat || (el.center && el.center.lat);
+    const lon = el.lon || (el.center && el.center.lon);
+    if (!lat || !lon) return null;
+    return {
+      id: `osm::${(t.name || "").trim()}::${lat.toFixed(4)},${lon.toFixed(4)}`,
+      name: t.name,
+      lat, lon,
+      address: [t["addr:housenumber"], t["addr:street"], t["addr:city"]].filter(Boolean).join(" ") || "",
+      phone: t.phone || t["contact:phone"] || null,
+      website: t.website || t["contact:website"] || null,
+      hours: t.opening_hours || null,
+      type: t.shop || t.craft || t.amenity || t.office || t.leisure || "",
+      source: "OpenStreetMap",
+      trust_label: "Public map data",
+      _distance: haversineMiles(parseFloat(geo.lat), parseFloat(geo.lon), lat, lon),
+      _src: "osm",
+    };
+  }).filter(Boolean);
+
+  // City items already in flat shape — augment with distance + source flag
+  const cityFlat = (cityItems || []).map(b => ({
+    ...b,
+    id: `city::${(b.name || "").trim()}::${(b.address || "").slice(0,30)}`,
+    _distance: b.distance_mi != null ? b.distance_mi : haversineMiles(parseFloat(geo.lat), parseFloat(geo.lon), b.lat, b.lon),
+    _src: "city",
+  }));
+
+  const merged = [...cityFlat, ...osmFlat].sort((a, b) => (a._distance || 0) - (b._distance || 0));
+
+  setText("businesses-value", merged.length
+    ? `${merged.length} business${merged.length === 1 ? "" : "es"} matching "${keyword}" near ${cityName} (${cityFlat.length} city-licensed + ${osmFlat.length} OSM)`
+    : `No matches for "${keyword}" near ${cityName}`);
+
+  if (!merged.length) {
+    // Same honest empty state as v2.2 — no Google Maps redirect.
+    const kwSafe = escapeHtml(keyword);
+    const citySafe = escapeHtml(cityName);
+    const submitOsmUrl = `https://www.openstreetmap.org/note/new#map=14/${geo.lat}/${geo.lon}`;
+    const reportUrl = `mailto:feedback@nearnity.com?subject=${encodeURIComponent(`Missing business: ${keyword} in ${cityName}`)}&body=${encodeURIComponent(`Searched "${keyword}" near ${cityName}, no matches.\n\nKnown business in this category:\n- Name:\n- Address:\n- Phone:\n- Website:`)}`;
+    tbody.innerHTML = `<div class="schools-empty" style="padding:18px;line-height:1.6;">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px;">No "${kwSafe}" businesses found in OpenStreetMap or ${citySafe}'s city license registry.</div>
+      <div style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;">Both sources are community/government-maintained. Specialty businesses sometimes aren't listed yet. Three ways forward:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <a href="${submitOsmUrl}" target="_blank" rel="noopener" class="nrny-action nrny-action-primary">📍 Add this business to OpenStreetMap</a>
+        <a href="${reportUrl}" class="nrny-action">📩 Tell Nearnity about a known business</a>
+        <button type="button" class="nrny-action" onclick="window.__widenRadius && window.__widenRadius()">↔ Widen search radius</button>
+      </div>
+    </div>`;
+    return;
+  }
+  tbody.innerHTML = merged.slice(0, 40).map(b => _renderMergedBusinessCard(b, cityName)).join("");
+  if (typeof setupSectionMap === "function") {
+    setupSectionMap("businesses-map", parseFloat(geo.lat), parseFloat(geo.lon), merged);
+  }
+  if (typeof sectionState !== "undefined") {
+    sectionState["card-businesses"] = { grouped: { all: merged }, geo: { lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) } };
+  }
+}
+
+function _renderMergedBusinessCard(b, cityName) {
+  const phoneTel = b.phone ? b.phone.replace(/[^\d+]/g, "") : null;
+  const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lon}`;
+  const distLabel = b._distance != null
+    ? `<span class="cal-event-dist">${b._distance < 1 ? b._distance.toFixed(1) : Math.round(b._distance)} mi</span>`
+    : "";
+  const tagLabel = (b.type || "").replace(/_/g, " ");
+  const trustClass = b._src === "city" ? "trust-pill-official" : "trust-pill-public-map";
+  const trustText = b._src === "city" ? "City-licensed" : (b.trust_label || "Public map data");
+  const sourceIcon = b._src === "city" ? "📋" : "🏪";
+  const star = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml({
+    id: b.id, type: "business", title: b.name, subtitle: b.address || tagLabel, url: b.website || null, phone: b.phone || null,
+  }) : "";
+  const reportPayload = encodeURIComponent(JSON.stringify({
+    card_id: "card-businesses", category: "business", title_hint: b.name,
+    address: b.address, source: b.source,
+    source_url: b.source_url || (b._src === "osm" ? `https://www.openstreetmap.org/?mlat=${b.lat}&mlon=${b.lon}#map=18/${b.lat}/${b.lon}` : null),
+  }));
+  return `<div class="cal-event" data-bucket="community">
+    <div class="cal-event-body">
+      <div class="cal-event-title">${sourceIcon} ${escapeHtml(b.name)} ${distLabel} ${tagLabel ? `<span class="trust-pill ${trustClass}">${escapeHtml(tagLabel)}</span>` : `<span class="trust-pill ${trustClass}">${escapeHtml(trustText)}</span>`} ${star}</div>
+      ${b.address ? `<div class="cal-event-meta">${escapeHtml(b.address)}</div>` : ""}
+      ${b.hours ? `<div class="cal-event-meta hint">Hours: ${escapeHtml(b.hours)}</div>` : ""}
+      <div class="cal-event-actions">
+        ${phoneTel ? `<a class="nrny-action nrny-action-primary" href="tel:${escapeHtml(phoneTel)}">📞 Call ${escapeHtml(b.phone)}</a>` : ""}
+        <a class="nrny-action" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">🧭 Directions</a>
+        ${b.website ? `<a class="nrny-action" href="${escapeHtml(b.website)}" target="_blank" rel="noopener">↗ Website</a>` : ""}
+        <a class="nrny-action nrny-action-source" href="${b._src === "osm" ? `https://www.openstreetmap.org/?mlat=${b.lat}&mlon=${b.lon}#map=18/${b.lat}/${b.lon}` : escapeHtml(b.source_url || "#")}" target="_blank" rel="noopener">🔗 ${b._src === "city" ? "City registry" : "OSM"}</a>
+        <button type="button" class="nrny-action nrny-action-report" data-report-payload="${reportPayload}">⚠ Report issue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function fetchBusinessesByKeyword(lat, lon, keyword) {
+  const radiusM = (typeof CURRENT_RADIUS_M !== "undefined" ? CURRENT_RADIUS_M : 25000);
+  // Build a tolerant search regex: words ≥3 chars from the keyword, OR'd.
+  // "violin repairs" → /(violin|repairs)/i — matches a shop named just
+  // "Violin World" or just "ABC Repairs" without forcing both words.
+  const words = keyword.toLowerCase().split(/\s+/).filter(w => w.length >= 3 && !/^(the|and|for|near|with|shop|store|service|services)$/.test(w));
+  if (!words.length) words.push(keyword.replace(/[^a-z0-9]/gi, ""));
+  const escaped = words.map(w => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  // Search across name with regex. Also catch description fields some POIs use.
+  const q = `[out:json][timeout:15];(`
+          + `nwr["name"~"${escaped}",i](around:${radiusM},${lat},${lon});`
+          + `);out center tags;`;
+  const els = await overpassQuery(q);
+  return Array.isArray(els) ? els : [];
+}
+
+function renderBusinesses(elements, keyword, geo) {
+  const cityName = (typeof getDisplayCityForHeadline === "function") ? getDisplayCityForHeadline(geo) : "your area";
+  const tbody = document.getElementById("businesses-tbody");
+  if (!tbody) return;
+  // Filter to POIs that LOOK like businesses — must have a shop/craft/
+  // amenity/office/leisure tag indicating it's a commercial place, not
+  // some random named feature (street, neighborhood, etc.).
+  const businesses = (elements || []).map(el => {
+    const t = el.tags || {};
+    if (!t.name) return null;
+    const isBusiness = t.shop || t.craft || t.amenity || t.office || t.leisure;
+    if (!isBusiness) return null;
+    const lat = el.lat || (el.center && el.center.lat);
+    const lon = el.lon || (el.center && el.center.lon);
+    if (!lat || !lon) return null;
+    return {
+      id: `biz::${(t.name || "").trim()}::${lat.toFixed(4)},${lon.toFixed(4)}`,
+      name: t.name,
+      lat, lon,
+      address: [t["addr:housenumber"], t["addr:street"], t["addr:city"]].filter(Boolean).join(" ") || "",
+      phone: t.phone || t["contact:phone"] || null,
+      website: t.website || t["contact:website"] || t.url || null,
+      hours: t.opening_hours || null,
+      tagFamily: t.shop ? "shop" : t.craft ? "craft" : t.amenity ? "amenity" : t.office ? "office" : "leisure",
+      tagValue: t.shop || t.craft || t.amenity || t.office || t.leisure || "",
+      source: "OpenStreetMap",
+      trust_label: "Public map data",
+      _distance: haversineMiles(parseFloat(geo.lat), parseFloat(geo.lon), lat, lon),
+    };
+  }).filter(Boolean).sort((a, b) => a._distance - b._distance);
+
+  setText("businesses-value", businesses.length
+    ? `${businesses.length} matching business${businesses.length === 1 ? "" : "es"} for "${keyword}" near ${cityName}`
+    : `No matches for "${keyword}" near ${cityName}`);
+
+  if (!businesses.length) {
+    // Honest empty state. NO "go to Google Maps" as primary path. Three
+    // genuinely-Nearnity-shaped next steps: widen radius, submit to OSM
+    // (community-maintained data improves for everyone), or report to us.
+    const kwSafe = escapeHtml(keyword);
+    const citySafe = escapeHtml(cityName);
+    const submitOsmUrl = `https://www.openstreetmap.org/note/new#map=14/${geo.lat}/${geo.lon}`;
+    const reportBody = encodeURIComponent(
+      `I searched for "${keyword}" near ${cityName} on Nearnity and didn't find any matches.\n\nKnown business in this category:\n- Name:\n- Address:\n- Phone:\n- Website:\n\nThanks!`
+    );
+    const reportUrl = `mailto:feedback@nearnity.com?subject=${encodeURIComponent(`Missing business: ${keyword} in ${cityName}`)}&body=${reportBody}`;
+    tbody.innerHTML = `<div class="schools-empty" style="padding:18px;line-height:1.6;">
+      <div style="font-size:15px;font-weight:700;color:var(--ink);margin-bottom:8px;">No "${kwSafe}" businesses tagged in OpenStreetMap near ${citySafe} yet.</div>
+      <div style="font-size:14px;color:var(--ink-soft);margin-bottom:14px;">OpenStreetMap is community-maintained — small specialty businesses (instrument repair, tailors, music tutors, etc.) often haven't been added yet. Three ways to help:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        <a href="${submitOsmUrl}" target="_blank" rel="noopener" class="nrny-action nrny-action-primary">📍 Add this business to OpenStreetMap</a>
+        <a href="${reportUrl}" class="nrny-action">📩 Tell Nearnity about a known business</a>
+        <button type="button" class="nrny-action" onclick="window.__widenRadius && window.__widenRadius()">↔ Widen search radius</button>
+      </div>
+    </div>`;
+    return;
+  }
+
+  // Render results as a grid of business cards
+  tbody.innerHTML = businesses.slice(0, 40).map(b => _renderBusinessCard(b, cityName)).join("");
+  // Paint the map with markers
+  if (typeof setupSectionMap === "function") {
+    setupSectionMap("businesses-map", parseFloat(geo.lat), parseFloat(geo.lon), businesses);
+  }
+  // Stash state for the card-active reshape and tail buttons
+  if (typeof sectionState !== "undefined") {
+    sectionState["card-businesses"] = { grouped: { all: businesses }, geo: { lat: parseFloat(geo.lat), lon: parseFloat(geo.lon) } };
+  }
+}
+
+function _renderBusinessCard(b, cityName) {
+  const phoneTel = b.phone ? b.phone.replace(/[^\d+]/g, "") : null;
+  const mapUrl = `https://www.google.com/maps/dir/?api=1&destination=${b.lat},${b.lon}`;
+  const distLabel = b._distance != null
+    ? `${b._distance < 1 ? b._distance.toFixed(1) : Math.round(b._distance)} mi`
+    : "";
+  const tagLabel = (b.tagValue || "").replace(/_/g, " ");
+  const star = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml({
+    id: b.id, type: "business", title: b.name, subtitle: b.address || tagLabel, url: b.website || null, phone: b.phone || null,
+  }) : "";
+  const reportPayload = encodeURIComponent(JSON.stringify({
+    card_id: "card-businesses",
+    category: "business",
+    title_hint: b.name,
+    address: b.address,
+    source: b.source,
+    source_url: b.website || `https://www.openstreetmap.org/?mlat=${b.lat}&mlon=${b.lon}#map=18/${b.lat}/${b.lon}`,
+  }));
+  return `<div class="cal-event" data-bucket="community" style="margin-bottom:10px;">
+    <div class="cal-event-body">
+      <div class="cal-event-title">🏪 ${escapeHtml(b.name)} ${distLabel ? `<span class="cal-event-dist">${distLabel}</span>` : ""} ${tagLabel ? `<span class="trust-pill trust-pill-source-linked" style="margin-left:6px;">${escapeHtml(tagLabel)}</span>` : ""} ${star}</div>
+      ${b.address ? `<div class="cal-event-meta">${escapeHtml(b.address)}</div>` : ""}
+      ${b.hours ? `<div class="cal-event-meta hint">Hours: ${escapeHtml(b.hours)}</div>` : ""}
+      <div class="cal-event-actions">
+        ${phoneTel ? `<a class="nrny-action nrny-action-primary" href="tel:${escapeHtml(phoneTel)}">📞 Call ${escapeHtml(b.phone)}</a>` : ""}
+        <a class="nrny-action" href="${escapeHtml(mapUrl)}" target="_blank" rel="noopener">🧭 Directions</a>
+        ${b.website ? `<a class="nrny-action" href="${escapeHtml(b.website)}" target="_blank" rel="noopener">↗ Website</a>` : ""}
+        <a class="nrny-action nrny-action-source" href="https://www.openstreetmap.org/?mlat=${b.lat}&mlon=${b.lon}#map=18/${b.lat}/${b.lon}" target="_blank" rel="noopener">🔗 Source: OSM</a>
+        <button type="button" class="nrny-action nrny-action-report" data-report-payload="${reportPayload}">⚠ Report issue</button>
+      </div>
+    </div>
+  </div>`;
+}
+
 async function loadNearbyHomeServices(geo) {
   lastHsGeo = geo;
   const lat = parseFloat(geo.lat), lon = parseFloat(geo.lon);
@@ -15389,26 +16092,12 @@ function _renderEventsEmpty(geo, tb, keyword) {
   const reportUrl = `mailto:feedback@nearnity.com?subject=${reportSubject}&body=${reportBody}`;
   if (keyword) {
     const kwSafe = escapeHtml(keyword);
-    // v2.2: When the search term looks more like a SERVICE / SHOP / BUSINESS
-    // than an event (repair / shop / store / cleaner / plumber / etc.), this
-    // section can't help — surface that honestly and point to better paths.
-    // Common case: someone searches "violin repairs in Dublin" and lands on
-    // the events tab, gets confused that no events match.
-    const serviceLike = /\b(repair|repairs|shop|shops|store|stores|service|services|salon|spa|clinic|dentist|doctor|plumber|electrician|tutor|lessons|classes|cleaner|cleaning|locksmith|tailor|barber|gym)\b/i.test(keyword);
-    const gmapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(keyword + " near " + cityName)}`;
-    if (serviceLike) {
-      tb.innerHTML = `<div class="schools-empty" style="padding:16px;line-height:1.55;">
-        <b>"${kwSafe}" looks like a service or business, not an event.</b><br>
-        Nearnity's curated business coverage is still narrow at v2.2 — niche specialties like instrument repair, tailoring, and tutors aren't in our data yet.<br><br>
-        <b>Two paths from here:</b>
-        <ul style="margin:8px 0 0 18px;padding:0;">
-          <li>Try <a href="#sec-home-services" class="subtab" data-subtarget="card-home-services" style="color:#0050c2;font-weight:600;">Home services</a> — covers handyman / plumber / electrician / HVAC trades from OpenStreetMap.</li>
-          <li>For very specific businesses, <a href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">search Google Maps</a> (has wider coverage but includes ads).</li>
-        </ul>
-        <div style="margin-top:10px;font-size:13px;color:#6b7280;">Know a great ${kwSafe} provider near ${escapeHtml(cityName)}? <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">Recommend one →</a></div>
-      </div>`;
-      return;
-    }
+    // v2.2: When the search keyword is a service/business (not an event),
+    // the intent system routes the user to the new "Local businesses"
+    // section which does an OSM name search for the keyword. Events
+    // section just stays empty for that query — no need to advertise it
+    // here since the businesses section is already populated above.
+    // (Routing happens in applyIntentFocus → loadNearbyBusinesses.)
     tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
       <b>No events matching "${kwSafe}" found near ${escapeHtml(cityName)} in the next 30 days.</b><br>
       Try a broader term, clear the search, or widen your radius. Looking for something specific?
@@ -17399,6 +18088,11 @@ function renderResults(geo) {
   // fails or times out, the others continue and the failing tab shows a
   // Retry button automatically via nrnyLoadGuard.
   try { setTimeout(() => nrnyEagerPreload(geo), 100); } catch (e) { console.warn("[eager-preload]", e); }
+  // v2.4: kick off federal-data enrichment (NPPES + SAMHSA + CSLB) in the
+  // background. Each is non-blocking and fail-silent — adds richer data to
+  // Health & wellness and Home services cards when available, no degraded
+  // experience when sources are unreachable.
+  try { _wireV24Enrichment(geo); } catch (e) { console.warn("[v2.4-enrichment]", e); }
   // v2.0.1: cache the resolved geo so returning visitors land on results
   // instantly (no re-search needed). Capped to address + lat/lon — no PII.
   try {
@@ -17485,10 +18179,12 @@ function renderResults(geo) {
   // v2.1: INTENT-FIRST search. Detect what the user is asking for and route
   // the result page to the matching answer section. Full dashboard becomes
   // secondary under "Explore more around this place".
+  // v2.2: keyword is now passed through so the "businesses" intent can
+  // run an OSM name search instead of dead-ending the user.
   try {
     const q = (document.getElementById("q-input")?.value || "").trim();
     const intent = detectQueryIntent(q);
-    applyIntentFocus(intent, geo);
+    applyIntentFocus(intent, geo, q);
   } catch (e) { console.warn("[intent-first]", e); }
 }
 
