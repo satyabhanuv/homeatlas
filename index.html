@@ -3141,6 +3141,29 @@
     .subnav-group-label,
     .subnav-group-sep { display: none; }
   }
+  /* v2.2: on mobile, the 13-tab subnav was too wide to fit and the tabs were
+     hard to scan. Switch to a horizontal scroll strip with snap stops on each
+     tab — same experience as a native segmented control. Add a subtle scroll
+     hint shadow at the right edge so users know there's more off-screen. */
+  @media (max-width: 720px) {
+    .subnav.subnav-grouped {
+      display: flex;
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scroll-snap-type: x proximity;
+      -webkit-overflow-scrolling: touch;
+      padding: 4px 14px 8px;
+      margin: 0 -14px;            /* extend to viewport edges */
+      mask-image: linear-gradient(to right, #000 0, #000 95%, transparent 100%);
+    }
+    .subnav.subnav-grouped::-webkit-scrollbar { height: 4px; }
+    .subnav.subnav-grouped::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }
+    .subnav.subnav-grouped .subtab {
+      flex: 0 0 auto;
+      scroll-snap-align: start;
+      white-space: nowrap;
+    }
+  }
 
   /* v2.2: inline event-count line replacing the removed duplicate chip rows */
   .cal-count-line {
@@ -6772,6 +6795,7 @@
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="today"   data-filter-bucket="all">Today</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="tonight" data-filter-bucket="all">Tonight</a>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="weekend" data-filter-bucket="all">This weekend</a>
+      <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="all">This month</a>
       <span class="subnav-group-sep" aria-hidden="true"></span>
       <span class="subnav-group-label">Type</span>
       <a href="#events-listings-section"  class="subtab" data-subtarget="events-listings-section" data-filter-window="month"   data-filter-bucket="community">Free &amp; community</a>
@@ -15365,6 +15389,26 @@ function _renderEventsEmpty(geo, tb, keyword) {
   const reportUrl = `mailto:feedback@nearnity.com?subject=${reportSubject}&body=${reportBody}`;
   if (keyword) {
     const kwSafe = escapeHtml(keyword);
+    // v2.2: When the search term looks more like a SERVICE / SHOP / BUSINESS
+    // than an event (repair / shop / store / cleaner / plumber / etc.), this
+    // section can't help — surface that honestly and point to better paths.
+    // Common case: someone searches "violin repairs in Dublin" and lands on
+    // the events tab, gets confused that no events match.
+    const serviceLike = /\b(repair|repairs|shop|shops|store|stores|service|services|salon|spa|clinic|dentist|doctor|plumber|electrician|tutor|lessons|classes|cleaner|cleaning|locksmith|tailor|barber|gym)\b/i.test(keyword);
+    const gmapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(keyword + " near " + cityName)}`;
+    if (serviceLike) {
+      tb.innerHTML = `<div class="schools-empty" style="padding:16px;line-height:1.55;">
+        <b>"${kwSafe}" looks like a service or business, not an event.</b><br>
+        Nearnity's curated business coverage is still narrow at v2.2 — niche specialties like instrument repair, tailoring, and tutors aren't in our data yet.<br><br>
+        <b>Two paths from here:</b>
+        <ul style="margin:8px 0 0 18px;padding:0;">
+          <li>Try <a href="#sec-home-services" class="subtab" data-subtarget="card-home-services" style="color:#0050c2;font-weight:600;">Home services</a> — covers handyman / plumber / electrician / HVAC trades from OpenStreetMap.</li>
+          <li>For very specific businesses, <a href="${gmapsUrl}" target="_blank" rel="noopener" style="color:#0050c2;font-weight:600;">search Google Maps</a> (has wider coverage but includes ads).</li>
+        </ul>
+        <div style="margin-top:10px;font-size:13px;color:#6b7280;">Know a great ${kwSafe} provider near ${escapeHtml(cityName)}? <a href="${reportUrl}" style="color:#0050c2;font-weight:600;">Recommend one →</a></div>
+      </div>`;
+      return;
+    }
     tb.innerHTML = `<div class="schools-empty" style="padding:14px;line-height:1.55;">
       <b>No events matching "${kwSafe}" found near ${escapeHtml(cityName)} in the next 30 days.</b><br>
       Try a broader term, clear the search, or widen your radius. Looking for something specific?
