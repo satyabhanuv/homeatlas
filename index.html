@@ -425,6 +425,142 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
+     v2.6 — EMERGENCY & SAFETY GUIDE (always-visible reference content)
+     ───────────────────────────────────────────────────────────────────────────
+     This section's card is REFERENCE material — universal triage, scenario
+     actions, facility verification. Visible at all times (pre-search too)
+     because emergency guidance shouldn't require a resolved location.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Override the v2.2 "hide everything pre-search" rule for this card */
+  body:not(.has-location) #card-safety-guide,
+  body:not(.has-location) #card-safety-guide > *:not(.nearnity-card-empty) {
+    display: revert !important;
+  }
+  body:not(.has-location) #card-safety-guide > .nearnity-card-empty,
+  #card-safety-guide > .nearnity-card-empty { display: none !important; }
+
+  /* The 911-first callout — always-visible red emergency stripe */
+  .safety-911-callout {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #fee2e2 0%, #fef3f2 100%);
+    border: 1px solid #fecaca;
+    border-left: 4px solid #dc2626;
+    border-radius: 10px;
+    margin: 0 0 18px;
+  }
+  .safety-911-icon { font-size: 26px; line-height: 1; }
+  .safety-911-body { flex: 1; min-width: 0; }
+  .safety-911-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #7f1d1d;
+    margin-bottom: 4px;
+  }
+  .safety-911-title a {
+    color: #dc2626;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .safety-911-sub {
+    font-size: 13px;
+    color: var(--ink-soft, #4a5263);
+    line-height: 1.45;
+  }
+
+  /* Triage grid — 3 color-coded tiles for severity levels */
+  .safety-triage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .safety-triage-tile {
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid;
+    display: flex;
+    flex-direction: column;
+  }
+  .safety-triage-er {
+    background: #fef2f2;
+    border-color: #fecaca;
+  }
+  .safety-triage-urgent {
+    background: #fffbeb;
+    border-color: #fde68a;
+  }
+  .safety-triage-primary {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+  }
+  .safety-triage-eyebrow {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 4px;
+  }
+  .safety-triage-er .safety-triage-eyebrow { color: #b91c1c; }
+  .safety-triage-urgent .safety-triage-eyebrow { color: #b45309; }
+  .safety-triage-primary .safety-triage-eyebrow { color: #15803d; }
+  .safety-triage-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .safety-triage-list {
+    margin: 0 0 12px;
+    padding-left: 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .safety-triage-list li { margin-bottom: 3px; }
+  .safety-triage-list i { color: var(--ink-soft); font-style: italic; }
+  .safety-triage-action { margin-top: auto; align-self: flex-start; }
+
+  /* Scenarios grid — 2 columns on desktop, 1 on mobile */
+  .safety-scenarios-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .safety-scenario {
+    padding: 14px 16px;
+    border-radius: 10px;
+    background: var(--surface, #fff);
+    border: 1px solid var(--line);
+  }
+  .safety-scenario-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 4px;
+  }
+  .safety-scenario-contact {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+  .safety-scenario-steps {
+    margin: 0 0 10px;
+    padding-left: 22px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+  .safety-scenario-steps li { margin-bottom: 4px; }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
      v2.3 — UI presentation pass
      ───────────────────────────────────────────────────────────────────────────
      Goals: (1) more cards visible on first scroll (density), (2) consistent
@@ -6163,7 +6299,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.5</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.6</span>
     </div>
   </header>
 
@@ -6502,6 +6638,179 @@
       <div id="risks-body"></div>
       <div class="source" style="margin-top:12px;">
         Each score is Nearnity's 0–10 summary of the underlying official zone classification — FEMA flood zones (NFHL), Cal Fire FHSZ, AirNow, NOAA climate data. Click any factor to open the authoritative source and verify your parcel-level classification.
+      </div>
+    </div>
+
+    <!-- v2.6: Emergency & safety guide — reference content. Always visible
+         (pre-search too) because emergency guidance shouldn't require a
+         resolved location to access. Triage / Scenarios / Verify-a-facility
+         tabs. Each tab is static reference material, no API calls. -->
+    <div class="page-section-header public-services" id="sec-safety-guide">
+      <div class="psh-icon">📋</div>
+      <div class="psh-text">
+        <h2 class="psh-title">Emergency &amp; safety guide</h2>
+      </div>
+    </div>
+
+    <div class="subnav" data-subnav-for="card-safety-guide">
+      <a href="#sg-triage-section"    class="subtab active" data-subtarget="sg-triage-section">Triage: where to go</a>
+      <a href="#sg-scenarios-section" class="subtab"        data-subtarget="sg-scenarios-section">Scenario actions</a>
+      <a href="#sg-verify-section"    class="subtab"        data-subtarget="sg-verify-section">Verify a facility</a>
+    </div>
+
+    <div class="parks-card" id="card-safety-guide" data-always-visible="true">
+      <div class="card-context-bar">
+        <div class="card-context-text">Universal triage, scenario actions, and facility verification — always available, no search required.</div>
+      </div>
+
+      <!-- Always-on universal callout — 911 first -->
+      <div class="safety-911-callout">
+        <div class="safety-911-icon">🚑</div>
+        <div class="safety-911-body">
+          <div class="safety-911-title">For immediate medical emergencies, call <a href="tel:911">911</a> FIRST.</div>
+          <div class="safety-911-sub">Universal first step regardless of where you are in the United States. The guidance below applies after 911 is on the way — or when the situation isn't acute enough for 911.</div>
+        </div>
+      </div>
+
+      <!-- ── 1. TRIAGE ────────────────────────────────────────────────── -->
+      <div class="school-section subtab-active" id="sg-triage-section">
+        <h4>Where to go based on your symptoms <span class="hint">— save lives + thousands in bills</span></h4>
+        <div class="safety-triage-grid">
+          <div class="safety-triage-tile safety-triage-er">
+            <div class="safety-triage-eyebrow">911 / Emergency Room</div>
+            <div class="safety-triage-title">Life- or limb-threatening symptoms. Open 24/7.</div>
+            <ul class="safety-triage-list">
+              <li>Chest pain or pressure</li>
+              <li>Difficulty breathing</li>
+              <li>Sudden weakness, numbness, or slurred speech <i>(stroke signs)</i></li>
+              <li>Severe burns or uncontrollable bleeding</li>
+              <li>Major head trauma or loss of consciousness</li>
+            </ul>
+            <a href="tel:911" class="nrny-action nrny-action-primary safety-triage-action">📞 Call 911</a>
+          </div>
+
+          <div class="safety-triage-tile safety-triage-urgent">
+            <div class="safety-triage-eyebrow">Urgent Care</div>
+            <div class="safety-triage-title">Needs attention within 24 hours. Not life-threatening.</div>
+            <ul class="safety-triage-list">
+              <li>Minor fractures, sprains, strains</li>
+              <li>Mild asthma attacks</li>
+              <li>Fever, flu, severe sore throat</li>
+              <li>Animal bites, small cuts needing stitches</li>
+              <li>Urinary tract infections (UTIs)</li>
+            </ul>
+            <button type="button" class="nrny-action safety-triage-action popular-category-pill" data-pop-sec="sec-public-services" data-pop-sub="ps-urgent-section">🔎 Find urgent care near me</button>
+          </div>
+
+          <div class="safety-triage-tile safety-triage-primary">
+            <div class="safety-triage-eyebrow">Primary Care</div>
+            <div class="safety-triage-title">Preventative care + non-urgent ongoing issues.</div>
+            <ul class="safety-triage-list">
+              <li>Routine physicals, vaccinations</li>
+              <li>Managing chronic conditions <i>(diabetes, blood pressure)</i></li>
+              <li>Mild skin rashes, minor aches</li>
+              <li>Prescription refills</li>
+            </ul>
+            <button type="button" class="nrny-action safety-triage-action popular-category-pill" data-pop-sec="sec-health" data-pop-sub="health-clinics-section">🔎 Find clinics near me</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 2. SCENARIOS ─────────────────────────────────────────────── -->
+      <div class="school-section" id="sg-scenarios-section" hidden>
+        <h4>What to do in different emergency scenarios <span class="hint">— who to call + immediate actions</span></h4>
+        <div class="safety-scenarios-grid">
+          <div class="safety-scenario">
+            <div class="safety-scenario-title">🛣️ Beside a road or highway</div>
+            <div class="safety-scenario-contact"><b>Contact:</b> 911 · State Highway Patrol · Roadside assistance</div>
+            <ol class="safety-scenario-steps">
+              <li>Pull over safely to the shoulder.</li>
+              <li>Turn on your hazard lights.</li>
+              <li>Note the nearest highway mile marker or exit number.</li>
+              <li>Stay inside the vehicle if traffic is dangerous.</li>
+            </ol>
+          </div>
+
+          <div class="safety-scenario">
+            <div class="safety-scenario-title">🏠 At home</div>
+            <div class="safety-scenario-contact"><b>Contact:</b> 911 · Poison Control 1-800-222-1222 · Trusted neighbors</div>
+            <ol class="safety-scenario-steps">
+              <li>Unlock the front door so paramedics can enter.</li>
+              <li>Secure any household pets in a separate room.</li>
+              <li>Gather the patient's ID and current medications.</li>
+              <li>Turn on porch lights if it's dark outside.</li>
+            </ol>
+            <a href="tel:1-800-222-1222" class="nrny-action">📞 Poison Control · 1-800-222-1222</a>
+          </div>
+
+          <div class="safety-scenario">
+            <div class="safety-scenario-title">⛰️ In or near a national park</div>
+            <div class="safety-scenario-contact"><b>Contact:</b> 911 · National Park Service (NPS) rangers · Visitor center staff</div>
+            <ol class="safety-scenario-steps">
+              <li>Use a satellite messenger (Garmin inReach, ZOLEO, etc.) if there's no cell service.</li>
+              <li>Contact rangers via park emergency phone lines or emergency blue-light boxes.</li>
+              <li>Stay in place unless instructed to move. Don't separate from your group.</li>
+            </ol>
+          </div>
+
+          <div class="safety-scenario">
+            <div class="safety-scenario-title">📞 Helping a remote friend or family member</div>
+            <div class="safety-scenario-contact"><b>Contact:</b> Local dispatch for THEIR city · Local police non-emergency line</div>
+            <ol class="safety-scenario-steps">
+              <li>Ask them to text you their pin-drop location.</li>
+              <li><b>Don't just call 911 from your phone</b> — it routes to your local tower, not theirs.</li>
+              <li>Look up the direct police/EMS dispatch number for their specific city and call it directly.</li>
+              <li>If they can't communicate, request a "welfare check" from local police.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── 3. VERIFY A FACILITY ─────────────────────────────────────── -->
+      <div class="school-section" id="sg-verify-section" hidden>
+        <h4>Verify a hospital, clinic, or doctor <span class="hint">— free official tools</span></h4>
+        <p style="font-size:14px;color:var(--ink-soft);line-height:1.55;margin:0 0 14px;">Before you visit a facility or commit to a provider, check ratings, credentials, and clinical background using these free government / official-board tools. All free, all source-linked.</p>
+        <div class="civic-grid">
+          <a href="https://www.medicare.gov/care-compare/" target="_blank" rel="noopener" class="civic-card">
+            <div class="civic-card-icon">⭐</div>
+            <div class="civic-card-title">Medicare Hospital Compare</div>
+            <div class="civic-card-meta">Patient safety ratings, ER wait times, hospital type, available services. CMS-maintained.</div>
+            <div class="civic-card-link">Open Medicare.gov →</div>
+          </a>
+          <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener" class="civic-card">
+            <div class="civic-card-icon">🏥</div>
+            <div class="civic-card-title">HRSA Find a Health Center</div>
+            <div class="civic-card-meta">Federally qualified health centers — sliding-scale fees, accept uninsured, federally funded.</div>
+            <div class="civic-card-link">Open HRSA →</div>
+          </a>
+          <a href="https://www.docinfo.org/" target="_blank" rel="noopener" class="civic-card">
+            <div class="civic-card-icon">🩺</div>
+            <div class="civic-card-title">DocInfo (Federation of State Medical Boards)</div>
+            <div class="civic-card-meta">Look up a doctor's credentials, license status, board actions, and clinical background.</div>
+            <div class="civic-card-link">Open DocInfo →</div>
+          </a>
+          <a href="https://npiregistry.cms.hhs.gov/" target="_blank" rel="noopener" class="civic-card">
+            <div class="civic-card-icon">📋</div>
+            <div class="civic-card-title">NPPES NPI Registry</div>
+            <div class="civic-card-meta">CMS federal registry of every US healthcare provider. Verify NPI numbers, taxonomy, practice locations.</div>
+            <div class="civic-card-link">Open NPPES →</div>
+          </a>
+          <a href="https://findtreatment.gov/" target="_blank" rel="noopener" class="civic-card">
+            <div class="civic-card-icon">💚</div>
+            <div class="civic-card-title">SAMHSA Treatment Locator</div>
+            <div class="civic-card-meta">Mental health + substance-use treatment facilities. Federal, confidential, multilingual.</div>
+            <div class="civic-card-link">Open SAMHSA →</div>
+          </a>
+          <a href="https://www.poisonhelp.org/" target="_blank" rel="noopener" class="civic-card">
+            <div class="civic-card-icon">☠️</div>
+            <div class="civic-card-title">Poison Control · 1-800-222-1222</div>
+            <div class="civic-card-meta">24/7, free, confidential. For poisoning emergencies or questions. Faster than 911 for poison-specific questions.</div>
+            <div class="civic-card-link">Open PoisonHelp.org →</div>
+          </a>
+        </div>
+        <div class="source" style="margin-top:14px;">
+          All tools above are free, official sources. Nearnity links to them — we don't intermediate.
+        </div>
       </div>
     </div>
 
@@ -7477,7 +7786,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.5</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.6</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -10022,6 +10331,8 @@ const SHELL_V95_SECTIONS = [
   // Civic
   { id: "civic",          label: "Official links",  group: "civic",     cardId: "card-civic",           mapId: "civic-map",   subnavSel: '.subnav[data-subnav-for="card-civic"]',           secHeaderId: "sec-civic" },
   // Safety
+  // v2.6: Emergency & safety guide — reference content, always accessible
+  { id: "safety-guide",   label: "Safety guide",    group: "safety",    cardId: "card-safety-guide",   mapId: null,           subnavSel: '.subnav[data-subnav-for="card-safety-guide"]',    secHeaderId: "sec-safety-guide" },
   { id: "public-services",label: "Emergency services", group: "safety", cardId: "card-public-services", mapId: "ps-map",      subnavSel: '.subnav[data-subnav-for="card-public-services"]', secHeaderId: "sec-public-services" },
   { id: "risks",          label: "Climate risks",   group: "safety",    cardId: "card-risks",           mapId: "ra-map",      subnavSel: null,                                              secHeaderId: "sec-risks" },
   // Saved
