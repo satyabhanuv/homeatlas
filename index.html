@@ -6299,7 +6299,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.6</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7</span>
     </div>
   </header>
 
@@ -7786,7 +7786,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.6</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -14554,6 +14554,11 @@ function renderBusinessesMerged(cityItems, osmElements, keyword, geo) {
     ? `${merged.length} business${merged.length === 1 ? "" : "es"} matching "${keyword}" near ${cityName} (${cityFlat.length} city-licensed + ${osmFlat.length} OSM)`
     : `No matches for "${keyword}" near ${cityName}`);
 
+  // v2.7: auto-log zero-result searches so we see drop-off queries in KV
+  if (typeof window.nrnyLogUnmatchedSearch === "function") {
+    window.nrnyLogUnmatchedSearch(keyword, "businesses", cityName, merged.length);
+  }
+
   if (!merged.length) {
     // Same honest empty state as v2.2 — no Google Maps redirect.
     const kwSafe = escapeHtml(keyword);
@@ -19743,6 +19748,243 @@ document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
     sync();
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7 — TESTER FEEDBACK WIDGET (floating button + structured form)
+// ═══════════════════════════════════════════════════════════════════════════
+// Always-visible "💬 Feedback" button bottom-right. Click opens a structured
+// form that auto-captures page section, search query, and address context.
+// Submits to /api/feedback → emails Satya + writes to KV.
+// Also: auto-captures zero-result searches in the background (no user action
+// needed) so we see exactly which queries are dropping off.
+(function nrnyFeedbackInit() {
+  if (typeof document === "undefined") return;
+  // Inject styles once
+  if (!document.getElementById("nrny-fb-styles")) {
+    const style = document.createElement("style");
+    style.id = "nrny-fb-styles";
+    style.textContent = `
+      .nrny-fb-launcher {
+        position: fixed; right: 18px; bottom: 18px; z-index: 9998;
+        background: #0050c2; color: #fff; border: none;
+        padding: 11px 16px; border-radius: 999px;
+        font-weight: 700; font-size: 14px; cursor: pointer;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+        display: inline-flex; align-items: center; gap: 6px;
+        transition: transform 0.12s, box-shadow 0.12s, background 0.12s;
+      }
+      .nrny-fb-launcher:hover { background: #003d99; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.22); }
+      @media (max-width: 560px) {
+        .nrny-fb-launcher { padding: 10px 14px; font-size: 13px; right: 12px; bottom: 12px; }
+      }
+      .nrny-fb-modal-bg {
+        position: fixed; inset: 0; background: rgba(15,17,21,0.55);
+        z-index: 9999; display: flex; align-items: center; justify-content: center;
+        padding: 20px;
+      }
+      .nrny-fb-modal {
+        background: #fff; border-radius: 14px; max-width: 560px; width: 100%;
+        max-height: 90vh; overflow-y: auto;
+        padding: 22px 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.25);
+        font-family: inherit;
+      }
+      .nrny-fb-modal h3 { margin: 0 0 4px; font-size: 18px; }
+      .nrny-fb-modal p.sub { margin: 0 0 16px; font-size: 13px; color: #4a5263; line-height: 1.5; }
+      .nrny-fb-modal label { display: block; font-size: 13px; font-weight: 600; color: #344054; margin: 10px 0 4px; }
+      .nrny-fb-modal input, .nrny-fb-modal select, .nrny-fb-modal textarea {
+        width: 100%; padding: 9px 12px; border: 1px solid #d4dee8; border-radius: 8px;
+        font-size: 14px; font-family: inherit; background: #fafbfd;
+      }
+      .nrny-fb-modal textarea { min-height: 80px; resize: vertical; }
+      .nrny-fb-modal .ctx-line { font-size: 12px; color: #6b7280; margin-top: 4px; font-style: italic; }
+      .nrny-fb-modal .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      @media (max-width: 480px) { .nrny-fb-modal .row-2 { grid-template-columns: 1fr; } }
+      .nrny-fb-modal .actions { display: flex; gap: 10px; margin-top: 18px; justify-content: flex-end; }
+      .nrny-fb-modal button { padding: 9px 16px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px; border: none; }
+      .nrny-fb-modal .btn-submit { background: #0050c2; color: #fff; }
+      .nrny-fb-modal .btn-submit:hover { background: #003d99; }
+      .nrny-fb-modal .btn-cancel { background: #f4f7fb; color: #475569; border: 1px solid #e1e7ef; }
+      .nrny-fb-modal .status { margin-top: 12px; font-size: 13px; padding: 8px 12px; border-radius: 6px; }
+      .nrny-fb-modal .status-ok { background: #ecfdf5; color: #15803d; border: 1px solid #b8e1c6; }
+      .nrny-fb-modal .status-err { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    `;
+    document.head.appendChild(style);
+  }
+  // Inject the launcher button (only once)
+  if (!document.getElementById("nrnyFbLauncher")) {
+    const btn = document.createElement("button");
+    btn.id = "nrnyFbLauncher";
+    btn.type = "button";
+    btn.className = "nrny-fb-launcher";
+    btn.innerHTML = `<span>💬</span><span>Feedback</span>`;
+    btn.setAttribute("aria-label", "Send feedback to Nearnity");
+    btn.addEventListener("click", openFeedbackModal);
+    document.body.appendChild(btn);
+  }
+
+  function getCurrentSection() {
+    // Best-effort: read the active cat-tab, fall back to URL hash.
+    const activeCat = document.querySelector(".cat-tab.active");
+    if (activeCat) return activeCat.dataset.cat || activeCat.textContent.trim();
+    const activeSec = document.querySelector(".sec-tab.active");
+    if (activeSec) return activeSec.dataset.target || activeSec.textContent.trim();
+    return (window.location.hash || "").replace("#", "") || "landing";
+  }
+  function getCurrentSearch() {
+    return (document.getElementById("q-input")?.value || "").trim();
+  }
+  function getCurrentAddress() {
+    return (document.getElementById("addr")?.value || "").trim();
+  }
+
+  function openFeedbackModal() {
+    if (document.getElementById("nrnyFbModalBg")) return;
+    const bg = document.createElement("div");
+    bg.id = "nrnyFbModalBg";
+    bg.className = "nrny-fb-modal-bg";
+    bg.innerHTML = `
+      <div class="nrny-fb-modal" role="dialog" aria-labelledby="nrnyFbTitle" aria-modal="true">
+        <h3 id="nrnyFbTitle">Tell Nearnity what happened</h3>
+        <p class="sub">Reports go straight to the founder's inbox. Auto-captured: which section you're on, what you searched. Help us see what broke.</p>
+
+        <div class="row-2">
+          <div>
+            <label for="nrnyFbCategory">Type of feedback</label>
+            <select id="nrnyFbCategory">
+              <option value="bug">Bug — something broke</option>
+              <option value="missing-data">Missing data — should be here but isn't</option>
+              <option value="wrong-data">Wrong / outdated info on a card</option>
+              <option value="confusing">Confusing UX — couldn't figure out</option>
+              <option value="suggestion">Feature suggestion / nice-to-have</option>
+              <option value="general">General comment</option>
+            </select>
+          </div>
+          <div>
+            <label for="nrnyFbSeverity">How blocking?</label>
+            <select id="nrnyFbSeverity">
+              <option value="normal">Normal — annoying but workable</option>
+              <option value="high">High — blocks my use case</option>
+              <option value="critical">Critical — can't use the site at all</option>
+              <option value="low">Low — minor nitpick</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="nrnyFbMessage">What happened? <span style="color:#dc2626;">*</span></label>
+        <textarea id="nrnyFbMessage" placeholder="E.g. 'Searched for tailor in Dublin, no results showed up, but I know there's one on Amador Valley Blvd.'" required></textarea>
+
+        <label for="nrnyFbExpected">What did you EXPECT to happen? <span class="hint" style="color:#6b7280;font-weight:500;">(optional but really helpful)</span></label>
+        <textarea id="nrnyFbExpected" placeholder="E.g. 'I expected to see at least one tailor near my zip.'"></textarea>
+
+        <div class="row-2">
+          <div>
+            <label for="nrnyFbName">Your name <span class="hint" style="color:#6b7280;font-weight:500;">(optional)</span></label>
+            <input id="nrnyFbName" type="text" autocomplete="name" />
+          </div>
+          <div>
+            <label for="nrnyFbEmail">Email for follow-up <span class="hint" style="color:#6b7280;font-weight:500;">(optional)</span></label>
+            <input id="nrnyFbEmail" type="email" autocomplete="email" placeholder="we'll only use this to reply" />
+          </div>
+        </div>
+
+        <div class="ctx-line" id="nrnyFbCtxLine"></div>
+        <div class="actions">
+          <button type="button" class="btn-cancel" data-fb-close>Cancel</button>
+          <button type="button" class="btn-submit" id="nrnyFbSubmit">Send feedback</button>
+        </div>
+        <div class="status" id="nrnyFbStatus" hidden></div>
+      </div>
+    `;
+    document.body.appendChild(bg);
+
+    // Populate the auto-context line
+    const sec = getCurrentSection();
+    const q = getCurrentSearch();
+    const addr = getCurrentAddress();
+    document.getElementById("nrnyFbCtxLine").textContent =
+      `Auto-attached: section=${sec || "(none)"} · search=${q || "(none)"} · address=${addr || "(none)"} · page=${location.pathname}${location.hash || ""}`;
+
+    // Wire close + submit
+    bg.addEventListener("click", (e) => {
+      if (e.target === bg || e.target.closest("[data-fb-close]")) bg.remove();
+    });
+    document.getElementById("nrnyFbSubmit").addEventListener("click", async () => {
+      const status = document.getElementById("nrnyFbStatus");
+      const submitBtn = document.getElementById("nrnyFbSubmit");
+      const msg = document.getElementById("nrnyFbMessage").value.trim();
+      if (msg.length < 4) {
+        status.hidden = false; status.className = "status status-err"; status.textContent = "Tell us a bit more (at least 4 characters).";
+        return;
+      }
+      submitBtn.disabled = true; submitBtn.textContent = "Sending…";
+      status.hidden = true;
+      const payload = {
+        category: document.getElementById("nrnyFbCategory").value,
+        severity: document.getElementById("nrnyFbSeverity").value,
+        message: msg,
+        expected: document.getElementById("nrnyFbExpected").value.trim(),
+        page_section: sec,
+        search_query: q,
+        address_text: addr,
+        name: document.getElementById("nrnyFbName").value.trim(),
+        email: document.getElementById("nrnyFbEmail").value.trim(),
+        url: location.href,
+      };
+      try {
+        const r = await fetch("/api/feedback", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (r.ok) {
+          status.hidden = false; status.className = "status status-ok";
+          status.textContent = "Got it — thanks. The founder will see this within an hour or two. Closing in 3s…";
+          setTimeout(() => { try { bg.remove(); } catch (e) {} }, 3000);
+        } else {
+          const data = await r.json().catch(() => ({}));
+          status.hidden = false; status.className = "status status-err";
+          status.textContent = data.error ? `Couldn't send: ${data.error}` : "Couldn't send right now. Please try again, or email feedback@nearnity.com.";
+          submitBtn.disabled = false; submitBtn.textContent = "Send feedback";
+        }
+      } catch (e) {
+        status.hidden = false; status.className = "status status-err";
+        status.textContent = "Network error. Try again, or email feedback@nearnity.com.";
+        submitBtn.disabled = false; submitBtn.textContent = "Send feedback";
+      }
+    });
+  }
+
+  // Expose the opener so other parts of the page can trigger it (e.g. error states)
+  window.openNrnyFeedback = openFeedbackModal;
+
+  // ─── Auto-capture zero-result searches ────────────────────────────────
+  // Anywhere a section's empty-state renders, hook to log the (query, section,
+  // city) tuple. Best-effort, fail-silent. Throttled to once per query per
+  // session so we don't double-log.
+  const _loggedQueries = new Set();
+  window.nrnyLogUnmatchedSearch = function(query, section, addressText, resultCount) {
+    try {
+      const q = (query || "").trim();
+      if (!q) return;
+      const key = `${q.toLowerCase()}::${section || ""}`;
+      if (_loggedQueries.has(key)) return;
+      _loggedQueries.add(key);
+      const addr = typeof lastGeo !== "undefined" && lastGeo && lastGeo.address ? lastGeo.address : {};
+      fetch("/api/unmatched-search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: q,
+          section: section || "",
+          address_text: addressText || "",
+          address_city: addr.city || addr.town || "",
+          address_state: addr.state || "",
+          result_count: resultCount || 0,
+        }),
+      }).catch(() => {});
+    } catch (e) {}
+  };
+})();
 </script>
 </body>
 </html>
