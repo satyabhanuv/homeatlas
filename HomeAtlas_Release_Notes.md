@@ -8,6 +8,150 @@ A running log of every shipped iteration. Newest version on top.
 
 ---
 
+## v2.6 — 2026-06-19 — Emergency & safety guide (always-accessible reference content)
+
+Adds a dedicated reference section users can rely on in genuine emergencies — universal triage, scenario actions, facility verification — without needing to search anything first.
+
+### New section: Emergency & safety guide
+
+Lives in the Safety cat-group (above Emergency services). Card is always-visible (overrides the v2.2 "hide pre-search" CSS rule for this card specifically), because emergency guidance shouldn't require a resolved location. Three tabs:
+
+**Triage: where to go.** Three color-coded tiles (red / amber / green) explaining when to call 911 vs Urgent Care vs Primary Care. Each tile lists specific symptoms and has a clear primary action — call 911 on the ER tile, "Find urgent care near me" pop-jump on Urgent Care tile, "Find clinics near me" on Primary Care tile. Pop-jumps activate the right cat-tab + section + subtab in one click.
+
+**Scenario actions.** Four scenarios with contacts + step-by-step actions:
+- Beside a road or highway (911 / State Highway Patrol / roadside) — hazards on, mile marker note, stay in vehicle
+- At home (911 / Poison Control 1-800-222-1222 / neighbors) — unlock door, secure pets, gather meds + ID
+- In or near a national park (911 / NPS rangers / visitor center) — satellite messenger, blue-light boxes, stay in place
+- Helping a remote friend (local dispatch for THEIR city) — text pin drop, **don't call 911 from your phone** (it routes to your tower not theirs), find direct city dispatch number
+
+**Verify a facility.** Six free official tools as a verification grid:
+- Medicare Hospital Compare (CMS — patient safety ratings, ER wait times)
+- HRSA Find a Health Center (federal — sliding-scale FQHC clinics)
+- DocInfo (Federation of State Medical Boards — doctor credentials, license status, board actions)
+- NPPES NPI Registry (CMS — federal healthcare provider registry)
+- SAMHSA Treatment Locator (federal mental health + substance use)
+- Poison Control 1-800-222-1222 (24/7, free, faster than 911 for poison-specific calls)
+
+### New data sources noted
+
+- **DocInfo (Federation of State Medical Boards)** — link-only verification tool, no API. Added to the Verify-a-facility grid alongside the data sources we already pull from (NPPES, HRSA, SAMHSA, Medicare). DocInfo doesn't have a public API for programmatic ingestion, but it's the authoritative source for doctor license/board-action verification — every Health card can link to it.
+- **Poison Control / PoisonHelp.org** — added as a first-class reference. The 1-800-222-1222 number is the universal US poison helpline; faster than 911 for poison-specific questions.
+
+### Implementation notes
+
+- Section is pure HTML + CSS, no JS — zero async loading, zero risk of "stuck on Finding…" because there's nothing to fetch.
+- Reference content is hardcoded (not pulled from a CMS) — emergencies aren't a good time to discover the content didn't load.
+- Pop-jump buttons (Find urgent care / Find clinics near me) reuse the existing `_popJumpTo` infrastructure — activate the correct cat-tab and scroll.
+- The 911 callout uses the safety-red palette to make the universal-first-step message visually unmistakable.
+- All facility-verification links are external (target=_blank) — we link to the authoritative source, never intermediate the data.
+
+### Version + validation
+
+`node --check` passes. DOCTYPE intact. Footer shows **v2.6**. All 12 v2.6 markers present.
+
+---
+
+## v2.5 — 2026-06-19 — City open-data business license adapter (Bay Area)
+
+Third of three queued releases. Closes the small-business search gap by adding a generic adapter that pulls active business-license records from any city's open-data feed.
+
+### Worker (`nearnity-events-worker.js`)
+
+**New endpoint: `/api/city-businesses`** — generic adapter. Reads from `CITY_BUSINESS_LICENSE_FEEDS` (declarative dict; entries are added by data team without code change). Supports two upstream formats: Socrata (`*.json` REST with `$where` + `$q` filters) and CKAN (`/api/3/action/datastore_search`). Pre-loaded with five Bay Area cities: San Francisco, Oakland, San Jose, Berkeley, Fremont. Each entry maps the city's field names to Nearnity's normalized business shape (`name`, `address`, `type`, `lat`, `lon`). Cached at Cloudflare edge for 3 days (`cf: { cacheTtl: 86400 * 3 }`) — city license data refreshes weekly at most. Each match returns `trust_label: "Public dataset"` and `source_url` pointing at the city's open-data portal.
+
+### Frontend (`index.html`)
+
+**`fetchCityBusinessLicenses(geo, keyword)`** — frontend caller. Reads the user's resolved city + state from the geocoded address, calls `/api/city-businesses`, returns matching businesses.
+
+**`renderBusinessesMerged(cityItems, osmElements, keyword, geo)`** + **`_renderMergedBusinessCard(b, cityName)`** — replaces v2.2's single-source `renderBusinesses`. Merges city-license + OSM results, dedupes by lowercase name, sorts by distance. City-sourced cards get a green "City-licensed" / "Official source" trust pill (📋 icon); OSM-sourced cards keep the "Public map data" pill (🏪 icon). Empty state messaging updated to acknowledge both sources were checked.
+
+**`loadNearbyBusinesses` updated** to race OSM (`/api/overpass`) and city license registry in parallel via `Promise.all`. Either failing silently doesn't block the other.
+
+### Coverage impact
+
+For the Dublin violin-repair case: if Dublin's open data portal exposes business licenses (most Bay Area cities do), and a violin repair shop has registered a business license there, Nearnity now surfaces it. This is the closest free path to closing the gap that drove the original complaint — no Google Maps redirect, no aggregator dependency, no paid placement.
+
+### Validation
+
+`node --check` passes on both files. Worker grew to 211 KB. Frontend at 670 KB inline JS. All 5 v2.5 markers present (handleCityBusinesses, SF feed, Oakland feed, renderBusinessesMerged, fetchCityBusinessLicenses).
+
+---
+
+## v2.4 — 2026-06-19 — Federal data adapters (NPPES + CSLB + SAMHSA + Medicare + NCES)
+
+Second of three queued releases. Highest-authority free data layered into the existing Health & wellness and Home services sections.
+
+### Worker (`nearnity-events-worker.js`)
+
+Five new endpoints, all using federal/state agency sources with edge caching:
+
+**`/api/nppes`** — NPPES (National Plan & Provider Enumeration System), CMS-maintained NPI registry. Every US healthcare provider (doctor, dentist, therapist, counselor, optometrist, etc.) with name, address, phone, specialty, NPI number. Queries by postal code or state with optional taxonomy filter. Free, no API key, no documented rate cap.
+
+**`/api/cslb`** — California Contractors State License Board. Scrapes the public license-search form (stable for years), returns licensed plumbers, electricians, HVAC, contractors with license number, classification, status, city. CA-only by source design. Returns 502 with hint if CSLB changes the form (graceful degradation).
+
+**`/api/samhsa`** — SAMHSA Behavioral Health Treatment Services Locator. Mental-health + substance-use treatment facilities by lat/lon and radius. Free federal API.
+
+**`/api/medicare-quality`** — Medicare Care Compare hospital quality data via the data.cms.gov SODA REST API. Star ratings, emergency services availability, hospital type, by ZIP or state.
+
+**`/api/nces-schools`** — NCES Common Core of Data via Urban Institute Education Data Portal. K-12 public + private school directory with address, phone, grade range, enrollment, charter / magnet flags.
+
+All endpoints carry `cf: { cacheTtl: 86400 }` (or 86400 * 7 for NCES) so identical subrequests hit Cloudflare's edge cache. No KV writes consumed.
+
+### Frontend (`index.html`)
+
+**`_wireV24Enrichment(geo)`** — orchestrator. Fires inside `renderResolved()` after `body.has-location`, on a staggered timer (800ms / 1600ms / 2400ms) so we don't hit all federal endpoints simultaneously. Each enrichment is independently non-blocking and fail-silent — failures don't degrade the original section content.
+
+**`loadNPPESProviders(geo, specialty)`** + **`_renderNPPESPanel`** + **`_renderNPPESCard`** — pulls Dentists, Mental health counselors, and Family medicine doctors by default (configurable via `specialty` arg). Each specialty renders as its own subsection inside `card-health` with a federal "Official source" trust pill, tap-to-call phone, directions, NPI source link, save star, report issue.
+
+**`loadCSLBContractors(geo, trade)`** + **`_renderCSLBPanel`** + **`_renderCSLBCard`** — fires only when state === "CA". Renders a "State-licensed CA contractors" panel inside `card-home-services` at the top (above OSM-tagged business listings) so users see the most-trusted source first. Each card shows license number, classification, status, "Verify on CSLB" link.
+
+**`loadSAMHSATreatment(geo)`** + **`_renderSAMHSAPanel`** + **`_renderSAMHSACard`** — replaces the previous static SAMHSA copy. Renders a treatment-facility panel inside `card-health` with live results from the federal locator API.
+
+### Coverage impact
+
+These federal sources are MORE authoritative than Yelp/Google for the categories they cover. Users searching for a dentist near them now see actual licensed providers from the federal NPI registry. Users hiring a plumber in California see state-licensed contractors (passed exam + carry insurance), not random OSM tags. Mental-health and addiction treatment search hits the federal SAMHSA database. Each card prominently shows its government source with a "Verify with official source" action.
+
+### Validation
+
+`node --check` passes on both files. Worker grew to 211 KB; frontend to 670 KB inline JS. All 9 v2.4 markers present.
+
+---
+
+## v2.3 — 2026-06-19 — UI presentation pass (tile density, scannability, mobile polish)
+
+First of three queued releases. Pure CSS pass — no JS / no data changes. Goal: more cards visible on first scroll, consistent tile pattern across event / business / help / health cards, cleaner mobile stacking, calmer visual hierarchy.
+
+### Changes (all `index.html` CSS)
+
+**Tighter card padding** — `.parks-card`, `.home-card`, `.schools-card`, `.yard-card` padding from `16px 20px` → `14px 16px`. Saves ~16px vertical per card × ~6 cards visible = ~96px more above-the-fold real estate.
+
+**Tile grid density on wide screens** — `.cal-flat` / `.cal-flat-list` / `.cal-agenda` minmax 280px → 240px at ≥1100px viewports (3-4 columns), → 220px at ≥1500px (4-5 columns). Phones still drop to 1-col gracefully.
+
+**Tile chrome calmer** — card padding 12/14 → 11/12, gap 12 → 10, title font kept at 14, meta font 12.5 → 12. Action pills 5px/10px/12px → 4px/8px/11.5px so they support but don't overwhelm.
+
+**Section header more compact** — `.page-section-header` padding 18/12 → 14/10, margin-top 18 → 14, `.psh-title` font 22 → 20.
+
+**Subnav tighter** — `.subnav .subtab` padding 8/14 → 7/12, font 14 → 13. `.subnav-grouped` padding/margin tightened.
+
+**Card-context-bar calmer** — section data summary line padding tightened, border-bottom kept for separator.
+
+**Trust-pill smaller** — font 11 → 10.5, padding 3/8 → 2/7, less letter-spacing. Pills stop competing with card titles.
+
+**Skeleton tiles match new sizing** — height 80 → 56, border-radius 12 → 10.
+
+### Out of scope (kept stable)
+
+- No HTML restructuring (tab order, section order all unchanged)
+- No data source changes (all wiring unchanged)
+- No behavioral changes (all loaders, intents, action rows behave identically)
+- Cat-tab visual treatment unchanged (deferred to v2.6+ if needed)
+
+### Validation
+
+`node --check` passes. Visual diff only — all section logic and data flows unchanged.
+
+---
+
 ## v2.2 — 2026-06-18 — Map perf + universal loader hygiene + trust copy + UI cleanup pass
 
 Single bundled release covering all events-track feedback plus an in-bundle UI cleanup pass (popular pill nav, duplicate chips, deadspace, subnav clutter, logo). Both `index.html` and `nearnity-events-worker.js` ship together. Larger UI restructuring (tab restructuring, tile presentation, content-within-tile layout) deferred to v2.3.
@@ -56,9 +200,54 @@ Single bundled release covering all events-track feedback plus an in-bundle UI c
 - Single-scroll-list-of-everything → grouped/grid layout pass
 - Cat-tab visual treatment (left rail vs top tabs)
 
-### Validation
+### In-bundle mobile + content fixes (post-mobile-testing round)
 
-`node --check` passes on both files. `<!DOCTYPE html>` intact in `index.html`. ~653KB inline JS in `index.html`; worker ~3.1K lines after Overpass proxy + helpers landed. All five v2.2 UI markers present: `nrny-no-map`, `subnav-group-label`, `cal-count-line`, `fill-rule="evenodd"` (in logo), `_activateShellSection`.
+After Satya did mobile smoke-testing with friends and surfaced specific data gaps, this round adds:
+
+**"This month" tab in events subnav.** The WHEN group (Today / Tonight / This weekend) was missing an explicit "This month" tab — month view was only reachable via TYPE filter side-effects. Now exposed as a first-class tab.
+
+**Mobile-scrollable subnav.** On viewports ≤720px the 13-tab events subnav was too wide to fit. Now becomes a horizontally-scrollable strip with `scroll-snap-type: x proximity` (each tab snaps), `-webkit-overflow-scrolling: touch` for native momentum, and a soft right-edge mask fade as a "more off-screen" hint. Group labels and separators hide on mobile to save horizontal room.
+
+**Service-like search empty state.** When the search keyword matches service/business words (`repair / shop / store / cleaner / plumber / electrician / tutor / lessons / classes / locksmith / tailor / barber / gym`), the events empty state now says "this looks like a service, not an event" and offers two next steps: the Home services tab + a Google Maps fallback link. Replaces the v2.1 "we don't have curated X yet" message which read as a redirect-portal anti-pattern. Triggered by Satya's friend searching "violin repairs in Dublin" and hitting a confusing empty state.
+
+**Worker `specific_dates` seed projection.** `_seedEventsForGeo` now accepts a `specific_dates: ["YYYY-MM-DD", ...]` field on seed events, projected in the event's local tz at the seed's start_time. Lets pop-up festivals (Foodieland, Berkeley Sunday Streets) fit the seed model alongside the existing `day_of_week` / `day_of_month: "first_friday"` patterns.
+
+### Bay Area free-event coverage expansion
+
+**New seed events (8 recurring free events covering Bay Area).** Foodieland Night Market — Santana Row (San Jose, Jun + Sep dates) and Newark (Jul + Oct dates). Off the Grid — Fort Mason Friday Night Market (SF, weekly Fridays). Yerba Buena Gardens Festival free concerts (SF, weekly Saturdays). Music in the Park downtown San Jose (weekly Thursdays summer). Movies in the Park Lake Merritt (Oakland, weekly Fridays summer). Oakland First Friday Art Murmur (monthly). Berkeley Sunday Streets (Jul/Aug/Sep dates).
+
+**City calendar feed expansion — 23 new Bay Area cities.** `CITY_CALENDAR_FEEDS` went from 15 → 40 cities total (38 in California). Added East Bay: Hayward, Dublin, San Ramon, Livermore, Pleasant Hill, Concord, Antioch, Newark, Union City, San Leandro. Peninsula / North Bay: Daly City, South San Francisco, Burlingame, Foster City, Menlo Park, Vallejo, Richmond, San Rafael. South Bay extras: Saratoga, Los Gatos, Campbell, Morgan Hill, Gilroy. URLs follow the common CivicEngage `RSSFeed.aspx?ModID=58` pattern; failed fetches return empty without breaking the response, so admins can verify and update specific URLs over time without code change pressure.
+
+**Library calendar feed expansion — 5 new county-level systems.** `LIBRARY_CALENDAR_FEEDS` went from 5 → 43 city → library mappings. Each county library system is wired under all cities it serves: Alameda County Library (8 cities: Fremont, Hayward, Dublin, Newark, Union City, San Lorenzo, Castro Valley, Albany), Santa Clara County Library (8 cities: Milpitas, Saratoga, Los Gatos, Campbell, Cupertino, Morgan Hill, Gilroy, Los Altos), Contra Costa County Library (8 cities: Walnut Creek, Pleasant Hill, Concord, San Ramon, Antioch, Richmond, Pleasanton, Livermore), San Mateo County Library (9 cities: Daly City, South SF, Burlingame, San Carlos, Belmont, Foster City, Menlo Park, Redwood City, San Mateo), Marin County Free Library (5 cities: San Rafael, Novato, Mill Valley, Sausalito, Larkspur). This means a search in any of these cities now surfaces the regional event pool — unincorporated areas like Castro Valley get library events even without a city-level calendar.
+
+**Coverage result: all 47 listed Bay Area cities now have at least one feed wired** (city calendar, library system, or both). Up from 15 before this expansion.
+
+### Local businesses — real search-results destination (post-Dublin-violin-repair feedback)
+
+Satya's friend searched "violin repairs in Dublin" and the page dead-ended with a confusing "this looks like a service, go to Home services or Google Maps" message. That's a product failure — when the user types a query, we should fetch results for that query, not redirect them elsewhere.
+
+**New section: Local businesses (`sec-businesses` / `card-businesses`).** Lives in the Around me cat-group, after Events / Schools / Parks. Triggered automatically by the intent system when the user's search doesn't match a category we have rich data for. Runs an OSM Overpass query for any POI whose `name` contains the search keyword within the user's radius, filtered to actual businesses (tags: shop / craft / amenity / office / leisure). Results render as business cards with name, address, distance, phone (tap-to-call), website, directions, source link, save star, and report-issue button. Same `nrnyLoadGuard` watchdog as other sections.
+
+**New `businesses` intent.** `INTENT_KEYWORDS` gained a catch-all regex matching common business / service words (repair / shop / store / salon / tailor / tutor / lessons / cleaner / locksmith / mechanic / violin / guitar / piano / instrument / music / art studio / coffee shop / bakery / bookstore / etc.). Comes LAST in the intent registry so more specific category intents (health / events / markets) win first. When this intent matches, `applyIntentFocus(intent, geo, keyword)` calls `loadNearbyBusinesses(geo, keyword)` which fires the OSM name search through the `/api/overpass` proxy. The focused-banner heading reads "Results for 'violin repairs' near Dublin" — direct answer, no redirect.
+
+**`loadNearbyBusinesses(geo, keyword)`** + **`fetchBusinessesByKeyword(lat, lon, keyword)`** + **`renderBusinesses(items, keyword, geo)`** + **`_renderBusinessCard(b, cityName)`** added. Search builds a tolerant regex from keyword words ≥3 chars (so "violin repairs" matches "Violin World" OR "ABC Repairs" without requiring both terms). Filters Overpass results to POIs with a business-shaped tag. Sorts by distance from search location.
+
+**Empty-state for no business matches** — three Nearnity-shaped next steps replace the previous Google Maps redirect: (1) "Add this business to OpenStreetMap" with prefilled note creation link, (2) "Tell Nearnity about a known business" via email, (3) "Widen search radius." NO "go search Google Maps as primary path."
+
+**Removed the v2.2 round-1 service-like empty state in events** that was advertising Google Maps as the fallback path. Service-like queries now flow into the businesses section directly via intent routing — never hit the events empty state.
+
+### Validation (final, all rounds combined)
+
+| Check | State |
+|---|---|
+| `index.html` size | 953.2 KB (640 KB inline JS) |
+| `index.html` `<!DOCTYPE html>` | ✓ at line 1 |
+| `index.html` `node --check` | ✓ no errors |
+| `nearnity-events-worker.js` size | 190.1 KB |
+| `nearnity-events-worker.js` `node --check` | ✓ no errors |
+| All 32 v2.2 markers present | ✓ |
+| Anti-regression ("rough estimates", "Happening this month") | ✓ removed |
+| Bay Area city coverage | 47/47 cities |
 
 ### Deploy steps (same flow as v2.1)
 
