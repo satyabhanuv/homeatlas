@@ -425,6 +425,128 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════════════
+     v2.7 — RESPONSIVE LAYOUT CLEANUP (post-launch UI feedback)
+     ───────────────────────────────────────────────────────────────────────────
+     Fixes from real-device review:
+       • Hero h1 was hard-wrapped via <br> — removed; let natural wrap handle it
+       • Hero text wrap respects screen width on mobile (no overflow)
+       • Centered nav rows (popular pills, cat-nav, quick searches) created
+         huge dead space on wide screens — switched to left-aligned with
+         responsive flex-wrap. Still wraps gracefully on mobile.
+       • Footer 3-column grid had unbalanced columns creating tall dead
+         vertical space; rebalanced via auto-fill so columns flow to fit.
+     ═══════════════════════════════════════════════════════════════════════════ */
+
+  /* Hero h1 + lead: single-flow paragraphs that wrap by viewport */
+  .hero h1 {
+    text-wrap: balance;             /* modern browsers wrap to balance line length */
+    max-width: 24ch;                /* allow long single line on wide; wraps after ~24 chars on narrow */
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.15;
+  }
+  @media (min-width: 720px) {
+    .hero h1 { max-width: 40ch; }   /* wider on tablets+ so it stays single-line longer */
+  }
+  @media (min-width: 1100px) {
+    .hero h1 { max-width: none; white-space: normal; }
+  }
+  .hero p.lead {
+    text-wrap: pretty;              /* avoid orphans on the last line */
+    max-width: 64ch;                /* readable measure; wraps naturally on narrow */
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.55;
+  }
+
+  /* Popular categories row + showing-near + quick-searches + cat-dd-nav —
+     stop center-aligning into dead-space columns on wide screens. Use
+     left-aligned flex-wrap that fills available width on desktop AND
+     wraps cleanly on mobile. */
+  .popular-categories,
+  .quick-searches,
+  .showing-near {
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    max-width: none;
+  }
+  /* The cat-dd-nav row (Around you / My home / Help / Official / Safety / Saved)
+     was forcing equal width per tab + centering — switched to natural-width
+     pills that fit the row left-aligned, wrap on overflow. */
+  .cat-dd-nav {
+    display: flex !important;
+    flex-wrap: wrap;
+    justify-content: flex-start !important;
+    gap: 6px 12px;
+    width: 100%;
+  }
+  .cat-dd-tab {
+    flex: 0 0 auto !important;     /* don't stretch — width follows content */
+    min-width: 0;
+  }
+
+  /* Mobile: tab labels can be tight; cap the row gap a touch */
+  @media (max-width: 560px) {
+    .cat-dd-nav { gap: 4px 8px; }
+    .cat-dd-tab .cat-dd-label { font-size: 13px; }
+    .popular-categories,
+    .quick-searches { gap: 6px 8px; }
+  }
+
+  /* Footer: rebalance the 3-col grid so columns flow + minimum-width wraps.
+     Old setup was `repeat(3, 1fr)` even when one column had 10 items and
+     another had 3, creating tall dead vertical space below the shorter
+     columns. New: auto-fit with min 200px so columns balance, plus the
+     Data Sources middle column flows into 2 sub-columns on wide screens
+     to absorb the extra height. */
+  .site-footer-cols {
+    grid-template-columns: repeat(auto-fit, minmax(200px, auto)) !important;
+    align-items: start !important;
+    justify-content: start !important;
+    gap: 24px 40px !important;
+    margin-bottom: 24px !important;
+  }
+  /* On wide screens, give the long Data Sources column more horizontal
+     room + let it flow into two sub-columns via CSS multi-column layout. */
+  @media (min-width: 1100px) {
+    .site-footer-cols {
+      grid-template-columns: minmax(160px, auto) minmax(320px, 1.6fr) minmax(160px, auto) !important;
+    }
+    .site-footer-cols .site-footer-col:nth-child(2) ul {
+      columns: 2;
+      column-gap: 28px;
+    }
+    .site-footer-cols .site-footer-col:nth-child(2) ul li {
+      break-inside: avoid;
+    }
+  }
+  @media (max-width: 720px) {
+    .site-footer-cols {
+      grid-template-columns: 1fr !important;
+      gap: 16px !important;
+    }
+  }
+
+  /* v2.7: widen the main .wrap on large desktops so the search row +
+     chips + cat-nav use the full screen instead of centering in an
+     ~1080px column with huge dead space on the sides. Mobile/tablet
+     keep the existing comfortable measure. */
+  @media (min-width: 1280px) {
+    .wrap {
+      max-width: 1320px !important;
+      padding-left: 32px !important;
+      padding-right: 32px !important;
+    }
+  }
+  @media (min-width: 1600px) {
+    .wrap {
+      max-width: 1480px !important;
+    }
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════════════
      v2.6 — EMERGENCY & SAFETY GUIDE (always-visible reference content)
      ───────────────────────────────────────────────────────────────────────────
      This section's card is REFERENCE material — universal triage, scenario
@@ -6304,11 +6426,12 @@
   </header>
 
   <section class="hero">
-    <span class="hero-eyebrow">nearnity · Source-linked, no paid placement</span>
-    <h1>Find what's around you —<br>from <em>trusted public sources</em>.</h1>
-    <p class="lead">
-      Free clinics, events, parks, utilities, schools, civic services, and risk data — one clean page per address. No accounts. No tracking. No paid placement.
-    </p>
+    <!-- v2.7: removed redundant eyebrow banner — the wordmark + brand-tag at
+         top of page already says "Source-linked · No paid placement". The
+         h1 + lead also let natural responsive wrap handle line breaks
+         rather than forcing a hard <br>. -->
+    <h1>Find what's around you — from <em>trusted public sources</em>.</h1>
+    <p class="lead">Free clinics, events, parks, utilities, schools, civic services, and risk data — one clean page per address. No accounts. No tracking. No paid placement.</p>
 
     <!-- v0.49: dual search. Service query + location. Location defaults to Near me. -->
     <div class="search-wrap">
