@@ -17,9 +17,15 @@
 <meta name="apple-mobile-web-app-title" content="Nearnity">
 <meta name="mobile-web-app-capable" content="yes">
 
-<!-- v0.67: Nearnity logo — blue map-pin + verified-checkmark badge.
-     Location-first: signals "you are here, this is verified." -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><rect width='64' height='64' rx='14' fill='url(%23g)'/><path d='M32 12 C23 12 16 19 16 28 C16 38 25 50 32 56 C39 50 48 38 48 28 C48 19 41 12 32 12 Z' fill='%23ffffff'/><circle cx='32' cy='27' r='6' fill='url(%23g)'/><circle cx='50' cy='50' r='10' fill='%232d6a4f' stroke='%23ffffff' stroke-width='2'/><path d='M45.5 50 L48.5 53 L54 47' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+<!-- v2.7.1: Favicon updated to match v2.6 home-pin/n logo (blue pin + white
+     house silhouette with door cutout, fill-rule evenodd). Inline SVG data
+     URI works in Chrome, Firefox, Safari, Edge. Apple touch icon below
+     should be regenerated as 180×180 PNG and uploaded to repo root. -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><path d='M32 4 C18 4 8 14 8 26 C8 40 22 56 32 60 C42 56 56 40 56 26 C56 14 46 4 32 4 Z' fill='url(%23g)'/><path d='M22 38 L22 25 L32 15 L38 21 L38 17 L40 17 L40 23 L42 25 L42 38 Z M29 38 L29 31 L35 31 L35 38 Z' fill='%23ffffff' fill-rule='evenodd'/></svg>">
+<!-- Fallback for older browsers that don't render SVG favicons -->
+<link rel="alternate icon" type="image/png" href="/favicon-32.png">
+<!-- Safari pinned-tab uses monochrome SVG -->
+<link rel="mask-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><path d='M32 4 C18 4 8 14 8 26 C8 40 22 56 32 60 C42 56 56 40 56 26 C56 14 46 4 32 4 Z' fill='black'/></svg>" color="#0050c2">
 
 <!-- Open Graph / social-share preview -->
 <meta property="og:type" content="website">
@@ -157,10 +163,13 @@
     border-radius: 999px;
   }
   .hero h1 {
-    font-size: clamp(34px, 6vw, 60px);
-    line-height: 1.02;
+    /* v2.7.1: reduced cap from 60px → 44px so the hero fits on a single
+       line at desktop widths (1280-1480 wrap). At 51 chars and 60px,
+       it needed ~1500px to single-line; at 44px it fits in ~1100px. */
+    font-size: clamp(30px, 4.4vw, 44px);
+    line-height: 1.1;
     margin: 0 0 18px;
-    letter-spacing: -0.035em;
+    letter-spacing: -0.03em;
     font-weight: 700;
     transition: font-size 0.18s ease, margin 0.18s ease;
   }
@@ -437,23 +446,18 @@
          vertical space; rebalanced via auto-fill so columns flow to fit.
      ═══════════════════════════════════════════════════════════════════════════ */
 
-  /* Hero h1 + lead: single-flow paragraphs that wrap by viewport */
+  /* v2.7 / v2.7.1: hero text uses natural wrap based on font-size +
+     container width. text-wrap: balance gives clean line breaks when
+     wrap IS needed (small viewports). No artificial max-width — let
+     the parent .wrap container decide the measure. */
   .hero h1 {
-    text-wrap: balance;             /* modern browsers wrap to balance line length */
-    max-width: 24ch;                /* allow long single line on wide; wraps after ~24 chars on narrow */
+    text-wrap: balance;
     margin-left: auto;
     margin-right: auto;
-    line-height: 1.15;
-  }
-  @media (min-width: 720px) {
-    .hero h1 { max-width: 40ch; }   /* wider on tablets+ so it stays single-line longer */
-  }
-  @media (min-width: 1100px) {
-    .hero h1 { max-width: none; white-space: normal; }
   }
   .hero p.lead {
-    text-wrap: pretty;              /* avoid orphans on the last line */
-    max-width: 64ch;                /* readable measure; wraps naturally on narrow */
+    text-wrap: pretty;
+    max-width: 80ch;
     margin-left: auto;
     margin-right: auto;
     line-height: 1.55;
@@ -543,6 +547,99 @@
   @media (min-width: 1600px) {
     .wrap {
       max-width: 1480px !important;
+    }
+  }
+
+  /* v2.7.1: Collapse the Privacy & data section into a click-to-expand
+     details element. Saves ~140px vertical above the footer columns. */
+  .privacy-block { margin: 16px 0 8px !important; }
+  .privacy-details {
+    background: #f7f9fc;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .privacy-details summary {
+    cursor: pointer;
+    font-size: 14px;
+    list-style: none;
+    color: var(--ink);
+    user-select: none;
+    padding: 2px 0;
+  }
+  .privacy-details summary::-webkit-details-marker { display: none; }
+  .privacy-details summary::before {
+    content: "▸ ";
+    display: inline-block;
+    width: 14px;
+    color: var(--ink-faint);
+    transition: transform 0.15s;
+  }
+  .privacy-details[open] summary::before { transform: rotate(90deg); }
+  .privacy-summary-hint {
+    color: var(--ink-soft);
+    font-weight: 400;
+    font-size: 13px;
+  }
+  .privacy-details .privacy {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink);
+    margin-top: 6px;
+  }
+
+  /* v2.7.1: tighten the section-block + footer-data-from row spacing so the
+     dead air between "Privacy & data" and the footer columns shrinks. */
+  .section-block,
+  .powered-by-row,
+  section.block { margin-top: 16px !important; margin-bottom: 16px !important; }
+  .site-footer { padding-top: 18px !important; }
+
+  /* v2.7.1: search-wrap was capped at 860px which felt squeezed on wide
+     desktops. Open it up so the bar stretches across most of the page
+     and autocomplete suggestions get room to breathe. Buttons go from
+     square/small to rectangular/wider so they're easier to hit + read. */
+  .search-wrap {
+    max-width: none !important;
+    margin: 0 auto;
+  }
+  @media (min-width: 900px) {
+    .search-wrap { max-width: 1100px !important; }
+  }
+  @media (min-width: 1280px) {
+    .search-wrap { max-width: 1240px !important; }
+  }
+  /* Make the search buttons rectangular + roomier */
+  .searchbar.dual-search .near-me-btn,
+  .searchbar.dual-search #searchBtn {
+    min-width: 120px !important;
+    padding: 0 22px !important;
+    height: 56px !important;
+    border-radius: 10px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.2px;
+  }
+  .searchbar.dual-search .near-me-btn .nm-label,
+  .searchbar.dual-search .near-me-btn .nm-emoji {
+    display: inline !important;
+  }
+  /* On the widened bar, give each search-field column more space too */
+  @media (min-width: 900px) {
+    .searchbar.dual-search .search-field {
+      padding: 6px 16px !important;
+      min-height: 56px;
+    }
+    .searchbar input { font-size: 16px !important; padding: 10px 0 6px !important; }
+  }
+  /* Mobile: stack the buttons cleanly, full width */
+  @media (max-width: 720px) {
+    .searchbar.dual-search { flex-wrap: wrap; }
+    .searchbar.dual-search .near-me-btn,
+    .searchbar.dual-search #searchBtn {
+      flex: 1 1 calc(50% - 4px);
+      min-width: 0 !important;
+      height: 48px !important;
     }
   }
 
@@ -6421,7 +6518,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.1</span>
     </div>
   </header>
 
@@ -6462,19 +6559,25 @@
         <button type="submit" id="searchBtn">Search</button>
       </form>
     </div>
-    <!-- v2.0.1: VibeLocal Figma — "Popular categories" pill row. Quick-jumps to
-         the most-used Nearnity flows. Each pill triggers the corresponding
-         section's load + scrolls to it (uses the existing sec-tab click). -->
-    <div class="popular-categories" id="popularCategories">
-      <span class="pc-label">Popular:</span>
-      <button type="button" class="popular-category-pill cat-emergency" data-pop-sec="sec-public-services" data-pop-sub="ps-er-section">Emergency rooms</button>
-      <button type="button" class="popular-category-pill cat-emergency" data-pop-sec="sec-public-services" data-pop-sub="ps-urgent-section">Urgent care</button>
-      <button type="button" class="popular-category-pill cat-hospital"  data-pop-sec="sec-public-services" data-pop-sub="ps-hospital-section">Hospitals</button>
-      <button type="button" class="popular-category-pill cat-events"    data-pop-sec="sec-events">Events near you</button>
-      <button type="button" class="popular-category-pill cat-schools"   data-pop-sec="sec-schools">Schools</button>
-      <button type="button" class="popular-category-pill cat-parks"     data-pop-sec="sec-parks">Parks &amp; rec</button>
-    </div>
+    <!-- v2.7.1: Merged "Popular categories" pill row INTO the quick-searches
+         row below. Removed redundant duplication. The combined row uses the
+         existing intent-routing system (data-chip-q) — typing the keyword
+         into the search bar + submitting auto-routes to the right section
+         via INTENT_KEYWORDS, no more parallel pop-jump pathway. -->
     <div class="showing-near" id="showingNear" hidden></div>
+
+    <!-- v2.7.1: Quick searches — single row, primary entry points. Uses
+         data-chip-q (fills search + submits → intent routing handles dest). -->
+    <div class="quick-chips" id="quickChips" aria-label="Quick searches">
+      <span class="quick-chips-label">Quick searches</span>
+      <button type="button" class="quick-chip" data-chip-q="emergency room">🚑 Emergency rooms</button>
+      <button type="button" class="quick-chip" data-chip-q="urgent care">🏥 Urgent care</button>
+      <button type="button" class="quick-chip" data-chip-q="events near you">🎉 Events near you</button>
+      <button type="button" class="quick-chip" data-chip-q="farmers market">🥬 Farmers market</button>
+      <button type="button" class="quick-chip" data-chip-q="food bank">🥫 Food bank</button>
+      <button type="button" class="quick-chip" data-chip-q="library">📚 Library</button>
+      <button type="button" class="quick-chip" data-chip-q="DMV">🚗 DMV</button>
+    </div>
     <!-- v0.75: Yelp-inspired category dropdown nav. Six tabs, each opens a
          panel with subsection links. Click a subsection → triggers near-me
          (or prompts for location) → activates the right section in results. -->
@@ -6534,17 +6637,10 @@
     <!-- v0.70: Quick-chip shortcuts — pre-formed searches for the most common
          intents. Tap to auto-fill the "Looking for" box and trigger search
          with Near-me location. Hidden once results are shown. -->
-    <div class="quick-chips" id="quickChips" aria-label="Quick searches">
-      <span class="quick-chips-label">Quick searches</span>
-      <button type="button" class="quick-chip" data-chip-q="free clinic">🏥 Free clinic</button>
-      <button type="button" class="quick-chip" data-chip-q="farmers market">🥬 Farmers market</button>
-      <button type="button" class="quick-chip" data-chip-q="food bank">🥫 Food bank</button>
-      <button type="button" class="quick-chip" data-chip-q="library">📚 Library</button>
-      <button type="button" class="quick-chip" data-chip-q="DMV">🚗 DMV</button>
-      <button type="button" class="quick-chip" data-chip-q="electric utility">⚡ Electric utility</button>
-      <button type="button" class="quick-chip" data-chip-q="flood risk">🌊 Flood risk</button>
-      <button type="button" class="quick-chip" data-chip-q="this weekend">🎉 This weekend</button>
-    </div>
+    <!-- v2.7.1: legacy quick-chips row removed — merged into the new
+         consolidated row above (before cat-dd-nav). Single source of
+         truth for primary entry points. -->
+
     <details class="hero-disclosure">
       <summary>What's covered &amp; how it works</summary>
       <div class="hero-disclosure-body">
@@ -7808,16 +7904,18 @@
   -->
 
 
-  <section class="block">
-    <h2>Privacy &amp; data</h2>
-    <!-- v0.82: rewrote per QA2 — the old "runs entirely in your browser"
-         + "address sent to OSM services" combo read contradictory to a
-         normal user. Now: clear about what stays local vs what gets sent. -->
-    <div class="privacy">
-      <p style="margin:0 0 8px;"><b>We do not store your address on Nearnity servers.</b> To resolve a location and load nearby results, your browser may send the address or coordinates to public map and geocoding services (OpenStreetMap-based providers, US Census Geocoder, federal data APIs like NWS / USGS / NPS). These are public-data services with their own privacy policies linked below.</p>
-      <p style="margin:0 0 8px;"><b>Saved places stay on your device.</b> Anything you star is stored in your browser's local storage only — not on Nearnity's servers, not synced. Clearing your browser data removes them.</p>
-      <p style="margin:0;"><b>Email digest is opt-in.</b> If (and only if) you subscribe to weekly updates, we store your email + saved-place location in our database to send those emails. Unsubscribe anytime. No third-party sharing, ever.</p>
-    </div>
+  <!-- v2.7.1: Privacy & data is now a collapsed `<details>` — full content
+       is still indexable + accessible, but doesn't eat vertical space by
+       default. Click the summary line to expand. -->
+  <section class="block privacy-block">
+    <details class="privacy-details">
+      <summary><b>Privacy & data</b> <span class="privacy-summary-hint">— we don't store your address. Saved places stay on your device. Email digest is opt-in. (click for detail)</span></summary>
+      <div class="privacy">
+        <p style="margin:8px 0;"><b>We do not store your address on Nearnity servers.</b> To resolve a location and load nearby results, your browser may send the address or coordinates to public map and geocoding services (OpenStreetMap-based providers, US Census Geocoder, federal data APIs like NWS / USGS / NPS). These are public-data services with their own privacy policies linked below.</p>
+        <p style="margin:8px 0;"><b>Saved places stay on your device.</b> Anything you star is stored in your browser's local storage only — not on Nearnity's servers, not synced. Clearing your browser data removes them.</p>
+        <p style="margin:8px 0 0;"><b>Email digest is opt-in.</b> If (and only if) you subscribe to weekly updates, we store your email + saved-place location in our database to send those emails. Unsubscribe anytime. No third-party sharing, ever.</p>
+      </div>
+    </details>
   </section>
 
   <!-- v0.72: Correction modal — single shared modal, opened by any [data-report-payload] click -->
@@ -7909,7 +8007,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -17183,8 +17281,13 @@ function _renderEventsCalendar(geo, events, tb) {
     // the window. The calendar+agenda combo only makes sense for the full
     // month — for "Today" / "This weekend" / "Next 7 days" users want a
     // direct list, not a tiny grid + agenda that defaults to today only.
+    // v2.7.1: ALSO use flat list when a keyword search is active. The
+    // mini-calendar + agenda 2-col layout squeezes agenda cards to ~150px
+    // inside the active-mode card, causing severe text wrapping for
+    // searches like "fireworks". Keyword search results read better as a
+    // flat list with full-width tiles.
     let body;
-    if (timeWindow !== "month") {
+    if (timeWindow !== "month" || keyword) {
       body = _renderFlatEventList(events, timeWindow);
     } else {
       body = `<div class="cal-layout">
