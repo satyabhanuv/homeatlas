@@ -3526,6 +3526,87 @@
   .trust-pill-claimed    { background: rgba(72,84,99,0.10);   color: #485463; border: 1px solid rgba(72,84,99,0.24); }
   .trust-pill-verified   { background: rgba(15,110,86,0.18);  color: #0F6E56; border: 1px solid rgba(15,110,86,0.40); }
   .trust-pill-unverified { background: rgba(120,120,128,0.10); color: #71717A; border: 1px solid rgba(120,120,128,0.24); }
+
+  /* v2.7.3: Assignment-model chip — tiny status pill under section titles that
+     classifies the user/service relationship (Open / Assigned / Choice). Click
+     or hover to reveal a 1-sentence tooltip. v3 will restyle the chip but the
+     content registry (SECTION_ASSIGNMENT_MODEL) is reused verbatim. */
+  .assign-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px 3px 7px;
+    font-size: 11px; font-weight: 600; letter-spacing: 0.1px;
+    border-radius: 999px; border: 1px solid; cursor: pointer;
+    user-select: none; position: relative; line-height: 1.2;
+    transition: background 0.12s, transform 0.06s;
+    vertical-align: middle;
+  }
+  .assign-chip:hover, .assign-chip:focus { outline: none; }
+  .assign-chip .assign-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex: 0 0 6px;
+    background: currentColor; opacity: 0.85;
+  }
+  .assign-chip .assign-icon {
+    width: 13px; height: 13px; border-radius: 50%; flex: 0 0 13px;
+    background: currentColor; color: #fff;
+    font-size: 9px; font-weight: 800; font-style: italic;
+    display: inline-grid; place-items: center; line-height: 1;
+    opacity: 0.55;
+  }
+  .assign-chip:hover .assign-icon,
+  .assign-chip:focus .assign-icon,
+  .assign-chip.am-open .assign-icon { opacity: 1; }
+  /* Three tones — match the existing trust-pill palette so visually consistent */
+  .assign-open     { background: rgba(15,110,86,0.10);  color: #0F6E56; border-color: rgba(15,110,86,0.28); }
+  .assign-assigned { background: rgba(0,80,194,0.08);   color: #0050C2; border-color: rgba(0,80,194,0.24); }
+  .assign-choice   { background: rgba(180,83,9,0.10);   color: #B45309; border-color: rgba(180,83,9,0.26); }
+  /* Tooltip — hidden by default; reveals on hover (desktop), focus (keyboard),
+     or .am-open class added by tap handler (mobile). */
+  .assign-chip .assign-tip {
+    position: absolute; top: calc(100% + 6px); left: 0;
+    min-width: 220px; max-width: 320px;
+    background: #1f2937; color: #f9fafb;
+    padding: 9px 12px; border-radius: 8px;
+    font-size: 12px; font-weight: 400; line-height: 1.45;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transform: translateY(-4px);
+    transition: opacity 0.14s, transform 0.14s, visibility 0.14s;
+    z-index: 1000; white-space: normal; letter-spacing: 0;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .assign-chip:hover .assign-tip,
+  .assign-chip:focus .assign-tip,
+  .assign-chip.am-open .assign-tip {
+    opacity: 1; visibility: visible; transform: translateY(0);
+  }
+  @media (max-width: 640px) {
+    /* On mobile, anchor the tip away from the right edge so it never overflows */
+    .assign-chip .assign-tip { left: auto; right: 0; min-width: 200px; max-width: calc(100vw - 32px); }
+  }
+
+  /* v2.7.3: ER reassurance callout — one-line dismissable banner above the
+     ER result list. Reinforces the chip's "Open to anyone" tooltip in a more
+     visible way for the highest-stakes section. localStorage flag persists
+     dismiss across sessions so testers don't see it forever. */
+  .er-reassure {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(220, 38, 38, 0.06);
+    border: 1px solid rgba(220, 38, 38, 0.22);
+    border-left: 3px solid #dc2626;
+    border-radius: 8px;
+    padding: 10px 14px; margin: 8px 0 14px;
+    color: #7a1313; font-size: 13px; line-height: 1.45;
+  }
+  .er-reassure-icon { font-size: 16px; flex: 0 0 auto; }
+  .er-reassure-text { flex: 1; }
+  .er-reassure-text strong { color: #5b0f0f; }
+  .er-reassure-close {
+    background: none; border: none; cursor: pointer;
+    color: #7a1313; opacity: 0.65; padding: 4px 6px;
+    font-size: 16px; line-height: 1;
+  }
+  .er-reassure-close:hover { opacity: 1; }
+
   /* v0.70: meta row under each event card — "Checked 5 min ago · ● High · Why · close to you" */
   .cal-event-meta-row {
     display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -6518,7 +6599,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.3</span>
     </div>
   </header>
 
@@ -7037,7 +7118,7 @@
     <div class="page-section-header public-services" id="sec-public-services">
       <div class="psh-icon">🚨</div>
       <div class="psh-text">
-        <h2 class="psh-title">Emergency services</h2>
+        <h2 class="psh-title">Emergency services <span class="assign-chip-slot" data-am="emergency"></span></h2>
       </div>
     </div>
 
@@ -7075,19 +7156,25 @@
       <div id="ps-sections" hidden>
         <!-- v1.3: ER / Hospital / Urgent care split -->
         <div class="school-section" id="ps-er-section" hidden>
-          <h4>Emergency rooms <span class="hint">— 24/7 trauma + critical care</span></h4>
+          <h4>Emergency rooms <span class="assign-chip-slot" data-am="emergency"></span> <span class="hint">— 24/7 trauma + critical care</span></h4>
+          <!-- v2.7.3: ER reassurance callout — dismissable, persisted in localStorage -->
+          <div class="er-reassure" id="er-reassure-banner">
+            <span class="er-reassure-icon" aria-hidden="true">🚑</span>
+            <span class="er-reassure-text">In a real emergency, <strong>call 911</strong> or go to the nearest ER — federal law (EMTALA) requires they treat you regardless of insurance, citizenship, or ability to pay.</span>
+            <button type="button" class="er-reassure-close" id="er-reassure-close" aria-label="Dismiss this message">×</button>
+          </div>
           <div id="ps-er-tbody"></div>
         </div>
         <div class="school-section" id="ps-hospital-section" hidden>
-          <h4>Hospitals <span class="hint">— full medical centers</span></h4>
+          <h4>Hospitals <span class="assign-chip-slot" data-am="hospitals"></span> <span class="hint">— full medical centers</span></h4>
           <div id="ps-hospital-tbody"></div>
         </div>
         <div class="school-section" id="ps-urgent-section" hidden>
-          <h4>Urgent care <span class="hint">— walk-in, check hours</span></h4>
+          <h4>Urgent care <span class="assign-chip-slot" data-am="urgent_care"></span> <span class="hint">— walk-in, check hours</span></h4>
           <div id="ps-urgent-tbody"></div>
         </div>
         <div class="school-section" id="ps-emergency-section" hidden>
-          <h4>Fire stations</h4>
+          <h4>Fire stations <span class="assign-chip-slot" data-am="fire_station"></span></h4>
           <div id="ps-emergency-tbody"></div>
         </div>
         <div class="school-section" id="ps-police-section" hidden>
@@ -7126,7 +7213,7 @@
     <div class="page-section-header public-services" id="sec-civic">
       <div class="psh-icon">🏛️</div>
       <div class="psh-text">
-        <h2 class="psh-title">Official links</h2>
+        <h2 class="psh-title">Official links <span class="assign-chip-slot" data-am="voting"></span></h2>
       </div>
     </div>
 
@@ -7194,7 +7281,7 @@
     <div class="page-section-header services" id="sec-services">
       <div class="psh-icon">🔌</div>
       <div class="psh-text">
-        <h2 class="psh-title">Utility services</h2>
+        <h2 class="psh-title">Utility services <span class="assign-chip-slot" data-am="utilities"></span></h2>
       </div>
     </div>
 
@@ -7262,7 +7349,7 @@
     <div class="page-section-header schools" id="sec-schools">
       <div class="psh-icon">🎓</div>
       <div class="psh-text">
-        <h2 class="psh-title">Education</h2>
+        <h2 class="psh-title">Education <span class="assign-chip-slot" data-am="schools_public"></span></h2>
       </div>
     </div>
 
@@ -7339,7 +7426,7 @@
     <div class="page-section-header parks" id="sec-parks">
       <div class="psh-icon">🌳</div>
       <div class="psh-text">
-        <h2 class="psh-title">Recreation</h2>
+        <h2 class="psh-title">Recreation <span class="assign-chip-slot" data-am="parks"></span></h2>
       </div>
     </div>
 
@@ -7429,7 +7516,7 @@
     <div class="page-section-header parks" id="sec-events">
       <div class="psh-icon">🎪</div>
       <div class="psh-text">
-        <h2 class="psh-title">Events near you</h2>
+        <h2 class="psh-title">Events near you <span class="assign-chip-slot" data-am="events"></span></h2>
       </div>
     </div>
 
@@ -7560,7 +7647,7 @@
     <div class="page-section-header health" id="sec-health">
       <div class="psh-icon">🏥</div>
       <div class="psh-text">
-        <h2 class="psh-title">Health &amp; wellness</h2>
+        <h2 class="psh-title">Health &amp; wellness <span class="assign-chip-slot" data-am="emergency"></span></h2>
       </div>
     </div>
 
@@ -8007,7 +8094,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.3</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9892,6 +9979,151 @@ if (typeof document !== "undefined") {
     setTimeout(_bootstrap, 0);
   } else {
     document.addEventListener("DOMContentLoaded", _bootstrap);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.3 — SECTION ASSIGNMENT MODEL
+// Honest microcopy per category: tells the user the relationship between
+// their address and the service. Three tones:
+//   - "open"     → anyone can use this regardless of address (ER, parks, library)
+//   - "assigned" → your address determines this; you can't switch (district, utility)
+//   - "choice"   → your choice, but with conditions (insurance network, state-only)
+// Renders as a tiny chip under each section title with a 1-sentence tooltip.
+// Registry is cross-version: v3 will restyle the chip but reuse these strings.
+// ═══════════════════════════════════════════════════════════════════════════
+const SECTION_ASSIGNMENT_MODEL = {
+  emergency: {
+    tone: "open", badge: "Open to anyone",
+    tip: "Federal law (EMTALA) requires any ER to treat you regardless of insurance, citizenship, or ability to pay — go to the closest one in a real emergency."
+  },
+  hospitals: {
+    tone: "choice", badge: "Insurance matters",
+    tip: "For planned care, choose in-network for affordability. For emergencies, any hospital must treat you (see ER above)."
+  },
+  urgent_care: {
+    tone: "choice", badge: "Insurance varies",
+    tip: "Urgent cares are private clinics — check your insurer's network. Typically cheaper than ER, pricier than primary care."
+  },
+  schools_public: {
+    tone: "assigned", badge: "Your district",
+    tip: "All public schools in your assigned district. Your specific school depends on your street address — check the district enrollment page for attendance zones."
+  },
+  schools_private: {
+    tone: "choice", badge: "Open application",
+    tip: "Private schools admit students through their own application process, not by address."
+  },
+  schools_charter: {
+    tone: "choice", badge: "Lottery / application",
+    tip: "Charter and magnet schools usually admit via lottery or application — your address doesn't guarantee a seat."
+  },
+  dmv: {
+    tone: "choice", badge: "Any in your state",
+    tip: "You can use any California DMV. Distance is just convenience — appointment availability varies."
+  },
+  fire_station: {
+    tone: "assigned", badge: "Auto-dispatched",
+    tip: "Call 911 — dispatch routes based on your address. Shown for non-emergency reference only."
+  },
+  voting: {
+    tone: "assigned", badge: "Your precinct",
+    tip: "On election day you must vote at your assigned precinct. Mail-in or early voting is more flexible — check your county registrar."
+  },
+  utilities: {
+    tone: "assigned", badge: "Assigned utility",
+    tip: "Your service territory determines the provider — you can't switch. Contact them directly to start, stop, or transfer service."
+  },
+  library: {
+    tone: "open", badge: "System-wide card",
+    tip: "One library card works at any branch in the system. Walk into whichever is closest."
+  },
+  parks: {
+    tone: "open", badge: "Public access",
+    tip: "All public parks are open to everyone. No reservation needed for general use."
+  },
+  events: {
+    tone: "open", badge: "Public listings",
+    tip: "Anyone can attend. Sorted by date and distance from your address."
+  },
+};
+
+// renderAssignChip(modelKey) — emits inline HTML for the chip + tooltip.
+// Returns "" if modelKey is unknown so callers don't blow up. The chip uses
+// `tabindex="0"` so it's keyboard-focusable; tooltip toggles on hover, focus,
+// AND tap (mobile, via a data-attribute toggled by the click handler below).
+function renderAssignChip(modelKey) {
+  const m = SECTION_ASSIGNMENT_MODEL[modelKey];
+  if (!m) return "";
+  const tipId = `am-tip-${modelKey}`;
+  return `<span class="assign-chip assign-${m.tone}" tabindex="0" role="button" aria-describedby="${tipId}" data-am-key="${modelKey}">`
+       + `<span class="assign-dot" aria-hidden="true"></span>${m.badge}<span class="assign-icon" aria-hidden="true">i</span>`
+       + `<span class="assign-tip" id="${tipId}" role="tooltip">${m.tip}</span>`
+       + `</span>`;
+}
+
+// Mobile tap support: tap chip → toggle .am-open class so the tooltip pins.
+// Tap anywhere else → close. Idempotent: only binds once.
+if (typeof document !== "undefined" && !window._nrnyAmTapBound) {
+  window._nrnyAmTapBound = true;
+  document.addEventListener("click", (e) => {
+    const chip = e.target.closest && e.target.closest(".assign-chip");
+    if (chip) {
+      // Close any other open chips first
+      document.querySelectorAll(".assign-chip.am-open").forEach(c => { if (c !== chip) c.classList.remove("am-open"); });
+      chip.classList.toggle("am-open");
+      e.stopPropagation();
+    } else {
+      document.querySelectorAll(".assign-chip.am-open").forEach(c => c.classList.remove("am-open"));
+    }
+  }, { passive: true });
+}
+
+// ER reassurance callout: dismiss persists in localStorage. Idempotent bind.
+function applyErReassureCallout() {
+  try {
+    const banner = document.getElementById("er-reassure-banner");
+    if (!banner) return;
+    // Hide if user previously dismissed
+    if (localStorage.getItem("nrny.er.reassure.dismissed") === "1") {
+      banner.style.display = "none";
+      return;
+    }
+    const btn = document.getElementById("er-reassure-close");
+    if (btn && !btn._nrnyBound) {
+      btn._nrnyBound = true;
+      btn.addEventListener("click", () => {
+        banner.style.display = "none";
+        try { localStorage.setItem("nrny.er.reassure.dismissed", "1"); } catch (_) {}
+      });
+    }
+  } catch (_) { /* localStorage unavailable in some incognito modes — fail silent */ }
+}
+
+// applyAssignChips() — scans for placeholder slots and injects the chip HTML.
+// Each slot is `<span class="assign-chip-slot" data-am="KEY"></span>` in the
+// page markup. Idempotent: if already populated (has .assign-chip child),
+// skip. Safe to call multiple times (bootstrap + after dynamic re-render).
+function applyAssignChips() {
+  const slots = document.querySelectorAll(".assign-chip-slot[data-am]");
+  let count = 0;
+  slots.forEach(slot => {
+    if (slot.querySelector(".assign-chip")) return; // already populated
+    const key = slot.getAttribute("data-am");
+    const html = renderAssignChip(key);
+    if (html) { slot.innerHTML = html; count++; }
+  });
+  if (count > 0 && window.NEARNITY_DEBUG) console.log(`[assign-chip] populated ${count} slots`);
+}
+// Run at bootstrap alongside applyEmptyStates
+if (typeof document !== "undefined") {
+  const _amBootstrap = () => {
+    try { applyAssignChips(); } catch(e){}
+    try { applyErReassureCallout(); } catch(e){}
+  };
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(_amBootstrap, 0);
+  } else {
+    document.addEventListener("DOMContentLoaded", _amBootstrap);
   }
 }
 
@@ -12065,6 +12297,38 @@ function detectSchoolLevel(name, t) {
   return null;
 }
 
+// v2.7.3: Map NCES level/grade fields → the subtype values the renderer expects.
+// NCES CCD school_level_text values: "Elementary", "Middle", "High", "Other", or null.
+// grade_low / grade_high: "KG", "PK", "01"-"12" etc. We coerce into the same
+// Elementary/Middle/High/K-8 buckets that OSM-classified schools use.
+function _ncesLevelToSubtype(levelText, gradeLow, gradeHigh) {
+  const lt = String(levelText || "").toLowerCase();
+  if (lt === "elementary") return "Elementary";
+  if (lt === "middle")     return "Middle";
+  if (lt === "high")       return "High";
+
+  // Infer from grades if level_text is "Other"/missing
+  const _g = (g) => {
+    if (g == null) return null;
+    const s = String(g).toUpperCase();
+    if (s === "KG" || s === "K") return 0;
+    if (s === "PK") return -1;
+    const n = parseInt(s, 10);
+    return isNaN(n) ? null : n;
+  };
+  const gLow  = _g(gradeLow);
+  const gHigh = _g(gradeHigh);
+
+  // K-8 / K-12 academies span multiple bands — treat as mixed
+  if (gLow != null && gHigh != null) {
+    if (gHigh - gLow >= 7) return "K-8 / K-12"; // 8+ grade span = multi-level
+    if (gHigh <= 5)  return "Elementary";
+    if (gHigh <= 8)  return "Middle";
+    if (gHigh <= 12) return "High";
+  }
+  return null;
+}
+
 function classifyEducationItem(el) {
   const t = el.tags || {};
   const name = t.name || t["name:en"];
@@ -12894,7 +13158,8 @@ function renderSchoolSections(grouped, total, cityKey) {
   // v0.35.3: don't destroy subsection structure on empty — subtab navigation
   // depends on those IDs existing. Show a placeholder in each tbody instead.
   if (total === 0) {
-    const placeholder = `<div class="schools-empty" style="padding:14px;">No schools or educational facilities found within ${CURRENT_RADIUS_MI} miles. Try a wider radius, a more central address, or use the Google Maps button on the map below.</div>`;
+    const schoolsQueriedMi = Math.min(CURRENT_RADIUS_MI, 10);
+    const placeholder = `<div class="schools-empty" style="padding:14px;">No schools or educational facilities found within ${schoolsQueriedMi} miles. Try a wider radius, a more central address, or use the Google Maps button on the map below.</div>`;
     ["public-tbody", "private-tbody", "other-tbody", "higher-tbody", "enrichment-tbody"].forEach(id => {
       const tb = $(id); if (tb) tb.innerHTML = placeholder;
     });
@@ -12921,33 +13186,113 @@ async function loadNearbySchools(geo) {
   nrnyLoadGuardStart("school-loading", () => loadNearbySchools(geo), { label: "schools" });
 
   try {
-    const elements = await fetchNearbyEducation(lat, lon, 4000, (idx, total, host) => {
-      // Progress callback — fires when we move to a new mirror so the user
-      // sees activity rather than wondering whether it's stuck.
-      if (idx === 1) {
-        loading.textContent = `Searching ${host} for nearby schools… (this can take 15–40 seconds)`;
-      } else {
-        loading.textContent = `Server ${idx - 1} was slow. Trying backup server ${idx} of ${total} (${host})…`;
-      }
-    });
-    const items = elements
+    // v2.7.2: schools radius was hardcoded to 4000m (~2.5mi) — way too tight
+    // for metro/suburban districts. FUSD spans ~10mi corner-to-corner; same
+    // district often spans 5-10mi. Now: honor user radius, cap at 16km/10mi
+    // to keep result counts sane (otherwise dense urban radii return 100+
+    // entries and the per-level pick becomes random).
+    const schoolsRadiusM = Math.min(CURRENT_RADIUS_M, 16000);
+
+    // v2.7.3: Run TWO queries in parallel:
+    //   1. /api/school-zone — assigned-district public school roster (Census→NCES)
+    //   2. OSM Overpass — private + charter + colleges + libraries + amenities
+    // NCES CCD is K-12 public only. So we use it as authoritative for the
+    // "Public schools" subtab, but still need OSM for everything else.
+    // If school-zone fails (rural address, geocode miss, network), fall back
+    // to OSM-only — same shape, just with public schools coming from OSM
+    // distance query as before.
+    const [zoneRes, osmElements] = await Promise.allSettled([
+      fetch(`/api/school-zone?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}`)
+        .then(r => r.ok ? r.json() : null)
+        .catch(_ => null),
+      fetchNearbyEducation(lat, lon, schoolsRadiusM, (idx, total, host) => {
+        if (idx === 1) {
+          loading.textContent = `Searching ${host} for nearby schools… (this can take 15–40 seconds)`;
+        } else {
+          loading.textContent = `Server ${idx - 1} was slow. Trying backup server ${idx} of ${total} (${host})…`;
+        }
+      })
+    ]);
+
+    const zone = zoneRes.status === "fulfilled" ? zoneRes.value : null;
+    const elements = osmElements.status === "fulfilled" ? osmElements.value : [];
+
+    // Transform OSM Overpass elements as before (private, charter, higher, enrichment)
+    const osmItems = elements
       .map(classifyEducationItem)
       .filter(Boolean)
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
       .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name && x.subtype === it.subtype))
       .sort((a, b) => a.dist - b.dist);
 
-    // v0.12: keep all sorted by distance — pickByLevel does per-level pick.
-    // Charter/magnet schools live in their own "other" pool now.
-    const sortedPublic  = items.filter(i => i.category === "public" ).sort((a, b) => a.dist - b.dist);
-    const sortedPrivate = items.filter(i => i.category === "private").sort((a, b) => a.dist - b.dist);
-    const sortedOther   = items.filter(i => i.category === "other"  ).sort((a, b) => a.dist - b.dist);
+    // Public schools: prefer assigned-district roster from NCES; fall back to OSM
+    let publicItems;
+    let districtBadge = null;
+    if (zone && zone.district && Array.isArray(zone.schools) && zone.schools.length > 0) {
+      // NCES schools — only public + non-charter. Charters go to the "other" pool.
+      publicItems = zone.schools
+        .filter(s => !s.charter)
+        .filter(s => s.lat != null && s.lon != null)
+        .map(s => ({
+          name: s.name,
+          lat: s.lat, lon: s.lon,
+          category: "public",
+          subtype: _ncesLevelToSubtype(s.level_text, s.grade_low, s.grade_high),
+          dist: haversineMiles(lat, lon, s.lat, s.lon),
+          address: s.address,
+          phone: s.phone,
+          enrollment: s.enrollment,
+          source_url: s.source_url,
+          source: "NCES Common Core of Data",
+          district_name: zone.district.name,
+        }))
+        .filter(i => i.subtype) // drop K-only / N/A levels we can't classify
+        .sort((a, b) => a.dist - b.dist);
+
+      // Charters from NCES go to "other" if any
+      const ncesCharters = zone.schools
+        .filter(s => s.charter)
+        .filter(s => s.lat != null && s.lon != null)
+        .map(s => ({
+          name: s.name,
+          lat: s.lat, lon: s.lon,
+          category: "other",
+          subtype: _ncesLevelToSubtype(s.level_text, s.grade_low, s.grade_high) || "Mixed levels",
+          dist: haversineMiles(lat, lon, s.lat, s.lon),
+          address: s.address, phone: s.phone, source_url: s.source_url,
+          source: "NCES Common Core of Data",
+          district_name: zone.district.name,
+        }));
+      osmItems.push(...ncesCharters);
+
+      districtBadge = zone.district.name;
+      if (window.NEARNITY_DEBUG) console.log(`[school-zone] ${zone.district.name} (${zone.district.leaid}) → ${publicItems.length} public schools`);
+    } else {
+      // Fallback: OSM-derived public schools (distance-based, as before)
+      publicItems = osmItems.filter(i => i.category === "public").sort((a, b) => a.dist - b.dist);
+      if (window.NEARNITY_DEBUG) console.log("[school-zone] unavailable, fell back to OSM distance query");
+    }
+
+    // Surface district name in the schools header so users see "your district"
+    if (districtBadge) {
+      const metaEl = $("school-meta");
+      if (metaEl) metaEl.textContent = `Schools in ${districtBadge}`;
+      const valueEl = $("school-value");
+      if (valueEl && (!valueEl.textContent || valueEl.textContent === "—")) {
+        valueEl.textContent = districtBadge;
+      }
+    }
+
+    const sortedPrivate = osmItems.filter(i => i.category === "private").sort((a, b) => a.dist - b.dist);
+    const sortedOther   = osmItems.filter(i => i.category === "other"  ).sort((a, b) => a.dist - b.dist);
+    // For map + total count, combine all items
+    const items = [...publicItems, ...osmItems.filter(i => i.category !== "public")];
     const grouped = {
-      public:     sortedPublic,
+      public:     publicItems,
       private:    sortedPrivate,
       other:      sortedOther,
-      higher:     items.filter(i => i.category === "higher").slice(0, 5),
-      enrichment: items.filter(i => i.category === "enrichment").slice(0, 5)
+      higher:     osmItems.filter(i => i.category === "higher").slice(0, 5),
+      enrichment: osmItems.filter(i => i.category === "enrichment").slice(0, 5)
     };
     renderSchoolSections(grouped, items.length, cityKey);
     // v0.33.3: save grouped data + render map for active subtab only
@@ -19991,7 +20336,7 @@ document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
     style.id = "nrny-fb-styles";
     style.textContent = `
       .nrny-fb-launcher {
-        position: fixed; right: 18px; bottom: 18px; z-index: 9998;
+        position: fixed; right: 18px; bottom: 96px; z-index: 9998;
         background: #0050c2; color: #fff; border: none;
         padding: 11px 16px; border-radius: 999px;
         font-weight: 700; font-size: 14px; cursor: pointer;
@@ -20001,7 +20346,7 @@ document.querySelectorAll(".input-clear[data-clear-target]").forEach((btn) => {
       }
       .nrny-fb-launcher:hover { background: #003d99; transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.22); }
       @media (max-width: 560px) {
-        .nrny-fb-launcher { padding: 10px 14px; font-size: 13px; right: 12px; bottom: 12px; }
+        .nrny-fb-launcher { padding: 10px 14px; font-size: 13px; right: 12px; bottom: 72px; }
       }
       .nrny-fb-modal-bg {
         position: fixed; inset: 0; background: rgba(15,17,21,0.55);
