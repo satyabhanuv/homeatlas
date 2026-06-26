@@ -690,6 +690,98 @@
     line-height: 1.45;
   }
 
+  /* v2.7.6: Liability disclaimer at top of Safety guide — small, persistent */
+  .sg-disclaimer {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin: 14px 0 10px;
+    padding: 10px 14px;
+    background: rgba(0, 80, 194, 0.05);
+    border: 1px solid rgba(0, 80, 194, 0.18);
+    border-left: 3px solid #0050C2;
+    border-radius: 8px;
+    font-size: 12.5px; color: #1f2a44; line-height: 1.5;
+  }
+  .sg-disclaimer-icon { font-size: 14px; flex: 0 0 auto; line-height: 1.5; }
+  .sg-disclaimer a { color: #0050C2; font-weight: 700; }
+
+  /* v2.7.6: Audience toggle bar (Resident / Traveler, then insurance Y/N) */
+  .sg-audience {
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 10px 0 14px;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .sg-audience-row {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .sg-audience-label {
+    font-size: 12.5px; font-weight: 700; color: var(--ink);
+    letter-spacing: 0.2px; min-width: 96px;
+  }
+  .sg-audience-buttons { display: inline-flex; gap: 8px; flex-wrap: wrap; }
+  .sg-audience-btn {
+    background: #fff; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 999px;
+    padding: 7px 14px; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.12s;
+  }
+  .sg-audience-btn:hover { border-color: #0050C2; background: rgba(0,80,194,0.04); }
+  .sg-audience-btn[aria-checked="true"] {
+    background: #0050C2; color: #fff; border-color: #0050C2;
+  }
+  .sg-audience-hint {
+    font-size: 12px; color: var(--ink-faint);
+    font-style: italic; padding-top: 2px;
+  }
+
+  /* v2.7.6: per-tile conditional accents that reveal based on audience toggle */
+  .sg-tile-accent {
+    margin-top: 12px;
+    padding: 9px 11px;
+    background: rgba(0, 80, 194, 0.06);
+    border: 1px solid rgba(0, 80, 194, 0.18);
+    border-radius: 8px;
+    font-size: 12.5px; line-height: 1.5; color: #1f2a44;
+  }
+  .sg-tile-accent strong { color: #0050C2; }
+  .sg-tile-accent em { color: #B45309; font-style: normal; font-weight: 600; }
+  .sg-tile-accent a { color: #0050C2; font-weight: 600; text-decoration: none; }
+  .sg-tile-accent a:hover { text-decoration: underline; }
+
+  /* v2.7.6: Post-visit billing summary at the bottom of the Triage section */
+  .sg-postvisit {
+    margin-top: 22px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px 18px;
+    box-shadow: var(--shadow);
+  }
+  .sg-postvisit-head {
+    font-size: 15px; font-weight: 700; color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .sg-postvisit-list {
+    margin: 0; padding-left: 22px;
+    font-size: 13.5px; color: var(--ink-soft); line-height: 1.55;
+  }
+  .sg-postvisit-list li { margin-bottom: 8px; }
+  .sg-postvisit-list li:last-child { margin-bottom: 0; }
+  .sg-postvisit-list strong { color: var(--ink); }
+  .sg-postvisit-list em { color: #B45309; font-style: normal; font-weight: 600; }
+  .sg-postvisit-list a { color: #0050C2; font-weight: 600; text-decoration: none; }
+  .sg-postvisit-list a:hover { text-decoration: underline; }
+  .sg-postvisit-warn { color: #7a1313 !important; }
+  .sg-postvisit-warn strong { color: #5b0f0f !important; }
+  .sg-postvisit-source {
+    margin-top: 12px;
+    font-size: 11.5px; color: var(--ink-faint); line-height: 1.45;
+  }
+  .sg-postvisit-source a { color: var(--ink-faint); text-decoration: underline; }
+  .sg-postvisit-source a:hover { color: #0050C2; }
+
   /* Triage grid — 3 color-coded tiles for severity levels */
   .safety-triage-grid {
     display: grid;
@@ -1480,6 +1572,33 @@
   .suggestion:hover, .suggestion.active { background: rgba(45,106,79,0.08); }
   .suggestion .top { font-weight: 600; color: var(--ink); }
   .suggestion .sub { color: var(--ink-faint); font-size: 12.5px; margin-top: 2px; }
+
+  /* v2.7.4: Recent-history dropdown — same parent .suggestions container, but
+     a different "recent-mode" branch with a header + footer and item rows
+     prefixed by a 📍 / 🔍 icon. v3 will restyle but reuses the data + flow. */
+  .suggestions.recent-mode { padding: 4px 0; }
+  .suggestions .recent-header {
+    padding: 8px 16px 4px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.7px;
+    color: var(--ink-faint); text-transform: uppercase;
+  }
+  .suggestions .recent-footer {
+    padding: 6px 16px 8px;
+    font-size: 11px; color: var(--ink-faint); font-style: italic;
+    border-top: 1px solid var(--line); margin-top: 4px;
+  }
+  .suggestions .recent-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px dashed rgba(0,0,0,0.05);
+  }
+  .suggestions .recent-item:last-of-type { border-bottom: none; }
+  .suggestions .recent-item:hover { background: rgba(0,80,194,0.06); }
+  .suggestions .recent-item .recent-icon { font-size: 14px; flex: 0 0 18px; }
+  .suggestions .recent-item .recent-text {
+    flex: 1; font-size: 13.5px; color: var(--ink);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
   .suggest-badge {
     display: inline-block; margin-left: 8px; padding: 1px 7px;
     background: rgba(176,137,0,0.16); color: #6b5400;
@@ -3606,6 +3725,70 @@
     font-size: 16px; line-height: 1;
   }
   .er-reassure-close:hover { opacity: 1; }
+  /* v2.7.5: Expand link + detail card — billing + resource navigator */
+  .er-reassure-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .er-reassure-hosp {
+    background: rgba(180, 83, 9, 0.06);
+    border: 1px solid rgba(180, 83, 9, 0.22);
+    border-left: 3px solid #B45309;
+    color: #6b3d0a;
+  }
+  .er-reassure-hosp .er-reassure-close { color: #6b3d0a; }
+  .er-reassure-hosp .er-reassure-text strong { color: #4a2705; }
+  .er-reassure-expand {
+    background: none; border: none; cursor: pointer;
+    padding: 2px 0; margin-top: 2px;
+    color: inherit; font-size: 12.5px; font-weight: 600;
+    text-decoration: underline; text-underline-offset: 3px;
+    display: inline-flex; align-items: center; gap: 6px;
+    align-self: flex-start; opacity: 0.85;
+  }
+  .er-reassure-expand:hover { opacity: 1; }
+  .er-reassure-expand[aria-expanded="true"] .err-expand-arrow { transform: rotate(180deg); }
+  .err-expand-arrow {
+    display: inline-block; transition: transform 0.18s;
+    font-size: 11px;
+  }
+  .er-reassure-detail {
+    margin: -8px 0 14px;
+    background: #fafafa;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .er-reassure-detail .err-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  }
+  @media (max-width: 720px) {
+    .er-reassure-detail .err-grid { grid-template-columns: 1fr; gap: 12px; }
+  }
+  .err-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .err-head {
+    font-size: 13px; font-weight: 700; color: var(--ink);
+    margin-bottom: 8px; letter-spacing: -0.01em;
+  }
+  .err-list {
+    margin: 0; padding-left: 18px;
+    font-size: 13px; color: var(--ink-soft); line-height: 1.5;
+  }
+  .err-list li { margin-bottom: 7px; }
+  .err-list li:last-child { margin-bottom: 0; }
+  .err-list a { color: #0050C2; text-decoration: none; font-weight: 600; }
+  .err-list a:hover { text-decoration: underline; }
+  .err-list strong { color: var(--ink); }
+  .err-list em { color: #B45309; font-style: normal; font-weight: 600; }
+  .err-source {
+    margin-top: 10px;
+    font-size: 11px; color: var(--ink-faint);
+    line-height: 1.45;
+  }
+  .err-source a { color: var(--ink-faint); text-decoration: underline; text-underline-offset: 2px; }
+  .err-source a:hover { color: #0050C2; }
 
   /* v0.70: meta row under each event card — "Checked 5 min ago · ● High · Why · close to you" */
   .cal-event-meta-row {
@@ -6599,7 +6782,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.3</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.6</span>
     </div>
   </header>
 
@@ -6972,6 +7155,30 @@
         </div>
       </div>
 
+      <!-- v2.7.6: Quick-reference disclaimer + audience toggle -->
+      <div class="sg-disclaimer">
+        <span class="sg-disclaimer-icon" aria-hidden="true">ℹ️</span>
+        <span><strong>Quick reference, not medical advice.</strong> For life-threatening situations, call <a href="tel:911">911</a> immediately. Nearnity links to free public resources — we don't diagnose, prescribe, or replace a clinician.</span>
+      </div>
+
+      <div class="sg-audience" id="sg-audience">
+        <div class="sg-audience-row">
+          <div class="sg-audience-label">I'm a…</div>
+          <div class="sg-audience-buttons" role="radiogroup" aria-label="Audience">
+            <button type="button" class="sg-audience-btn" data-aud-role="resident" role="radio" aria-checked="false">🏡 Resident</button>
+            <button type="button" class="sg-audience-btn" data-aud-role="traveler" role="radio" aria-checked="false">✈️ Traveler / Visitor</button>
+          </div>
+        </div>
+        <div class="sg-audience-row" id="sg-ins-row" hidden>
+          <div class="sg-audience-label">Travel insurance?</div>
+          <div class="sg-audience-buttons" role="radiogroup" aria-label="Travel insurance status">
+            <button type="button" class="sg-audience-btn" data-aud-ins="yes" role="radio" aria-checked="false">✓ I have travel insurance</button>
+            <button type="button" class="sg-audience-btn" data-aud-ins="no" role="radio" aria-checked="false">✗ No insurance / paying cash</button>
+          </div>
+        </div>
+        <div class="sg-audience-hint" id="sg-audience-hint">Pick your situation above to see tailored steps.</div>
+      </div>
+
       <!-- ── 1. TRIAGE ────────────────────────────────────────────────── -->
       <div class="school-section subtab-active" id="sg-triage-section">
         <h4>Where to go based on your symptoms <span class="hint">— save lives + thousands in bills</span></h4>
@@ -6987,6 +7194,13 @@
               <li>Major head trauma or loss of consciousness</li>
             </ul>
             <a href="tel:911" class="nrny-action nrny-action-primary safety-triage-action">📞 Call 911</a>
+            <!-- v2.7.6: audience-aware accent — shown based on toggle state -->
+            <div class="sg-tile-accent" data-show-when="traveler-yes" hidden>
+              <strong>Traveler with travel insurance:</strong> After 911 is dispatched, call your travel insurer's 24/7 hotline (on the back of your card). They'll route you to in-network ERs and confirm direct billing. ER will treat you first regardless.
+            </div>
+            <div class="sg-tile-accent" data-show-when="traveler-no" hidden>
+              <strong>No insurance:</strong> Any ER must treat and stabilize you under federal law (EMTALA) — they will not demand cash to save your life. Bill comes later by mail. See "After the visit" below.
+            </div>
           </div>
 
           <div class="safety-triage-tile safety-triage-urgent">
@@ -7000,18 +7214,52 @@
               <li>Urinary tract infections (UTIs)</li>
             </ul>
             <button type="button" class="nrny-action safety-triage-action popular-category-pill" data-pop-sec="sec-public-services" data-pop-sub="ps-urgent-section">🔎 Find urgent care near me</button>
+            <div class="sg-tile-accent" data-show-when="resident" hidden>
+              <strong>Tip:</strong> Urgent care typically costs $100-$300 vs $1,000-$3,000+ for an ER visit for the same non-emergency issue.
+            </div>
+            <div class="sg-tile-accent" data-show-when="traveler-yes" hidden>
+              <strong>Call your insurer first.</strong> Steps: (1) call the 24/7 number on your card, (2) give them your ZIP, (3) ask for the nearest <em>in-network</em> urgent care, (4) confirm direct billing vs. pay-and-claim. Bring passport, policy number, and a credit card.
+            </div>
+            <div class="sg-tile-accent" data-show-when="traveler-no" hidden>
+              <strong>Cheaper than ER, but check the price.</strong> Most urgent cares are private. Ask for the cash price before treatment. For sliding-scale fees, prefer a <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener">Federally Qualified Health Center (FQHC)</a> instead.
+            </div>
           </div>
 
           <div class="safety-triage-tile safety-triage-primary">
-            <div class="safety-triage-eyebrow">Primary Care</div>
-            <div class="safety-triage-title">Preventative care + non-urgent ongoing issues.</div>
+            <div class="safety-triage-eyebrow">Walk-in clinic / Primary care</div>
+            <div class="safety-triage-title">Routine issues + non-urgent ongoing care.</div>
             <ul class="safety-triage-list">
-              <li>Routine physicals, vaccinations</li>
-              <li>Managing chronic conditions <i>(diabetes, blood pressure)</i></li>
-              <li>Mild skin rashes, minor aches</li>
-              <li>Prescription refills</li>
+              <li>Mild rash, cough, vaccines, prescription refills</li>
+              <li>Routine physicals + chronic condition management</li>
+              <li>Retail clinics inside CVS / Walgreens — flat $99-$150, post prices upfront</li>
+              <li>Community Health Center — sliding-scale based on income</li>
             </ul>
             <button type="button" class="nrny-action safety-triage-action popular-category-pill" data-pop-sec="sec-health" data-pop-sub="health-clinics-section">🔎 Find clinics near me</button>
+            <div class="sg-tile-accent" data-show-when="traveler-no" hidden>
+              <strong>Cheapest option for minor issues:</strong> <a href="https://www.cvs.com/minuteclinic" target="_blank" rel="noopener">CVS MinuteClinic</a> or <a href="https://www.walgreens.com/topic/pharmacy/healthcare-clinic.jsp" target="_blank" rel="noopener">Walgreens Healthcare Clinic</a> post flat prices ($99-$150). You pay at a kiosk before being seen — no surprise bills.
+            </div>
+            <div class="sg-tile-accent" data-show-when="traveler-yes" hidden>
+              <strong>For minor issues:</strong> Retail clinics ($99-$150 flat) are often cheaper than your insurance copay. Check what your travel policy covers before going.
+            </div>
+            <div class="sg-tile-accent" data-show-when="resident" hidden>
+              <strong>No insurance?</strong> The <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener">HRSA Find a Health Center</a> network has sliding-scale clinics covering 32M Americans regardless of insurance status.
+            </div>
+          </div>
+        </div>
+
+        <!-- v2.7.6: Post-visit billing summary — compact version of the v2.7.5
+             ER/Hospitals callouts, lives in the always-on guide so it's reachable
+             without first going through ER tab. Cross-links to detailed callouts. -->
+        <div class="sg-postvisit">
+          <div class="sg-postvisit-head">📨 After the visit: what to do with the bill</div>
+          <ol class="sg-postvisit-list">
+            <li><strong>Ask for an itemized bill.</strong> Call billing, demand a line-by-line itemized bill with CPT codes. Hospitals routinely lower prices when forced to justify each line.</li>
+            <li><strong>Apply for Charity Care.</strong> Every US non-profit hospital has a Financial Assistance Policy under IRS §501(r). Ask billing for the <em>"Charity Care Application"</em>. Income-based; can erase the bill entirely.</li>
+            <li><strong>Get free help.</strong> <a href="https://www.patientadvocate.org/" target="_blank" rel="noopener">Patient Advocate Foundation</a> negotiates bills and fights insurance denials for free.</li>
+            <li class="sg-postvisit-warn"><strong>Never ignore the bill.</strong> Unpaid medical debt can damage credit and — for non-citizens — affect future US visa applications. Negotiating a $20/mo payment plan is always better than ignoring.</li>
+          </ol>
+          <div class="sg-postvisit-source">
+            Sources: <a href="https://www.cms.gov/regulations-and-guidance/legislation/emtala" target="_blank" rel="noopener">EMTALA</a>, <a href="https://www.irs.gov/charities-non-profits/charitable-hospitals-general-requirements-for-tax-exemption-under-section-501r" target="_blank" rel="noopener">IRS §501(r)</a>, Patient Advocate Foundation, HRSA, SAMHSA. Full callout with crisis lines (211 / 988 / HRSA) appears on the <a href="#sec-public-services">Emergency rooms</a> tab.
           </div>
         </div>
       </div>
@@ -7157,16 +7405,79 @@
         <!-- v1.3: ER / Hospital / Urgent care split -->
         <div class="school-section" id="ps-er-section" hidden>
           <h4>Emergency rooms <span class="assign-chip-slot" data-am="emergency"></span> <span class="hint">— 24/7 trauma + critical care</span></h4>
-          <!-- v2.7.3: ER reassurance callout — dismissable, persisted in localStorage -->
+          <!-- v2.7.3 + v2.7.5: ER reassurance callout with expandable resource navigator. -->
           <div class="er-reassure" id="er-reassure-banner">
             <span class="er-reassure-icon" aria-hidden="true">🚑</span>
-            <span class="er-reassure-text">In a real emergency, <strong>call 911</strong> or go to the nearest ER — federal law (EMTALA) requires they treat you regardless of insurance, citizenship, or ability to pay.</span>
+            <div class="er-reassure-body">
+              <div class="er-reassure-text">In a real emergency, <strong>call 911</strong> or go to the nearest ER — federal law (EMTALA) requires they treat you regardless of insurance, citizenship, or ability to pay.</div>
+              <button type="button" class="er-reassure-expand" id="er-reassure-expand-er"
+                      aria-expanded="false" aria-controls="er-reassure-detail-er"
+                      data-detail-id="er-reassure-detail-er">
+                <span class="err-expand-label">What about the bill? Resources for helping someone</span>
+                <span class="err-expand-arrow" aria-hidden="true">↓</span>
+              </button>
+            </div>
             <button type="button" class="er-reassure-close" id="er-reassure-close" aria-label="Dismiss this message">×</button>
+          </div>
+          <div class="er-reassure-detail" id="er-reassure-detail-er" hidden>
+            <div class="err-grid">
+              <div class="err-card">
+                <div class="err-head">💰 Worried about the bill?</div>
+                <ul class="err-list">
+                  <li><strong>Charity Care.</strong> By law, non-profit US hospitals must offer financial assistance programs. Call the hospital's billing department and ask for a <em>"Charity Care Application"</em> — it can lower or completely erase the bill based on income.</li>
+                  <li><strong>Patient Advocate Foundation</strong> — <a href="https://www.patientadvocate.org/" target="_blank" rel="noopener">patientadvocate.org</a> helps patients negotiate medical bills and navigate insurance denials. Free.</li>
+                </ul>
+              </div>
+              <div class="err-card">
+                <div class="err-head">🤝 Helping someone in crisis?</div>
+                <ul class="err-list">
+                  <li><strong>General help</strong> (food, housing, utilities, health services): Call <a href="tel:211">211</a> or visit <a href="https://www.211.org/" target="_blank" rel="noopener">211.org</a>. Free, confidential, 24/7.</li>
+                  <li><strong>Uninsured + non-emergency care</strong>: <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener">HRSA Find a Health Center</a> — federally-funded clinics with sliding-scale fees.</li>
+                  <li><strong>Mental health / substance use crisis</strong>: Call or text <a href="tel:988">988</a> — Suicide &amp; Crisis Lifeline. Free, confidential, 24/7.</li>
+                </ul>
+              </div>
+            </div>
+            <div class="err-source">Sources: <a href="https://www.cms.gov/regulations-and-guidance/legislation/emtala" target="_blank" rel="noopener">42 U.S.C. §1395dd (EMTALA)</a>, <a href="https://www.irs.gov/charities-non-profits/charitable-hospitals-general-requirements-for-tax-exemption-under-section-501r" target="_blank" rel="noopener">IRS §501(r)</a>, HRSA, SAMHSA, 988 Lifeline. All resources are free and verified-public.</div>
           </div>
           <div id="ps-er-tbody"></div>
         </div>
         <div class="school-section" id="ps-hospital-section" hidden>
           <h4>Hospitals <span class="assign-chip-slot" data-am="hospitals"></span> <span class="hint">— full medical centers</span></h4>
+          <!-- v2.7.5: same resource navigator on Hospitals — non-emergency bills are equally devastating -->
+          <div class="er-reassure er-reassure-hosp" id="er-reassure-banner-hosp">
+            <span class="er-reassure-icon" aria-hidden="true">💵</span>
+            <div class="er-reassure-body">
+              <div class="er-reassure-text"><strong>Non-emergency hospital care</strong> is where insurance matters most. For planned care, choose in-network. For unexpected bills, you have options.</div>
+              <button type="button" class="er-reassure-expand" id="er-reassure-expand-hosp"
+                      aria-expanded="false" aria-controls="er-reassure-detail-hosp"
+                      data-detail-id="er-reassure-detail-hosp">
+                <span class="err-expand-label">Bill help + finding affordable care</span>
+                <span class="err-expand-arrow" aria-hidden="true">↓</span>
+              </button>
+            </div>
+            <button type="button" class="er-reassure-close" id="er-reassure-close-hosp" data-dismiss-key="nrny.er.reassure-hosp.dismissed" aria-label="Dismiss this message">×</button>
+          </div>
+          <div class="er-reassure-detail" id="er-reassure-detail-hosp" hidden>
+            <div class="err-grid">
+              <div class="err-card">
+                <div class="err-head">💰 Already got a big bill?</div>
+                <ul class="err-list">
+                  <li><strong>Charity Care.</strong> Non-profit US hospitals must offer financial assistance under IRS §501(r). Call billing and ask for a <em>"Charity Care Application"</em>. Many bills get reduced or zeroed.</li>
+                  <li><strong>Patient Advocate Foundation</strong> — <a href="https://www.patientadvocate.org/" target="_blank" rel="noopener">patientadvocate.org</a>. Free help negotiating bills + fighting insurance denials.</li>
+                  <li><strong>Itemized bill audit.</strong> Always request the itemized bill. 30-80% of hospital bills contain errors per industry studies.</li>
+                </ul>
+              </div>
+              <div class="err-card">
+                <div class="err-head">🤝 Affordable care + crisis resources</div>
+                <ul class="err-list">
+                  <li><strong>Free / low-cost primary care</strong>: <a href="https://findahealthcenter.hrsa.gov/" target="_blank" rel="noopener">HRSA Find a Health Center</a> — sliding-scale community clinics.</li>
+                  <li><strong>General help</strong> (food, housing, utilities): <a href="tel:211">211</a> or <a href="https://www.211.org/" target="_blank" rel="noopener">211.org</a>.</li>
+                  <li><strong>Mental health / substance use crisis</strong>: Call or text <a href="tel:988">988</a> (Suicide &amp; Crisis Lifeline).</li>
+                </ul>
+              </div>
+            </div>
+            <div class="err-source">Sources: <a href="https://www.cms.gov/regulations-and-guidance/legislation/emtala" target="_blank" rel="noopener">EMTALA</a>, <a href="https://www.irs.gov/charities-non-profits/charitable-hospitals-general-requirements-for-tax-exemption-under-section-501r" target="_blank" rel="noopener">IRS §501(r)</a>, HRSA, SAMHSA, 988 Lifeline.</div>
+          </div>
           <div id="ps-hospital-tbody"></div>
         </div>
         <div class="school-section" id="ps-urgent-section" hidden>
@@ -8094,7 +8405,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.3</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.6</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -10078,25 +10389,147 @@ if (typeof document !== "undefined" && !window._nrnyAmTapBound) {
   }, { passive: true });
 }
 
-// ER reassurance callout: dismiss persists in localStorage. Idempotent bind.
+// ER reassurance callout: dismiss persists in localStorage; expand toggle
+// reveals billing + resource navigator. Idempotent bind. v2.7.5 extended
+// to handle both ER and Hospitals banners + their expand buttons.
 function applyErReassureCallout() {
   try {
-    const banner = document.getElementById("er-reassure-banner");
-    if (!banner) return;
-    // Hide if user previously dismissed
-    if (localStorage.getItem("nrny.er.reassure.dismissed") === "1") {
-      banner.style.display = "none";
-      return;
-    }
-    const btn = document.getElementById("er-reassure-close");
-    if (btn && !btn._nrnyBound) {
-      btn._nrnyBound = true;
-      btn.addEventListener("click", () => {
+    // Each banner has its own dismiss key so dismissing ER doesn't dismiss Hospitals
+    const banners = [
+      { bannerId: "er-reassure-banner",      closeId: "er-reassure-close",      key: "nrny.er.reassure.dismissed" },
+      { bannerId: "er-reassure-banner-hosp", closeId: "er-reassure-close-hosp", key: "nrny.er.reassure-hosp.dismissed" },
+    ];
+    for (const b of banners) {
+      const banner = document.getElementById(b.bannerId);
+      if (!banner) continue;
+      if (localStorage.getItem(b.key) === "1") {
         banner.style.display = "none";
-        try { localStorage.setItem("nrny.er.reassure.dismissed", "1"); } catch (_) {}
-      });
+        continue;
+      }
+      const btn = document.getElementById(b.closeId);
+      if (btn && !btn._nrnyBound) {
+        btn._nrnyBound = true;
+        btn.addEventListener("click", () => {
+          banner.style.display = "none";
+          try { localStorage.setItem(b.key, "1"); } catch (_) {}
+        });
+      }
     }
+    // v2.7.5: wire expand/collapse for the "What about the bill?" links on
+    // both ER and Hospitals callouts. Tracks expanded state in localStorage
+    // so a user who's read it once doesn't have to re-expand on every visit.
+    document.querySelectorAll(".er-reassure-expand[data-detail-id]").forEach((expBtn) => {
+      if (expBtn._nrnyBound) return;
+      expBtn._nrnyBound = true;
+      const detailId = expBtn.getAttribute("data-detail-id");
+      const detailEl = document.getElementById(detailId);
+      if (!detailEl) return;
+      const stateKey = `nrny.errd.${detailId}.expanded`;
+      // Restore prior expand state
+      try {
+        if (localStorage.getItem(stateKey) === "1") {
+          detailEl.hidden = false;
+          expBtn.setAttribute("aria-expanded", "true");
+        }
+      } catch (_) {}
+      expBtn.addEventListener("click", () => {
+        const expanded = expBtn.getAttribute("aria-expanded") === "true";
+        const next = !expanded;
+        expBtn.setAttribute("aria-expanded", String(next));
+        detailEl.hidden = !next;
+        try { localStorage.setItem(stateKey, next ? "1" : "0"); } catch (_) {}
+      });
+    });
   } catch (_) { /* localStorage unavailable in some incognito modes — fail silent */ }
+}
+
+// v2.7.6: Safety-guide audience toggle (Resident / Traveler · insurance Y/N).
+// State persists in localStorage so users don't re-pick on every visit.
+// The toggle drives `.sg-tile-accent[data-show-when=...]` reveal logic and
+// shows tailored steps per audience without us pretending to be a doctor.
+const NRNY_SG_STATE_KEY = "nrny.sg.audience";
+function _nrnyReadSgState() {
+  try {
+    const raw = localStorage.getItem(NRNY_SG_STATE_KEY);
+    if (!raw) return { role: null, ins: null };
+    const s = JSON.parse(raw);
+    return { role: s.role || null, ins: s.ins || null };
+  } catch (_) { return { role: null, ins: null }; }
+}
+function _nrnyWriteSgState(s) {
+  try { localStorage.setItem(NRNY_SG_STATE_KEY, JSON.stringify(s)); } catch (_) {}
+}
+function _nrnyApplySgAudience(state) {
+  // Compute the active "audience key" used by data-show-when attributes:
+  //   resident          → "resident"
+  //   traveler + yes    → "traveler-yes"
+  //   traveler + no     → "traveler-no"
+  //   traveler + null   → just "traveler" (show generic traveler accents)
+  let key = null;
+  if (state.role === "resident") key = "resident";
+  else if (state.role === "traveler") {
+    key = state.ins === "yes" ? "traveler-yes" : (state.ins === "no" ? "traveler-no" : "traveler");
+  }
+  document.querySelectorAll(".sg-tile-accent[data-show-when]").forEach(el => {
+    const want = el.getAttribute("data-show-when");
+    // Show this accent if its data-show-when matches the current key OR
+    // if it's a generic "traveler" accent and the role is traveler.
+    const show = (key && (want === key || (want === "traveler" && state.role === "traveler")));
+    el.hidden = !show;
+  });
+  // Toggle button visual state
+  document.querySelectorAll(".sg-audience-btn[data-aud-role]").forEach(btn => {
+    btn.setAttribute("aria-checked", btn.dataset.audRole === state.role ? "true" : "false");
+  });
+  document.querySelectorAll(".sg-audience-btn[data-aud-ins]").forEach(btn => {
+    btn.setAttribute("aria-checked", btn.dataset.audIns === state.ins ? "true" : "false");
+  });
+  // Show/hide the insurance row based on role
+  const insRow = document.getElementById("sg-ins-row");
+  if (insRow) insRow.hidden = state.role !== "traveler";
+  // Update the hint copy
+  const hint = document.getElementById("sg-audience-hint");
+  if (hint) {
+    if (!state.role) {
+      hint.textContent = "Pick your situation above to see tailored steps.";
+    } else if (state.role === "resident") {
+      hint.textContent = "Showing tips for residents. Click a tile below for symptom-based triage.";
+    } else if (state.role === "traveler" && !state.ins) {
+      hint.textContent = "Traveler selected — do you have travel insurance?";
+    } else if (state.role === "traveler" && state.ins === "yes") {
+      hint.textContent = "Travel insurance selected — tiles below now show insurer call-script + in-network steps.";
+    } else if (state.role === "traveler" && state.ins === "no") {
+      hint.textContent = "No-insurance traveler — tiles below show cheapest care path + EMTALA protection.";
+    }
+  }
+}
+function applySgAudienceToggle() {
+  const container = document.getElementById("sg-audience");
+  if (!container || container._nrnyBound) return;
+  container._nrnyBound = true;
+  let state = _nrnyReadSgState();
+  // Wire role buttons
+  container.querySelectorAll(".sg-audience-btn[data-aud-role]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const role = btn.dataset.audRole;
+      // Toggle off if already active (user can reset)
+      state.role = (state.role === role) ? null : role;
+      if (state.role !== "traveler") state.ins = null;
+      _nrnyWriteSgState(state);
+      _nrnyApplySgAudience(state);
+    });
+  });
+  // Wire insurance buttons
+  container.querySelectorAll(".sg-audience-btn[data-aud-ins]").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const ins = btn.dataset.audIns;
+      state.ins = (state.ins === ins) ? null : ins;
+      _nrnyWriteSgState(state);
+      _nrnyApplySgAudience(state);
+    });
+  });
+  // Initial apply (restores from localStorage)
+  _nrnyApplySgAudience(state);
 }
 
 // applyAssignChips() — scans for placeholder slots and injects the chip HTML.
@@ -10119,6 +10552,7 @@ if (typeof document !== "undefined") {
   const _amBootstrap = () => {
     try { applyAssignChips(); } catch(e){}
     try { applyErReassureCallout(); } catch(e){}
+    try { applySgAudienceToggle(); } catch(e){}
   };
   if (document.readyState === "complete" || document.readyState === "interactive") {
     setTimeout(_amBootstrap, 0);
@@ -11201,23 +11635,37 @@ function setupSectionMap(elId, centerLat, centerLon, items) {
     if (!_sectionClusters) window._sectionClusters = _sectionClusters;
     _sectionClusters[elId] = clusterGroup;
   }
-  // v2.0.1: HOME IS ALWAYS THE CENTER. Dropped fitBounds entirely.
+  // v2.0.1 → v2.7.4: HOME IS STILL THE CENTER, but ZOOM is fit to the top-N
+  // closest pins so the user actually sees the schools/parks/etc. we ranked.
   //
-  // Why: fitBounds always centers on the bounding-box midpoint, which is
-  // halfway between home and the farthest pin. If pins are 6mi west of
-  // home, the map centers ~3mi west. The previous v2.0.1 cap of 8mi
-  // reduced the offset but didn't eliminate it — Satya's screenshot showed
-  // the home pin off to the right because the box midpoint was still west.
+  // v2.0.1 set a fixed zoom 12 which works for dense urban areas but was too
+  // zoomed out for users (Satya's Fremont screenshot 2026-06-25): home pin
+  // visible but lost among 19+ schools spread across the city.
   //
-  // New rule: setView(home, 12). The home pin is always at map center on
-  // first load. Zoom 12 covers ~10mi diameter — a metro neighborhood view.
-  // Pins near home are visible; far pins are placed but reached via pan/zoom.
-  //
-  // When the user pans, the "Search this area" button surfaces and they can
-  // re-query for the new center. Home → explore → search-this-area is a
-  // predictable, consistent flow.
-  map.setView([centerLat, centerLon], 12);
-  if (window.NEARNITY_DEBUG) console.log(`[setupSectionMap] ${elId}: setView home @ zoom 12 (${validItems.length} pins placed)`);
+  // v2.7.4 rule: setView(home, zoom) where zoom = Leaflet's computed
+  // bounds-fit zoom for [home + top-N closest pins], capped at [11, 16] so
+  // we never over-zoom (single pin → blurry) or stay too wide (rural).
+  // Home stays at map center; the visible window is sized to the ranked set.
+  let _mapZoom = 12;
+  if (validItems.length > 0 && typeof L !== "undefined" && L.latLngBounds) {
+    const TOP_N = 10; // top-10 closest pins is enough to see the ranked set
+    const sorted = [...validItems].sort((a, b) => {
+      const da = (a.dist != null) ? a.dist : Number.MAX_SAFE_INTEGER;
+      const db = (b.dist != null) ? b.dist : Number.MAX_SAFE_INTEGER;
+      return da - db;
+    }).slice(0, TOP_N);
+    const bounds = L.latLngBounds([[centerLat, centerLon]]);
+    sorted.forEach(p => bounds.extend([p.lat, p.lon]));
+    try {
+      // getBoundsZoom returns the zoom level Leaflet would use; we then
+      // setView home at that zoom so home stays at center. inside=true means
+      // "make sure bounds FIT within the viewport" (vs. partially covering).
+      const fitZoom = map.getBoundsZoom(bounds, true);
+      _mapZoom = Math.max(11, Math.min(fitZoom, 16));
+    } catch (_) { /* fall through to default zoom 12 */ }
+  }
+  map.setView([centerLat, centerLon], _mapZoom);
+  if (window.NEARNITY_DEBUG) console.log(`[setupSectionMap] ${elId}: setView home @ zoom ${_mapZoom} (${validItems.length} pins placed, top-N-fit)`);
   // v0.34.1/v0.34.4/v0.35.2: empty-state overlay with Retry + Google Maps fallback.
   // OSM coverage is inevitably uneven — Google Maps is the user's escape hatch.
   // The Google search URL embeds the user's lat/lon + a category-specific query.
@@ -19164,6 +19612,13 @@ async function runLookupFromFeature(feature) {
       }
     } catch(_) {}
     renderResults(geo);
+    // v2.7.4: record successful geocode into recent-addresses history.
+    // We prefer the display_name (full resolved address) but fall back to
+    // whatever's currently in the input.
+    try {
+      const label = (geo && geo.display_name) || (document.getElementById("addr") && document.getElementById("addr").value);
+      if (typeof nrnyRecordRecentAddress === "function") nrnyRecordRecentAddress(label);
+    } catch (_) {}
     $("results").scrollIntoView({ behavior: "smooth", block: "start" });
   } catch (err) {
     $("results").hidden = true;
@@ -19172,6 +19627,214 @@ async function runLookupFromFeature(feature) {
     $("searchBtn").disabled = false;
     $("searchBtn").textContent = "Find my zones";
     hideSuggestions();
+  }
+}
+
+/* =====================================================================
+   v2.7.4 — Search input editing + recent history
+   --------------------------------------------------------------------
+   Three problems being solved:
+   1. Cmd+Z broken — the browser's native <input> undo gets wiped any time
+      JS sets `input.value = "..."` (suggestion click, chip click, programmatic
+      geocode result). We track an explicit history stack per input so Cmd+Z
+      works across both keystrokes AND programmatic sets.
+   2. Paste not feeling responsive — we add an explicit paste listener that
+      fires our autocomplete refresh (and history-capture) right after paste
+      so the suggestion list reflects the pasted content immediately.
+   3. Recent history — last 3 successful addresses and last 3 search queries
+      are stored in localStorage and shown as a dropdown when the user focuses
+      an empty input. One tap to re-use, no retyping.
+
+   v3 carry-over: the localStorage keys (nrny.recent.addresses,
+   nrny.recent.queries) + the capture helpers are pure data. The dropdown
+   styling is acknowledged-throwaway; v3 will restyle inside its rectangle
+   layout but reuse the underlying mechanism.
+   ===================================================================== */
+
+// ── 1. Custom undo/redo history ─────────────────────────────────────
+const _nrnyInputHist = new WeakMap();
+function nrnyAttachInputHistory(inputEl, opts) {
+  if (!inputEl || _nrnyInputHist.has(inputEl)) return;
+  const h = { stack: [inputEl.value || ""], idx: 0, max: (opts && opts.max) || 40, suppress: false };
+  _nrnyInputHist.set(inputEl, h);
+  const capture = (force) => {
+    if (h.suppress) return;
+    const v = inputEl.value || "";
+    if (h.stack[h.idx] === v && !force) return;
+    // Truncate any forward redo history
+    if (h.idx < h.stack.length - 1) h.stack = h.stack.slice(0, h.idx + 1);
+    h.stack.push(v);
+    if (h.stack.length > h.max) h.stack.shift();
+    h.idx = h.stack.length - 1;
+  };
+  // Capture on every user-driven change (typing, paste, cut, clear button)
+  inputEl.addEventListener("input", () => capture(false));
+  // Cmd/Ctrl+Z = undo; Cmd/Ctrl+Shift+Z or Ctrl+Y = redo
+  inputEl.addEventListener("keydown", (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (!meta) return;
+    const k = e.key.toLowerCase();
+    const isUndo = k === "z" && !e.shiftKey;
+    const isRedo = (k === "z" && e.shiftKey) || k === "y";
+    if (isUndo && h.idx > 0) {
+      e.preventDefault();
+      h.idx--; h.suppress = true;
+      inputEl.value = h.stack[h.idx];
+      h.suppress = false;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    } else if (isRedo && h.idx < h.stack.length - 1) {
+      e.preventDefault();
+      h.idx++; h.suppress = true;
+      inputEl.value = h.stack[h.idx];
+      h.suppress = false;
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+  });
+  // Expose a hook so code that PROGRAMMATICALLY sets the value can also
+  // push to history (so a subsequent Cmd+Z undoes the auto-fill).
+  inputEl._nrnyPushHistory = () => capture(true);
+}
+
+// Wrapper to update an input value AND record it in history. Use this from
+// any code path that programmatically sets the value (suggestion click,
+// chip click, etc.) so Cmd+Z can rewind past those changes.
+function nrnySetInputValue(inputEl, value) {
+  if (!inputEl) return;
+  inputEl.value = value;
+  if (typeof inputEl._nrnyPushHistory === "function") inputEl._nrnyPushHistory();
+  inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+// ── 2. Paste passthrough (defensive — make sure paste fires our refresh) ─
+function nrnyAttachPastePassthrough(inputEl) {
+  if (!inputEl || inputEl._nrnyPasteBound) return;
+  inputEl._nrnyPasteBound = true;
+  // Don't preventDefault — let native paste happen. The setTimeout(0) lets
+  // the pasted value land in input.value before we dispatch input to refresh
+  // suggestions / history.
+  inputEl.addEventListener("paste", () => {
+    setTimeout(() => {
+      inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    }, 0);
+  });
+}
+
+// ── 3. Recent-history store (localStorage, FIFO depth 3) ────────────
+const NRNY_RECENT_ADDR_KEY  = "nrny.recent.addresses";
+const NRNY_RECENT_QUERY_KEY = "nrny.recent.queries";
+const NRNY_RECENT_DEPTH = 3;
+function _nrnyReadRecent(key) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const arr = JSON.parse(raw);
+    return Array.isArray(arr) ? arr.slice(0, NRNY_RECENT_DEPTH) : [];
+  } catch (_) { return []; }
+}
+function _nrnyWriteRecent(key, list) {
+  try { localStorage.setItem(key, JSON.stringify(list.slice(0, NRNY_RECENT_DEPTH))); }
+  catch (_) { /* incognito / quota — fail silent */ }
+}
+function nrnyRecordRecentAddress(label) {
+  const norm = (label || "").trim();
+  if (!norm || norm.length < 4) return;
+  const cur = _nrnyReadRecent(NRNY_RECENT_ADDR_KEY).filter(x => x.toLowerCase() !== norm.toLowerCase());
+  cur.unshift(norm);
+  _nrnyWriteRecent(NRNY_RECENT_ADDR_KEY, cur);
+}
+function nrnyRecordRecentQuery(q) {
+  const norm = (q || "").trim();
+  if (!norm || norm.length < 2) return;
+  const cur = _nrnyReadRecent(NRNY_RECENT_QUERY_KEY).filter(x => x.toLowerCase() !== norm.toLowerCase());
+  cur.unshift(norm);
+  _nrnyWriteRecent(NRNY_RECENT_QUERY_KEY, cur);
+}
+
+// ── 4. Recent-items dropdown (renders inside the existing suggestions
+//      <div> so we reuse its positioning and the click-outside-to-close
+//      handler already in place). Shown when input is empty/short and the
+//      user focuses it.
+function _renderRecentPanel(targetSugEl, items, kind, onPick) {
+  if (!targetSugEl) return false;
+  if (!items || !items.length) return false;
+  const lbl = kind === "addr" ? "Recent locations" : "Recent searches";
+  const icon = kind === "addr" ? "📍" : "🔍";
+  const html = `<div class="recent-header">${lbl}</div>`
+    + items.map((s, i) =>
+        `<div class="suggestion recent-item" role="option" data-recent-idx="${i}" data-recent-kind="${kind}">`
+        + `<span class="recent-icon" aria-hidden="true">${icon}</span>`
+        + `<span class="recent-text">${escapeHtml(s)}</span>`
+        + `</div>`
+      ).join("")
+    + `<div class="recent-footer">Click to reuse · Type to search fresh</div>`;
+  targetSugEl.innerHTML = html;
+  targetSugEl.hidden = false;
+  targetSugEl.classList.add("recent-mode");
+  // Wire click handlers
+  targetSugEl.querySelectorAll(".recent-item").forEach(el => {
+    el.addEventListener("click", () => {
+      const idx = parseInt(el.getAttribute("data-recent-idx"), 10);
+      const value = items[idx];
+      if (value != null) onPick(value);
+      targetSugEl.hidden = true;
+      targetSugEl.classList.remove("recent-mode");
+      targetSugEl.innerHTML = "";
+    });
+  });
+  return true;
+}
+
+function nrnyShowRecentForAddr() {
+  const inp = $("addr");
+  if (!inp) return;
+  // Only show recent panel if input is empty / very short — otherwise the
+  // normal geocoder suggestions are more useful.
+  if ((inp.value || "").trim().length >= 2) return;
+  const items = _nrnyReadRecent(NRNY_RECENT_ADDR_KEY);
+  if (!items.length) return;
+  _renderRecentPanel($("suggestions"), items, "addr", (val) => {
+    nrnySetInputValue(inp, val);
+    inp.focus();
+    // Trigger the existing search flow as if user submitted
+    if ($("searchForm")) $("searchForm").dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+  });
+}
+
+function nrnyShowRecentForQuery() {
+  const inp = $("q-input");
+  if (!inp) return;
+  if ((inp.value || "").trim().length >= 2) return;
+  const items = _nrnyReadRecent(NRNY_RECENT_QUERY_KEY);
+  if (!items.length) return;
+  _renderRecentPanel($("q-suggestions"), items, "query", (val) => {
+    nrnySetInputValue(inp, val);
+    inp.focus();
+    if ($("searchForm")) $("searchForm").dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+  });
+}
+
+// Attach behaviors on bootstrap. Idempotent.
+if (typeof document !== "undefined") {
+  const _v274Boot = () => {
+    try {
+      const a = document.getElementById("addr");
+      const q = document.getElementById("q-input");
+      if (a) {
+        nrnyAttachInputHistory(a);
+        nrnyAttachPastePassthrough(a);
+        a.addEventListener("focus", () => { try { nrnyShowRecentForAddr(); } catch(_){} });
+      }
+      if (q) {
+        nrnyAttachInputHistory(q);
+        nrnyAttachPastePassthrough(q);
+        q.addEventListener("focus", () => { try { nrnyShowRecentForQuery(); } catch(_){} });
+      }
+    } catch (_) {}
+  };
+  if (document.readyState === "complete" || document.readyState === "interactive") {
+    setTimeout(_v274Boot, 0);
+  } else {
+    document.addEventListener("DOMContentLoaded", _v274Boot);
   }
 }
 
@@ -19693,6 +20356,12 @@ formEl.addEventListener("submit", async (e) => {
   _isHistoryRestore = false;
   const rawAddr = addrEl.value.trim();
   const rawQ    = qInputEl ? qInputEl.value.trim() : "";
+  // v2.7.4: record the query into recent-searches history. Skip on URL/back
+  // restores (the user didn't actively type this query — it's a navigation),
+  // and skip empty queries.
+  if (!isRestore && rawQ) {
+    try { if (typeof nrnyRecordRecentQuery === "function") nrnyRecordRecentQuery(rawQ); } catch (_) {}
+  }
   hideSuggestions();
   hideQSuggestions();
   $("searchBtn").disabled = true; $("searchBtn").textContent = "Searching…";
