@@ -6782,7 +6782,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.6</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.7</span>
     </div>
   </header>
 
@@ -8405,7 +8405,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.6</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.7</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -15850,33 +15850,39 @@ function renderHomeServices(grouped, total, cityKey) {
 async function fetchPublicServices(lat, lon, radiusMeters) {
   // v0.30: default to current global radius if not specified
   if (radiusMeters == null) radiusMeters = CURRENT_RADIUS_M;
+  // v2.7.7 P0 fix: Bay Area + 25mi radius = tens of thousands of OSM nodes →
+  // Overpass returns "killed/timeout" → all 4 queries fail → empty state.
+  // Same root cause that killed schools in v2.7.2; same fix applied here.
+  // Cap healthcare/emergency at 16km (~10mi) — covers any metro fully, keeps
+  // queries returnable. Civic + DMV stays wider (small node counts).
+  const healthR = Math.min(radiusMeters, 16000);
+  const civicR  = Math.min(radiusMeters, 16000);
   // v0.30 fix: split into amenity vs healthcare so a slow query in one doesn't kill both
   const amenQ = `[out:json][timeout:10];(`
-    + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall|courthouse)$"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["emergency"="fire_station"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["amenity"~"^(fire_station|police|hospital|clinic|doctors|dentist|pharmacy|post_office|townhall|courthouse)$"](around:${healthR},${lat},${lon});`
+    + `nwr["emergency"="fire_station"](around:${healthR},${lat},${lon});`
     // v1.3: explicitly find ER-tagged facilities (some hospitals are tagged with emergency_ward=yes)
-    + `nwr["emergency_ward"="yes"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["emergency"="emergency_ward"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["emergency_ward"="yes"](around:${healthR},${lat},${lon});`
+    + `nwr["emergency"="emergency_ward"](around:${healthR},${lat},${lon});`
     + `);out center tags;`;
   const hcQ = `[out:json][timeout:10];(`
-    + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["healthcare"~"^(hospital|clinic|doctor|dentist|pharmacy|urgent_care|centre)$"](around:${healthR},${lat},${lon});`
     + `);out center tags;`;
   // v0.34.1/v0.34.4/v0.35.0: civic add-ons — government offices.
   const civicQ = `[out:json][timeout:10];(`
-    + `nwr["office"="government"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["amenity"="public_building"](around:${radiusMeters},${lat},${lon});`
-    + `nwr["government"~"^(local_authority|administrative|legislative|department)$"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["office"="government"](around:${civicR},${lat},${lon});`
+    + `nwr["amenity"="public_building"](around:${civicR},${lat},${lon});`
+    + `nwr["government"~"^(local_authority|administrative|legislative|department)$"](around:${civicR},${lat},${lon});`
     + `);out center tags;`;
-  // v0.35.0/v0.35.2: separate query for DMV-named places — broadened regex
-  // to catch CA's "Driver Services", state-by-state variants like "Secretary
-  // of State", "Tag Office", "License Office", and government=motor_vehicle.
+  // v0.35.0/v0.35.2: separate query for DMV-named places
   const dmvQ = `[out:json][timeout:10];(`
-    + `nwr["name"~"DMV|Motor Vehicle|Driver License|Driver Services|Secretary of State|Tag Office|License Office|Title Office|RMV|BMV",i](around:${radiusMeters},${lat},${lon});`
-    + `nwr["government"="motor_vehicle"](around:${radiusMeters},${lat},${lon});`
+    + `nwr["name"~"DMV|Motor Vehicle|Driver License|Driver Services|Secretary of State|Tag Office|License Office|Title Office|RMV|BMV",i](around:${civicR},${lat},${lon});`
+    + `nwr["government"="motor_vehicle"](around:${civicR},${lat},${lon});`
     + `);out center tags;`;
   const results = await Promise.allSettled([overpassQuery(amenQ), overpassQuery(hcQ), overpassQuery(civicQ), overpassQuery(dmvQ)]);
   const out = [];
   results.forEach(r => { if (r.status === "fulfilled" && Array.isArray(r.value)) out.push(...r.value); });
+  if (window.NEARNITY_DEBUG) console.log(`[fetchPublicServices] returned ${out.length} elements (healthR=${healthR}m, civicR=${civicR}m)`);
   return out;
 }
 function classifyPublicService(el) {
