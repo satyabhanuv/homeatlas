@@ -8,6 +8,360 @@ A running log of every shipped iteration. Newest version on top.
 
 ---
 
+## v2.7.8 — 2026-07-07 — Federal medical fallback + search-never-fails anchor card
+
+**First release of the 5-tier data-layer buildout.** Directly addresses the primary July 4 QA failure: hospitals/ER/urgent-care returning empty state in Bay Area even after the v2.7.7 radius cap.
+
+### What changed
+
+**Federal medical data now runs in parallel with OSM Overpass.** No more single-point-of-failure on public Overpass mirrors. When Overpass fails or times out (which happens routinely during peak load), federal data (Medicare Care Compare + NPPES) still populates the tabs.
+
+- New `fetchFederalMedical(lat, lon, postal, stateAbbr)` — fires 3 parallel Worker calls:
+  - `/api/medicare-quality` → every US hospital with CMS ratings + emergency-services flag
+  - `/api/nppes` (taxonomy=Emergency Medicine) → federal ER provider directory
+  - `/api/nppes` (taxonomy=Urgent Care) → federal urgent care providers
+- `loadNearbyPublicServices` now does `Promise.all([fetchPublicServices, fetchFederalMedical])` — merges results, dedupes by lowercased name, ranks with `federal: true` marked at score 65-70 so authoritative records don't drop below random OSM entries.
+- Records from federal sources don't always have lat/lon (Medicare + NPPES return addresses). They render in the list without map pins; each card includes a Google Maps deep-link via `gmaps_url` field for click-through routing.
+
+**Search-never-fails anchor card.** ER, Urgent care, and Hospitals tabs ALWAYS show a permanent action card at the top of the results — even when the list is populated. Especially useful when it isn't:
+
+- ER tab: red-bordered card with 📞 Call 911 button + 🗺️ "Nearest ER on Google Maps" button. EMTALA reminder in copy.
+- Urgent care tab: orange-bordered card with hours + cash-price warning + Google Maps link.
+- Hospitals tab: orange-bordered card with in-network reminder + Google Maps link.
+
+Anchor cards use the current resolved geo coords to build Google Maps search URLs that center on the user's actual location.
+
+### Files touched
+
+- `index.html`: +14 KB.
+  - New v2.7.8 block: `_STATE_ABBR_MAP`, `_stateAbbrFromAddress`, `_gmapsSearchUrl`, `fetchFederalMedical` (~120 lines).
+  - `loadNearbyPublicServices`: OSM → Federal parallel fetch + merge + dedupe (~30 lines rewrite).
+  - `renderPublicServices`: anchor-card HTML injection into ER/UC/Hospital tbodies (~50 lines addition).
+  - +60 lines CSS for `.nrny-emergency-anchor`, `.nrny-emergency-anchor-uc/-hosp`, `.nea-icon/-body/-title/-sub/-actions/-btn/-btn-primary`.
+  - Version footer × 2 → v2.7.8.
+
+### Validation
+
+- `node --check` clean on extracted JS
+- DOCTYPE intact, 1.13 MB
+- Content markers: `fetchFederalMedical` × 2, `_stateAbbrFromAddress` × 2, `nrny-emergency-anchor` × 7, `anchorCardER` × 2, `/api/medicare-quality` × 2, `/api/nppes` × 4, v2.7.8 footer × 2
+
+### What this is NOT
+
+- Not BLM + USFS adapters — deferred to v2.7.9 (Bay Area users don't need these first)
+- Not Mission Peak / Oakland Zoo fix — those need Tier 2 (state parks + regional districts) and Tier 4 (AZA institutional). Sprint order defined in Roadmap Phase D.
+- Not v3 rectangle layout wiring — parallel track, deferred to next code session
+
+### QA after deploy
+
+| Test | Expected |
+|---|---|
+| Search "ER" near San Jose or Oakland | ER tab shows 911/Google Maps anchor card at top + Medicare hospitals + NPPES ER providers + OSM ER pins (union) |
+| Search "urgent care" | Orange anchor card + Medicare + NPPES + OSM merged, no empty state |
+| Open DevTools Network with Overpass mirrors blocked in browser DNS | ER tab STILL populates from federal data alone — no empty state |
+| Federal card click | Opens Google Maps in new tab with the hospital name pre-filled + centered on your coords |
+| Mobile (<480px) | Anchor card compact — icon smaller, buttons smaller, single column |
+| Footer | **v2.7.8** |
+
+### v3 carry-over
+
+- `fetchFederalMedical` — pure data layer, ported verbatim to v3
+- Anchor-card content — copy stays; v3 restyles the card border/colors inside rectangle shell
+- Data merge + dedupe logic — reusable across shell versions
+
+---
+
+## v2.7.6 — 2026-06-26 — Audience toggle (Resident/Traveler·Insurance Y/N), walk-in clinic, post-visit summary
+
+**What this closes.** v2.7.5 added billing/resource help on the ER and Hospitals subsections. The Safety Guide is the *quick-reference decision tree* — and it was missing the **traveler vs resident** axis + **insurance Yes/No** branch that determines which path someone should actually take. Plus the Walk-in/Retail clinic option (CVS MinuteClinic, Walgreens Healthcare Clinic) wasn't surfaced anywhere.
+
+### What's new
+
+**Liability disclaimer** at the top of the guide:
+> ℹ️ *Quick reference, not medical advice. For life-threatening situations, call 911 immediately. Nearnity links to free public resources — we don't diagnose, prescribe, or replace a clinician.*
+
+**Audience toggle bar** — two rows of pill buttons:
+- Row 1: *I'm a…* → 🏡 Resident · ✈️ Traveler / Visitor
+- Row 2 (only when Traveler): *Travel insurance?* → ✓ Yes · ✗ No / paying cash
+- Selection persists in `localStorage["nrny.sg.audience"]`
+- Below the buttons: a one-line hint that updates based on selection
+
+**Conditional accents on each triage tile** — show/hide via `data-show-when="resident"` / `"traveler-yes"` / `"traveler-no"`:
+
+| Tile | Resident | Traveler + Insurance | Traveler, No Insurance |
+|---|---|---|---|
+| 911/ER | (existing content) | "After 911, call insurer's 24/7 line on card back — they'll route to in-network ER + confirm direct billing. ER treats first regardless." | "Any ER must treat & stabilize you under EMTALA — they will not demand cash to save your life. Bill comes by mail. See After the Visit below." |
+| Urgent Care | "Urgent care costs $100-$300 vs $1,000-$3,000+ for ER for the same issue." | 4-step call script: (1) call insurer, (2) give ZIP, (3) ask for in-network UC, (4) confirm direct billing. Bring passport + policy # + credit card. | "Most urgent cares are private. Ask cash price before treatment. For sliding-scale, prefer HRSA FQHC." |
+| Walk-in / Primary care | "No insurance? HRSA Find a Health Center has sliding-scale clinics — 32M Americans covered." | "Retail clinics ($99-$150 flat) often cheaper than copay. Check policy first." | "Cheapest minor-issue option: CVS MinuteClinic or Walgreens Healthcare Clinic — flat $99-$150, pay at kiosk, no surprise bills." |
+
+**Walk-in/retail clinic info added to the Primary Care tile** — renamed *"Walk-in clinic / Primary care"*. Now lists CVS MinuteClinic / Walgreens Healthcare Clinic at flat $99-$150 prices, alongside FQHC sliding-scale and routine care examples.
+
+**Post-visit billing summary** — new card at the bottom of the Triage tab:
+1. Ask for an itemized bill (line-by-line with CPT codes)
+2. Apply for Charity Care (every US non-profit hospital must offer it under IRS §501(r))
+3. Get free help from Patient Advocate Foundation
+4. **Never ignore the bill** — can damage credit and, for non-citizens, affect future US visa applications. Negotiate a $20/mo plan instead.
+
+Sources line links EMTALA, IRS §501(r), Patient Advocate Foundation, HRSA, SAMHSA. Cross-links to the detailed v2.7.5 ER callout for the full crisis-line block.
+
+### Files touched
+
+- `index.html`: +14 KB.
+  - Disclaimer + audience toggle markup inserted between safety-911-callout and triage grid.
+  - Three triage tiles enhanced with `<div class="sg-tile-accent" data-show-when="...">` blocks (8 accents total, hidden by default).
+  - Primary Care tile renamed + content rewritten to surface walk-in/retail clinics.
+  - Post-visit summary block added below triage tiles.
+  - +110 lines CSS for `.sg-disclaimer`, `.sg-audience`, `.sg-audience-row`, `.sg-audience-btn` (active state), `.sg-audience-hint`, `.sg-tile-accent`, `.sg-postvisit` + warn variant + source.
+  - +90 lines JS (`applySgAudienceToggle`, `_nrnyApplySgAudience`, `_nrnyReadSgState`, `_nrnyWriteSgState`) wired into the existing v2.7.3 bootstrap.
+  - Version footer × 2 → v2.7.6.
+
+### Validation
+
+- `node --check` clean on extracted JS
+- DOCTYPE intact, 1.12 MB
+- Content markers: `applySgAudienceToggle` × 2 (def + bootstrap), `sg-audience-btn` × 11 (4 buttons + CSS), `sg-tile-accent` × 15 (CSS + 8 accents in markup), `data-show-when` × 13, `sg-postvisit` × 19, `NRNY_SG_STATE_KEY` × 3, `MinuteClinic` × 1, `Never ignore` × 1, `Quick reference, not medical advice` × 1, v2.7.6 footer × 2
+
+### Liability posture
+
+The guide explicitly avoids prescriptive language. We use:
+- ✓ "Consider going to…" / "Open 24/7" / "Federal law (EMTALA) ensures…" / "Tip:"
+- ✗ NOT "You should…" / "We recommend…" / "Diagnose…" / "Symptoms suggest…"
+
+Every external resource is a free public service (federal agencies, established non-profits) — we link, we don't intermediate.
+
+### v3 carry-over
+
+- All content (microcopy, links, sources) → verbatim
+- Audience-toggle state machine + localStorage → pure data, untouched by v3
+- Walk-in clinic content → reuses existing Primary Care tile structure
+- Post-visit summary block HTML → drop-in for v3 layout
+- CSS (~110 lines) → acknowledged-throwaway; v3 will restyle within rectangle layout, structure stays
+
+### QA after deploy
+
+| Test | Expected |
+|---|---|
+| Open Emergency & safety guide → Triage tab | New blue disclaimer banner up top + audience toggle below the 911 callout |
+| Click 🏡 Resident | Button highlights blue; resident-specific accents appear under Urgent Care + Walk-in tiles |
+| Click ✈️ Traveler | Resident accent disappears; new insurance row appears |
+| Click ✗ No insurance | Traveler-no-insurance accents appear on all 3 tiles (CVS MinuteClinic on Walk-in, EMTALA on ER, etc.) |
+| Click ✓ Has insurance | Switches to traveler-yes accents (4-step call script on Urgent Care, "call insurer after 911" on ER) |
+| Reload page | Selections persist (read from localStorage) |
+| Tap an accent's link (HRSA, CVS, etc.) | Opens in new tab |
+| Scroll to Post-visit billing block | "Never ignore the bill" warning visible in red; sources link |
+| Footer | **v2.7.6** |
+
+---
+
+## v2.7.5 — 2026-06-26 — ER billing + resource navigator (Charity Care, Patient Advocate, 211, HRSA, 988)
+
+**The product gap this closes.** v2.7.3 told users "any ER must treat you under EMTALA." That's reassuring but incomplete — they still get a bill afterward. Nearnity should tell people what to do *after* the emergency, and how to point others to the right help in a crisis.
+
+### What's new
+
+Two expandable resource-navigator cards, anchored to the moments where the question is alive:
+
+**On the Emergency rooms subsection** — the EMTALA banner now has a *"What about the bill? Resources for helping someone →"* link that expands a two-column card:
+- **💰 Worried about the bill?** Charity Care (non-profit hospitals MUST offer it by IRS §501(r) — ask billing for the "Charity Care Application"). Patient Advocate Foundation (free bill negotiation + insurance-denial help).
+- **🤝 Helping someone in crisis?** 211 (general help — food, housing, utilities), HRSA Find a Health Center (uninsured non-emergency care, sliding-scale clinics), 988 (mental health / substance use crisis, call or text).
+
+**On the Hospitals subsection** — a parallel orange-toned callout *"Non-emergency hospital care is where insurance matters most"* with its own expandable:
+- **💰 Already got a big bill?** Same Charity Care + Patient Advocate Foundation guidance + an itemized-bill audit tip (30-80% contain errors).
+- **🤝 Affordable care + crisis resources** — HRSA, 211, 988.
+
+Each card has a sources line linking the underlying law / authoritative agencies so the user can verify nothing is invented (EMTALA at CMS.gov, §501(r) at IRS.gov).
+
+### Behavior
+
+- Expand state persists per-card in localStorage (`nrny.errd.er-reassure-detail-er.expanded`, `…-hosp.expanded`) — a user who's read it once doesn't have to re-expand on every visit.
+- Each banner has its own dismiss key (`nrny.er.reassure.dismissed` for ER, `nrny.er.reassure-hosp.dismissed` for Hospitals) — dismissing ER doesn't dismiss Hospitals.
+- Arrow rotates on expand for visual affordance.
+- Mobile: 2-col grid collapses to single column at ≤720px.
+- All links open in a new tab with `rel="noopener"`.
+
+### Files touched
+
+- `index.html`: +10 KB.
+  - ER subsection markup extended from single-line banner → two-layer (text + expand button + detail card).
+  - Same component added to Hospitals subsection with orange-toned variant + Hospitals-specific copy.
+  - +60 lines CSS for `.er-reassure-body`, `.er-reassure-expand`, `.er-reassure-detail`, `.err-grid`, `.err-card`, `.err-head`, `.err-list`, `.err-source`, `.er-reassure-hosp` variant, mobile breakpoint.
+  - `applyErReassureCallout()` extended to handle both banners (separate dismiss keys) and wire all `.er-reassure-expand[data-detail-id]` buttons with expand/collapse + localStorage state restore.
+  - Version footer × 2 bumped to v2.7.5.
+
+### Validation
+
+- `node --check` clean on extracted JS
+- DOCTYPE intact, 1.10 MB
+- Content markers: `Charity Care Application` × 2 (both cards), `patientadvocate.org` × 2, `findahealthcenter.hrsa.gov` referenced 8 times (existing + new), `tel:988` × 4, `tel:211` × 4, `EMTALA` × 4 (text + linked), `IRS §501(r)` × 3, v2.7.5 footer × 2
+- ER + Hospitals detail wrapper IDs present and aria-controls wired
+
+### v3 carry-over
+
+- All content (microcopy + links + sources) — verbatim, no rework needed
+- Expand-toggle JS — generic, bound by class/data-attribute, survives any shell
+- localStorage keys — pure data
+- CSS for the detail card (~60 lines) — acknowledged-throwaway; v3 will restyle the card inside the rectangle layout but reuse the same HTML structure
+
+### Sources cited in the UI
+
+Every fact in the cards links its authoritative source:
+- EMTALA (42 U.S.C. §1395dd) → CMS.gov
+- IRS §501(r) (non-profit hospital community benefit / Charity Care requirement) → IRS.gov
+- HRSA Find a Health Center → findahealthcenter.hrsa.gov
+- 211 / SAMHSA / 988 Lifeline → official sites
+- Patient Advocate Foundation → patientadvocate.org
+
+### QA after deploy
+
+| Test | Expected |
+|---|---|
+| Search anything → ER subtab | Red EMTALA callout above results. New link reads "What about the bill? Resources for helping someone ↓" |
+| Click that link | Two-column card expands below the banner with Charity Care + Patient Advocate + 211/HRSA/988. Arrow rotates 180°. |
+| Click the × on the ER banner | Banner + expanded card both disappear; stay gone on reload (localStorage) |
+| Switch to Hospitals subtab | Orange-toned callout with similar pattern + Hospitals-specific microcopy |
+| Click the "Charity Care Application" / Patient Advocate / 988 links | Open in new tab, correct destinations |
+| Reload after expanding | Expanded state remembered (no need to re-expand) |
+| Mobile (≤720px) | 2-col grid stacks to single column |
+| Footer | **v2.7.5** |
+
+---
+
+## v2.7.4 — 2026-06-26 — Search-bar editing + recent history + schools map fit
+
+**Five tester-feedback fixes in one push.** All are cross-version (data + map fitBounds logic) so they carry to v3 unchanged.
+
+### What changed
+
+| Item | What was wrong | What's now there |
+|---|---|---|
+| Cmd+Z broken | Native input undo gets wiped any time JS sets `input.value` (suggestion click, chip click, geocode result). Once you typed something and we auto-filled, Cmd+Z had nothing to restore. | Custom history stack per input (`nrnyAttachInputHistory`) with up to 40 states. Cmd+Z = undo, Cmd+Shift+Z / Ctrl+Y = redo. Survives programmatic value sets via `nrnySetInputValue()`. |
+| Paste feel | Native paste works, but our suggestion list didn't refresh until the next keystroke, so pasted addresses felt unresponsive. | Explicit `paste` listener (`nrnyAttachPastePassthrough`) that re-fires the `input` event in the next tick so autocomplete reacts immediately. Does NOT preventDefault — native paste behavior is preserved. |
+| No recent addresses | Re-typing the same address every visit. | `localStorage` key `nrny.recent.addresses` (FIFO depth 3). Captured on every successful `runLookupFromFeature`. Focus on empty "Near" input → shows a `Recent locations` panel with 📍 icons. One tap re-runs the search. |
+| No recent searches | Same problem on the "Looking for" input. | `localStorage` key `nrny.recent.queries` (FIFO depth 3). Captured on every form submit with a non-empty query (excluding URL/back navigation restores). Focus on empty input → shows `Recent searches` panel. |
+| Schools map too zoomed-out | v2.0.1 hardcoded zoom 12 (`map.setView(home, 12)`). Worked for dense urban but for Fremont it showed home + 19 schools spread across the whole city — user couldn't tell which were "theirs". | Home is still the center pin (no fitBounds drift). But the zoom is now computed via `map.getBoundsZoom([home + top-10 closest pins], inside=true)` and clamped to `[11, 16]`. Result: home stays at map center, the visible window is sized to the ranked set. |
+
+### Files touched
+
+- `index.html`: +12 KB.
+  - New v2.7.4 block (~180 lines) before "Event wiring": history stack, paste passthrough, recent-history store + dropdown render, focus handlers, bootstrap.
+  - +25 lines of CSS for `.recent-mode` / `.recent-item` / `.recent-header` / `.recent-footer`.
+  - 2-line addition in `runLookupFromFeature` after successful render → `nrnyRecordRecentAddress(geo.display_name)`.
+  - 4-line addition at top of form `submit` handler → `nrnyRecordRecentQuery(rawQ)` (skipped on history restore).
+  - Schools map setView block rewritten to do home-centered top-N-fit zoom.
+  - Version footer × 2 bumped to v2.7.4.
+
+### Validation
+
+- `node --check` clean on extracted index JS
+- DOCTYPE intact, 1.09 MB
+- All markers present: `nrnyAttachInputHistory` × 3, `nrnyAttachPastePassthrough` × 3, `nrnyRecordRecentAddress` × 2, `nrnyRecordRecentQuery` × 2, `nrnyShowRecentForAddr` × 2, `nrnyShowRecentForQuery` × 2, `getBoundsZoom` × 2 (the new fit-zoom call), v2.7.4 footer × 2
+
+### v3 carry-over
+
+All five items are cross-version:
+- localStorage keys + capture/recent helpers = pure data, untouched by v3 shell
+- Paste passthrough + undo stack = bound to `<input>` elements that v3 keeps
+- Map setView/fitBounds = same Leaflet widget in v3 rectangle layout
+- Dropdown styling (~25 lines) is the only acknowledged-throwaway piece
+
+### What this is NOT
+
+- Not a fix for system-level clipboard blocks (corporate enterprise policy on PayPal laptop, etc.) — those are outside the page's control. If the OS clipboard didn't receive the copy, paste obviously can't fire. The fix above ensures our page doesn't make the situation worse.
+- Not a redo of the suggestion-picker UI — that's its own layer, separate from the recent-history panel.
+
+### QA after deploy
+
+| Test | Expected |
+|---|---|
+| Type "abc" in NEAR, click a suggestion → it autofills | Cmd+Z restores "abc"; Cmd+Shift+Z brings the suggestion back |
+| Backspace the input to empty, Cmd+Z | Previous text restored |
+| Cmd+V into NEAR with an address from clipboard | Pastes; suggestion list refreshes within ~50ms with matching geocoder hits |
+| Focus the empty NEAR input after at least one successful search | "Recent locations" panel appears with up to 3 prior addresses, 📍 icon prefix |
+| Click a recent address | Input fills + form auto-submits → results re-run for that address |
+| Same flow for LOOKING FOR with "Recent searches" panel | Works equivalently |
+| Search Fremont address → look at Schools map | Home pin centered; zoom level shows the immediately-ranked schools (not the whole metro). Should be ~zoom 13 for typical FUSD search |
+| Footer | **v2.7.4** |
+
+---
+
+## v2.7.3 — 2026-06-25 — Assignment-model chips + ER reassurance + school zoning by district
+
+**The shift:** Stop pretending every service is distance-based. Tell the user honestly which services are *assigned* to their address (school district, fire dispatch, utilities, voting precinct), which are *open to anyone* (ER, parks, library), and which are *choice with conditions* (urgent care, hospitals for non-emergency, DMV).
+
+### What changed
+- **`SECTION_ASSIGNMENT_MODEL` registry** (12 entries). Each section/category gets a tone (`open` / `assigned` / `choice`), a 2-word badge, and a 1-sentence tooltip. Pure data — v3 will restyle the chip but reuse the strings verbatim.
+- **`renderAssignChip(modelKey)` helper** + bootstrap `applyAssignChips()` that scans `.assign-chip-slot[data-am]` placeholders and injects markup.
+- **Chip CSS** — small pill under section titles, three tones matching existing trust-pill palette. Hover/focus reveals tooltip on desktop; tap pins it on mobile via `.am-open` class.
+- **Chip slots wired into 12 headers**: Education (`schools_public`), Utility services, Recreation, Events, Health & wellness, Live alerts header, Emergency services top, Official links (`voting`), plus subsections — ER, Hospitals, Urgent care, Fire stations.
+- **ER reassurance callout** above the Emergency rooms result list: `🚑 In a real emergency, call 911 or go to the nearest ER — federal law (EMTALA) requires they treat you regardless of insurance, citizenship, or ability to pay.` Dismissable with `localStorage` persistence (key: `nrny.er.reassure.dismissed`).
+
+### Schools: from distance to district assignment
+- **New Worker endpoint `/api/school-zone?lat=&lon=`** — point-in-polygon against Census geographies (Unified / Secondary / Elementary School District layers, Current vintage), returns assigned LEAID + name. Then queries NCES CCD Urban Institute API by `leaid` for the full roster. Cache TTLs: Census 30 days, NCES 7 days.
+- **`loadNearbySchools` runs zone + OSM in parallel**. If zone returns a roster, Public schools subtab uses NCES district roster (sorted by within-district distance). If zone fails (rural/unincorporated, geocode miss), falls back to the OSM distance query unchanged.
+- **`_ncesLevelToSubtype()`** helper maps NCES `school_level_text` + grade range → the Elementary/Middle/High/K-8 subtype values the renderer already understands. No render-layer changes.
+- **District name surfaced in section header** — e.g. "Schools in Fremont Unified School District" — so the user sees the *assignment*, not just a list of distant schools.
+- **NCES CCD = public-only**. Private + charter + colleges + libraries + amenities still come from OSM Overpass. Charters from NCES (where present) flow into the "Charter/magnet" pool.
+
+### Files touched
+- `index.html`: +17 KB. New registry, helper, bootstrap, CSS, 12 chip slots, ER callout markup + handler, NCES level mapper, parallel-fetch + roster transform in `loadNearbySchools`. Version footer × 2 bumped to v2.7.3.
+- `nearnity-events-worker.js`: +6 KB. New `/school-zone` route + `handleSchoolZone()` (Census geographies → NCES CCD). Added to allowed-routes list in `/__health`.
+
+### Validation
+- `node --check` clean on extracted index JS and on worker
+- DOCTYPE intact; index.html 1.08 MB; worker 236 KB
+- Markers present: `SECTION_ASSIGNMENT_MODEL` × 3, `renderAssignChip` × 3, 13 `assign-chip-slot` mentions (1 CSS class + 12 slots), `er-reassure-banner` × 2 (markup + handler), `school-zone` × 5 (3 worker + 2 index), `_ncesLevelToSubtype` × 3 (helper + 2 callers), `handleSchoolZone` × 2 (route + def)
+- Idempotent bootstrap — re-running `applyAssignChips()` skips already-populated slots
+- Tap handler bound once via `window._nrnyAmTapBound` guard
+
+### What this is NOT
+- Not a UI redesign — chip styling is acknowledged-throwaway. v3 will restyle. Registry strings carry over.
+- Not the full "assigned authorities" architecture (`/api/zones` returning fire/police/utility/precinct all at once). That's v3-era — sits inside the rectangle layout's sidebar.
+- Not handling school attendance zones (street-level → specific elementary/middle/high). NCES SABS has patchy coverage. District-level is the honest first cut.
+
+### QA after deploy
+- Search 1757 Horner Way Fremont CA → Education tab → should show "Schools in Fremont Unified School District" header and list FUSD public schools sorted by distance (including American High, Mission San Jose High, etc. that v2.7.1 hid behind the 2.5-mile cap)
+- Hover any section title's chip → tooltip appears with the 1-sentence explainer
+- Mobile (or DevTools touch): tap chip → tooltip pins; tap elsewhere → closes
+- Search anything → ER subtab → red-bordered EMTALA callout above results
+- Click × on ER callout → callout disappears and stays gone (verify via localStorage in DevTools)
+- Footer reads **v2.7.3**
+
+---
+
+## v2.7.1 — 2026-06-25 — Mobile/desktop layout fixes + favicon + July 4 fireworks seeds
+
+Tactical patch bundle on top of v2.7 deploy. Tester feedback from Satya after company-laptop access opened up.
+
+### Frontend (`index.html`)
+
+**Favicon** — replaced the old verified-checkmark inline SVG with the v2.6 home-pin/n design (matches what's in the header logo). Browser tab now shows the brand mark instead of a generic globe. Added `<link rel="alternate icon">` PNG fallback + Safari `mask-icon` for pinned-tab.
+
+**Search bar widened + buttons rectangular** — `.search-wrap` was capped at 860px (squeezed look). Opened to 1100px ≥900vw / 1240px ≥1280vw. Search + Near-me buttons forced to `min-width: 120px`, `height: 56px` (was square/small). Search-field columns get more breathing room so autocomplete suggestions display below cleanly. Mobile (≤720px) stacks both buttons at 50%.
+
+**Footer dead-space reduced** — "Privacy & data" section converted from always-expanded block to collapsed `<details>` element with one-line summary ("we don't store your address. Saved places stay on your device. Email digest is opt-in. (click for detail)"). Saves ~140px above the footer columns. Section-block margins tightened from 32→16px.
+
+**Hero H1 sized to single-line on desktop** — reduced `font-size: clamp(34px, 6vw, 60px)` → `clamp(30px, 4.4vw, 44px)`. "Find what's around you — from trusted public sources" now fits on one line at desktop widths (≥900px) instead of wrapping. Removed legacy `max-width: 24ch / 40ch` constraints that were forcing artificial wrap. `text-wrap: balance` retained for graceful wrapping on narrower viewports.
+
+**Popular pills + Quick searches consolidated** — Removed the redundant `popularCategories` row (6 pills) entirely. Combined everything into a single `Quick searches` row with 7 items: 🚑 Emergency rooms · 🏥 Urgent care · 🎉 Events near you · 🥬 Farmers market · 🥫 Food bank · 📚 Library · 🚗 DMV. Each uses the existing `data-chip-q` handler which fills the search input + submits, then the v2.1 intent-routing system sends the user to the correct section. Single source of truth for primary entry points.
+
+**Wider `.wrap` on big desktops** — 1080px → 1320px @ ≥1280px viewports (→ 1480px @ ≥1600px) so cat-nav + chip rows use the available width instead of centering in a narrow column with dead space.
+
+**Calendar view broken under keyword search → flat list fallback** — When a user searched a keyword like "fireworks", the events section rendered the month-calendar + agenda 2-column layout. Inside the active-mode card's narrow column, the agenda items got squeezed to ~150px wide and text wrapped character-by-character (unreadable). Fix: when `keyword` is non-empty OR `timeWindow !== "month"`, render the flat list view. Calendar+agenda layout only fires for unfiltered month-browse.
+
+### Worker (`nearnity-events-worker.js`)
+
+**Bay Area July 4 fireworks — 14 seed events.** Free city-park fireworks shows aren't covered by Ticketmaster (no tickets), SeatGeek, OSM (no events on OSM), or most city iCal feeds (those usually carry only city council meetings, not park events). Added as `specific_dates: ["2026-07-04"]` seed entries (v2.2 feature). Locations covered: San Francisco (Pier 39), Foster City (Leo Ryan Park), Mountain View (Shoreline Amphitheatre), Redwood City (Port), Hayward (CSU East Bay), Concord (Mt Diablo HS), Walnut Creek (Heather Farm), Antioch (Marina), Half Moon Bay (parade), Alameda (Mayor's Parade), Marin (Larkspur Landing), Vallejo (Mare Island), Berkeley (Cesar Chavez Park), San Jose (Discovery Meadow). Searches for "fireworks" / "4th of july" / "independence day" within radius now return these.
+
+### Validation
+
+`node --check` passes on both. DOCTYPE intact. ~700 KB inline JS in `index.html`. Worker ~211 KB.
+
+### Known gaps (intentionally deferred to v3.0 redesign)
+
+- The v3 prototype (`index_v3_prototype.html`) is being built in parallel. Once approved, v3.0 replaces all of v2.7.x. The patches above keep v2.7.x usable while v3 is in review.
+
+---
+
 ## v2.6 — 2026-06-19 — Emergency & safety guide (always-accessible reference content)
 
 Adds a dedicated reference section users can rely on in genuine emergencies — universal triage, scenario actions, facility verification — without needing to search anything first.

@@ -1,0 +1,35 @@
+// Cloudflare Workers Static Assets configuration for the Nearnity website.
+//
+// WHY THIS FILE EXISTS:
+// Cloudflare recently migrated Pages projects to run through Wrangler.
+// The auto-generated config detects the repo name ("homeatlas") which
+// collides with the existing Worker of that name. Without a committed
+// wrangler config, Wrangler refuses to overwrite the existing Worker
+// as a safety guard, and the deploy fails.
+//
+// This file explicitly confirms: yes, deploy this repo's static assets
+// as an update to the existing Worker named "homeatlas" (which is what
+// nearnity.com's DNS custom-domain currently points at).
+//
+// If you ever rename this Worker (e.g., to "nearnity-site"), you must:
+//   1. Update the "name" field below
+//   2. Rebind nearnity.com's custom domain to the new Worker in the
+//      Cloudflare dashboard (Workers & Pages → nearnity-site → Domains)
+//   3. Optionally delete the old "homeatlas" Worker after DNS propagates
+//
+// NOTE: This config only deploys the STATIC SITE (index.html + manifest +
+// icons). The API Worker (nearnity-events-worker.js) is a SEPARATE
+// Worker deployed independently via the Cloudflare dashboard — it is
+// NOT affected by this file.
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "homeatlas",
+  "compatibility_date": "2026-07-07",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "directory": "."
+  },
+  "observability": {
+    "enabled": true
+  }
+}
