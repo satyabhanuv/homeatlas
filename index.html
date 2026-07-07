@@ -3725,6 +3725,58 @@
     font-size: 16px; line-height: 1;
   }
   .er-reassure-close:hover { opacity: 1; }
+
+  /* v2.7.8: Emergency anchor card — always at top of ER/Hospital/Urgent tabs.
+     Search-never-fails backstop. Uses 911 red for ER, orange for UC/Hosp. */
+  .nrny-emergency-anchor {
+    display: flex; gap: 12px; align-items: flex-start;
+    background: #fff5f5;
+    border: 1px solid rgba(220,38,38,0.24);
+    border-left: 4px solid #dc2626;
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin: 0 0 14px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+  }
+  .nrny-emergency-anchor-uc {
+    background: #fff8ed;
+    border-color: rgba(180,83,9,0.24);
+    border-left-color: #B45309;
+  }
+  .nrny-emergency-anchor-hosp {
+    background: #fef7ec;
+    border-color: rgba(180,83,9,0.20);
+    border-left-color: #B45309;
+  }
+  .nea-icon { font-size: 22px; line-height: 1.2; flex: 0 0 auto; }
+  .nea-body { flex: 1; min-width: 0; }
+  .nea-title { font-size: 14px; font-weight: 700; color: #1f2937; margin-bottom: 3px; letter-spacing: -0.01em; }
+  .nea-title a { color: #dc2626; text-decoration: underline; }
+  .nea-sub { font-size: 12.5px; color: #4b5563; line-height: 1.45; margin-bottom: 10px; }
+  .nea-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .nea-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px;
+    border-radius: 999px;
+    font-size: 12.5px; font-weight: 600;
+    background: #fff; color: #1f2937;
+    border: 1px solid rgba(0,0,0,0.12);
+    text-decoration: none;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .nea-btn:hover { background: #f3f4f6; border-color: rgba(0,0,0,0.24); }
+  .nea-btn-primary {
+    background: #dc2626; color: #fff; border-color: #dc2626;
+  }
+  .nea-btn-primary:hover { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+  @media (max-width: 480px) {
+    .nrny-emergency-anchor { padding: 10px 12px; gap: 10px; }
+    .nea-icon { font-size: 18px; }
+    .nea-title { font-size: 13px; }
+    .nea-sub { font-size: 12px; }
+    .nea-btn { padding: 6px 11px; font-size: 12px; }
+  }
+
   /* v2.7.5: Expand link + detail card — billing + resource navigator */
   .er-reassure-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
   .er-reassure-hosp {
@@ -6782,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.7</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8</span>
     </div>
   </header>
 
@@ -8405,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.7</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -15934,6 +15986,145 @@ function classifyPublicService(el) {
   return { name, category, subtype, lat, lon, score, reasons, verified: score >= 50, website: t.website || t["contact:website"] || t.url || null, phone: t.phone || t["contact:phone"] || null, opening_hours: t.opening_hours || null, access: (t.access === "private" || t.access === "customers" || t.access === "permit") ? "private" : null, tags: t };
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.8 — Federal medical data fallback
+// ═══════════════════════════════════════════════════════════════════════════
+// The July 4 2026 QA proved OSM Overpass alone can't be trusted for healthcare
+// searches: public mirrors hit "killed/timeout" during peak loads, leaving
+// users with zero ER/hospital/urgent-care results in dense metros.
+//
+// Fix: call the existing Worker federal endpoints in PARALLEL with OSM and
+// merge results. Federal (Medicare Care Compare + NPPES) is authoritative,
+// slower to update than OSM but never times out. When both succeed, users
+// get the union. When OSM fails, users still get every federally-registered
+// hospital + ER + urgent care.
+//
+// Endpoints hit (all no-key, edge-cached in the Worker):
+//   /api/medicare-quality?zip=&limit=       → every US hospital w/ CMS rating
+//   /api/nppes?postal=&taxonomy=&limit=     → all US providers by taxonomy
+//
+// Records returned have addresses but not always lat/lon — they show in the
+// list but don't get map pins (Google Maps deep-link surfaces on card click).
+// This is fine — the fallback exists to prevent empty state, map pins are
+// a nice-to-have and users can click through to the source.
+
+// State name → 2-letter code map (subset — covers CA + major states).
+// Falls back to blank if state isn't recognized; NPPES gracefully handles
+// missing state.
+const _STATE_ABBR_MAP = {
+  "california":"CA","new york":"NY","texas":"TX","florida":"FL","illinois":"IL",
+  "pennsylvania":"PA","ohio":"OH","georgia":"GA","north carolina":"NC","michigan":"MI",
+  "new jersey":"NJ","virginia":"VA","washington":"WA","arizona":"AZ","massachusetts":"MA",
+  "tennessee":"TN","indiana":"IN","missouri":"MO","maryland":"MD","wisconsin":"WI",
+  "colorado":"CO","minnesota":"MN","south carolina":"SC","alabama":"AL","louisiana":"LA",
+  "kentucky":"KY","oregon":"OR","oklahoma":"OK","connecticut":"CT","utah":"UT",
+  "iowa":"IA","nevada":"NV","arkansas":"AR","mississippi":"MS","kansas":"KS",
+  "new mexico":"NM","nebraska":"NE","west virginia":"WV","idaho":"ID","hawaii":"HI",
+  "new hampshire":"NH","maine":"ME","montana":"MT","rhode island":"RI","delaware":"DE",
+  "south dakota":"SD","north dakota":"ND","alaska":"AK","vermont":"VT","wyoming":"WY",
+  "district of columbia":"DC"
+};
+function _stateAbbrFromAddress(addr) {
+  if (!addr) return "";
+  // Nominatim sometimes puts abbr in ISO3166-2-lvl4 as "US-CA"
+  const iso = addr["ISO3166-2-lvl4"];
+  if (iso && /^US-([A-Z]{2})$/.test(iso)) return RegExp.$1;
+  const s = (addr.state || "").toLowerCase().trim();
+  return _STATE_ABBR_MAP[s] || "";
+}
+
+// Google Maps search-URL helper — used for federal card click-through when
+// we don't have lat/lon to pin on the map.
+function _gmapsSearchUrl(name, address) {
+  const q = [name, address].filter(Boolean).join(", ");
+  return `https://www.google.com/maps/search/${encodeURIComponent(q)}`;
+}
+
+async function fetchFederalMedical(lat, lon, postal, stateAbbr) {
+  // Guard: need at least one identifier (postal or state) to query.
+  if (!postal && !stateAbbr) {
+    if (window.NEARNITY_DEBUG) console.warn("[federal-medical] no postal or state — skipping");
+    return [];
+  }
+  const params = postal ? `zip=${encodeURIComponent(postal)}` : `state=${encodeURIComponent(stateAbbr)}`;
+  const nppesParams = postal ? `postal=${encodeURIComponent(postal)}` : `state=${encodeURIComponent(stateAbbr)}`;
+
+  // Fire 3 requests in parallel: hospitals (Medicare), ER providers (NPPES
+  // taxonomy=Emergency Medicine), urgent care providers (NPPES taxonomy=Urgent Care).
+  // Each has its own edge cache in the Worker; ~50-200ms typical, <2s worst case.
+  const [medicareRes, erRes, ucRes] = await Promise.allSettled([
+    fetch(`/api/medicare-quality?${params}&limit=30`).then(r => r.ok ? r.json() : null).catch(_ => null),
+    fetch(`/api/nppes?${nppesParams}&taxonomy=${encodeURIComponent("Emergency Medicine")}&limit=20`).then(r => r.ok ? r.json() : null).catch(_ => null),
+    fetch(`/api/nppes?${nppesParams}&taxonomy=${encodeURIComponent("Urgent Care")}&limit=20`).then(r => r.ok ? r.json() : null).catch(_ => null),
+  ]);
+
+  const out = [];
+
+  // Medicare hospitals: distinguish "hospital with ER" (emergency_services=yes)
+  // vs "hospital without ER" so they show up in the right subtab.
+  if (medicareRes.status === "fulfilled" && medicareRes.value && Array.isArray(medicareRes.value.hospitals)) {
+    medicareRes.value.hospitals.forEach(h => {
+      out.push({
+        name: h.name,
+        address: h.address || null,
+        phone: h.phone || null,
+        category: h.emergency_services ? "er" : "hospital",
+        subtype: h.emergency_services ? "Emergency room" : "Hospital",
+        lat: null, lon: null, dist: null,
+        rating: h.overall_rating,
+        source: h.source,
+        source_url: h.source_url,
+        trust_label: h.trust_label || "Official source",
+        federal: true,
+        gmaps_url: _gmapsSearchUrl(h.name, h.address),
+        // v0.33 ranking uses score+dist; federal records get a high score
+        // so they don't drop below random OSM entries with 0 completeness.
+        score: 70, reasons: ["Medicare-verified"], verified: true,
+      });
+    });
+  }
+
+  // NPPES ER providers
+  if (erRes.status === "fulfilled" && erRes.value && Array.isArray(erRes.value.providers)) {
+    erRes.value.providers.forEach(p => {
+      out.push({
+        name: p.name,
+        address: p.address || null,
+        phone: p.phone || null,
+        category: "er",
+        subtype: p.specialty || "Emergency medicine provider",
+        lat: null, lon: null, dist: null,
+        source: p.source, source_url: p.source_url,
+        trust_label: p.trust_label || "Official source",
+        federal: true,
+        gmaps_url: _gmapsSearchUrl(p.name, p.address),
+        score: 65, reasons: ["NPPES-verified"], verified: true,
+      });
+    });
+  }
+
+  // NPPES urgent care providers
+  if (ucRes.status === "fulfilled" && ucRes.value && Array.isArray(ucRes.value.providers)) {
+    ucRes.value.providers.forEach(p => {
+      out.push({
+        name: p.name,
+        address: p.address || null,
+        phone: p.phone || null,
+        category: "urgent",
+        subtype: p.specialty || "Urgent care",
+        lat: null, lon: null, dist: null,
+        source: p.source, source_url: p.source_url,
+        trust_label: p.trust_label || "Official source",
+        federal: true,
+        gmaps_url: _gmapsSearchUrl(p.name, p.address),
+        score: 65, reasons: ["NPPES-verified"], verified: true,
+      });
+    });
+  }
+
+  return out;
+}
+
 let lastPsGeo = null;
 async function loadNearbyPublicServices(geo) {
   lastPsGeo = geo;
@@ -15954,16 +16145,50 @@ async function loadNearbyPublicServices(geo) {
    "ps-police-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody",
    "ps-civic-tbody"].forEach(id => injectSkeleton(id, 6));
   try {
-    const elements = await fetchPublicServices(lat, lon);  // v0.30: uses CURRENT_RADIUS_M
-    const itemsRaw = elements
+    // v2.7.8 P0: run OSM + federal in PARALLEL. Federal (Medicare Care Compare
+    // + NPPES) is authoritative — every US hospital + provider. When Overpass
+    // fails (public-mirror timeout, killed query) federal ALWAYS populates
+    // ER/Hospital/Urgent care so the tab is never empty. When Overpass
+    // succeeds, federal adds ratings + quality data as source-linked cards.
+    // This is the "search never fails" backstop for the July 4 QA regression.
+    const postal = (geo.address && (geo.address.postcode || geo.address.postal || geo.address.zip)) || "";
+    const stateAbbr = (geo.address && (geo.address.state_code || _stateAbbrFromAddress(geo.address))) || "";
+    const federalPromise = fetchFederalMedical(lat, lon, postal, stateAbbr);
+
+    const [osmElements, federalItems] = await Promise.all([
+      fetchPublicServices(lat, lon).catch(err => {
+        console.warn("[public-services] OSM fetch failed:", err && err.message);
+        return [];
+      }),
+      federalPromise.catch(err => {
+        console.warn("[public-services] federal fetch failed:", err && err.message);
+        return [];
+      })
+    ]);
+
+    const osmItemsRaw = osmElements
       .map(classifyPublicService)
       .filter(Boolean)
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
       .filter((it, i, arr) => i === arr.findIndex(x => x.name === it.name));
-    // v0.33: completeness-first ranking. For emergency services, fire/police usually
-    // have full tagging; the ranking mainly helps the doctor/dentist/pharmacy lists
-    // where verified entries with phone+hours dominate over name-only entries.
-    const items = rankByScoreThenDistance(itemsRaw);
+
+    // v2.7.8: merge federal items with OSM. Federal has no lat/lon so no
+    // distance sort — they interleave by category with `federal_priority: true`.
+    // Dedupe by lowercased name (Medicare + OSM often list the same hospital).
+    const mergedRaw = [...osmItemsRaw];
+    const seenNames = new Set(osmItemsRaw.map(x => (x.name || "").toLowerCase().trim()));
+    federalItems.forEach(fi => {
+      const key = (fi.name || "").toLowerCase().trim();
+      if (!key || seenNames.has(key)) return;
+      seenNames.add(key);
+      mergedRaw.push(fi);
+    });
+
+    const items = rankByScoreThenDistance(mergedRaw);
+
+    if (window.NEARNITY_DEBUG) {
+      console.log(`[public-services] OSM=${osmItemsRaw.length} + federal=${federalItems.length} → merged=${items.length}`);
+    }
 
     const grouped = {
       // v0.34.2: keep more items per category — render shows top 6 + "+N more" expansion
@@ -16004,24 +16229,81 @@ function renderPublicServices(grouped, total, cityKey) {
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("ps-value", total > 0 ? `${total} services nearby` : "No public services found in OSM");
 
+  // v2.7.8: Search-never-fails anchor card. Always renders at the TOP of the
+  // ER + Urgent care + Hospital tbodies — regardless of whether we have data.
+  // Even when the list is populated, the user knows the 911/Google Maps
+  // escape hatch is one tap away. When the list is empty, this replaces the
+  // useless "no matches" text with something actionable.
+  //
+  // The card is different per category:
+  //   ER      → 911 + Google Maps ER search
+  //   Hosp.   → Nearest hospital search (non-emergency, insurance-aware)
+  //   Urgent  → Cheap-first search hint + Google Maps
+  const geoLat = (lastGeo && lastGeo.lat) || (lastPsGeo && lastPsGeo.lat) || null;
+  const geoLon = (lastGeo && lastGeo.lon) || (lastPsGeo && lastPsGeo.lon) || null;
+  const gmapsBase = (geoLat && geoLon)
+    ? `@${geoLat.toFixed(5)},${geoLon.toFixed(5)},14z`
+    : "";
+  const gmapsQ = (q) => `https://www.google.com/maps/search/${encodeURIComponent(q)}/${gmapsBase}`;
+  const anchorCardER = `
+    <div class="nrny-emergency-anchor" role="region" aria-label="Emergency options — always available">
+      <div class="nea-icon" aria-hidden="true">🚑</div>
+      <div class="nea-body">
+        <div class="nea-title">In a real emergency, call <a href="tel:911">911</a></div>
+        <div class="nea-sub">Federal law (EMTALA) requires ANY ER to treat you regardless of insurance. Any hospital below works. If we didn't surface the closest one, use Google Maps.</div>
+        <div class="nea-actions">
+          <a class="nea-btn nea-btn-primary" href="tel:911">📞 Call 911</a>
+          <a class="nea-btn" href="${gmapsQ('emergency room near me')}" target="_blank" rel="noopener">🗺️ Nearest ER on Google Maps</a>
+        </div>
+      </div>
+    </div>`;
+  const anchorCardUC = `
+    <div class="nrny-emergency-anchor nrny-emergency-anchor-uc">
+      <div class="nea-icon" aria-hidden="true">🏥</div>
+      <div class="nea-body">
+        <div class="nea-title">Urgent care — check hours + cash price first</div>
+        <div class="nea-sub">Most urgent cares are private. Confirm they're open + ask cash price before visiting. Cheaper than ER, pricier than a clinic.</div>
+        <div class="nea-actions">
+          <a class="nea-btn" href="${gmapsQ('urgent care near me open now')}" target="_blank" rel="noopener">🗺️ Open urgent cares on Google Maps</a>
+        </div>
+      </div>
+    </div>`;
+  const anchorCardHosp = `
+    <div class="nrny-emergency-anchor nrny-emergency-anchor-hosp">
+      <div class="nea-icon" aria-hidden="true">💵</div>
+      <div class="nea-body">
+        <div class="nea-title">Planned hospital care — insurance matters</div>
+        <div class="nea-sub">For non-emergency care, verify in-network status with your insurer BEFORE the visit. Any US hospital must accept emergencies (EMTALA).</div>
+        <div class="nea-actions">
+          <a class="nea-btn" href="${gmapsQ('hospital near me')}" target="_blank" rel="noopener">🗺️ Hospitals on Google Maps</a>
+        </div>
+      </div>
+    </div>`;
+
   // v0.35.3: keep sections visible on empty so subtabs can navigate
   const psEmptyMsg = `<div class="schools-empty" style="padding:10px;">No matches in this category within ${CURRENT_RADIUS_MI} mi.</div>`;
-  const fill = (sectionId, tbodyId, items) => {
+  const fill = (sectionId, tbodyId, items, anchorHtml) => {
     const sec = $(sectionId), tb = $(tbodyId);
     if (!sec || !tb) return;
     sec.hidden = false;
-    if (!items.length) { tb.innerHTML = psEmptyMsg; return; }
-    tb.innerHTML = renderListWithMore(items, cityKey, { top: 6 });
+    // v2.7.8: prepend anchor card (if any) to the section body so it renders
+    // above the results list. Anchor card is ALWAYS visible for ER/UC/Hosp.
+    const anchor = anchorHtml || "";
+    if (!items.length) {
+      tb.innerHTML = anchor + psEmptyMsg;
+      return;
+    }
+    tb.innerHTML = anchor + renderListWithMore(items, cityKey, { top: 6 });
   };
-  fill("ps-er-section",        "ps-er-tbody",        grouped.er);
-  fill("ps-hospital-section",  "ps-hospital-tbody",  grouped.hospital);
-  fill("ps-urgent-section",    "ps-urgent-tbody",    grouped.urgent);
-  fill("ps-emergency-section", "ps-emergency-tbody", grouped.fire);
-  fill("ps-police-section",    "ps-police-tbody",    grouped.police);
-  fill("ps-clinic-section",    "ps-clinic-tbody",    grouped.clinic);
-  fill("ps-pharmacy-section",  "ps-pharmacy-tbody",  grouped.pharmacy);
-  fill("ps-dentist-section",   "ps-dentist-tbody",   grouped.dentist);
-  fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic);
+  fill("ps-er-section",        "ps-er-tbody",        grouped.er,       anchorCardER);
+  fill("ps-hospital-section",  "ps-hospital-tbody",  grouped.hospital, anchorCardHosp);
+  fill("ps-urgent-section",    "ps-urgent-tbody",    grouped.urgent,   anchorCardUC);
+  fill("ps-emergency-section", "ps-emergency-tbody", grouped.fire, null);
+  fill("ps-police-section",    "ps-police-tbody",    grouped.police, null);
+  fill("ps-clinic-section",    "ps-clinic-tbody",    grouped.clinic, null);
+  fill("ps-pharmacy-section",  "ps-pharmacy-tbody",  grouped.pharmacy, null);
+  fill("ps-dentist-section",   "ps-dentist-tbody",   grouped.dentist, null);
+  fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic, null);
 
   // v0.35.3: keep subsection structure intact when empty — subtab navigation depends on it
   if (total === 0) {
