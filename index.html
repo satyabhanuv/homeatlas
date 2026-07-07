@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8.1</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -16239,9 +16239,15 @@ function renderPublicServices(grouped, total, cityKey) {
   //   ER      → 911 + Google Maps ER search
   //   Hosp.   → Nearest hospital search (non-emergency, insurance-aware)
   //   Urgent  → Cheap-first search hint + Google Maps
-  const geoLat = (lastGeo && lastGeo.lat) || (lastPsGeo && lastPsGeo.lat) || null;
-  const geoLon = (lastGeo && lastGeo.lon) || (lastPsGeo && lastPsGeo.lon) || null;
-  const gmapsBase = (geoLat && geoLon)
+  //
+  // v2.7.8.1 HOTFIX: geo.lat/lon come in as strings from Photon/Nominatim
+  // geocoders. Coerce to numbers before calling toFixed() — the previous
+  // code threw TypeError silently and left tiles as skeletons forever.
+  const _rawLat = (lastGeo && lastGeo.lat) ?? (lastPsGeo && lastPsGeo.lat) ?? null;
+  const _rawLon = (lastGeo && lastGeo.lon) ?? (lastPsGeo && lastPsGeo.lon) ?? null;
+  const geoLat = (_rawLat != null && Number.isFinite(+_rawLat)) ? +_rawLat : null;
+  const geoLon = (_rawLon != null && Number.isFinite(+_rawLon)) ? +_rawLon : null;
+  const gmapsBase = (geoLat != null && geoLon != null)
     ? `@${geoLat.toFixed(5)},${geoLon.toFixed(5)},14z`
     : "";
   const gmapsQ = (q) => `https://www.google.com/maps/search/${encodeURIComponent(q)}/${gmapsBase}`;
