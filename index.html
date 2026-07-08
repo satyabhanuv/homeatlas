@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.8.3</span>
     </div>
   </header>
 
@@ -16125,6 +16125,88 @@ async function fetchFederalMedical(lat, lon, postal, stateAbbr) {
   return out;
 }
 
+// v2.7.8.3: instrumented wrapper around fetchFederalMedical. Same result,
+// but records per-source counts + errors into the diagnostic object so the
+// UI can render a visible status line telling users which sources populated.
+async function fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, diag) {
+  if (!postal && !stateAbbr) {
+    console.warn("[federal-medical] no postal or state — skipping (diag)");
+    diag.medicare = 0; diag.nppesEr = 0; diag.nppesUc = 0;
+    diag.errors.push({ src: "federal", msg: "no postal or state available from geocoder" });
+    return [];
+  }
+  const params = postal ? `zip=${encodeURIComponent(postal)}` : `state=${encodeURIComponent(stateAbbr)}`;
+  const nppesParams = postal ? `postal=${encodeURIComponent(postal)}` : `state=${encodeURIComponent(stateAbbr)}`;
+
+  const _fetch = async (url, label) => {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) {
+        console.error(`[federal-medical] ${label} ${r.status}: ${url}`);
+        diag.errors.push({ src: label, msg: `HTTP ${r.status}` });
+        return null;
+      }
+      const data = await r.json();
+      return data;
+    } catch (e) {
+      console.error(`[federal-medical] ${label} threw:`, e && e.message);
+      diag.errors.push({ src: label, msg: (e && e.message) || String(e) });
+      return null;
+    }
+  };
+
+  const [medicareRes, erRes, ucRes] = await Promise.all([
+    _fetch(`/api/medicare-quality?${params}&limit=30`, "medicare-quality"),
+    _fetch(`/api/nppes?${nppesParams}&taxonomy=${encodeURIComponent("Emergency Medicine")}&limit=20`, "nppes-er"),
+    _fetch(`/api/nppes?${nppesParams}&taxonomy=${encodeURIComponent("Urgent Care")}&limit=20`, "nppes-uc"),
+  ]);
+
+  const out = [];
+
+  const mHospitals = (medicareRes && Array.isArray(medicareRes.hospitals)) ? medicareRes.hospitals : [];
+  diag.medicare = mHospitals.length;
+  mHospitals.forEach(h => {
+    out.push({
+      name: h.name, address: h.address || null, phone: h.phone || null,
+      category: h.emergency_services ? "er" : "hospital",
+      subtype: h.emergency_services ? "Emergency room" : "Hospital",
+      lat: null, lon: null, dist: null,
+      rating: h.overall_rating, source: h.source, source_url: h.source_url,
+      trust_label: h.trust_label || "Official source", federal: true,
+      gmaps_url: _gmapsSearchUrl(h.name, h.address),
+      score: 70, reasons: ["Medicare-verified"], verified: true,
+    });
+  });
+
+  const erProviders = (erRes && Array.isArray(erRes.providers)) ? erRes.providers : [];
+  diag.nppesEr = erProviders.length;
+  erProviders.forEach(p => {
+    out.push({
+      name: p.name, address: p.address || null, phone: p.phone || null,
+      category: "er", subtype: p.specialty || "Emergency medicine provider",
+      lat: null, lon: null, dist: null, source: p.source, source_url: p.source_url,
+      trust_label: p.trust_label || "Official source", federal: true,
+      gmaps_url: _gmapsSearchUrl(p.name, p.address),
+      score: 65, reasons: ["NPPES-verified"], verified: true,
+    });
+  });
+
+  const ucProviders = (ucRes && Array.isArray(ucRes.providers)) ? ucRes.providers : [];
+  diag.nppesUc = ucProviders.length;
+  ucProviders.forEach(p => {
+    out.push({
+      name: p.name, address: p.address || null, phone: p.phone || null,
+      category: "urgent", subtype: p.specialty || "Urgent care",
+      lat: null, lon: null, dist: null, source: p.source, source_url: p.source_url,
+      trust_label: p.trust_label || "Official source", federal: true,
+      gmaps_url: _gmapsSearchUrl(p.name, p.address),
+      score: 65, reasons: ["NPPES-verified"], verified: true,
+    });
+  });
+
+  return out;
+}
+
 let lastPsGeo = null;
 async function loadNearbyPublicServices(geo) {
   lastPsGeo = geo;
@@ -16144,27 +16226,40 @@ async function loadNearbyPublicServices(geo) {
   ["ps-er-tbody","ps-hospital-tbody","ps-urgent-tbody","ps-emergency-tbody",
    "ps-police-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody",
    "ps-civic-tbody"].forEach(id => injectSkeleton(id, 6));
+  // v2.7.8.3: collect diagnostic breadcrumbs across the fetch pipeline so we
+  // can render a visible status line (bottom of ER/UC/Hospital) telling the
+  // user what actually populated. Kills silent-empty debugging.
+  const _psDiag = { osm: null, medicare: null, nppesEr: null, nppesUc: null, errors: [] };
+
   try {
     // v2.7.8 P0: run OSM + federal in PARALLEL. Federal (Medicare Care Compare
     // + NPPES) is authoritative — every US hospital + provider. When Overpass
     // fails (public-mirror timeout, killed query) federal ALWAYS populates
-    // ER/Hospital/Urgent care so the tab is never empty. When Overpass
-    // succeeds, federal adds ratings + quality data as source-linked cards.
-    // This is the "search never fails" backstop for the July 4 QA regression.
+    // ER/Hospital/Urgent care so the tab is never empty.
     const postal = (geo.address && (geo.address.postcode || geo.address.postal || geo.address.zip)) || "";
     const stateAbbr = (geo.address && (geo.address.state_code || _stateAbbrFromAddress(geo.address))) || "";
-    const federalPromise = fetchFederalMedical(lat, lon, postal, stateAbbr);
+    _psDiag.postal = postal;
+    _psDiag.stateAbbr = stateAbbr;
+    console.log(`[public-services] resolved geo — postal=${postal || "(none)"} state=${stateAbbr || "(none)"}`);
+
+    const federalPromise = fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, _psDiag);
 
     const [osmElements, federalItems] = await Promise.all([
       fetchPublicServices(lat, lon).catch(err => {
-        console.warn("[public-services] OSM fetch failed:", err && err.message);
+        const msg = (err && err.message) || String(err);
+        console.error("[public-services] OSM fetch failed:", msg);
+        _psDiag.errors.push({ src: "OSM", msg });
         return [];
       }),
       federalPromise.catch(err => {
-        console.warn("[public-services] federal fetch failed:", err && err.message);
+        const msg = (err && err.message) || String(err);
+        console.error("[public-services] federal fetch failed:", msg);
+        _psDiag.errors.push({ src: "federal", msg });
         return [];
       })
     ]);
+    _psDiag.osm = osmElements.length;
+    console.log(`[public-services] OSM returned ${osmElements.length} elements, federal returned ${federalItems.length} items`);
 
     const osmItemsRaw = osmElements
       .map(classifyPublicService)
@@ -16190,44 +16285,146 @@ async function loadNearbyPublicServices(geo) {
       console.log(`[public-services] OSM=${osmItemsRaw.length} + federal=${federalItems.length} → merged=${items.length}`);
     }
 
+    // v2.7.8.3: loosen ER/Urgent grouping to fix Bay Area Jul 2026 QA failure.
+    //
+    // OSM tags most hospitals as `amenity=hospital` WITHOUT emergency_ward=yes.
+    // Nearly every US hospital HAS an ER — the OSM tag is just missing.
+    // Rule: any hospital counts as ER-eligible UNLESS explicitly tagged
+    // emergency=no. Same hospital shows in BOTH the Hospital and ER tabs
+    // (with a subtype label so the user knows it's derived, not confirmed).
+    //
+    // For Urgent care: name-based fallback catches common US chain names
+    // (Sutter Walk-In, Kaiser Urgent Care, One Medical, Concentra,
+    // MinuteClinic, GoHealth, CareNow, NextCare, PAMF) that OSM often
+    // classifies as generic amenity=clinic without the healthcare=urgent_care tag.
+    const _isHospitalWithLikelyER = (i) => {
+      if (i.category !== "hospital") return false;
+      const t = i.tags || {};
+      // Explicit opt-out — respect it
+      if (t.emergency === "no" || t.emergency_services === "no") return false;
+      return true;
+    };
+    const _UC_CHAIN_RE = /\b(sutter walk[- ]?in|kaiser (permanente )?urgent care|one medical|concentra|minute[- ]?clinic|go[- ]?health|carenow|next[- ]?care|palo alto medical foundation|pamf|mycurehealth|physician.?care|dignity health.? urgent|carbon health)\b/i;
+    const _isDerivedUrgentByName = (i) => {
+      if (i.category === "urgent") return false;   // already
+      if (!i.name) return false;
+      // Only promote clinics + doctors' offices — not hospitals or dentists
+      if (i.category !== "clinic") return false;
+      return _UC_CHAIN_RE.test(i.name);
+    };
+
+    // Build derived items — a hospital-with-ER becomes a duplicate ER card,
+    // a clinic-with-UC-chain-name becomes a duplicate UC card. Duplicates
+    // keep their original card in the Hospital / Clinic tab AND appear in
+    // the ER / Urgent tab respectively.
+    const derivedER = items
+      .filter(_isHospitalWithLikelyER)
+      .map(i => ({ ...i, category: "er", subtype: "Hospital — call to confirm ER" }));
+    const derivedUC = items
+      .filter(_isDerivedUrgentByName)
+      .map(i => ({ ...i, category: "urgent", subtype: "Urgent care (from clinic listing)" }));
+    if (derivedER.length || derivedUC.length) {
+      console.log(`[public-services] v2.7.8.3 derived: ${derivedER.length} ER from hospitals, ${derivedUC.length} UC from clinic names`);
+    }
+    const itemsAugmented = [...items, ...derivedER, ...derivedUC];
+
     const grouped = {
       // v0.34.2: keep more items per category — render shows top 6 + "+N more" expansion
-      fire:     items.filter(i => i.category === "fire").slice(0, 30),
-      police:   items.filter(i => i.category === "police").slice(0, 30),
+      fire:     itemsAugmented.filter(i => i.category === "fire").slice(0, 30),
+      police:   itemsAugmented.filter(i => i.category === "police").slice(0, 30),
       // v1.3: ER / Hospital / Urgent split — each gets its own subtab in UI
-      er:       items.filter(i => i.category === "er").slice(0, 30),
-      hospital: items.filter(i => i.category === "hospital").slice(0, 30),
-      urgent:   items.filter(i => i.category === "urgent").slice(0, 30),
-      clinic:   items.filter(i => i.category === "clinic").slice(0, 60),
-      pharmacy: items.filter(i => i.category === "pharmacy").slice(0, 60),
-      dentist:  items.filter(i => i.category === "dentist").slice(0, 60),
-      civic:    items.filter(i => i.category === "civic").slice(0, 30),
+      er:       itemsAugmented.filter(i => i.category === "er").slice(0, 30),
+      hospital: itemsAugmented.filter(i => i.category === "hospital").slice(0, 30),
+      urgent:   itemsAugmented.filter(i => i.category === "urgent").slice(0, 30),
+      clinic:   itemsAugmented.filter(i => i.category === "clinic").slice(0, 60),
+      pharmacy: itemsAugmented.filter(i => i.category === "pharmacy").slice(0, 60),
+      dentist:  itemsAugmented.filter(i => i.category === "dentist").slice(0, 60),
+      civic:    itemsAugmented.filter(i => i.category === "civic").slice(0, 30),
     };
-    renderPublicServices(grouped, items.length, getCityKey(geo.address || {}));
+    // v2.7.8.3: defensive render — if render throws, surface a visible error
+    // banner (not just hidden loader) so future silent failures are diagnosable.
+    try {
+      renderPublicServices(grouped, items.length, getCityKey(geo.address || {}), _psDiag);
+    } catch (renderErr) {
+      console.error("[public-services] renderPublicServices threw:", renderErr);
+      _psDiag.errors.push({ src: "render", msg: (renderErr && renderErr.message) || String(renderErr) });
+      // Force-clear "Searching…" so users know something happened
+      setText("ps-value", "Render failed — see below");
+      // Inject a big red banner into the ER tab so user sees SOMETHING
+      const erTb = document.getElementById("ps-er-tbody");
+      if (erTb) {
+        erTb.innerHTML = `<div style="background:#fee;border:2px solid #dc2626;padding:16px;border-radius:8px;color:#991b1b;">`
+          + `<b>⚠️ Something went wrong rendering emergency services.</b><br>`
+          + `Error: ${escapeHtml((renderErr && renderErr.message) || String(renderErr))}<br><br>`
+          + `<strong>In an emergency, dial <a href="tel:911" style="color:#991b1b;">911</a></strong> or `
+          + `<a href="https://www.google.com/maps/search/emergency%20room%20near%20me" target="_blank" rel="noopener">search Google Maps</a>.`
+          + `</div>`;
+      }
+    }
     // v0.33.3: save state + render map for active subtab only
     sectionState["card-public-services"] = { grouped, geo: { lat, lon } };
-    refreshActiveSubtabFor("card-public-services");
+    try { refreshActiveSubtabFor("card-public-services"); } catch (e) { console.error("[public-services] refreshActiveSubtab failed:", e); }
     // v0.34.0: civic map reuses public-services civic items
-    refreshCivicMap();
+    try { refreshCivicMap(); } catch (e) { console.error("[public-services] refreshCivicMap failed:", e); }
     // v2.0.1: re-render the civic section's DMV body so nearby OSM DMV locations
     // appear in tiles ABOVE the static state portal links (Bug 1 fix).
     try {
       if (lastGeo && lastGeo.address && typeof renderCivicSection === "function") {
         renderCivicSection(lastGeo.address);
       }
-    } catch (e) {}
+    } catch (e) { console.error("[public-services] renderCivicSection failed:", e); }
     nrnyLoadGuardSuccess("ps-loading");
   } catch (err) {
-    nrnyLoadGuardFail("ps-loading", `Couldn't reach OpenStreetMap right now (${(err && err.message) || "network error"}).`);
+    console.error("[public-services] top-level load failed:", err);
+    _psDiag.errors.push({ src: "top-level", msg: (err && err.message) || String(err) });
+    nrnyLoadGuardFail("ps-loading", `Couldn't reach data sources right now (${(err && err.message) || "network error"}).`);
+    // Still inject the emergency anchor via a minimal fallback path
+    const erTb = document.getElementById("ps-er-tbody");
+    if (erTb && !erTb.innerHTML.includes("nea-btn-primary")) {
+      erTb.innerHTML = `<div class="nrny-emergency-anchor" style="margin:0 0 12px;">`
+        + `<div class="nea-icon" aria-hidden="true">🚑</div>`
+        + `<div class="nea-body">`
+          + `<div class="nea-title">In a real emergency, call <a href="tel:911">911</a></div>`
+          + `<div class="nea-sub">Data services are unreachable right now. Dial 911 for emergencies or use Google Maps as a fallback.</div>`
+          + `<div class="nea-actions">`
+            + `<a class="nea-btn nea-btn-primary" href="tel:911">📞 Call 911</a>`
+            + `<a class="nea-btn" href="https://www.google.com/maps/search/emergency%20room%20near%20me" target="_blank" rel="noopener">🗺️ Google Maps</a>`
+          + `</div>`
+        + `</div>`
+      + `</div>`;
+    }
   }
 }
-function renderPublicServices(grouped, total, cityKey) {
+function renderPublicServices(grouped, total, cityKey, diag) {
   $("ps-loading").hidden = true;
   $("ps-sections").hidden = false;
   const pill = $("ps-summary");
   pill.hidden = false;
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
-  setText("ps-value", total > 0 ? `${total} services nearby` : "No public services found in OSM");
+  setText("ps-value", total > 0 ? `${total} services nearby` : "No matches — see 911/Google Maps below");
+
+  // v2.7.8.3: Diagnostic status line — visible ALWAYS when totals are 0 (so
+  // users understand what's happening), and when NEARNITY_DEBUG=true. Shows
+  // per-source counts + error messages. Not a fancy UI — just honest signal.
+  const _renderDiag = () => {
+    if (!diag) return "";
+    const show = (total === 0) || window.NEARNITY_DEBUG;
+    if (!show) return "";
+    const parts = [
+      `OSM: ${diag.osm == null ? "?" : diag.osm}`,
+      `Medicare: ${diag.medicare == null ? "?" : diag.medicare}`,
+      `NPPES-ER: ${diag.nppesEr == null ? "?" : diag.nppesEr}`,
+      `NPPES-UC: ${diag.nppesUc == null ? "?" : diag.nppesUc}`,
+    ];
+    const errList = (diag.errors && diag.errors.length)
+      ? `<br><span style="color:#991b1b;">Errors: ${diag.errors.map(e => `${escapeHtml(e.src)}: ${escapeHtml(e.msg)}`).join(" · ")}</span>`
+      : "";
+    const geoInfo = `<br><span style="color:#6b7280;">geo: postal=${escapeHtml(diag.postal || "(missing)")} · state=${escapeHtml(diag.stateAbbr || "(missing)")}</span>`;
+    return `<div class="nrny-diag" style="background:#fefce8;border:1px solid #fde68a;padding:8px 12px;margin:8px 0;border-radius:6px;font-size:11.5px;color:#78350f;font-family:monospace;">`
+      + `<b>Data source status:</b> ${parts.join(" · ")}` + errList + geoInfo
+      + `</div>`;
+  };
+  const diagBar = _renderDiag();
 
   // v2.7.8: Search-never-fails anchor card. Always renders at the TOP of the
   // ER + Urgent care + Hospital tbodies — regardless of whether we have data.
@@ -16301,7 +16498,7 @@ function renderPublicServices(grouped, total, cityKey) {
     }
     tb.innerHTML = anchor + renderListWithMore(items, cityKey, { top: 6 });
   };
-  fill("ps-er-section",        "ps-er-tbody",        grouped.er,       anchorCardER);
+  fill("ps-er-section",        "ps-er-tbody",        grouped.er,       diagBar + anchorCardER);
   fill("ps-hospital-section",  "ps-hospital-tbody",  grouped.hospital, anchorCardHosp);
   fill("ps-urgent-section",    "ps-urgent-tbody",    grouped.urgent,   anchorCardUC);
   fill("ps-emergency-section", "ps-emergency-tbody", grouped.fire, null);
@@ -16311,10 +16508,13 @@ function renderPublicServices(grouped, total, cityKey) {
   fill("ps-dentist-section",   "ps-dentist-tbody",   grouped.dentist, null);
   fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic, null);
 
-  // v0.35.3: keep subsection structure intact when empty — subtab navigation depends on it
+  // v0.35.3 → v2.7.8.3: keep subsection structure intact when empty — but
+  // DO NOT wipe ER / UC / Hospital which now have anchor cards + diag bar.
+  // Only overwrite the tbodies that don't carry their own anchor content.
   if (total === 0) {
     const placeholder = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius, or use the Google Maps button on the map below.</div>`;
-    ["ps-emergency-tbody","ps-police-tbody","ps-hospital-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody","ps-civic-tbody"].forEach(id => {
+    // v2.7.8.3: removed ps-hospital-tbody from override list (anchor card must stay)
+    ["ps-emergency-tbody","ps-police-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody","ps-civic-tbody"].forEach(id => {
       const tb = $(id); if (tb) tb.innerHTML = placeholder;
     });
     ["ps-emergency-section","ps-police-section","ps-hospital-section","ps-clinic-section","ps-pharmacy-section","ps-dentist-section","ps-civic-section"].forEach(id => {
