@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.9</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.9.1</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.9</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.9.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -13478,8 +13478,14 @@ function placeRow(item, cityKey) {
     url: reach,
   };
   const saveStar = (typeof saveStarButtonHtml === "function") ? saveStarButtonHtml(saveItem) : "";
-  // v0.33: transparent "why ranked here"
-  const whyRanked = `Ranked by: ${item.dist.toFixed(1)} mi away${(item.reasons && item.reasons.length) ? ' · OSM-verified ' + item.reasons.join(', ') : ''}`;
+  // v0.33 / v2.7.9.1.1 defensive: transparent "why ranked here". Federal
+  // records (Medicare/NPPES fallback path) don't have lat/lon → dist is null.
+  // Previously `null.toFixed(1)` threw TypeError, killing the whole render
+  // pipeline silently. Now: gracefully degrades to source-only label.
+  const distLabel = (typeof item.dist === "number" && Number.isFinite(item.dist))
+    ? `${item.dist.toFixed(1)} mi away`
+    : (item.address ? "distance approximate" : "distance unknown");
+  const whyRanked = `Ranked by: ${distLabel}${(item.reasons && item.reasons.length) ? ' · ' + (item.federal ? 'Federally-verified' : 'OSM-verified') + ' ' + item.reasons.join(', ') : ''}`;
   // v0.33.4: contact + hours line under the name when OSM has them
   const hours = (item.opening_hours || "").trim();
   const phone = (item.phone || "").trim();
@@ -13506,7 +13512,7 @@ function placeRow(item, cityKey) {
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag lvl-k12">${escapeHtml(item.subtype)}</span>
-      <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
+      <span class="school-dist-tag ${distCls}">${(typeof item.dist === "number" && Number.isFinite(item.dist)) ? item.dist.toFixed(1) + " mi" : "≈"}</span>
       ${openPill}
       ${accessTag}
       ${verifiedBadge}
@@ -13606,7 +13612,7 @@ function levelRow(level, item, cityKey) {
     <div class="school-info">
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
-      <span class="school-dist-tag ${distCls}">${item.dist.toFixed(1)} mi</span>
+      <span class="school-dist-tag ${distCls}">${(typeof item.dist === "number" && Number.isFinite(item.dist)) ? item.dist.toFixed(1) + " mi" : "≈"}</span>
       <div class="school-meta" style="margin-top:4px;">
         <a href="${gsUrl}" target="_blank" rel="noopener" style="color:var(--primary); font-size:12px; font-weight:500; text-decoration:none;">Open GreatSchools rating →</a>
       </div>
@@ -16125,7 +16131,7 @@ async function fetchFederalMedical(lat, lon, postal, stateAbbr) {
   return out;
 }
 
-// v2.7.9: instrumented wrapper around fetchFederalMedical. Same result,
+// v2.7.9.1: instrumented wrapper around fetchFederalMedical. Same result,
 // but records per-source counts + errors into the diagnostic object so the
 // UI can render a visible status line telling users which sources populated.
 async function fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, diag) {
@@ -16137,7 +16143,7 @@ async function fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, diag) {
   }
 
   // ─────────────────────────────────────────────────────────────────────
-  // v2.7.9 PRIMARY PATH: /api/medical-radius (pre-geocoded KV + haversine)
+  // v2.7.9.1 PRIMARY PATH: /api/medical-radius (pre-geocoded KV + haversine)
   // ─────────────────────────────────────────────────────────────────────
   // Level 4 architecture — the actual answer to Satya's ZIP-anchor critique.
   // Fires ONE call. Server reads pre-geocoded KV shard for user's state (plus
@@ -16160,7 +16166,7 @@ async function fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, diag) {
       if (rResp.ok) {
         const rData = await rResp.json();
         if (rData && rData.meta && rData.meta.kv_hit && Array.isArray(rData.results) && rData.results.length > 0) {
-          console.log(`[federal-medical] v2.7.9 KV path hit: ${rData.results.length} results in ${rData.meta.elapsed_ms || "?"}ms from states=[${(rData.meta.source_states || []).join(",")}]`);
+          console.log(`[federal-medical] v2.7.9.1 KV path hit: ${rData.results.length} results in ${rData.meta.elapsed_ms || "?"}ms from states=[${(rData.meta.source_states || []).join(",")}]`);
           diag.medicare = rData.results.filter(r => (r.source || "").includes("Medicare")).length;
           diag.nppesEr  = rData.results.filter(r => r.category === "er"     && (r.source || "").includes("NPPES")).length;
           diag.nppesUc  = rData.results.filter(r => r.category === "urgent" && (r.source || "").includes("NPPES")).length;
@@ -16192,7 +16198,7 @@ async function fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, diag) {
         }
         // KV miss (not yet ingested for this state) — fall through to legacy path.
         if (rData && rData.meta && rData.meta.kv_hit === false) {
-          console.log(`[federal-medical] v2.7.9 KV miss for state ${stateAbbr} — falling back to Medicare/NPPES direct paths`);
+          console.log(`[federal-medical] v2.7.9.1 KV miss for state ${stateAbbr} — falling back to Medicare/NPPES direct paths`);
           diag.errors.push({ src: "medical-radius", msg: `KV miss for ${stateAbbr}; using legacy fallback` });
         }
       } else {
@@ -16204,10 +16210,10 @@ async function fetchFederalMedicalDiag(lat, lon, postal, stateAbbr, diag) {
       diag.errors.push({ src: "medical-radius", msg: (e && e.message) || String(e) });
     }
   }
-  // ─── End v2.7.9 primary path. Below is legacy fallback (unchanged). ───
-  // v2.7.9 ROLLBACK: city-based approach rejected 2026-07-08 (fails at city
+  // ─── End v2.7.9.1 primary path. Below is legacy fallback (unchanged). ───
+  // v2.7.9.1 ROLLBACK: city-based approach rejected 2026-07-08 (fails at city
   // boundaries, doesn't scale nationally). Reverted to v2.7.8.4-equivalent
-  // postal+state query construction. Next iteration = v2.7.9 pre-geocoded KV
+  // postal+state query construction. Next iteration = v2.7.9.1 pre-geocoded KV
   // + haversine radius filter (Level 4 architecture — the correct answer).
   const _pairs = [];
   if (postal)    _pairs.push(`zip=${encodeURIComponent(postal)}`);
@@ -16307,7 +16313,7 @@ async function loadNearbyPublicServices(geo) {
   ["ps-er-tbody","ps-hospital-tbody","ps-urgent-tbody","ps-emergency-tbody",
    "ps-police-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody",
    "ps-civic-tbody"].forEach(id => injectSkeleton(id, 6));
-  // v2.7.9: collect diagnostic breadcrumbs across the fetch pipeline so we
+  // v2.7.9.1: collect diagnostic breadcrumbs across the fetch pipeline so we
   // can render a visible status line (bottom of ER/UC/Hospital) telling the
   // user what actually populated. Kills silent-empty debugging.
   const _psDiag = { osm: null, medicare: null, nppesEr: null, nppesUc: null, errors: [] };
@@ -16366,7 +16372,7 @@ async function loadNearbyPublicServices(geo) {
       console.log(`[public-services] OSM=${osmItemsRaw.length} + federal=${federalItems.length} → merged=${items.length}`);
     }
 
-    // v2.7.9: loosen ER/Urgent grouping to fix Bay Area Jul 2026 QA failure.
+    // v2.7.9.1: loosen ER/Urgent grouping to fix Bay Area Jul 2026 QA failure.
     //
     // OSM tags most hospitals as `amenity=hospital` WITHOUT emergency_ward=yes.
     // Nearly every US hospital HAS an ER — the OSM tag is just missing.
@@ -16405,7 +16411,7 @@ async function loadNearbyPublicServices(geo) {
       .filter(_isDerivedUrgentByName)
       .map(i => ({ ...i, category: "urgent", subtype: "Urgent care (from clinic listing)" }));
     if (derivedER.length || derivedUC.length) {
-      console.log(`[public-services] v2.7.9 derived: ${derivedER.length} ER from hospitals, ${derivedUC.length} UC from clinic names`);
+      console.log(`[public-services] v2.7.9.1 derived: ${derivedER.length} ER from hospitals, ${derivedUC.length} UC from clinic names`);
     }
     const itemsAugmented = [...items, ...derivedER, ...derivedUC];
 
@@ -16422,7 +16428,7 @@ async function loadNearbyPublicServices(geo) {
       dentist:  itemsAugmented.filter(i => i.category === "dentist").slice(0, 60),
       civic:    itemsAugmented.filter(i => i.category === "civic").slice(0, 30),
     };
-    // v2.7.9: defensive render — if render throws, surface a visible error
+    // v2.7.9.1: defensive render — if render throws, surface a visible error
     // banner (not just hidden loader) so future silent failures are diagnosable.
     try {
       renderPublicServices(grouped, items.length, getCityKey(geo.address || {}), _psDiag);
@@ -16484,7 +16490,7 @@ function renderPublicServices(grouped, total, cityKey, diag) {
   pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${CURRENT_RADIUS_MI} mi`;
   setText("ps-value", total > 0 ? `${total} services nearby` : "No matches — see 911/Google Maps below");
 
-  // v2.7.9: Diagnostic status line — visible ALWAYS when totals are 0 (so
+  // v2.7.9.1: Diagnostic status line — visible ALWAYS when totals are 0 (so
   // users understand what's happening), and when NEARNITY_DEBUG=true. Shows
   // per-source counts + error messages. Not a fancy UI — just honest signal.
   const _renderDiag = () => {
@@ -16589,12 +16595,12 @@ function renderPublicServices(grouped, total, cityKey, diag) {
   fill("ps-dentist-section",   "ps-dentist-tbody",   grouped.dentist, null);
   fill("ps-civic-section",     "ps-civic-tbody",     grouped.civic, null);
 
-  // v0.35.3 → v2.7.9: keep subsection structure intact when empty — but
+  // v0.35.3 → v2.7.9.1: keep subsection structure intact when empty — but
   // DO NOT wipe ER / UC / Hospital which now have anchor cards + diag bar.
   // Only overwrite the tbodies that don't carry their own anchor content.
   if (total === 0) {
     const placeholder = `<div class="schools-empty" style="padding:14px;">No public services found in OpenStreetMap within ${CURRENT_RADIUS_MI} mi. Try widening the radius, or use the Google Maps button on the map below.</div>`;
-    // v2.7.9: removed ps-hospital-tbody from override list (anchor card must stay)
+    // v2.7.9.1: removed ps-hospital-tbody from override list (anchor card must stay)
     ["ps-emergency-tbody","ps-police-tbody","ps-clinic-tbody","ps-pharmacy-tbody","ps-dentist-tbody","ps-civic-tbody"].forEach(id => {
       const tb = $(id); if (tb) tb.innerHTML = placeholder;
     });
