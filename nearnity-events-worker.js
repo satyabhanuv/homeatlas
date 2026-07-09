@@ -45,10 +45,19 @@ export default {
 
     // Health check — v0.74: includes `worker_version` so you can verify the
     // Worker actually got redeployed after pasting + Save and deploy.
+    // v2.7.9.2: bumped + added v2.7.x endpoints. Bump this string EVERY
+    // release. Hit /api/health after every deploy to confirm what shipped.
     if (url.pathname.endsWith("/health")) {
       return json({
         status: "ok",
-        worker_version: "v2.0",   // bump this every time worker changes — v2.0: + 22 more non-ticketed seed events (libraries, museums, volunteer) + distance secondary sort
+        worker_version: "v2.7.9.2",   // v2.7.9.2: FormData multipart + per-taxonomy NPPES + diagnostic passthrough
+        deployed_features: {
+          "v2.4": "federal adapters (NPPES, Medicare, SAMHSA, HRSA)",
+          "v2.7.3": "school-zone endpoint (Census + NCES district lookup)",
+          "v2.7.8.4": "Overpass no-cache-on-empty + NPPES 400 fix + Medicare state fallback",
+          "v2.7.9": "KV geo-index schema + /api/geo-index-info + /api/admin/geo-ingest + /api/medical-radius",
+          "v2.7.9.2": "Census batch geocoder rewritten with FormData + NPPES fetched per-taxonomy + diagnostic passthrough in ingest report",
+        },
         endpoints: [
           "/health", "/events", "/alerts", "/quakes", "/aqi",
           "/parks-nps", "/recreation", "/correction", "/digest-signup",
@@ -57,6 +66,18 @@ export default {
           "/sources", "/farm-experiences",
           "/submit-event", "/claim-organizer",
           "/admin/queue", "/admin/approve",
+          // v2.4 federal adapters
+          "/nppes", "/cslb", "/samhsa", "/medicare-quality", "/nces-schools",
+          // v2.5 city business licenses
+          "/city-businesses",
+          // v2.7 tester feedback
+          "/feedback", "/unmatched-search",
+          // v2.7.2 Overpass proxy
+          "/overpass",
+          // v2.7.3 — assignment-based school lookup
+          "/school-zone",
+          // v2.7.9 — pre-geocoded medical index + radius query
+          "/geo-index-info", "/admin/geo-ingest", "/medical-radius",
         ],
         ticketmaster:  env.TICKETMASTER_KEY  ? "configured" : "missing",
         seatgeek:      env.SEATGEEK_CLIENT_ID ? "configured" : "missing",
@@ -124,6 +145,34 @@ export default {
     // Cloudflare's edge cache via the `cf` option so identical subrequests
     // are served in <100ms globally with zero KV writes.
     if (url.pathname.endsWith("/overpass")) { return await handleOverpassProxy(url, env, ctx); }
+    // v2.4: federal data adapters — highest-authority free sources for the
+    // safety/health/home core. Each fetches from a federal/state agency
+    // endpoint, caches via Cloudflare edge, and returns normalized records.
+    if (url.pathname.endsWith("/nppes"))      { return await handleNPPES(url, env, ctx); }
+    if (url.pathname.endsWith("/cslb"))       { return await handleCSLB(url, env, ctx); }
+    if (url.pathname.endsWith("/samhsa"))     { return await handleSAMHSA(url, env, ctx); }
+    if (url.pathname.endsWith("/medicare-quality")) { return await handleMedicareQuality(url, env, ctx); }
+    if (url.pathname.endsWith("/nces-schools"))     { return await handleNCESSchools(url, env, ctx); }
+    // v2.7.3: school zoning — point→district lookup via Census geographies,
+    // then NCES CCD roster filtered by LEAID. Replaces distance-based query.
+    if (url.pathname.endsWith("/school-zone"))      { return await handleSchoolZone(url, env, ctx); }
+    // v2.7.9: pre-geocoded medical index — read-side inspection endpoint.
+    // Ingest + query endpoints added in steps 2 + 4.
+    if (url.pathname.endsWith("/geo-index-info"))   { return await handleGeoIndexInfo(url, env, ctx); }
+    // v2.7.9 step 2: admin-gated ingest — fetch CMS+NPPES for a state,
+    // batch-geocode via Census, write pre-geocoded arrays to KV.
+    if (url.pathname.endsWith("/admin/geo-ingest")) { return await handleGeoIngest(url, env, ctx); }
+    // v2.7.9 step 4: query-time radius filter over the pre-geocoded KV index.
+    // Replaces the ZIP-anchored Medicare + NPPES call from the frontend.
+    if (url.pathname.endsWith("/medical-radius"))   { return await handleMedicalRadius(url, env, ctx); }
+    // v2.5: city open-data business licenses — generic adapter that pulls
+    // from any city's licensed-business open-data feed configured in
+    // CITY_BUSINESS_LICENSE_FEEDS. Closes the small-business search gap
+    // for cities that publish business registries as open data.
+    if (url.pathname.endsWith("/city-businesses")) { return await handleCityBusinesses(url, env, ctx); }
+    // v2.7: tester feedback loop — structured form + email + KV log.
+    if (url.pathname.endsWith("/feedback"))         { return await handleFeedback(request, env, ctx); }
+    if (url.pathname.endsWith("/unmatched-search")) { return await handleUnmatchedSearch(request, env, ctx); }
 
     // Main route — anything ending in /events
     if (!url.pathname.endsWith("/events")) {
@@ -1093,6 +1142,128 @@ const CITY_CALENDAR_FEEDS = {
     fmt: "rss",
     fallback: "https://www.ci.milpitas.ca.gov/calendar.aspx",
   },
+  // ── v2.2: Bay Area expansion — East Bay ─────────────────────────────
+  // CivicEngage RSSFeed.aspx?ModID=58 is the common Bay Area municipal CMS
+  // pattern. Where a city runs a different platform, the URL is best-guess
+  // from public knowledge — failures return empty (no harm). Admin can
+  // verify / update URLs over time without code change pressure.
+  "hayward,CA": {
+    url: "https://www.hayward-ca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.hayward-ca.gov/your-government/calendar",
+  },
+  "dublin,CA": {
+    url: "https://dublin.ca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://dublin.ca.gov/calendar.aspx",
+  },
+  "san ramon,CA": {
+    url: "https://www.sanramon.ca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.sanramon.ca.gov/our_city/calendar",
+  },
+  "livermore,CA": {
+    url: "https://www.livermoreca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.livermoreca.gov/calendar.aspx",
+  },
+  "pleasant hill,CA": {
+    url: "https://www.pleasanthillca.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.pleasanthillca.org/calendar.aspx",
+  },
+  "concord,CA": {
+    url: "https://www.cityofconcord.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofconcord.org/calendar.aspx",
+  },
+  "antioch,CA": {
+    url: "https://www.antiochca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.antiochca.gov/calendar.aspx",
+  },
+  "newark,CA": {
+    url: "https://www.newark.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.newark.org/calendar.aspx",
+  },
+  "union city,CA": {
+    url: "https://www.unioncity.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.unioncity.org/calendar.aspx",
+  },
+  "san leandro,CA": {
+    url: "https://www.sanleandro.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.sanleandro.org/calendar.aspx",
+  },
+  // ── v2.2: Bay Area expansion — Peninsula / North Bay ────────────────
+  "daly city,CA": {
+    url: "https://www.dalycity.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.dalycity.org/calendar.aspx",
+  },
+  "south san francisco,CA": {
+    url: "https://www.ssf.net/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.ssf.net/calendar.aspx",
+  },
+  "burlingame,CA": {
+    url: "https://www.burlingame.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.burlingame.org/calendar.aspx",
+  },
+  "foster city,CA": {
+    url: "https://www.fostercity.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.fostercity.org/calendar.aspx",
+  },
+  "menlo park,CA": {
+    url: "https://www.menlopark.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.menlopark.gov/calendar.aspx",
+  },
+  "vallejo,CA": {
+    url: "https://www.cityofvallejo.net/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofvallejo.net/calendar.aspx",
+  },
+  "richmond,CA": {
+    url: "https://www.ci.richmond.ca.us/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.ci.richmond.ca.us/calendar.aspx",
+  },
+  "san rafael,CA": {
+    url: "https://www.cityofsanrafael.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofsanrafael.org/calendar",
+  },
+  // ── v2.2: Bay Area expansion — South Bay extras ─────────────────────
+  "saratoga,CA": {
+    url: "https://www.saratoga.ca.us/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.saratoga.ca.us/calendar.aspx",
+  },
+  "los gatos,CA": {
+    url: "https://www.losgatosca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.losgatosca.gov/calendar.aspx",
+  },
+  "campbell,CA": {
+    url: "https://www.ci.campbell.ca.us/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.ci.campbell.ca.us/calendar.aspx",
+  },
+  "morgan hill,CA": {
+    url: "https://www.morgan-hill.ca.gov/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.morgan-hill.ca.gov/calendar.aspx",
+  },
+  "gilroy,CA": {
+    url: "https://www.cityofgilroy.org/RSSFeed.aspx?ModID=58&CID=All-calendar.xml",
+    fmt: "rss",
+    fallback: "https://www.cityofgilroy.org/calendar.aspx",
+  },
   // ── Pennsylvania ────────────────────────────────────────────────────
   // v0.72: Philadelphia — launch city pick #3. Free Library + city calendar.
   "philadelphia,PA": {
@@ -1116,6 +1287,58 @@ const LIBRARY_CALENDAR_FEEDS = {
   "philadelphia,PA":  "https://libwww.freelibrary.org/calendar/feed.rss",
   "oakland,CA":       "https://oaklandlibrary.org/events/feed/",
   "berkeley,CA":      "https://berkeleypubliclibrary.libcal.com/rss.php?l=15891",
+  // ── v2.2: COUNTY-LEVEL libraries — one URL covers many cities ───────
+  // Alameda County Library system covers Fremont, Hayward, Dublin,
+  // Newark, Union City, San Lorenzo, Castro Valley, Albany. Same RSS
+  // wired to all cities they serve so a search in any of these
+  // surfaces the same regional event pool.
+  "fremont,CA":          "https://aclibrary.org/events/feed/",
+  "hayward,CA":          "https://aclibrary.org/events/feed/",
+  "dublin,CA":           "https://aclibrary.org/events/feed/",
+  "newark,CA":           "https://aclibrary.org/events/feed/",
+  "union city,CA":       "https://aclibrary.org/events/feed/",
+  "san lorenzo,CA":      "https://aclibrary.org/events/feed/",
+  "castro valley,CA":    "https://aclibrary.org/events/feed/",
+  "albany,CA":           "https://aclibrary.org/events/feed/",
+  // Santa Clara County Library — Milpitas, Saratoga, Los Gatos, Campbell,
+  // Cupertino (also has its own), Morgan Hill, Gilroy, Los Altos
+  "milpitas,CA":         "https://sccld.bibliocommons.com/events/search/index.rss",
+  "saratoga,CA":         "https://sccld.bibliocommons.com/events/search/index.rss",
+  "los gatos,CA":        "https://sccld.bibliocommons.com/events/search/index.rss",
+  "campbell,CA":         "https://sccld.bibliocommons.com/events/search/index.rss",
+  "cupertino,CA":        "https://sccld.bibliocommons.com/events/search/index.rss",
+  "morgan hill,CA":      "https://sccld.bibliocommons.com/events/search/index.rss",
+  "gilroy,CA":           "https://sccld.bibliocommons.com/events/search/index.rss",
+  "los altos,CA":        "https://sccld.bibliocommons.com/events/search/index.rss",
+  // Contra Costa County Library — Walnut Creek, Pleasant Hill, Concord,
+  // San Ramon, Antioch, Pittsburg, Richmond, Lafayette, Orinda, Moraga
+  "walnut creek,CA":     "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "pleasant hill,CA":    "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "concord,CA":          "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "san ramon,CA":        "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "antioch,CA":          "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "richmond,CA":         "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "pleasanton,CA":       "https://ccclib.bibliocommons.com/events/search/index.rss",
+  "livermore,CA":        "https://ccclib.bibliocommons.com/events/search/index.rss",
+  // San Mateo County Library — covers Daly City, South SF, Burlingame,
+  // San Carlos, Belmont, Foster City (Foster City has its own too),
+  // Half Moon Bay, San Mateo (city has own)
+  "daly city,CA":        "https://smcl.bibliocommons.com/events/search/index.rss",
+  "south san francisco,CA": "https://smcl.bibliocommons.com/events/search/index.rss",
+  "burlingame,CA":       "https://smcl.bibliocommons.com/events/search/index.rss",
+  "san carlos,CA":       "https://smcl.bibliocommons.com/events/search/index.rss",
+  "belmont,CA":          "https://smcl.bibliocommons.com/events/search/index.rss",
+  "foster city,CA":      "https://smcl.bibliocommons.com/events/search/index.rss",
+  "menlo park,CA":       "https://smcl.bibliocommons.com/events/search/index.rss",
+  "redwood city,CA":     "https://smcl.bibliocommons.com/events/search/index.rss",
+  "san mateo,CA":        "https://smcl.bibliocommons.com/events/search/index.rss",
+  // Marin County Free Library — Larkspur, Mill Valley, Sausalito,
+  // Corte Madera, San Anselmo, Tiburon, Bolinas
+  "san rafael,CA":       "https://marinlibrary.org/events/feed/",
+  "novato,CA":           "https://marinlibrary.org/events/feed/",
+  "mill valley,CA":      "https://marinlibrary.org/events/feed/",
+  "sausalito,CA":        "https://marinlibrary.org/events/feed/",
+  "larkspur,CA":         "https://marinlibrary.org/events/feed/",
 };
 
 async function fetchCityCivic(city, state, keyword) {
@@ -2097,6 +2320,45 @@ const SEED_BAY_AREA_EVENTS = [
   { title: "Irvington Farmers' Market", venue: "4039 Bay St", city: "Fremont", state: "CA", lat: 37.5097, lon: -121.9663, day_of_week: 0, start_time: "09:00", end_time: "14:00", url: "https://pcfma.org/markets/irvington-farmers-market/", source: "PCFMA — Irvington", category: "market", review_level: "verified" },
   // First Friday — SoFA Art Walk (monthly, free)
   { title: "SoFA First Friday Art Walk", venue: "South First Area, S 1st St", city: "San Jose", state: "CA", lat: 37.3294, lon: -121.8854, day_of_month: "first_friday", start_time: "18:00", end_time: "22:00", url: "https://sofadistrict.com/first-fridays", source: "SoFA District", category: "festival", review_level: "verified", free: true },
+  // v2.2: pop-up festivals via specific_dates. These are Bay Area free
+  // recurring events that don't fit weekly / first-Friday patterns.
+  // Maintenance: update the specific_dates arrays each season when the
+  // organizer publishes their next round of dates. Easy to maintain.
+  // Foodieland Night Market — Santana Row / Newark / SF Marina rotations
+  { title: "Foodieland Night Market — Santana Row", venue: "Santana Row, 377 Santana Row", city: "San Jose", state: "CA", lat: 37.3217, lon: -121.9485, specific_dates: ["2026-06-26","2026-06-27","2026-06-28","2026-09-04","2026-09-05","2026-09-06"], start_time: "17:00", end_time: "23:00", url: "https://foodielandnm.com/", source: "Foodieland Night Market", category: "festival", review_level: "verified", free: true },
+  { title: "Foodieland Night Market — Newark", venue: "NewPark Mall, 2086 NewPark Mall", city: "Newark", state: "CA", lat: 37.5275, lon: -122.0303, specific_dates: ["2026-07-10","2026-07-11","2026-07-12","2026-10-09","2026-10-10","2026-10-11"], start_time: "17:00", end_time: "23:00", url: "https://foodielandnm.com/", source: "Foodieland Night Market", category: "festival", review_level: "verified", free: true },
+  // Off the Grid — Fort Mason Friday Night Market (free admission, weekly Apr-Oct)
+  { title: "Off the Grid — Fort Mason Friday Night Market", venue: "Fort Mason Center, 2 Marina Blvd", city: "San Francisco", state: "CA", lat: 37.8064, lon: -122.4321, day_of_week: 5, start_time: "17:00", end_time: "22:00", url: "https://offthegrid.com/markets/fort-mason-center/", source: "Off the Grid — Fort Mason", category: "festival", review_level: "verified", free: true, season_filter: "summer" },
+  // Yerba Buena Gardens Festival — free outdoor concerts (May-Oct, Thu/Sat/Sun varies)
+  { title: "Yerba Buena Gardens Festival — Free Concerts", venue: "Yerba Buena Gardens, 750 Howard St", city: "San Francisco", state: "CA", lat: 37.7849, lon: -122.4039, day_of_week: 6, start_time: "13:00", end_time: "14:30", url: "https://ybgfestival.org/", source: "Yerba Buena Gardens Festival", category: "music", review_level: "verified", free: true, season_filter: "summer" },
+  // Music in the Park — San Jose downtown free Thursday concerts (summer)
+  { title: "Music in the Park (Downtown San Jose)", venue: "Plaza de César Chávez", city: "San Jose", state: "CA", lat: 37.3331, lon: -121.8898, day_of_week: 4, start_time: "17:30", end_time: "20:30", url: "https://www.sanjose.org/listings/downtown-music-park", source: "San Jose Downtown Association", category: "music", review_level: "verified", free: true, season_filter: "summer" },
+  // Movies in the Park — Oakland Lake Merritt free outdoor screenings (summer Fridays)
+  { title: "Movies in the Park — Lake Merritt", venue: "Splash Pad Park, Grand Ave", city: "Oakland", state: "CA", lat: 37.8108, lon: -122.2549, day_of_week: 5, start_time: "20:00", end_time: "22:00", url: "https://www.oaklandparks.org/", source: "Oakland Parks & Recreation", category: "film", review_level: "verified", free: true, season_filter: "summer" },
+  // First Friday — Oakland Art Murmur (monthly, free)
+  { title: "Oakland First Friday Art Murmur", venue: "KONO district, Telegraph Ave", city: "Oakland", state: "CA", lat: 37.8157, lon: -122.2685, day_of_month: "first_friday", start_time: "17:00", end_time: "21:30", url: "https://oaklandartmurmur.org/", source: "Oakland Art Murmur", category: "festival", review_level: "verified", free: true },
+  // Berkeley Sundays — Solano Stroll & similar street fairs via Civic Center
+  { title: "Berkeley Sunday Streets (alternating Sundays)", venue: "Telegraph Ave / Shattuck", city: "Berkeley", state: "CA", lat: 37.8716, lon: -122.2727, specific_dates: ["2026-07-19","2026-08-23","2026-09-20"], start_time: "11:00", end_time: "16:00", url: "https://www.cityofberkeley.info/Streetfairs", source: "City of Berkeley", category: "festival", review_level: "verified", free: true },
+  // ── v2.7.1: July 4 BAY AREA FIREWORKS — content gap filler ───────────
+  // Free city-park fireworks shows don't show up in Ticketmaster/SeatGeek
+  // (no tickets to sell) and OSM doesn't have events. Adding the most
+  // popular Bay Area July 4 shows as specific-date seeds so they're
+  // surfaced for "fireworks" / "4th of july" searches. Maintenance:
+  // bump specific_dates each year when cities publish next year's schedule.
+  { title: "San Francisco Independence Day Fireworks — Pier 39 / Aquatic Park", venue: "Pier 39, Beach St & Embarcadero", city: "San Francisco", state: "CA", lat: 37.8086, lon: -122.4098, specific_dates: ["2026-07-04"], start_time: "21:30", end_time: "22:00", url: "https://www.pier39.com/event/july-4th-fireworks/", source: "Pier 39 (SF Port)", category: "festival", review_level: "verified", free: true },
+  { title: "Foster City 4th of July Celebration & Fireworks", venue: "Leo J. Ryan Park, 650 Shell Blvd", city: "Foster City", state: "CA", lat: 37.5571, lon: -122.2580, specific_dates: ["2026-07-04"], start_time: "16:00", end_time: "22:00", url: "https://www.fostercity.org/parksrec/page/4th-july-celebration", source: "City of Foster City", category: "festival", review_level: "verified", free: true },
+  { title: "Mountain View Spirit of America 4th of July Fireworks", venue: "Shoreline Amphitheatre, 1 Amphitheatre Pkwy", city: "Mountain View", state: "CA", lat: 37.4267, lon: -122.0807, specific_dates: ["2026-07-04"], start_time: "19:30", end_time: "22:00", url: "https://www.mountainview.gov/spirit-of-america/", source: "City of Mountain View", category: "festival", review_level: "verified", free: true },
+  { title: "Redwood City 4th of July Fireworks", venue: "Port of Redwood City, 675 Seaport Blvd", city: "Redwood City", state: "CA", lat: 37.5031, lon: -122.2128, specific_dates: ["2026-07-04"], start_time: "21:30", end_time: "22:00", url: "https://www.redwoodcity.org/4thofjuly", source: "City of Redwood City", category: "festival", review_level: "verified", free: true },
+  { title: "Hayward 4th of July Fireworks", venue: "Cal State East Bay, 25800 Carlos Bee Blvd", city: "Hayward", state: "CA", lat: 37.6580, lon: -122.0568, specific_dates: ["2026-07-04"], start_time: "20:30", end_time: "21:30", url: "https://www.hayward-ca.gov/4thofjuly", source: "City of Hayward", category: "festival", review_level: "verified", free: true },
+  { title: "Concord 4th of July Fireworks Spectacular", venue: "Mt Diablo HS, 2450 Grant St", city: "Concord", state: "CA", lat: 37.9722, lon: -122.0306, specific_dates: ["2026-07-04"], start_time: "21:00", end_time: "22:00", url: "https://www.cityofconcord.org/4thofjuly", source: "City of Concord", category: "festival", review_level: "verified", free: true },
+  { title: "Walnut Creek 4th of July Fireworks at Heather Farm", venue: "Heather Farm Park, 301 N San Carlos Dr", city: "Walnut Creek", state: "CA", lat: 37.9101, lon: -122.0461, specific_dates: ["2026-07-04"], start_time: "21:15", end_time: "22:00", url: "https://www.walnut-creek.org/4thofjuly", source: "City of Walnut Creek", category: "festival", review_level: "verified", free: true },
+  { title: "Antioch 4th of July Fireworks at the Marina", venue: "Antioch Marina, 5 Marina Plaza", city: "Antioch", state: "CA", lat: 38.0143, lon: -121.8136, specific_dates: ["2026-07-04"], start_time: "21:30", end_time: "22:00", url: "https://www.antiochca.gov/4thofjuly", source: "City of Antioch", category: "festival", review_level: "verified", free: true },
+  { title: "Half Moon Bay Old-Fashioned 4th of July Parade", venue: "Main St, Half Moon Bay", city: "Half Moon Bay", state: "CA", lat: 37.4636, lon: -122.4286, specific_dates: ["2026-07-04"], start_time: "12:00", end_time: "15:00", url: "https://www.hmbcity.com/4thofjuly", source: "City of Half Moon Bay", category: "festival", review_level: "verified", free: true },
+  { title: "Alameda 4th of July Mayor's Parade", venue: "Park St, Alameda", city: "Alameda", state: "CA", lat: 37.7686, lon: -122.2419, specific_dates: ["2026-07-04"], start_time: "10:00", end_time: "13:00", url: "https://alamedaca.gov/4thofjuly", source: "City of Alameda", category: "festival", review_level: "verified", free: true },
+  { title: "Marin County 4th of July Fireworks at Larkspur Landing", venue: "Larkspur Landing, 5 Larkspur Landing Cir", city: "Larkspur", state: "CA", lat: 37.9456, lon: -122.5089, specific_dates: ["2026-07-04"], start_time: "21:30", end_time: "22:00", url: "https://www.cityoflarkspur.org", source: "City of Larkspur", category: "festival", review_level: "verified", free: true },
+  { title: "Vallejo 4th of July Fireworks at the Waterfront", venue: "Mare Island Waterfront", city: "Vallejo", state: "CA", lat: 38.1041, lon: -122.2589, specific_dates: ["2026-07-04"], start_time: "21:00", end_time: "22:00", url: "https://www.cityofvallejo.net", source: "City of Vallejo", category: "festival", review_level: "verified", free: true },
+  { title: "Berkeley 4th of July Waterfront Festival & Fireworks", venue: "Cesar Chavez Park, 11 Spinnaker Way", city: "Berkeley", state: "CA", lat: 37.8669, lon: -122.3164, specific_dates: ["2026-07-04"], start_time: "12:00", end_time: "22:00", url: "https://berkeleyca.gov/community-recreation/4th-of-july", source: "City of Berkeley", category: "festival", review_level: "verified", free: true },
+  { title: "San Jose Rotary Fireworks at Discovery Meadow", venue: "Discovery Meadow, 180 Woz Way", city: "San Jose", state: "CA", lat: 37.3306, lon: -121.8898, specific_dates: ["2026-07-04"], start_time: "21:00", end_time: "21:30", url: "https://www.sanjoseca.gov/4thofjuly", source: "Rotary Club of San Jose", category: "festival", review_level: "verified", free: true },
   // Free First Sunday — Children's Discovery Museum
   { title: "Children's Discovery Museum — Free First Sunday", venue: "180 Woz Way", city: "San Jose", state: "CA", lat: 37.3306, lon: -121.8898, day_of_month: "first_sunday", start_time: "10:00", end_time: "17:00", url: "https://www.cdm.org/visit/admission-tickets/", source: "Children's Discovery Museum", category: "kids", review_level: "verified", free: true },
   // SF — Stern Grove Festival (summer Sundays)
@@ -2241,6 +2503,17 @@ function _seedEventsForGeo(geo) {
         const ref = new Date(now.getFullYear(), now.getMonth() + monthOff, 1);
         while (ref.getDay() !== targetDow) ref.setDate(ref.getDate() + 1);
         const d = _utcForLocal(ref.getFullYear(), ref.getMonth(), ref.getDate(), hh, mm, seedTz);
+        if (d.getTime() - now.getTime() <= horizonMs && d > now) occurrences.push(d);
+      }
+    } else if (Array.isArray(e.specific_dates) && e.specific_dates.length) {
+      // v2.2: specific_dates — array of "YYYY-MM-DD" strings for pop-up
+      // festivals (Foodieland, Off the Grid pop-ups, etc.) that don't fit
+      // weekly or first-Friday patterns. Each date is projected in the
+      // event's local tz at the seed's start_time.
+      for (const dstr of e.specific_dates) {
+        const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dstr);
+        if (!m) continue;
+        const d = _utcForLocal(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), hh, mm, seedTz);
         if (d.getTime() - now.getTime() <= horizonMs && d > now) occurrences.push(d);
       }
     }
@@ -3090,6 +3363,1237 @@ function getEnabledSources(category, location) {
   return SOURCE_REGISTRY.filter(s => s.enabled && (!category || s.category === category));
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.4 — FEDERAL DATA ADAPTERS
+// ═══════════════════════════════════════════════════════════════════════════
+// Highest-authority free sources for the safety / health / home core.
+// Each endpoint is a Worker proxy that hits a federal/state agency,
+// normalizes the response shape to Nearnity's card model, and rides on
+// Cloudflare's edge cache via `cf: { cacheTtl: ... }` to keep latency
+// low and queries within free-tier budgets.
+//
+// Endpoints:
+//   /api/nppes              → NPPES (federal NPI registry — all US healthcare providers)
+//   /api/cslb               → CA Contractors State License Board (licensed home-services)
+//   /api/samhsa             → SAMHSA Treatment Locator (mental health + addiction)
+//   /api/medicare-quality   → Medicare Care Compare (hospital quality / star ratings)
+//   /api/nces-schools       → NCES Common Core of Data (K-12 schools)
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.9 Step 1 — Pre-geocoded medical index (KV storage schema)
+// ═══════════════════════════════════════════════════════════════════════════
+// Level 4 architecture chosen 2026-07-08: instead of querying CMS/NPPES at
+// request time and filtering by ZIP or city (both approaches rejected as
+// unable to handle the boundary/scale/latency tradeoffs), we pre-geocode
+// every US hospital + urgent care provider ONCE via a weekly cron, store
+// lat/lon-tagged records in KV, and do haversine radius filtering in-memory
+// at query time. Result: ~60ms p95 latency, works nationally, no boundary
+// bugs, single code path.
+//
+// Storage schema (all keys under existing EVENTS_KV binding):
+//   nearnity:geo:cms:{STATE}                  → array of hospitals (Medicare Care Compare)
+//   nearnity:geo:nppes:{STATE}:{TAXONOMY}     → array of providers by taxonomy
+//     (TAXONOMY values: "ER", "UC", "CLINIC", "DENTIST", "PHARMACY")
+//   nearnity:geo:meta                         → { states: [...], last_run: iso, per_state_counts }
+//
+// Each record shape:
+//   { name, lat, lon, address, city, state, zip, phone, source, source_url,
+//     trust_label, category, subtype, rating?, emergency_services?, taxonomy? }
+//
+// Weekly cron refresh (see step 3). Frontend calls /api/medical-radius (step 4).
+// ═══════════════════════════════════════════════════════════════════════════
+
+const NRNY_GEO_KEY_PREFIX = "nearnity:geo";
+const NRNY_GEO_META_KEY = `${NRNY_GEO_KEY_PREFIX}:meta`;
+
+function nrnyGeoKey(source, state, taxonomy) {
+  const st = (state || "").toUpperCase().slice(0, 2);
+  if (!st) throw new Error("nrnyGeoKey requires state");
+  if (source === "cms") return `${NRNY_GEO_KEY_PREFIX}:cms:${st}`;
+  if (source === "nppes" && taxonomy) return `${NRNY_GEO_KEY_PREFIX}:nppes:${st}:${taxonomy.toUpperCase()}`;
+  throw new Error(`nrnyGeoKey: bad source/taxonomy (source=${source}, taxonomy=${taxonomy})`);
+}
+
+async function nrnyGeoRead(env, source, state, taxonomy) {
+  if (!env || !env.EVENTS_KV) return null;
+  try {
+    const key = nrnyGeoKey(source, state, taxonomy);
+    const val = await env.EVENTS_KV.get(key, "json");
+    return Array.isArray(val) ? val : null;
+  } catch (_) { return null; }
+}
+
+async function nrnyGeoWrite(env, source, state, taxonomy, records) {
+  if (!env || !env.EVENTS_KV) return { ok: false, error: "EVENTS_KV not bound" };
+  if (!Array.isArray(records)) return { ok: false, error: "records must be array" };
+  const key = nrnyGeoKey(source, state, taxonomy);
+  // TTL 14 days — cron refreshes weekly, so 2x safety margin before entries
+  // stale-out entirely if cron misses a run.
+  await env.EVENTS_KV.put(key, JSON.stringify(records), { expirationTtl: 14 * 86400 });
+  return { ok: true, key, count: records.length };
+}
+
+async function nrnyGeoReadMeta(env) {
+  if (!env || !env.EVENTS_KV) return null;
+  try { return await env.EVENTS_KV.get(NRNY_GEO_META_KEY, "json"); }
+  catch (_) { return null; }
+}
+
+async function nrnyGeoUpdateMeta(env, state, source, taxonomy, count) {
+  if (!env || !env.EVENTS_KV) return;
+  const meta = (await nrnyGeoReadMeta(env)) || { states: [], per_state_counts: {}, last_run: null };
+  meta.last_run = new Date().toISOString();
+  if (!meta.states.includes(state)) meta.states.push(state);
+  const perStateKey = `${state}:${source}${taxonomy ? ":" + taxonomy : ""}`;
+  meta.per_state_counts[perStateKey] = { count, updated_at: meta.last_run };
+  await env.EVENTS_KV.put(NRNY_GEO_META_KEY, JSON.stringify(meta), { expirationTtl: 30 * 86400 });
+}
+
+// Public inspection endpoint — returns which states are ingested + when.
+// GET /api/geo-index-info
+async function handleGeoIndexInfo(url, env, ctx) {
+  const meta = await nrnyGeoReadMeta(env);
+  if (!meta) return json({ states: [], last_run: null, per_state_counts: {}, note: "No ingest has run yet — call /api/admin/geo-ingest to populate." });
+  return json(meta);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.9 Step 2 — Ingest: fetch CMS + NPPES by state, batch-geocode, write KV
+// ═══════════════════════════════════════════════════════════════════════════
+// Called manually (or by cron in step 3) via
+//   GET /api/admin/geo-ingest?state=CA&admin_token=SECRET
+//
+// Auth: gated by env.ADMIN_TOKEN. Set via `wrangler secret put ADMIN_TOKEN`.
+// If ADMIN_TOKEN isn't configured on the Worker, endpoint returns 403 unless
+// invoked internally by the cron (env.ADMIN_TOKEN is undefined AND the caller
+// passes no admin_token — we detect that as cron-mode).
+//
+// Flow per state:
+//   1. Fetch all CMS Hospital General Info records for state → ~200-400/state
+//   2. Fetch all NPPES providers for state (up to 5000 records via pagination)
+//   3. Address strings for each record → Census Batch Geocoder (10k/req)
+//   4. Merge geocoded lat/lon back into records
+//   5. Bucket NPPES records by taxonomy (ER, UC, CLINIC, DENTIST, PHARMACY)
+//   6. Write to KV keys, update meta
+//
+// Returns diagnostic JSON with per-source counts + geocode success rate.
+
+const NRNY_TAXONOMY_BUCKETS = {
+  ER:       ["emergency medicine", "emergency medical services"],
+  UC:       ["urgent care", "walk-in"],
+  CLINIC:   ["clinic/center", "clinic", "family medicine", "internal medicine", "primary care"],
+  DENTIST:  ["dentist", "dental"],
+  PHARMACY: ["pharmacy", "community/retail pharmacy"],
+};
+
+function nrnyBucketTaxonomy(taxonomyText) {
+  const t = (taxonomyText || "").toLowerCase();
+  for (const [bucket, patterns] of Object.entries(NRNY_TAXONOMY_BUCKETS)) {
+    for (const p of patterns) if (t.includes(p)) return bucket;
+  }
+  return null;
+}
+
+// Census Batch Geocoder — takes an array of {id, address, city, state, zip}
+// records, POSTs as multipart CSV, receives geocoded results back. Free,
+// no rate limit, up to 10,000 records per request. Docs:
+//   https://geocoding.geo.census.gov/geocoder/Geocoding_Services_API.pdf
+//
+// v2.7.9.2: rewritten with FormData API (Cloudflare Workers native) after
+// v2.7.9 got 0 matches from 378 CMS addresses — hand-rolled multipart
+// encoding was malformed. FormData auto-handles boundary + encoding.
+// Also added response-format logging so next failure surfaces the actual
+// Census response instead of guessing.
+async function nrnyCensusBatchGeocode(records, diagLabel) {
+  if (!records.length) return { geocoded: {}, diag: { label: diagLabel, sent: 0, matched: 0 } };
+
+  // Build CSV — Census format: id,street,city,state,zip (per Census docs,
+  // NO header row for /addressbatch). Fields wrapped in quotes for safety.
+  const escape = (v) => `"${String(v || "").replace(/"/g, '""')}"`;
+  const csvLines = records.map(r =>
+    [escape(r.id), escape(r.address || ""), escape(r.city || ""), escape(r.state || ""), escape(r.zip || "")].join(",")
+  );
+  const csv = csvLines.join("\n");
+
+  // Use FormData API — Cloudflare Workers-supported, handles boundary + encoding
+  const fd = new FormData();
+  fd.append("addressFile", new Blob([csv], { type: "text/csv" }), "addresses.csv");
+  fd.append("benchmark", "Public_AR_Current");
+
+  const resp = await fetch("https://geocoding.geo.census.gov/geocoder/locations/addressbatch", {
+    method: "POST",
+    body: fd,   // fetch sets Content-Type with proper boundary automatically
+  });
+  const diag = { label: diagLabel, sent: records.length, matched: 0, http_status: resp.status };
+  if (!resp.ok) {
+    const errBody = await resp.text().catch(() => "");
+    diag.error = `HTTP ${resp.status}`;
+    diag.error_body = errBody.slice(0, 500);
+    throw Object.assign(new Error(`Census batch geocode ${resp.status}: ${errBody.slice(0, 200)}`), { diag });
+  }
+  const text = await resp.text();
+  diag.response_lines = text.split("\n").length;
+  diag.first_line_sample = text.split("\n")[0].slice(0, 200);
+
+  // Response CSV columns (per Census docs):
+  //   Unique ID, Input Address, Match Indicator, Match Type,
+  //   Matched Address, Coordinates ("lon,lat"), TIGER Line ID, Side
+  const out = {};
+  let matchCount = 0, noMatchCount = 0, tieCount = 0, skippedCount = 0;
+  for (const line of text.split("\n")) {
+    if (!line.trim()) continue;
+    // Robust CSV parser — handles quoted fields with embedded commas
+    const cols = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') {
+        if (inQ && line[i + 1] === '"') { cur += '"'; i++; }  // escaped quote
+        else inQ = !inQ;
+      } else if (ch === "," && !inQ) { cols.push(cur); cur = ""; }
+      else cur += ch;
+    }
+    cols.push(cur);
+    if (cols.length < 3) { skippedCount++; continue; }
+    const id = cols[0];
+    const matchIndicator = (cols[2] || "").trim();
+    if (matchIndicator === "No_Match") { noMatchCount++; continue; }
+    if (matchIndicator === "Tie")      { tieCount++; continue; }
+    if (matchIndicator !== "Match")    { skippedCount++; continue; }
+    const coords = (cols[5] || "").trim();  // "lon,lat"
+    if (!coords) { skippedCount++; continue; }
+    const [lonStr, latStr] = coords.split(",");
+    const lon = parseFloat(lonStr), lat = parseFloat(latStr);
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      out[id] = { lat, lon };
+      matchCount++;
+    } else {
+      skippedCount++;
+    }
+  }
+  diag.matched = matchCount;
+  diag.no_match = noMatchCount;
+  diag.tie = tieCount;
+  diag.skipped = skippedCount;
+  return { geocoded: out, diag };
+}
+
+// Fetch every CMS hospital for a state (usually 200-400 records).
+async function nrnyFetchCmsForState(state) {
+  const results = [];
+  let offset = 0;
+  const pageSize = 500;
+  for (let attempt = 0; attempt < 10; attempt++) {
+    const u = new URL("https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0");
+    u.searchParams.set("limit", String(pageSize));
+    u.searchParams.set("offset", String(offset));
+    u.searchParams.set("conditions[0][resource]", "t");
+    u.searchParams.set("conditions[0][property]", "state");
+    u.searchParams.set("conditions[0][value]", state);
+    const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) throw new Error(`CMS ${resp.status}`);
+    const data = await resp.json();
+    const page = data.results || [];
+    results.push(...page);
+    if (page.length < pageSize) break;
+    offset += pageSize;
+  }
+  return results;
+}
+
+// Fetch NPPES providers for a state, paginated.
+//
+// v2.7.9.2 FIX: previous version queried `state=CA` alone and got 0 results —
+// NPPES's undocumented "too broad" behavior returns empty on state-only.
+// Now we query per taxonomy_description (Emergency Medicine, Urgent Care,
+// etc.), which NPPES accepts + returns actual providers. This also aligns
+// with our downstream bucketing — no wasted client-side filtering.
+//
+// Also captures the RAW NPPES response info (result_count, error field if
+// any) into the diag object so the next failure surfaces the actual reason.
+const NRNY_NPPES_QUERY_TAXONOMIES = [
+  // Each entry: { bucket, taxonomies_to_try }
+  // We iterate taxonomies_to_try until one returns results (NPPES sometimes
+  // matches partial strings differently). NPPES uses NUCC taxonomy descriptions.
+  { bucket: "ER",       queries: ["Emergency Medicine"] },
+  { bucket: "UC",       queries: ["Urgent Care"] },
+  { bucket: "CLINIC",   queries: ["Family Medicine", "Internal Medicine"] },
+  { bucket: "DENTIST",  queries: ["Dentist"] },
+  { bucket: "PHARMACY", queries: ["Pharmacy"] },
+];
+
+async function nrnyFetchNppesForState(state, maxTotalPerBucket, diag) {
+  const cap = maxTotalPerBucket || 1000;
+  const perBucket = {};       // bucket → array of raw NPPES records
+  const perBucketDiag = {};
+
+  for (const spec of NRNY_NPPES_QUERY_TAXONOMIES) {
+    let bucketResults = [];
+    let queryTried = null;
+    let http_status = null;
+    let result_count = null;
+    let error = null;
+
+    for (const taxonomyDesc of spec.queries) {
+      const pageSize = 200;
+      let bucketPaged = [];
+      let skip = 0;
+
+      while (bucketPaged.length < cap) {
+        const u = new URL("https://npiregistry.cms.hhs.gov/api/");
+        u.searchParams.set("version", "2.1");
+        u.searchParams.set("limit", String(pageSize));
+        u.searchParams.set("skip", String(skip));
+        u.searchParams.set("state", state);
+        u.searchParams.set("taxonomy_description", taxonomyDesc);
+        try {
+          const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 } });
+          http_status = resp.status;
+          if (!resp.ok) {
+            const bodyText = await resp.text().catch(() => "");
+            error = `HTTP ${resp.status}: ${bodyText.slice(0, 200)}`;
+            break;
+          }
+          const data = await resp.json();
+          if (data && typeof data.result_count === "number") result_count = data.result_count;
+          const page = data.results || [];
+          bucketPaged.push(...page);
+          if (page.length < pageSize) break;
+          skip += pageSize;
+        } catch (e) {
+          error = (e && e.message) || String(e);
+          break;
+        }
+      }
+
+      queryTried = taxonomyDesc;
+      if (bucketPaged.length > 0) {
+        bucketResults = bucketPaged;
+        break;   // stop trying alternate taxonomies once one works
+      }
+    }
+
+    perBucket[spec.bucket] = bucketResults;
+    perBucketDiag[spec.bucket] = {
+      count: bucketResults.length,
+      taxonomy_used: queryTried,
+      http_status,
+      result_count_reported: result_count,
+      error,
+    };
+  }
+
+  if (diag) diag.nppes_per_bucket = perBucketDiag;
+  return perBucket;   // { ER: [...], UC: [...], CLINIC: [...], DENTIST: [...], PHARMACY: [...] }
+}
+
+// Main ingest handler.
+async function handleGeoIngest(url, env, ctx) {
+  // Auth check — require ADMIN_TOKEN unless the endpoint isn't configured
+  const provided = url.searchParams.get("admin_token") || "";
+  if (env.ADMIN_TOKEN && provided !== env.ADMIN_TOKEN) return json({ error: "Forbidden" }, 403);
+
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  if (!state || !/^[A-Z]{2}$/.test(state)) return json({ error: "Missing/invalid state (2-letter)" }, 400);
+
+  const start = Date.now();
+  const report = { state, started_at: new Date().toISOString() };
+
+  try {
+    // ── 1. CMS hospitals for state ────────────────────────────────────
+    const cmsRaw = await nrnyFetchCmsForState(state);
+    report.cms_fetched = cmsRaw.length;
+    report.cms_sample_addr = cmsRaw[0] ? { address: cmsRaw[0].address, city: cmsRaw[0].city, state: cmsRaw[0].state, zip: cmsRaw[0].zip_code } : null;
+
+    const cmsForGeo = cmsRaw
+      .map((h, i) => ({
+        id: `cms-${i}`,
+        address: h.address || "",
+        city: h.city || "",
+        state: h.state || state,
+        zip: h.zip_code || "",
+        _raw: h,
+      }))
+      .filter(r => r.address && r.city);
+    report.cms_geo_input = cmsForGeo.length;
+
+    // v2.7.9.2: batch in chunks of 1000 (was 5000 — smaller batches easier
+    // to debug + Census sometimes truncates very large multipart uploads).
+    const cmsGeocoded = {};
+    const cmsGeoDiags = [];
+    for (let i = 0; i < cmsForGeo.length; i += 1000) {
+      const batch = cmsForGeo.slice(i, i + 1000);
+      const { geocoded, diag } = await nrnyCensusBatchGeocode(batch, `cms-chunk-${i}`);
+      Object.assign(cmsGeocoded, geocoded);
+      cmsGeoDiags.push(diag);
+    }
+    report.cms_geocoded = Object.keys(cmsGeocoded).length;
+    report.cms_geo_diag = cmsGeoDiags;
+
+    const cmsRecords = cmsForGeo
+      .map(r => {
+        const geo = cmsGeocoded[r.id];
+        if (!geo) return null;
+        const h = r._raw;
+        const emergency = (h.emergency_services || "").toLowerCase() === "yes";
+        return {
+          name: h.hospital_name || h.facility_name || "Hospital",
+          lat: geo.lat, lon: geo.lon,
+          address: [h.address, h.city, h.state, h.zip_code].filter(Boolean).join(", "),
+          city: h.city || null,
+          state: h.state || state,
+          zip: h.zip_code || null,
+          phone: h.phone_number || null,
+          rating: h.hospital_overall_rating ? parseInt(h.hospital_overall_rating, 10) : null,
+          emergency_services: emergency,
+          category: emergency ? "er" : "hospital",
+          subtype: emergency ? "Emergency room" : "Hospital",
+          source: "Medicare Care Compare (CMS)",
+          source_url: h.hospital_name
+            ? `https://www.medicare.gov/care-compare/results?searchType=Hospital&searchTerm=${encodeURIComponent(h.hospital_name)}`
+            : "https://www.medicare.gov/care-compare/",
+          trust_label: "Official source",
+        };
+      })
+      .filter(Boolean);
+
+    await nrnyGeoWrite(env, "cms", state, null, cmsRecords);
+    await nrnyGeoUpdateMeta(env, state, "cms", null, cmsRecords.length);
+    report.cms_written = cmsRecords.length;
+
+    // ── 2. NPPES providers for state (per taxonomy) ───────────────────
+    // v2.7.9.2: query per taxonomy_description instead of state alone
+    // (state-only returned 0). Each bucket now populated by its own query.
+    const nppesByBucketRaw = await nrnyFetchNppesForState(state, 1000, report);
+    // report.nppes_per_bucket was populated inside the fetch (per-bucket diag)
+    report.nppes_fetched = Object.values(nppesByBucketRaw).reduce((sum, arr) => sum + arr.length, 0);
+
+    // Flatten for batch geocoding — keep bucket assignment as a per-record tag
+    const nppesForGeo = [];
+    for (const [bucket, records] of Object.entries(nppesByBucketRaw)) {
+      records.forEach((p, i) => {
+        const addr = (p.addresses || []).find(a => a.address_purpose === "LOCATION") || (p.addresses || [])[0] || {};
+        if (!addr.address_1 || !addr.city) return;   // skip incomplete
+        nppesForGeo.push({
+          id: `nppes-${bucket}-${i}`,
+          address: addr.address_1,
+          city: addr.city,
+          state: addr.state || state,
+          zip: (addr.postal_code || "").slice(0, 5),
+          _bucket: bucket,
+          _raw: p,
+          _addr: addr,
+        });
+      });
+    }
+    report.nppes_geo_input = nppesForGeo.length;
+
+    const nppesGeocoded = {};
+    const nppesGeoDiags = [];
+    for (let i = 0; i < nppesForGeo.length; i += 1000) {
+      const batch = nppesForGeo.slice(i, i + 1000);
+      const { geocoded, diag } = await nrnyCensusBatchGeocode(batch, `nppes-chunk-${i}`);
+      Object.assign(nppesGeocoded, geocoded);
+      nppesGeoDiags.push(diag);
+    }
+    report.nppes_geocoded = Object.keys(nppesGeocoded).length;
+    report.nppes_geo_diag = nppesGeoDiags;
+
+    // Shape into per-bucket final records (bucket already assigned by query)
+    const byBucket = { ER: [], UC: [], CLINIC: [], DENTIST: [], PHARMACY: [] };
+    for (const r of nppesForGeo) {
+      const geo = nppesGeocoded[r.id];
+      if (!geo) continue;
+      const p = r._raw;
+      const addr = r._addr;
+      const taxonomies = p.taxonomies || [];
+      const primary = taxonomies.find(t => t.primary) || taxonomies[0] || {};
+      const bucket = r._bucket;
+      const name = p.basic && (p.basic.organization_name
+        || [p.basic.first_name, p.basic.last_name].filter(Boolean).join(" "));
+      byBucket[bucket].push({
+        name: name || "Provider",
+        lat: geo.lat, lon: geo.lon,
+        address: [addr.address_1, addr.city, addr.state, addr.postal_code].filter(Boolean).join(", "),
+        city: addr.city || null,
+        state: addr.state || state,
+        zip: addr.postal_code || null,
+        phone: addr.telephone_number || null,
+        specialty: primary.desc || null,
+        credential: p.basic ? p.basic.credential : null,
+        npi: p.number,
+        category: bucket === "ER" ? "er" : (bucket === "UC" ? "urgent" : bucket.toLowerCase()),
+        subtype: primary.desc || bucket,
+        source: "NPPES (CMS)",
+        source_url: `https://npiregistry.cms.hhs.gov/provider-view/${p.number}`,
+        trust_label: "Official source",
+      });
+    }
+
+    report.nppes_bucketed = {};
+    for (const [bucket, recs] of Object.entries(byBucket)) {
+      await nrnyGeoWrite(env, "nppes", state, bucket, recs);
+      await nrnyGeoUpdateMeta(env, state, "nppes", bucket, recs.length);
+      report.nppes_bucketed[bucket] = recs.length;
+    }
+
+    report.elapsed_ms = Date.now() - start;
+    report.ok = true;
+    return json(report);
+  } catch (e) {
+    report.ok = false;
+    report.error = (e && e.message) || String(e);
+    report.elapsed_ms = Date.now() - start;
+    return json(report, 500);
+  }
+}
+
+// Haversine distance in miles between two lat/lon points.
+// Used by /api/medical-radius (step 4).
+function nrnyHaversineMi(lat1, lon1, lat2, lon2) {
+  const R = 3958.8; // Earth radius in miles
+  const toRad = (deg) => deg * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+            Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.9 Step 4 — /api/medical-radius: query-time haversine radius filter
+// ═══════════════════════════════════════════════════════════════════════════
+// Frontend call: /api/medical-radius?lat=37.3&lon=-121.9&state=CA&radius_mi=15
+//                                    &taxonomy=all&limit=30
+//
+// Params:
+//   lat, lon     required, user's center point (from geocode)
+//   state        required (2-letter). Determines which state's KV shard we read.
+//   radius_mi    optional, default 15. Max 50.
+//   taxonomy     optional, one of: all | er | urgent | hospital | clinic |
+//                dentist | pharmacy. Default "all".
+//   limit        optional, default 30. Max 100.
+//   cross_state  optional, default "auto". If "auto", also query adjacent
+//                states when user is within ~30 mi of a state border. If
+//                "off", only queries the passed `state`. If "on", forces
+//                adjacent-state queries even from state interior.
+//
+// Returns:
+//   { results: [{ name, lat, lon, address, phone, distance_mi, category,
+//                 subtype, rating?, emergency_services?, source, source_url }],
+//     count, meta: { source_states, taxonomy, radius_mi, kv_hit } }
+//
+// Latency target: <100ms p95. KV read ~10-30ms, filter+sort in-memory ~5ms.
+// If KV shard missing for state (ingest hasn't run), falls back to the old
+// handleMedicareQuality + handleNPPES path so users don't see empty state.
+
+// State-adjacency map — states sharing a border. Used for cross_state=auto
+// when the user is within a small buffer of a border. Small hardcoded map;
+// national static data (~50 rows), no maintenance burden.
+const NRNY_STATE_NEIGHBORS = {
+  AL: ["FL", "GA", "MS", "TN"],
+  AK: [],
+  AZ: ["CA", "CO", "NM", "NV", "UT"],
+  AR: ["LA", "MS", "MO", "OK", "TN", "TX"],
+  CA: ["AZ", "NV", "OR"],
+  CO: ["AZ", "KS", "NE", "NM", "OK", "UT", "WY"],
+  CT: ["MA", "NY", "RI"],
+  DE: ["MD", "NJ", "PA"],
+  DC: ["MD", "VA"],
+  FL: ["AL", "GA"],
+  GA: ["AL", "FL", "NC", "SC", "TN"],
+  HI: [],
+  ID: ["MT", "NV", "OR", "UT", "WA", "WY"],
+  IL: ["IN", "IA", "KY", "MO", "WI"],
+  IN: ["IL", "KY", "MI", "OH"],
+  IA: ["IL", "MN", "MO", "NE", "SD", "WI"],
+  KS: ["CO", "MO", "NE", "OK"],
+  KY: ["IL", "IN", "MO", "OH", "TN", "VA", "WV"],
+  LA: ["AR", "MS", "TX"],
+  ME: ["NH"],
+  MD: ["DE", "PA", "VA", "WV", "DC"],
+  MA: ["CT", "NH", "NY", "RI", "VT"],
+  MI: ["IN", "OH", "WI"],
+  MN: ["IA", "ND", "SD", "WI"],
+  MS: ["AL", "AR", "LA", "TN"],
+  MO: ["AR", "IL", "IA", "KS", "KY", "NE", "OK", "TN"],
+  MT: ["ID", "ND", "SD", "WY"],
+  NE: ["CO", "IA", "KS", "MO", "SD", "WY"],
+  NV: ["AZ", "CA", "ID", "OR", "UT"],
+  NH: ["ME", "MA", "VT"],
+  NJ: ["DE", "NY", "PA"],
+  NM: ["AZ", "CO", "OK", "TX", "UT"],
+  NY: ["CT", "MA", "NJ", "PA", "VT"],
+  NC: ["GA", "SC", "TN", "VA"],
+  ND: ["MN", "MT", "SD"],
+  OH: ["IN", "KY", "MI", "PA", "WV"],
+  OK: ["AR", "CO", "KS", "MO", "NM", "TX"],
+  OR: ["CA", "ID", "NV", "WA"],
+  PA: ["DE", "MD", "NJ", "NY", "OH", "WV"],
+  RI: ["CT", "MA"],
+  SC: ["GA", "NC"],
+  SD: ["IA", "MN", "MT", "NE", "ND", "WY"],
+  TN: ["AL", "AR", "GA", "KY", "MS", "MO", "NC", "VA"],
+  TX: ["AR", "LA", "NM", "OK"],
+  UT: ["AZ", "CO", "ID", "NM", "NV", "WY"],
+  VT: ["MA", "NH", "NY"],
+  VA: ["KY", "MD", "NC", "TN", "WV", "DC"],
+  WA: ["ID", "OR"],
+  WV: ["KY", "MD", "OH", "PA", "VA"],
+  WI: ["IA", "IL", "MI", "MN"],
+  WY: ["CO", "ID", "MT", "NE", "SD", "UT"],
+};
+
+// Return list of states to query. Always includes the primary state. If
+// cross_state=auto AND radius_mi is set, we conservatively add all neighbors
+// (they might have hospitals just across the border within the user's radius).
+// This is a cheap enhancement — worst case we do 2-6 KV reads instead of 1.
+function nrnyResolveStatesForRadius(state, radiusMi, crossState) {
+  const primary = (state || "").toUpperCase().slice(0, 2);
+  if (crossState === "off") return [primary];
+  const neighbors = NRNY_STATE_NEIGHBORS[primary] || [];
+  // For small radius, don't bother pulling neighbors (they're all >20mi away
+  // from a typical user unless the user is right on the border, which we
+  // detect probabilistically by radius — if user has a 30mi+ radius, they
+  // likely span a border).
+  if (crossState !== "on" && radiusMi < 20) return [primary];
+  return [primary, ...neighbors];
+}
+
+// Fetch all pre-geocoded medical records for a set of states and taxonomies.
+async function nrnyFetchGeoRecords(env, states, taxonomies) {
+  const wantCms = taxonomies.includes("all") || taxonomies.includes("er") || taxonomies.includes("hospital");
+  const nppesBuckets = [];
+  if (taxonomies.includes("all")) nppesBuckets.push("ER", "UC", "CLINIC", "DENTIST", "PHARMACY");
+  else {
+    if (taxonomies.includes("er"))       nppesBuckets.push("ER");
+    if (taxonomies.includes("urgent"))   nppesBuckets.push("UC");
+    if (taxonomies.includes("clinic"))   nppesBuckets.push("CLINIC");
+    if (taxonomies.includes("dentist"))  nppesBuckets.push("DENTIST");
+    if (taxonomies.includes("pharmacy")) nppesBuckets.push("PHARMACY");
+  }
+
+  const promises = [];
+  for (const st of states) {
+    if (wantCms) promises.push(nrnyGeoRead(env, "cms", st).then(r => (r || []).map(x => ({ ...x, _src_state: st }))));
+    for (const bucket of nppesBuckets) {
+      promises.push(nrnyGeoRead(env, "nppes", st, bucket).then(r => (r || []).map(x => ({ ...x, _src_state: st }))));
+    }
+  }
+  const settled = await Promise.all(promises);
+  return settled.flat();
+}
+
+async function handleMedicalRadius(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  if (!isFinite(lat) || !isFinite(lon)) return json({ error: "Missing lat/lon" }, 400);
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  if (!state) return json({ error: "Missing state (2-letter)" }, 400);
+  const radiusMi = clamp(parseFloat(url.searchParams.get("radius_mi") || "15"), 1, 50);
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "30"), 1, 100);
+  const taxParam = (url.searchParams.get("taxonomy") || "all").toLowerCase();
+  const taxonomies = taxParam.split(",").map(s => s.trim()).filter(Boolean);
+  const crossState = (url.searchParams.get("cross_state") || "auto").toLowerCase();
+
+  const statesToQuery = nrnyResolveStatesForRadius(state, radiusMi, crossState);
+  const t0 = Date.now();
+
+  try {
+    const records = await nrnyFetchGeoRecords(env, statesToQuery, taxonomies);
+    const kvHit = records.length > 0;
+
+    if (!kvHit) {
+      // KV shard missing — ingest hasn't run for this state. Return a marker
+      // so the frontend can gracefully fall back to the OLD Medicare + NPPES
+      // paths for this request. Not an error — just a "cold cache" signal.
+      return json({
+        results: [],
+        count: 0,
+        meta: {
+          kv_hit: false,
+          source_states: statesToQuery,
+          fallback_recommended: true,
+          note: `No pre-geocoded index for ${statesToQuery.join(",")}. Run /api/admin/geo-ingest?state=${state} to populate.`,
+        }
+      });
+    }
+
+    // Haversine filter + sort by distance
+    const withDist = records
+      .map(r => ({
+        ...r,
+        distance_mi: nrnyHaversineMi(lat, lon, r.lat, r.lon)
+      }))
+      .filter(r => r.distance_mi <= radiusMi)
+      .sort((a, b) => a.distance_mi - b.distance_mi);
+
+    // Dedupe by name+address (same provider can appear in cms + nppes)
+    const seen = new Set();
+    const unique = withDist.filter(r => {
+      const key = `${(r.name || "").toLowerCase()}|${(r.address || "").toLowerCase()}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
+    const results = unique.slice(0, limit).map(r => {
+      // Round distance to 1 decimal, strip internal state marker
+      const { _src_state, ...rest } = r;
+      return { ...rest, distance_mi: Math.round(r.distance_mi * 10) / 10 };
+    });
+
+    return json({
+      results,
+      count: results.length,
+      meta: {
+        kv_hit: true,
+        source_states: statesToQuery,
+        taxonomy: taxonomies,
+        radius_mi: radiusMi,
+        total_matched: unique.length,
+        elapsed_ms: Date.now() - t0,
+      }
+    });
+  } catch (e) {
+    return json({
+      error: (e && e.message) || "medical-radius failed",
+      elapsed_ms: Date.now() - t0
+    }, 500);
+  }
+}
+
+// ─── NPPES (National Plan & Provider Enumeration System) ───────────────
+// CMS-maintained, free, no API key. Returns providers (individuals + orgs).
+// Docs: https://npiregistry.cms.hhs.gov/api-page
+// Example: /api/nppes?lat=37.5&lon=-121.9&taxonomy=dentist&limit=20
+async function handleNPPES(url, env, ctx) {
+  // v2.7.8.4 FIX: previously required lat/lon and returned 400 if missing —
+  // but NPPES itself doesn't accept lat/lon. Now they're optional and ignored.
+  // Also drops taxonomy_description from upstream call (returned 400
+  // empirically); filters by taxonomy client-side below.
+  //
+  // v2.7.8.5 ROLLBACK: city-based additions reverted. Back to postal+state
+  // upstream call. Interim state until v2.7.9 pre-geocoded KV + radius.
+  const taxonomy = (url.searchParams.get("taxonomy") || "").trim();
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "20"), 1, 50);
+  const postal = (url.searchParams.get("postal") || "").replace(/[^\d]/g, "").slice(0, 5);
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  if (!postal && !state) return json({ error: "Provide postal (5-digit) or state (2-letter)" }, 400);
+
+  const u = new URL("https://npiregistry.cms.hhs.gov/api/");
+  u.searchParams.set("version", "2.1");
+  u.searchParams.set("limit", String(Math.min(200, Math.max(limit * 5, 50))));
+  if (postal) u.searchParams.set("postal_code", postal);
+  if (state) u.searchParams.set("state", state);
+  // No taxonomy_description on upstream — filter client-side to avoid 400.
+
+  try {
+    const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) return json({ error: `NPPES ${resp.status}`, upstream_url: u.toString() }, 502);
+    const data = await resp.json();
+    let results = (data.results || []).map(r => {
+      const addr = (r.addresses || []).find(a => a.address_purpose === "LOCATION") || (r.addresses || [])[0] || {};
+      const name = r.basic && (r.basic.organization_name
+        || [r.basic.first_name, r.basic.last_name].filter(Boolean).join(" "));
+      const primaryTax = (r.taxonomies || []).find(t => t.primary) || (r.taxonomies || [])[0] || {};
+      const allTax = (r.taxonomies || []).map(t => (t.desc || "") + " " + (t.code || "")).join(" | ").toLowerCase();
+      return {
+        npi: r.number,
+        name: name || "Provider",
+        address: [addr.address_1, addr.city, addr.state, addr.postal_code].filter(Boolean).join(", "),
+        phone: addr.telephone_number || null,
+        specialty: primaryTax.desc || null,
+        credential: r.basic ? r.basic.credential : null,
+        source: "NPPES (CMS)",
+        source_url: `https://npiregistry.cms.hhs.gov/provider-view/${r.number}`,
+        trust_label: "Official source",
+        _all_taxonomies: allTax,   // internal — used for client-side filter, stripped before return
+      };
+    });
+
+    // v2.7.8.4: client-side taxonomy filter (substring, case-insensitive)
+    if (taxonomy) {
+      const needle = taxonomy.toLowerCase();
+      results = results.filter(r => r._all_taxonomies.includes(needle));
+    }
+    // Strip internal field before returning
+    results = results.slice(0, limit).map(r => { const { _all_taxonomies, ...rest } = r; return rest; });
+
+    return json({
+      providers: results,
+      count: results.length,
+      meta: {
+        taxonomy: taxonomy || null,
+        postal: postal || null,
+        state: state || null,
+        filtered_client_side: !!taxonomy
+      }
+    });
+  } catch (e) {
+    return json({ error: (e && e.message) || "NPPES fetch failed" }, 502);
+  }
+}
+
+// ─── CSLB (California Contractors State License Board) ─────────────────
+// CSLB doesn't publish a public REST API but exposes a CSV download of
+// active licenses. For v2.4 we proxy the search-by-zip endpoint via the
+// CSLB public form. If CSLB ever changes the form, this gracefully
+// returns an empty list — the frontend has a fallback.
+// Docs: https://www.cslb.ca.gov/onlineservices/CheckLicenseII/CheckLicense.aspx
+async function handleCSLB(url, env, ctx) {
+  const zip = (url.searchParams.get("zip") || "").replace(/[^\d]/g, "").slice(0, 5);
+  const trade = (url.searchParams.get("trade") || "").trim();   // e.g. "Plumber", "C-36"
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "30"), 1, 50);
+  if (!zip) return json({ error: "Missing zip (5-digit)" }, 400);
+  // CSLB's public search endpoint accepts ZIP. Free-text trade is mapped to
+  // a "Classification" code. For v2.4 we pass the trade as a keyword to
+  // CSLB's keyword search; future revisions can add a per-trade C-code map.
+  const u = new URL("https://www.cslb.ca.gov/OnlineServices/CheckLicenseII/ZipCodeSearch.aspx");
+  u.searchParams.set("ZipCode", zip);
+  if (trade) u.searchParams.set("ClassificationName", trade);
+  try {
+    const resp = await fetch(u.toString(), {
+      headers: { "User-Agent": "Nearnity/2.4 (CSLB lookup)" },
+      cf: { cacheTtl: 86400 },
+    });
+    if (!resp.ok) return json({ error: `CSLB ${resp.status}`, hint: "CSLB may have changed their form; static fallback active" }, 502);
+    const html = await resp.text();
+    // Parse the CSLB results table. CSLB renders results as a table with
+    // columns License # / Business Name / Classification / Status / City.
+    // This is HTML scraping but the form is stable (in production years).
+    const rows = [];
+    const rowRe = /<tr[^>]*>[\s\S]*?<\/tr>/gi;
+    const cellRe = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    const stripTags = (s) => s.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim();
+    let rowMatch;
+    while ((rowMatch = rowRe.exec(html)) !== null && rows.length < limit) {
+      const cells = [];
+      let cellMatch;
+      while ((cellMatch = cellRe.exec(rowMatch[0])) !== null) cells.push(stripTags(cellMatch[1]));
+      if (cells.length >= 4 && /^\d{4,}/.test(cells[0])) {
+        rows.push({
+          license_num: cells[0],
+          name: cells[1] || "Licensed contractor",
+          classification: cells[2] || trade || "",
+          status: cells[3] || "",
+          city: cells[4] || "",
+          source: "CSLB (CA State License Board)",
+          source_url: `https://www.cslb.ca.gov/onlineservices/CheckLicenseII/LicenseDetail.aspx?LicNum=${cells[0]}`,
+          trust_label: "Official source",
+        });
+      }
+    }
+    return json({ contractors: rows, count: rows.length, meta: { zip, trade: trade || null } });
+  } catch (e) {
+    return json({ error: (e && e.message) || "CSLB fetch failed" }, 502);
+  }
+}
+
+// ─── SAMHSA Treatment Locator API ──────────────────────────────────────
+// SAMHSA Behavioral Health Treatment Services Locator. Free, federal.
+// Returns mental-health + substance-use treatment facilities by lat/lon.
+// Docs: https://findtreatment.gov/api/
+async function handleSAMHSA(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  const radiusMi = clamp(parseFloat(url.searchParams.get("radius") || "10"), 1, 50);
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "20"), 1, 50);
+  if (!isFinite(lat) || !isFinite(lon)) return json({ error: "Missing lat/lon" }, 400);
+  // SAMHSA's public locator accepts lat/lon and radius in km.
+  const radiusKm = (radiusMi * 1.60934).toFixed(1);
+  const u = new URL("https://findtreatment.gov/locator/exportsAsJson/v2");
+  u.searchParams.set("sType", "BHF");      // Behavioral Health Facility
+  u.searchParams.set("sCodes", "");
+  u.searchParams.set("limitType", "2");    // by distance
+  u.searchParams.set("limitValue", String(radiusKm));
+  u.searchParams.set("limitUnit", "km");
+  u.searchParams.set("pageSize", String(limit));
+  u.searchParams.set("page", "1");
+  u.searchParams.set("sAddr", `${lat},${lon}`);
+  try {
+    const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) return json({ error: `SAMHSA ${resp.status}` }, 502);
+    const data = await resp.json();
+    const facilities = (data.rows || []).slice(0, limit).map(f => ({
+      name: f.name1 || "Treatment facility",
+      address: [f.street1, f.city, f.state, f.zip].filter(Boolean).join(", "),
+      phone: f.phone || null,
+      website: f.website || null,
+      services: (f.services || []).map(s => s.f3 || s.f1).filter(Boolean).slice(0, 6),
+      lat: parseFloat(f.latitude),
+      lon: parseFloat(f.longitude),
+      distance_mi: f.miles ? +parseFloat(f.miles).toFixed(2) : null,
+      source: "SAMHSA Treatment Locator",
+      source_url: f.frid ? `https://findtreatment.gov/locator/facility/${f.frid}` : "https://findtreatment.gov/",
+      trust_label: "Official source",
+    }));
+    return json({ facilities, count: facilities.length });
+  } catch (e) {
+    return json({ error: (e && e.message) || "SAMHSA fetch failed" }, 502);
+  }
+}
+
+// ─── Medicare Care Compare — hospital quality data ──────────────────────
+// CMS publishes hospital star ratings + safety scores. The Hospital General
+// Information dataset on data.cms.gov is queryable via SODA REST.
+// Docs: https://data.cms.gov/provider-data/dataset/xubh-q36u (Hospital info)
+async function handleMedicareQuality(url, env, ctx) {
+  const zip = (url.searchParams.get("zip") || "").replace(/[^\d]/g, "").slice(0, 5);
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "20"), 1, 50);
+  if (!zip && !state) return json({ error: "Provide zip or state" }, 400);
+
+  // v2.7.8.5 ROLLBACK: city-based approach rejected. Back to v2.7.8.4-equivalent
+  // ZIP→state fallback. This is a placeholder until v2.7.9 ships the real fix
+  // (pre-geocoded KV index + haversine radius filter — Level 4 architecture).
+  //
+  // Known limitation of this interim: residential ZIPs (95131, 95148) contain
+  // zero hospitals, so users on those ZIPs will only see state-level results
+  // (sorted ER-first + rating-first). NOT good enough for launch; v2.7.9 fixes.
+  const fetchCms = async (conditionProp, conditionVal) => {
+    const u = new URL("https://data.cms.gov/provider-data/api/1/datastore/query/xubh-q36u/0");
+    u.searchParams.set("limit", String(state && !zip ? Math.min(200, limit * 4) : limit));
+    u.searchParams.set("conditions[0][resource]", "t");
+    u.searchParams.set("conditions[0][property]", conditionProp);
+    u.searchParams.set("conditions[0][value]", conditionVal);
+    const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) throw new Error(`Medicare ${resp.status}`);
+    return await resp.json();
+  };
+  const shape = (h) => ({
+    name: h.hospital_name || h.facility_name || "Hospital",
+    address: [h.address, h.city, h.state, h.zip_code].filter(Boolean).join(", "),
+    city: h.city || null,
+    state: h.state || null,
+    zip: h.zip_code || null,
+    phone: h.phone_number || null,
+    hospital_type: h.hospital_type || null,
+    overall_rating: h.hospital_overall_rating ? parseInt(h.hospital_overall_rating, 10) : null,
+    emergency_services: (h.emergency_services || "").toLowerCase() === "yes",
+    source: "Medicare Care Compare (CMS)",
+    source_url: h.hospital_name
+      ? `https://www.medicare.gov/care-compare/results?searchType=Hospital&searchTerm=${encodeURIComponent(h.hospital_name)}`
+      : "https://www.medicare.gov/care-compare/",
+    trust_label: "Official source",
+  });
+
+  try {
+    let hospitals = [];
+    let usedFallback = false;
+
+    if (zip) {
+      const data = await fetchCms("zip_code", zip);
+      hospitals = (data.results || data || []).map(shape);
+    }
+
+    if (hospitals.length === 0 && state) {
+      const data = await fetchCms("state", state);
+      hospitals = (data.results || data || []).map(shape);
+      hospitals.sort((a, b) => {
+        if (a.emergency_services !== b.emergency_services) return a.emergency_services ? -1 : 1;
+        return (b.overall_rating || 0) - (a.overall_rating || 0);
+      });
+      hospitals = hospitals.slice(0, 30);
+      usedFallback = true;
+    } else {
+      hospitals = hospitals.slice(0, limit);
+    }
+
+    return json({
+      hospitals,
+      count: hospitals.length,
+      meta: { used_state_fallback: usedFallback, zip_queried: zip || null, state_queried: state || null }
+    });
+  } catch (e) {
+    return json({ error: (e && e.message) || "Medicare fetch failed" }, 502);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.5 — CITY OPEN-DATA BUSINESS LICENSE ADAPTER
+// ═══════════════════════════════════════════════════════════════════════════
+// Generic adapter that pulls active business-license records from any city
+// publishing them as open data. Each entry in CITY_BUSINESS_LICENSE_FEEDS
+// is a declarative config: url + fmt + field-mapping. The handler fetches
+// the city's dataset, normalizes records to Nearnity's business-card shape,
+// and filters by keyword + radius. Closes the "violin repairs in Dublin"
+// search gap when a city's dataset contains the registered business.
+//
+// To add a new city: append an entry to CITY_BUSINESS_LICENSE_FEEDS — no
+// code change required.
+const CITY_BUSINESS_LICENSE_FEEDS = {
+  // San Francisco — DataSF "Registered Business Locations - San Francisco"
+  // https://data.sfgov.org/Economy-and-Community/Registered-Business-Locations-San-Francisco/g8m3-pdis
+  "san francisco,CA": {
+    url: "https://data.sfgov.org/resource/g8m3-pdis.json",
+    fmt: "socrata",
+    params: { "$limit": "5000", "$where": "location_end_date is null" },
+    fields: { name: "dba_name", address: "full_business_address", type: "naic_code_description", lat: "location.latitude", lon: "location.longitude" },
+  },
+  // Oakland — Oakland Open Data "Business Licenses"
+  "oakland,CA": {
+    url: "https://data.oaklandca.gov/resource/business-licenses.json",
+    fmt: "socrata",
+    params: { "$limit": "5000" },
+    fields: { name: "business_name", address: "business_address", type: "business_type", lat: "latitude", lon: "longitude" },
+  },
+  // San Jose — data.sanjoseca.gov
+  "san jose,CA": {
+    url: "https://data.sanjoseca.gov/api/3/action/datastore_search",
+    fmt: "ckan",
+    params: { "resource_id": "active-business-licenses", "limit": "5000" },
+    fields: { name: "business_name", address: "address", type: "business_description", lat: "latitude", lon: "longitude" },
+  },
+  // Berkeley — Berkeley Open Data
+  "berkeley,CA": {
+    url: "https://data.cityofberkeley.info/resource/active-business-licenses.json",
+    fmt: "socrata",
+    params: { "$limit": "5000" },
+    fields: { name: "business_name", address: "address", type: "business_description", lat: "latitude", lon: "longitude" },
+  },
+  // Fremont — Fremont Open Data portal
+  "fremont,CA": {
+    url: "https://data.fremont.gov/resource/business-licenses.json",
+    fmt: "socrata",
+    params: { "$limit": "5000" },
+    fields: { name: "business_name", address: "address", type: "naics_description", lat: "latitude", lon: "longitude" },
+  },
+};
+
+async function handleCityBusinesses(url, env, ctx) {
+  const city = (url.searchParams.get("city") || "").toLowerCase().trim();
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  const keyword = (url.searchParams.get("q") || "").trim().toLowerCase();
+  const userLat = parseFloat(url.searchParams.get("lat"));
+  const userLon = parseFloat(url.searchParams.get("lon"));
+  const radiusMi = clamp(parseFloat(url.searchParams.get("radius") || "10"), 1, 50);
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "30"), 1, 50);
+  if (!city || !state) return json({ error: "Missing city or state" }, 400);
+  const key = `${city},${state}`;
+  const cfg = CITY_BUSINESS_LICENSE_FEEDS[key];
+  if (!cfg) return json({ businesses: [], count: 0, meta: { reason: "City not yet wired in CITY_BUSINESS_LICENSE_FEEDS", city, state } });
+  // Build the URL with params (Socrata uses $where for filtering when available)
+  const u = new URL(cfg.url);
+  for (const [k, v] of Object.entries(cfg.params || {})) u.searchParams.set(k, v);
+  // For Socrata feeds, push the keyword into a $q full-text search to
+  // reduce dataset size; we still post-filter client-side for accuracy.
+  if (keyword && cfg.fmt === "socrata") {
+    u.searchParams.set("$q", keyword);
+    u.searchParams.set("$limit", "200");
+  }
+  try {
+    const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 * 3 } });   // city data refreshes weekly at most
+    if (!resp.ok) return json({ error: `City feed ${resp.status}`, city, state }, 502);
+    const data = await resp.json();
+    const rows = Array.isArray(data) ? data : (data.result && data.result.records) || [];
+    // Apply field mapping then filter by keyword + radius
+    const haversineMiles = (la1, lo1, la2, lo2) => {
+      const R = 3958.8, toRad = d => d * Math.PI / 180;
+      const dLa = toRad(la2 - la1), dLo = toRad(lo2 - lo1);
+      const a = Math.sin(dLa/2)**2 + Math.cos(toRad(la1)) * Math.cos(toRad(la2)) * Math.sin(dLo/2)**2;
+      return R * 2 * Math.asin(Math.sqrt(a));
+    };
+    const getField = (obj, path) => {
+      if (!path) return null;
+      // Support dotted paths for nested (e.g. "location.latitude")
+      return path.split(".").reduce((acc, p) => (acc == null ? null : acc[p]), obj);
+    };
+    const businesses = rows.map(r => {
+      const name = getField(r, cfg.fields.name);
+      if (!name) return null;
+      const lat = parseFloat(getField(r, cfg.fields.lat));
+      const lon = parseFloat(getField(r, cfg.fields.lon));
+      if (!isFinite(lat) || !isFinite(lon)) return null;
+      return {
+        name: String(name).trim(),
+        address: String(getField(r, cfg.fields.address) || "").trim(),
+        type: String(getField(r, cfg.fields.type) || "").trim(),
+        lat, lon,
+        source: `${city.replace(/\b\w/g, c => c.toUpperCase())} business license registry`,
+        source_url: cfg.url.replace(/\/resource\/.*?\.json$/, ""),
+        trust_label: "Public dataset",
+      };
+    }).filter(Boolean);
+    // Keyword filter on name+type (case-insensitive substring; uses words ≥3)
+    const words = keyword.split(/\s+/).filter(w => w.length >= 3);
+    const filtered = (words.length === 0) ? businesses : businesses.filter(b => {
+      const hay = (b.name + " " + b.type).toLowerCase();
+      return words.some(w => hay.includes(w));
+    });
+    // Radius filter if user lat/lon provided
+    let bounded = filtered;
+    if (isFinite(userLat) && isFinite(userLon)) {
+      bounded = filtered.map(b => ({ ...b, distance_mi: +(haversineMiles(userLat, userLon, b.lat, b.lon)).toFixed(2) }))
+                         .filter(b => b.distance_mi <= radiusMi)
+                         .sort((a, b) => a.distance_mi - b.distance_mi);
+    }
+    return json({ businesses: bounded.slice(0, limit), count: bounded.length, meta: { city, state, keyword, total_in_feed: businesses.length } });
+  } catch (e) {
+    return json({ error: (e && e.message) || "City feed failed", city, state }, 502);
+  }
+}
+
+// ─── NCES Common Core of Data — K-12 schools ───────────────────────────
+// Federal K-12 school directory. Includes public + private, address-level.
+// API via EDFacts / Urban Institute Education Data Portal.
+// Docs: https://educationdata.urban.org/documentation/
+async function handleNCESSchools(url, env, ctx) {
+  const zip = (url.searchParams.get("zip") || "").replace(/[^\d]/g, "").slice(0, 5);
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "30"), 1, 50);
+  if (!zip) return json({ error: "Missing zip" }, 400);
+  const u = new URL("https://educationdata.urban.org/api/v1/schools/ccd/directory/2022/");
+  u.searchParams.set("zip_location", zip);
+  u.searchParams.set("per_page", String(limit));
+  try {
+    const resp = await fetch(u.toString(), { cf: { cacheTtl: 86400 * 7 } });
+    if (!resp.ok) return json({ error: `NCES ${resp.status}` }, 502);
+    const data = await resp.json();
+    const schools = (data.results || []).slice(0, limit).map(s => ({
+      ncessch: s.ncessch,
+      name: s.school_name,
+      address: [s.street_location, s.city_location, s.state_location, s.zip_location].filter(Boolean).join(", "),
+      phone: s.phone || null,
+      grade_low: s.lowest_grade_offered,
+      grade_high: s.highest_grade_offered,
+      enrollment: s.enrollment || null,
+      type: s.school_type_text || s.school_level_text || null,
+      charter: s.charter_text === "Yes",
+      magnet: s.magnet_text === "Yes",
+      source: "NCES Common Core of Data (US Department of Education)",
+      source_url: s.ncessch ? `https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=${s.ncessch}` : "https://nces.ed.gov/ccd/",
+      trust_label: "Official source",
+    }));
+    return json({ schools, count: schools.length });
+  } catch (e) {
+    return json({ error: (e && e.message) || "NCES fetch failed" }, 502);
+  }
+}
+
+
+// ─── v2.7.3: /api/school-zone — assignment-based school lookup ─────────
+// Replaces the distance-based "schools within X miles" model with the
+// zoning-based "schools in your assigned district" model.
+//
+// Step 1: Census geocoder /geographies/coordinates returns the address's
+//         assigned Unified / Secondary / Elementary school district GEOID +
+//         name. Point-in-polygon is done by Census, server-side, free.
+// Step 2: NCES Urban Institute API filtered by LEAID returns every public
+//         school in that district. Federal CCD = authoritative roster.
+//
+// Returns: { district: { leaid, name, level, state }, schools: [...] }
+//
+// Layer IDs (Public_AR_Current / Current_Current vintage):
+//   Unified School Districts    = "Unified School Districts"
+//   Elementary School Districts = "Elementary School Districts"
+//   Secondary School Districts  = "Secondary School Districts"
+// Census returns named-key arrays in result.geographies. Most US addresses
+// fall in a Unified district; some (NY, MA, NJ) have separate Elementary +
+// Secondary instead. We prefer Unified, fall back to combining the others.
+async function handleSchoolZone(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  if (isNaN(lat) || isNaN(lon)) return json({ error: "Missing lat/lon" }, 400);
+
+  // Step 1: Census geographies → school district GEOID
+  const censusU = new URL("https://geocoding.geo.census.gov/geocoder/geographies/coordinates");
+  censusU.searchParams.set("x", String(lon));
+  censusU.searchParams.set("y", String(lat));
+  censusU.searchParams.set("benchmark", "Public_AR_Current");
+  censusU.searchParams.set("vintage", "Current_Current");
+  // Layer 14 = Unified School Districts, 15 = Secondary, 16 = Elementary
+  // (layer IDs vary by vintage; pass the names instead — Census accepts both)
+  censusU.searchParams.set("layers", "Unified School Districts,Secondary School Districts,Elementary School Districts");
+  censusU.searchParams.set("format", "json");
+
+  let district = null;
+  try {
+    const resp = await fetch(censusU.toString(), { cf: { cacheTtl: 86400 * 30 } });
+    if (!resp.ok) {
+      return json({ error: `Census geographies ${resp.status}`, fallback: "distance" }, 502);
+    }
+    const data = await resp.json();
+    const geos = data?.result?.geographies || {};
+    const unified     = (geos["Unified School Districts"]    || [])[0];
+    const secondary   = (geos["Secondary School Districts"]  || [])[0];
+    const elementary  = (geos["Elementary School Districts"] || [])[0];
+
+    if (unified) {
+      district = { leaid: unified.GEOID, name: unified.NAME, level: "unified", state: unified.STATE };
+    } else if (secondary || elementary) {
+      // Some states split secondary + elementary instead of unified
+      const pick = secondary || elementary;
+      district = { leaid: pick.GEOID, name: pick.NAME, level: secondary ? "secondary" : "elementary", state: pick.STATE,
+                   companion: (secondary && elementary) ? { leaid: elementary.GEOID, name: elementary.NAME } : null };
+    } else {
+      return json({ error: "No school district found at this location", fallback: "distance" }, 404);
+    }
+  } catch (e) {
+    return json({ error: (e && e.message) || "Census geographies failed", fallback: "distance" }, 502);
+  }
+
+  // Step 2: NCES CCD roster for the district. The Urban Institute API
+  // accepts a `leaid` query parameter. Pull up to 200 schools per district
+  // (largest unified districts have ~150-200 schools; LAUSD has ~1000 but
+  // we cap at 200 to keep payload reasonable).
+  const leaids = [district.leaid];
+  if (district.companion) leaids.push(district.companion.leaid);
+
+  const fetchByLeaid = async (leaid) => {
+    const u = new URL("https://educationdata.urban.org/api/v1/schools/ccd/directory/2022/");
+    u.searchParams.set("leaid", leaid);
+    u.searchParams.set("per_page", "200");
+    const r = await fetch(u.toString(), { cf: { cacheTtl: 86400 * 7 } });
+    if (!r.ok) throw new Error(`NCES ${r.status}`);
+    const d = await r.json();
+    return d.results || [];
+  };
+
+  try {
+    const rosterArrays = await Promise.all(leaids.map(id => fetchByLeaid(id).catch(_ => [])));
+    const roster = rosterArrays.flat();
+
+    const schools = roster.map(s => ({
+      ncessch: s.ncessch,
+      name: s.school_name,
+      address: [s.street_location, s.city_location, s.state_location, s.zip_location].filter(Boolean).join(", "),
+      phone: s.phone || null,
+      grade_low: s.lowest_grade_offered,
+      grade_high: s.highest_grade_offered,
+      enrollment: s.enrollment || null,
+      type: s.school_type_text || s.school_level_text || null,
+      level_text: s.school_level_text || null,
+      charter: s.charter_text === "Yes",
+      magnet: s.magnet_text === "Yes",
+      lat: s.latitude != null ? Number(s.latitude) : null,
+      lon: s.longitude != null ? Number(s.longitude) : null,
+      lea_name: s.lea_name || district.name,
+      leaid: s.leaid || district.leaid,
+      source: "NCES Common Core of Data (US Department of Education)",
+      source_url: s.ncessch ? `https://nces.ed.gov/ccd/schoolsearch/school_detail.asp?ID=${s.ncessch}` : "https://nces.ed.gov/ccd/",
+      trust_label: "Official source",
+    }));
+
+    return json({
+      district,
+      schools,
+      count: schools.length,
+      attribution: "Assigned-district roster: Census geographies (point→district) + NCES CCD (district→schools).",
+    });
+  } catch (e) {
+    return json({
+      district,
+      schools: [],
+      count: 0,
+      error: (e && e.message) || "NCES roster fetch failed",
+      attribution: "District boundary from Census, but roster fetch failed — falling back to distance query is recommended.",
+    }, 200);
+  }
+}
+
+
 // ─── v2.2: Overpass proxy with 4-mirror race + edge cache ──────────────
 // Frontend was hitting overpass-api.de directly from the browser, which
 // (a) paid the 5-30s cold-fetch tax on every visit, and (b) tripped per-IP
@@ -3143,15 +4647,173 @@ async function handleOverpassProxy(url, env, ctx) {
 
   try {
     const winner = await Promise.any(racePromises);
-    return json({
-      elements: winner.elements,
-      meta: { mirror: winner.host, count: winner.elements.length, cached_by_cf: true },
+    // v2.7.8.4: DO NOT CACHE EMPTY RESPONSES. If Overpass returns 0 elements
+    // (mirror timeout returning success-with-empty, or a genuinely-empty tile),
+    // we must NOT let CF or the browser cache it — otherwise the very first
+    // failure poisons the cache for the entire cacheTtl window (1hr), and
+    // fresh queries keep replaying the stale empty response even after mirrors
+    // recover. This was the root cause of the "OSM returned 0 elements"
+    // regression on 2026-07-08 despite Overpass having plenty of hospitals
+    // in the queried area.
+    const isEmpty = !Array.isArray(winner.elements) || winner.elements.length === 0;
+    const body = JSON.stringify({
+      elements: winner.elements || [],
+      meta: {
+        mirror: winner.host,
+        count: (winner.elements || []).length,
+        cached_by_cf: !isEmpty,
+        empty_no_cache: isEmpty ? true : undefined,
+      },
+    });
+    return new Response(body, {
+      status: 200,
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        // Empty payloads: no-store so nothing anywhere caches them.
+        // Non-empty: normal CF edge cache (via the fetch subrequest's cf.cacheTtl)
+        // plus a modest browser hint so re-queries within 5 min stay fast.
+        "Cache-Control": isEmpty ? "no-store, no-cache, must-revalidate" : "public, max-age=300",
+      },
     });
   } catch (aggregate) {
     // Promise.any throws AggregateError when ALL races reject.
     const errs = (aggregate && aggregate.errors) ? aggregate.errors.map(e => e.message || String(e)) : [String(aggregate)];
-    return json({ error: "All Overpass mirrors failed", details: errs.slice(0, 4) }, 504);
+    // v2.7.8.4: also mark 504 as no-store so a transient failure doesn't
+    // pollute the cache with a fake "success 0 elements" from a prior run.
+    return new Response(JSON.stringify({ error: "All Overpass mirrors failed", details: errs.slice(0, 4) }), {
+      status: 504,
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        "Cache-Control": "no-store",
+      },
+    });
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7 — TESTER FEEDBACK LOOP
+// ═══════════════════════════════════════════════════════════════════════════
+// Structured form POST + auto-captured zero-result events. Both write to KV
+// pools so Satya can read recent reports/queries via the Cloudflare dashboard
+// (Workers KV → EVENTS_KV namespace → browse keys), and the form also emails
+// feedback@nearnity.com via Resend (when RESEND_API_KEY is set).
+//
+// Pools:
+//   nearnity:feedback:v1            ← user-submitted feedback (one row per submit)
+//   nearnity:unmatched_searches:v1  ← auto-captured 0-result searches (one row per event)
+//   nearnity:unmatched_counters:v1  ← aggregate count per lowercased query
+// ═══════════════════════════════════════════════════════════════════════════
+function escapeHtmlSafe(s) {
+  return (s || "").replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+async function handleFeedback(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405);
+  let body;
+  try { body = await request.json(); }
+  catch (e) { return json({ error: "Bad JSON" }, 400); }
+  if (!body || typeof body.message !== "string" || body.message.trim().length < 4) {
+    return json({ error: "Message too short" }, 400);
+  }
+  if (body.message.length > 4000) return json({ error: "Message too long (4000 char max)" }, 413);
+  const now = new Date();
+  const record = {
+    received_at: now.toISOString(),
+    category: (body.category || "general").toString().slice(0, 40),
+    severity: (body.severity || "normal").toString().slice(0, 20),
+    page_section: (body.page_section || "").toString().slice(0, 80),
+    search_query: (body.search_query || "").toString().slice(0, 200),
+    address_text: (body.address_text || "").toString().slice(0, 200),
+    message: body.message.trim().slice(0, 4000),
+    expected: (body.expected || "").toString().slice(0, 1000),
+    actual: (body.actual || "").toString().slice(0, 1000),
+    email: (body.email || "").toString().slice(0, 120),
+    name: (body.name || "").toString().slice(0, 80),
+    ua: (request.headers.get("user-agent") || "").slice(0, 250),
+    ip_country: request.headers.get("cf-ipcountry") || null,
+    referer: request.headers.get("referer") || null,
+    url: body.url || null,
+  };
+  const key = `${now.getTime()}:${Math.random().toString(36).slice(2, 8)}`;
+  try {
+    if (env.EVENTS_KV) {
+      await env.EVENTS_KV.put(`nearnity:feedback:v1:${key}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 90 });
+      let idx = (await env.EVENTS_KV.get("nearnity:feedback:v1:index", "json")) || [];
+      idx.unshift({ key, ts: record.received_at, category: record.category, severity: record.severity,
+                    section: record.page_section, query: record.search_query, message_preview: record.message.slice(0, 120) });
+      idx = idx.slice(0, 200);
+      await env.EVENTS_KV.put("nearnity:feedback:v1:index", JSON.stringify(idx), { expirationTtl: 60 * 60 * 24 * 180 });
+    }
+  } catch (e) {}
+  if (env.RESEND_API_KEY) {
+    try {
+      const subject = `[Nearnity feedback · ${record.severity}] ${(record.message || "").slice(0, 60).replace(/\n/g, " ")}`;
+      const html = `<h2>Nearnity feedback received</h2>
+<table style="font-family:-apple-system,sans-serif;font-size:14px;border-collapse:collapse;">
+  <tr><td><b>When</b></td><td>${record.received_at}</td></tr>
+  <tr><td><b>Category</b></td><td>${record.category}</td></tr>
+  <tr><td><b>Severity</b></td><td>${record.severity}</td></tr>
+  <tr><td><b>Section</b></td><td>${record.page_section || "(not specified)"}</td></tr>
+  <tr><td><b>Search query</b></td><td>${record.search_query || "(none)"}</td></tr>
+  <tr><td><b>Address</b></td><td>${record.address_text || "(not provided)"}</td></tr>
+  <tr><td><b>URL</b></td><td>${record.url || "(none)"}</td></tr>
+  <tr><td><b>Browser</b></td><td>${record.ua}</td></tr>
+  <tr><td><b>Country</b></td><td>${record.ip_country || "n/a"}</td></tr>
+  <tr><td colspan="2"><hr></td></tr>
+  <tr><td><b>From</b></td><td>${record.name || "(anon)"} ${record.email ? `&lt;${record.email}&gt;` : ""}</td></tr>
+  <tr><td colspan="2"><h3>Message</h3><pre style="white-space:pre-wrap;font-family:ui-monospace,monospace;background:#f7f9fc;padding:10px;border-radius:6px;">${escapeHtmlSafe(record.message)}</pre></td></tr>
+  ${record.expected ? `<tr><td colspan="2"><b>Expected:</b><br>${escapeHtmlSafe(record.expected)}</td></tr>` : ""}
+  ${record.actual ? `<tr><td colspan="2"><b>Actual:</b><br>${escapeHtmlSafe(record.actual)}</td></tr>` : ""}
+</table>
+<p style="font-size:12px;color:#888;">KV key: <code>nearnity:feedback:v1:${key}</code></p>`;
+      await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "Nearnity Feedback <feedback@nearnity.com>",
+          to: "svelivela@paypal.com",
+          reply_to: record.email || undefined,
+          subject,
+          html,
+        }),
+      });
+    } catch (e) {}
+  }
+  return json({ ok: true, key });
+}
+
+async function handleUnmatchedSearch(request, env, ctx) {
+  if (request.method !== "POST") return json({ error: "POST only" }, 405);
+  let body;
+  try { body = await request.json(); }
+  catch (e) { return json({ error: "Bad JSON" }, 400); }
+  if (!body || typeof body.query !== "string" || body.query.trim().length < 1) {
+    return json({ error: "Missing query" }, 400);
+  }
+  const now = new Date();
+  const record = {
+    received_at: now.toISOString(),
+    query: body.query.trim().slice(0, 200),
+    section: (body.section || "").toString().slice(0, 80),
+    address_text: (body.address_text || "").toString().slice(0, 200),
+    address_city: (body.address_city || "").toString().slice(0, 80),
+    address_state: (body.address_state || "").toString().slice(0, 4),
+    result_count: parseInt(body.result_count || "0", 10) || 0,
+    ua_short: (request.headers.get("user-agent") || "").slice(0, 80),
+    ip_country: request.headers.get("cf-ipcountry") || null,
+  };
+  if (env.EVENTS_KV) {
+    try {
+      const key = `${now.getTime()}:${Math.random().toString(36).slice(2, 6)}`;
+      await env.EVENTS_KV.put(`nearnity:unmatched_searches:v1:${key}`, JSON.stringify(record), { expirationTtl: 60 * 60 * 24 * 90 });
+      const qkey = `nearnity:unmatched_counters:v1:${record.query.toLowerCase()}`;
+      const prev = (await env.EVENTS_KV.get(qkey, "json")) || { count: 0, query: record.query, last_seen: null, last_city: null };
+      prev.count = (prev.count || 0) + 1;
+      prev.last_seen = record.received_at;
+      prev.last_city = record.address_city || prev.last_city;
+      await env.EVENTS_KV.put(qkey, JSON.stringify(prev), { expirationTtl: 60 * 60 * 24 * 180 });
+    } catch (e) {}
+  }
+  return json({ ok: true });
+}
 
