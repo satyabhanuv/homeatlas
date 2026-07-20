@@ -50,13 +50,21 @@ export default {
     if (url.pathname.endsWith("/health")) {
       return json({
         status: "ok",
-        worker_version: "v2.7.9.2",   // v2.7.9.2: FormData multipart + per-taxonomy NPPES + diagnostic passthrough
+        worker_version: "v2.7.11.4",   // v2.7.11.4: BiblioCommons gateway API + USDA key + split-ingest filter + PCFMA debug + EBRPD drop
         deployed_features: {
           "v2.4": "federal adapters (NPPES, Medicare, SAMHSA, HRSA)",
           "v2.7.3": "school-zone endpoint (Census + NCES district lookup)",
           "v2.7.8.4": "Overpass no-cache-on-empty + NPPES 400 fix + Medicare state fallback",
           "v2.7.9": "KV geo-index schema + /api/geo-index-info + /api/admin/geo-ingest + /api/medical-radius",
           "v2.7.9.2": "Census batch geocoder rewritten with FormData + NPPES fetched per-taxonomy + diagnostic passthrough in ingest report",
+          "v2.7.9.3": "CMS field mapping fix (was wrong — thought field was city_town, actually citytown)",
+          "v2.7.9.4": "REAL CMS field name is `citytown` (no underscore, confirmed via diagnostic) + Census 502 retry with exponential backoff (3 attempts, 1s/3s/9s) + handleMedicareQuality fallback endpoint also fixed to use citytown",
+          "v2.7.10": "Generic event data layer — schema.org JSON-LD scraper + iCal parser + KV source registry (35+ seeded metros). Adding new source = 1 config row, not per-site code. Endpoints: /api/events-radius, /api/events-sources, /api/admin/events-ingest, /api/admin/events-sources-seed. Covers ~200 BiblioCommons libraries + PCFMA + regional park iCal + any site with schema.org events.",
+          "v2.7.11": "Scalable scraping: (a) iCal auto-discovery — given a domain, Worker fetches home + probes /events.ics /calendar.ics /events/feed.ics + scans <link rel=alternate type=text/calendar> tags. Adding a city = 1 domain row, no URL guessing. (b) Federal aggregators: NPS Events API + USDA Farmers Markets nationwide. (c) Sitemap crawler: fetch /sitemap.xml, filter event URLs, extract schema.org from each. New endpoint: /api/events-discover?domain=X.gov. Ingest orchestrator now handles type=discover/sitemap/federal in addition to schema_org/ical.",
+          "v2.7.11.1": "Bot-UA hotfix — sanjoseca.gov + many .gov sites returned 403 to `NearnityBot/2.7.11`. Now uses a real browser UA (Chrome/120 on macOS) for all scraping traffic (discovery, probe, sitemap, schema.org, iCal fetch). On 403/401, falls back to Googlebot UA (many sites 403 all non-Google bots but whitelist Googlebot). Federal APIs (NPS, USDA, Medicare, NPPES) unchanged — they're keyed/allowlisted anyway.",
+          "v2.7.11.2": "Discovery robustness — v2.7.11.1 confirmed sanjoseca.gov is CDN-level TLS-fingerprint blocked (not UA-blocked); no UA rotation beats it. Fixes: (a) discovery no longer bails on home 403 — probes + sitemap always attempted since WAF rules commonly block only root path, not sub-paths, (b) added sitemap.xml probing as a 4th discovery method (sitemaps are meant for bots and often whitelisted even when root is blocked), (c) home_error surfaced in diag for observability. The .gov home-page approach is fundamentally limited — expect ~30-40% of city .gov domains to be fully blocked. Federal + friendly sources (BiblioCommons libraries, USDA, NPS) carry the coverage story.",
+          "v2.7.11.3": "Registry pivot — dropped all 27 .gov city 'discover' rows after confirming TLS-fingerprint block on sanjoseca.gov is universal to CF Workers. Registry now = 2 federal (USDA + NPS nationwide) + 30 BiblioCommons libraries (schema.org, WAF-friendly) + 1 regional park iCal (EBRPD) + 1 sitemap crawler (PCFMA) = 34 sources total, all bot-friendly. Discovery + sitemap-crawler + federal code paths still intact for future additions from non-.gov domains (Socrata open-data portals in v2.7.12).",
+          "v2.7.11.4": "Data-source overhaul from v2.7.11.3 QA feedback: (a) BiblioCommons pivoted from schema.org scraping (SPA-blocked, returned 0) to undocumented gateway.bibliocommons.com/v2 API — verified sjpl returns 6,877 events. New type 'bibliocommons_api' fetches /events + /locations, joins branchLocationId to lat/lng. Locations cached per-library in KV 24h. (b) USDA fetch fixed: needs env.USDA_KEY (free registration) and state as 2-letter lowercase; prior versions passed full state name and got 'apikey error' string that parser silently treated as 0 records. Now surfaces error properly. (c) EBRPD dropped — no working feed exists (ebparks.org/calendar is HTML with no coords, /events.ics 404s). (d) PCFMA sitemap silent-swallow fixed — errors now surfaced in attempts[].error. (e) Split ingest: /api/admin/events-ingest?source=nps|usda|libraries|sitemap keeps each invocation under CF's 50-subrequest cap. Comma-separated for multi-source runs.",
         },
         endpoints: [
           "/health", "/events", "/alerts", "/quakes", "/aqi",
@@ -78,12 +86,18 @@ export default {
           "/school-zone",
           // v2.7.9 — pre-geocoded medical index + radius query
           "/geo-index-info", "/admin/geo-ingest", "/medical-radius",
+          // v2.7.10 — generic event data layer (schema.org + iCal + registry)
+          "/events-sources", "/events-radius",
+          "/admin/events-ingest", "/admin/events-sources-seed",
+          // v2.7.11 — auto-discovery preview
+          "/events-discover",
         ],
         ticketmaster:  env.TICKETMASTER_KEY  ? "configured" : "missing",
         seatgeek:      env.SEATGEEK_CLIENT_ID ? "configured" : "missing",
         airnow:        env.AIRNOW_KEY        ? "configured" : "missing (optional)",
         nps:           env.NPS_KEY           ? "configured" : "missing (optional)",
         ridb:          env.RIDB_KEY          ? "configured" : "missing (optional)",
+        usda:          env.USDA_KEY          ? "configured" : "missing (v2.7.11.4: USDA farmers markets need this — register at https://www.usdalocalfoodportal.com/fe/fregisterpublicapi/)",
         resend:        env.RESEND_API_KEY    ? "configured" : "missing (optional)",
         admin:         env.ADMIN_SECRET      ? "configured" : "missing (admin queue endpoints will 401)",
         kv:            env.EVENTS_KV         ? "bound" : "missing",
@@ -165,6 +179,13 @@ export default {
     // v2.7.9 step 4: query-time radius filter over the pre-geocoded KV index.
     // Replaces the ZIP-anchored Medicare + NPPES call from the frontend.
     if (url.pathname.endsWith("/medical-radius"))   { return await handleMedicalRadius(url, env, ctx); }
+    // v2.7.10 — generic event data layer (schema.org + iCal scrapers + KV registry)
+    if (url.pathname.endsWith("/events-radius"))       { return await handleEventsRadius(url, env, ctx); }
+    if (url.pathname.endsWith("/events-sources"))      { return await handleEventsSources(url, env, ctx); }
+    if (url.pathname.endsWith("/admin/events-ingest")) { return await handleEventsIngest(url, env, ctx); }
+    if (url.pathname.endsWith("/admin/events-sources-seed")) { return await handleEventsSourcesSeed(url, env, ctx); }
+    // v2.7.11: scalable-scraping additions — auto-discovery + federal + sitemap crawler
+    if (url.pathname.endsWith("/events-discover"))     { return await handleEventsDiscover(url, env, ctx); }
     // v2.5: city open-data business licenses — generic adapter that pulls
     // from any city's licensed-business open-data feed configured in
     // CITY_BUSINESS_LICENSE_FEEDS. Closes the small-business search gap
@@ -3521,14 +3542,31 @@ async function nrnyCensusBatchGeocode(records, diagLabel) {
   fd.append("addressFile", new Blob([csv], { type: "text/csv" }), "addresses.csv");
   fd.append("benchmark", "Public_AR_Current");
 
-  const resp = await fetch("https://geocoding.geo.census.gov/geocoder/locations/addressbatch", {
-    method: "POST",
-    body: fd,   // fetch sets Content-Type with proper boundary automatically
-  });
-  const diag = { label: diagLabel, sent: records.length, matched: 0, http_status: resp.status };
+  // v2.7.9.4: retry loop on transient upstream failures (502/503/504/429).
+  // Census's batch geocoder is generally reliable but occasionally 502s under
+  // load. Prior version treated 502 as fatal and aborted the entire ingest.
+  // Now: up to 3 attempts with exponential backoff (1s → 3s → 9s).
+  let resp;
+  let attempt = 0;
+  const maxAttempts = 3;
+  const backoffs = [1000, 3000, 9000];
+  const retryable = new Set([408, 429, 500, 502, 503, 504]);
+  while (attempt < maxAttempts) {
+    resp = await fetch("https://geocoding.geo.census.gov/geocoder/locations/addressbatch", {
+      method: "POST",
+      body: fd,
+    });
+    if (resp.ok) break;
+    if (!retryable.has(resp.status)) break;   // non-retryable — bail
+    attempt++;
+    if (attempt >= maxAttempts) break;
+    // Wait then retry — need to rebuild FormData since a spent Blob can't be reused reliably
+    await new Promise(r => setTimeout(r, backoffs[attempt - 1]));
+  }
+  const diag = { label: diagLabel, sent: records.length, matched: 0, http_status: resp.status, retries: attempt };
   if (!resp.ok) {
     const errBody = await resp.text().catch(() => "");
-    diag.error = `HTTP ${resp.status}`;
+    diag.error = `HTTP ${resp.status} after ${attempt + 1} attempt(s)`;
     diag.error_body = errBody.slice(0, 500);
     throw Object.assign(new Error(`Census batch geocode ${resp.status}: ${errBody.slice(0, 200)}`), { diag });
   }
@@ -3704,13 +3742,35 @@ async function handleGeoIngest(url, env, ctx) {
     // ── 1. CMS hospitals for state ────────────────────────────────────
     const cmsRaw = await nrnyFetchCmsForState(state);
     report.cms_fetched = cmsRaw.length;
-    report.cms_sample_addr = cmsRaw[0] ? { address: cmsRaw[0].address, city: cmsRaw[0].city, state: cmsRaw[0].state, zip: cmsRaw[0].zip_code } : null;
+
+    // v2.7.9.4: real CMS field name is `citytown` (NO underscore) — confirmed
+    // via cms_raw_first_keys diagnostic 2026-07-09. Also `countyparish` and
+    // `telephone_number` (which was already right). Full fallback chain kept
+    // in case dataset schema ever changes back.
+    const _cmsCity = (h) => h.citytown || h.city_town || h.city || h.location_city || "";
+    const _cmsName = (h) => h.facility_name || h.hospital_name || h.name || "Hospital";
+    const _cmsPhone = (h) => h.telephone_number || h.phone_number || h.phone || null;
+    const _cmsCounty = (h) => h.countyparish || h.county_parish || h.county || null;
+
+    // Include full first record in the report so we can spot any OTHER
+    // field-name surprises without another debug round-trip.
+    report.cms_sample_addr = cmsRaw[0] ? {
+      address: cmsRaw[0].address,
+      city_town: cmsRaw[0].city_town,   // NEW canonical field
+      city:      cmsRaw[0].city,         // legacy fallback
+      state: cmsRaw[0].state,
+      zip: cmsRaw[0].zip_code,
+      resolved_name: _cmsName(cmsRaw[0]),
+      resolved_city: _cmsCity(cmsRaw[0]),
+      resolved_phone: _cmsPhone(cmsRaw[0]),
+    } : null;
+    report.cms_raw_first_keys = cmsRaw[0] ? Object.keys(cmsRaw[0]).sort() : null;
 
     const cmsForGeo = cmsRaw
       .map((h, i) => ({
         id: `cms-${i}`,
         address: h.address || "",
-        city: h.city || "",
+        city: _cmsCity(h),
         state: h.state || state,
         zip: h.zip_code || "",
         _raw: h,
@@ -3737,21 +3797,24 @@ async function handleGeoIngest(url, env, ctx) {
         if (!geo) return null;
         const h = r._raw;
         const emergency = (h.emergency_services || "").toLowerCase() === "yes";
+        const resolvedName = _cmsName(h);
+        const resolvedCity = _cmsCity(h);
+        const resolvedPhone = _cmsPhone(h);
         return {
-          name: h.hospital_name || h.facility_name || "Hospital",
+          name: resolvedName,
           lat: geo.lat, lon: geo.lon,
-          address: [h.address, h.city, h.state, h.zip_code].filter(Boolean).join(", "),
-          city: h.city || null,
+          address: [h.address, resolvedCity, h.state, h.zip_code].filter(Boolean).join(", "),
+          city: resolvedCity || null,
           state: h.state || state,
           zip: h.zip_code || null,
-          phone: h.phone_number || null,
+          phone: resolvedPhone,
           rating: h.hospital_overall_rating ? parseInt(h.hospital_overall_rating, 10) : null,
           emergency_services: emergency,
           category: emergency ? "er" : "hospital",
           subtype: emergency ? "Emergency room" : "Hospital",
           source: "Medicare Care Compare (CMS)",
-          source_url: h.hospital_name
-            ? `https://www.medicare.gov/care-compare/results?searchType=Hospital&searchTerm=${encodeURIComponent(h.hospital_name)}`
+          source_url: resolvedName && resolvedName !== "Hospital"
+            ? `https://www.medicare.gov/care-compare/results?searchType=Hospital&searchTerm=${encodeURIComponent(resolvedName)}`
             : "https://www.medicare.gov/care-compare/",
           trust_label: "Official source",
         };
@@ -4065,6 +4128,1039 @@ async function handleMedicalRadius(url, env, ctx) {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.10 — Generic event data layer (schema.org + iCal scrapers + KV registry)
+// ═══════════════════════════════════════════════════════════════════════════
+// Per Satya's directive 2026-07-13: no point solutions per site. Two GENERIC
+// scrapers cover ~80% of publicly-published US event data:
+//
+//   1. schema.org JSON-LD Event parser — works on ANY page with embedded
+//      `<script type="application/ld+json">` blocks describing Event objects.
+//      Google mandates this for their events search, so most legitimate
+//      event publishers use it. Covers BiblioCommons (~200 libraries),
+//      Eventbrite, Meetup, museum sites, ticketed venues, most modern city
+//      rec sites, regional aggregators like PCFMA.
+//
+//   2. iCal (.ics) VEVENT parser — works on ANY iCal feed URL. Covers
+//      most city rec calendars, Google Calendar exports, university event
+//      systems, most CMS-driven calendars.
+//
+// Sources are configured in a KV-stored registry — adding a new event
+// source (a library, a city calendar, a museum) means adding one row to
+// the registry, NOT writing new code.
+//
+// KV schema:
+//   nearnity:events:sources:v1         → JSON registry { source_id → config }
+//   nearnity:events:by-state:{STATE}   → array of geocoded events
+//   nearnity:events:meta               → ingest metadata (per-source counts, timestamps)
+//
+// Endpoints:
+//   /api/events-sources                → read-only registry listing
+//   /api/events-radius                 → query events near lat/lon by radius + type + when
+//   /api/admin/events-ingest           → admin-gated ingest (auth: ADMIN_TOKEN)
+//   /api/admin/events-sources-seed     → seeds default registry (idempotent, admin-gated)
+
+const NRNY_EV_SOURCES_KEY = "nearnity:events:sources:v1";
+const NRNY_EV_META_KEY    = "nearnity:events:meta";
+function nrnyEvByStateKey(state) { return `nearnity:events:by-state:${(state || "").toUpperCase().slice(0, 2)}`; }
+
+async function nrnyEvReadSources(env) {
+  if (!env || !env.EVENTS_KV) return {};
+  try { return (await env.EVENTS_KV.get(NRNY_EV_SOURCES_KEY, "json")) || {}; }
+  catch (_) { return {}; }
+}
+async function nrnyEvWriteSources(env, sources) {
+  if (!env || !env.EVENTS_KV) return { ok: false };
+  await env.EVENTS_KV.put(NRNY_EV_SOURCES_KEY, JSON.stringify(sources), { expirationTtl: 365 * 86400 });
+  return { ok: true, count: Object.keys(sources).length };
+}
+async function nrnyEvReadState(env, state) {
+  if (!env || !env.EVENTS_KV) return [];
+  try {
+    const v = await env.EVENTS_KV.get(nrnyEvByStateKey(state), "json");
+    return Array.isArray(v) ? v : [];
+  } catch (_) { return []; }
+}
+async function nrnyEvWriteState(env, state, events) {
+  if (!env || !env.EVENTS_KV) return { ok: false };
+  await env.EVENTS_KV.put(nrnyEvByStateKey(state), JSON.stringify(events), { expirationTtl: 30 * 86400 });
+  return { ok: true, count: events.length };
+}
+
+// ─── Generic schema.org JSON-LD Event parser ─────────────────────────────
+// Extracts `@type: Event` (or subtypes like MusicEvent, SportsEvent) from
+// any HTML page's ld+json blocks. Robust to the various shapes publishers
+// use (single object, array, @graph nested).
+function nrnyParseSchemaOrgEvents(html, sourceUrl) {
+  const events = [];
+  // Find all <script type="application/ld+json"> blocks
+  const scriptRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let m;
+  while ((m = scriptRe.exec(html)) !== null) {
+    const raw = m[1].trim();
+    if (!raw) continue;
+    let parsed;
+    try { parsed = JSON.parse(raw); }
+    catch (_) { continue; }
+    // Flatten possible shapes: single object, array of objects, or {@graph: [...]}
+    const nodes = [];
+    const walk = (v) => {
+      if (!v) return;
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (typeof v !== "object") return;
+      nodes.push(v);
+      if (Array.isArray(v["@graph"])) v["@graph"].forEach(walk);
+    };
+    walk(parsed);
+    for (const node of nodes) {
+      const t = node["@type"];
+      const isEvent = t === "Event" || t === "MusicEvent" || t === "SportsEvent" ||
+                      t === "TheaterEvent" || t === "BusinessEvent" || t === "ChildrensEvent" ||
+                      t === "ComedyEvent" || t === "DanceEvent" || t === "EducationEvent" ||
+                      t === "ExhibitionEvent" || t === "Festival" || t === "FoodEvent" ||
+                      t === "LiteraryEvent" || t === "ScreeningEvent" || t === "SocialEvent" ||
+                      t === "VisualArtsEvent" || (Array.isArray(t) && t.some(x => (x || "").includes("Event")));
+      if (!isEvent) continue;
+      const loc = node.location || {};
+      const locName = (typeof loc === "string") ? loc : (loc.name || null);
+      const locAddr = (typeof loc === "object" && loc.address)
+        ? (typeof loc.address === "string" ? loc.address :
+           [loc.address.streetAddress, loc.address.addressLocality, loc.address.addressRegion, loc.address.postalCode].filter(Boolean).join(", "))
+        : null;
+      const locGeo = (typeof loc === "object" && loc.geo) ? loc.geo : null;
+      events.push({
+        title: node.name || null,
+        description: (node.description || "").slice(0, 500),
+        start_date: node.startDate || null,
+        end_date: node.endDate || null,
+        url: node.url || sourceUrl,
+        image: node.image || null,
+        venue_name: locName,
+        venue_address: locAddr,
+        // Some publishers include lat/lon directly — use if present, else geocode later
+        lat: locGeo && (locGeo.latitude != null) ? parseFloat(locGeo.latitude) : null,
+        lon: locGeo && (locGeo.longitude != null) ? parseFloat(locGeo.longitude) : null,
+        category: nrnyClassifyEventCategory(node.name || "", node.description || "", t),
+        _raw_type: t,
+      });
+    }
+  }
+  return events;
+}
+
+// Category inference — used to bucket generic events into tabs.
+// Very defensive: catches obvious keywords, falls back to "community".
+function nrnyClassifyEventCategory(title, description, type) {
+  const s = ((title || "") + " " + (description || "") + " " + (type || "")).toLowerCase();
+  if (/\bfarmer|farm[- ]?market|produce|csa\b/.test(s)) return "market";
+  if (/\bfirework|4th of july|independence day|memorial day parade|halloween parade\b/.test(s)) return "fireworks";
+  if (/\bconcert|music|band|dj|orchestra|choir\b/.test(s) || (type || "").toString().includes("MusicEvent")) return "music";
+  if (/\bkid|child|storytime|story time|toddler|baby time\b/.test(s) || (type || "").toString().includes("ChildrensEvent")) return "kids";
+  if (/\byoga|meditation|fitness|hiking|walk\b/.test(s)) return "fitness";
+  if (/\bworkshop|class|lesson|learn|tutorial|training\b/.test(s) || (type || "").toString().includes("EducationEvent")) return "learning";
+  if (/\bart|craft|paint|draw|sculpture|gallery\b/.test(s) || (type || "").toString().includes("VisualArtsEvent")) return "arts";
+  if (/\btheat(er|re)|play|drama|performance\b/.test(s) || (type || "").toString().includes("TheaterEvent")) return "theater";
+  if (/\bfestival|fair\b/.test(s) || (type || "").toString().includes("Festival")) return "festival";
+  if (/\bsport|game|race|marathon|tournament\b/.test(s) || (type || "").toString().includes("SportsEvent")) return "sports";
+  if (/\bworship|service|prayer|church|mass|synagogue|temple|mosque\b/.test(s)) return "worship";
+  if (/\bvolunteer|donation|donate|community service\b/.test(s)) return "volunteer";
+  return "community";
+}
+
+// ─── Generic iCal (.ics) VEVENT parser ─────────────────────────────────
+// Minimal RFC 5545 parser — handles DTSTART/DTEND (with or without TZID),
+// SUMMARY, DESCRIPTION, LOCATION, URL, and line-unfolding per spec.
+function nrnyParseICal(icsText, sourceUrl) {
+  if (!icsText || typeof icsText !== "string") return [];
+  // Line-unfolding: lines starting with space/tab are continuations of the previous line
+  const raw = icsText.replace(/\r\n[ \t]/g, "").replace(/\n[ \t]/g, "").split(/\r?\n/);
+  const events = [];
+  let cur = null;
+  const parseICSDate = (val) => {
+    if (!val) return null;
+    // Handle formats: YYYYMMDDTHHMMSSZ, YYYYMMDDTHHMMSS, YYYYMMDD
+    const clean = val.replace(/^TZID=[^:]+:/, "");
+    const m = clean.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z?))?$/);
+    if (!m) return clean;
+    const [, y, mo, d, h, mi, s, z] = m;
+    if (!h) return `${y}-${mo}-${d}`;
+    return `${y}-${mo}-${d}T${h}:${mi}:${s}${z ? "Z" : ""}`;
+  };
+  const unesc = (v) => (v || "").replace(/\\n/g, "\n").replace(/\\,/g, ",").replace(/\\;/g, ";").replace(/\\\\/g, "\\");
+  for (const line of raw) {
+    if (!line) continue;
+    if (line === "BEGIN:VEVENT") { cur = {}; continue; }
+    if (line === "END:VEVENT") {
+      if (cur && (cur.SUMMARY || cur.summary)) {
+        const title = unesc(cur.SUMMARY || cur.summary || "");
+        events.push({
+          title,
+          description: unesc(cur.DESCRIPTION || "").slice(0, 500),
+          start_date: parseICSDate(cur["DTSTART"] || cur["DTSTART_VALUE"] || null),
+          end_date:   parseICSDate(cur["DTEND"]   || cur["DTEND_VALUE"]   || null),
+          url: cur.URL || sourceUrl,
+          image: null,
+          venue_name: unesc(cur.LOCATION || "").split(",")[0] || null,
+          venue_address: unesc(cur.LOCATION || "") || null,
+          lat: null, lon: null,   // iCal doesn't include coords; geocoded later
+          category: nrnyClassifyEventCategory(title, cur.DESCRIPTION || "", ""),
+          _raw_type: "iCal",
+        });
+      }
+      cur = null; continue;
+    }
+    if (!cur) continue;
+    // KEY[;PARAMS]:VALUE — capture the key without params, and preserve the value
+    const colonIdx = line.indexOf(":");
+    if (colonIdx < 0) continue;
+    const keyWithParams = line.slice(0, colonIdx);
+    const value = line.slice(colonIdx + 1);
+    const key = keyWithParams.split(";")[0].toUpperCase();
+    cur[key] = value;
+  }
+  return events;
+}
+
+// ─── Ingest orchestrator: reads registry, runs scrapers, geocodes, writes KV ──
+// (v2.7.10 nrnyRunEventsIngestForState removed — replaced by v2.7.11 version
+// further down that also handles type="discover", type="sitemap", and
+// type="federal" in addition to legacy schema_org / ical.)
+
+async function handleEventsIngest(url, env, ctx) {
+  const provided = url.searchParams.get("admin_token") || "";
+  if (env.ADMIN_TOKEN && provided !== env.ADMIN_TOKEN) return json({ error: "Forbidden" }, 403);
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  if (!state) return json({ error: "Missing state (2-letter)" }, 400);
+  // v2.7.11.4: ?source=nps|usda|libraries|sitemap|ical filter — keeps each
+  // Worker invocation under Cloudflare's 50-subrequest cap. Comma-separated
+  // for multi-source runs (e.g. ?source=usda,sitemap). Omit for full run.
+  const sourceParam = url.searchParams.get("source") || "";
+  const sourceFilter = sourceParam ? sourceParam.split(",").map(s => s.trim()).filter(Boolean) : null;
+  const sources = await nrnyEvReadSources(env);
+  if (Object.keys(sources).length === 0) {
+    return json({ error: "No sources registered. Call /api/admin/events-sources-seed first.", state }, 400);
+  }
+  const report = await nrnyRunEventsIngestForState(env, state, sources, sourceFilter);
+  return json(report);
+}
+
+async function handleEventsSources(url, env, ctx) {
+  const sources = await nrnyEvReadSources(env);
+  const meta = (await env.EVENTS_KV.get(NRNY_EV_META_KEY, "json")) || null;
+  return json({ count: Object.keys(sources).length, sources, meta });
+}
+
+// Default registry seed — top ~50 sources across major US metros.
+// Adding a new source in the future = one row here (or via admin call).
+const NRNY_EV_SEED_SOURCES = {
+  // ─── California (Bay Area) ────────────────────────────────────────
+  "sjpl_biblio":     { name: "San Jose Public Library",   type: "schema_org", url: "https://sjpl.bibliocommons.com/events",       state: "CA", metro: "san-jose" },
+  "sfpl_biblio":     { name: "SF Public Library",         type: "schema_org", url: "https://sfpl.bibliocommons.com/events",       state: "CA", metro: "san-francisco" },
+  "berkeley_biblio": { name: "Berkeley Public Library",   type: "schema_org", url: "https://berkeley.bibliocommons.com/events",   state: "CA", metro: "berkeley" },
+  "oakland_biblio":  { name: "Oakland Public Library",    type: "schema_org", url: "https://oaklandlibrary.bibliocommons.com/events", state: "CA", metro: "oakland" },
+  "scc_biblio":      { name: "Santa Clara County Library",type: "schema_org", url: "https://sccl.bibliocommons.com/events",       state: "CA", metro: "santa-clara" },
+  "smc_biblio":      { name: "San Mateo County Library",  type: "schema_org", url: "https://smcl.bibliocommons.com/events",       state: "CA", metro: "san-mateo" },
+  "marin_biblio":    { name: "Marin County Library",      type: "schema_org", url: "https://marinlibrary.bibliocommons.com/events", state: "CA", metro: "marin" },
+  "contracosta_biblio":{ name: "Contra Costa County Library", type: "schema_org", url: "https://ccclib.bibliocommons.com/events", state: "CA", metro: "contra-costa" },
+  "alameda_biblio":  { name: "Alameda County Library",    type: "schema_org", url: "https://aclibrary.bibliocommons.com/events",  state: "CA", metro: "alameda" },
+  "pcfma":           { name: "PCFMA Farmers Markets",     type: "schema_org", url: "https://pcfma.org/markets/",                  state: "CA", metro: "bay-area" },
+
+  // ─── California (LA + San Diego) ──────────────────────────────────
+  "lapl_biblio":     { name: "LA County Library",         type: "schema_org", url: "https://lacountylibrary.bibliocommons.com/events", state: "CA", metro: "los-angeles" },
+  "sdpl_biblio":     { name: "San Diego Public Library",  type: "schema_org", url: "https://sdplibrary.bibliocommons.com/events", state: "CA", metro: "san-diego" },
+
+  // ─── New York ─────────────────────────────────────────────────────
+  "nypl_biblio":     { name: "New York Public Library",   type: "schema_org", url: "https://nypl.bibliocommons.com/events",       state: "NY", metro: "new-york" },
+  "bklyn_biblio":    { name: "Brooklyn Public Library",   type: "schema_org", url: "https://bklynlibrary.bibliocommons.com/events", state: "NY", metro: "brooklyn" },
+  "queens_biblio":   { name: "Queens Public Library",     type: "schema_org", url: "https://queenslibrary.bibliocommons.com/events", state: "NY", metro: "queens" },
+
+  // ─── Illinois ─────────────────────────────────────────────────────
+  "chipublib_biblio":{ name: "Chicago Public Library",    type: "schema_org", url: "https://chipublib.bibliocommons.com/events",  state: "IL", metro: "chicago" },
+
+  // ─── Massachusetts ────────────────────────────────────────────────
+  "boston_biblio":   { name: "Boston Public Library",     type: "schema_org", url: "https://bpl.bibliocommons.com/events",        state: "MA", metro: "boston" },
+  "cambridge_biblio":{ name: "Cambridge Public Library",  type: "schema_org", url: "https://cambridgema.bibliocommons.com/events", state: "MA", metro: "cambridge" },
+
+  // ─── Washington ───────────────────────────────────────────────────
+  "kcls_biblio":     { name: "King County Library",       type: "schema_org", url: "https://kcls.bibliocommons.com/events",       state: "WA", metro: "seattle-east" },
+  "spl_biblio":      { name: "Seattle Public Library",    type: "schema_org", url: "https://spl.bibliocommons.com/events",        state: "WA", metro: "seattle" },
+
+  // ─── Oregon ───────────────────────────────────────────────────────
+  "mcl_biblio":      { name: "Multnomah County Library",  type: "schema_org", url: "https://multcolib.bibliocommons.com/events",  state: "OR", metro: "portland" },
+
+  // ─── DC / Maryland / Virginia ─────────────────────────────────────
+  "dcpl_biblio":     { name: "DC Public Library",         type: "schema_org", url: "https://dclibrary.bibliocommons.com/events",  state: "DC", metro: "washington-dc" },
+  "mcpl_biblio":     { name: "Montgomery County Library", type: "schema_org", url: "https://montgomerycountymd.bibliocommons.com/events", state: "MD", metro: "montgomery-md" },
+  "arlpl_biblio":    { name: "Arlington Public Library",  type: "schema_org", url: "https://libcat.arlingtonva.us/events",        state: "VA", metro: "arlington-va" },
+
+  // ─── Texas ────────────────────────────────────────────────────────
+  "austin_biblio":   { name: "Austin Public Library",     type: "schema_org", url: "https://library.austintexas.gov/events",      state: "TX", metro: "austin" },
+  "houston_biblio":  { name: "Houston Public Library",    type: "schema_org", url: "https://houstonlibrary.bibliocommons.com/events", state: "TX", metro: "houston" },
+  "dallas_biblio":   { name: "Dallas Public Library",     type: "schema_org", url: "https://dallaslibrary.bibliocommons.com/events", state: "TX", metro: "dallas" },
+
+  // ─── Florida ──────────────────────────────────────────────────────
+  "miami_biblio":    { name: "Miami-Dade Library",        type: "schema_org", url: "https://mdpls.bibliocommons.com/events",      state: "FL", metro: "miami" },
+  "orange_biblio":   { name: "Orange County Library (FL)",type: "schema_org", url: "https://ocls.bibliocommons.com/events",       state: "FL", metro: "orlando" },
+
+  // ─── Colorado ─────────────────────────────────────────────────────
+  "denver_biblio":   { name: "Denver Public Library",     type: "schema_org", url: "https://denverlibrary.bibliocommons.com/events", state: "CO", metro: "denver" },
+
+  // ─── Arizona ──────────────────────────────────────────────────────
+  "phx_biblio":      { name: "Phoenix Public Library",    type: "schema_org", url: "https://phoenixpubliclibrary.bibliocommons.com/events", state: "AZ", metro: "phoenix" },
+
+  // ─── Nevada / Utah ────────────────────────────────────────────────
+  "lvccld_biblio":   { name: "Las Vegas Library",         type: "schema_org", url: "https://lvccld.bibliocommons.com/events",     state: "NV", metro: "las-vegas" },
+  "slcpl_biblio":    { name: "Salt Lake City Library",    type: "schema_org", url: "https://slcpl.bibliocommons.com/events",      state: "UT", metro: "salt-lake" },
+
+  // ─── Regional park iCal feeds (Bay Area) ──────────────────────────
+  "ebrpd_ical":      { name: "East Bay Regional Parks",   type: "ical",       url: "https://www.ebparks.org/events.ics",          state: "CA", metro: "east-bay" },
+  "sccp_ical":       { name: "Santa Clara County Parks",  type: "ical",       url: "https://www.sccgov.org/sites/parks/events/Documents/events.ics", state: "CA", metro: "santa-clara" },
+};
+
+// (v2.7.10 handleEventsSourcesSeed removed — replaced by v2.7.11 version below
+// which seeds discovery-based sources instead of hand-guessed URLs.)
+
+// ─── /api/events-radius — query events near lat/lon by radius + filters ──
+// ═══════════════════════════════════════════════════════════════════════════
+// v2.7.11 — Scalable scraping: auto-discovery + federal + sitemap crawler
+// ═══════════════════════════════════════════════════════════════════════════
+// Post-mortem on v2.7.10: hand-guessing URLs at 35 seeded sources hit 100%
+// failure (SPAs + wrong URLs). Fixed by three scalable mechanisms — none
+// require per-source URL knowledge:
+//
+//   1. iCal auto-discovery: given a domain (`sanjoseca.gov`), the Worker
+//      fetches the site, scans `<link rel="alternate" type="text/calendar">`,
+//      probes common paths (/events.ics, /calendar.ics, /events/feed).
+//      Discovered feed URL auto-registered. Adding a new city = 1 domain
+//      in the registry, discovery does the rest.
+//
+//   2. Federal aggregators: NPS + USDA + Rec.gov via their public APIs.
+//      Nationwide coverage, one adapter each, already have auth keys.
+//
+//   3. Sitemap crawler: fetch /sitemap.xml, filter for event paths, extract
+//      schema.org from each — works for server-rendered CMS sites at scale.
+
+// v2.7.11.1: many gov sites (sanjoseca.gov confirmed) 403 anything with
+// "Bot" in the UA. Use a real browser UA for discovery/probe/sitemap
+// traffic. Federal APIs still get NearnityBot because they're allowlists.
+const NRNY_BROWSER_UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const NRNY_BROWSER_HEADERS = {
+  "User-Agent": NRNY_BROWSER_UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/calendar;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+// Googlebot fallback — many sites 403 all non-Google bots but whitelist Googlebot.
+const NRNY_GOOGLEBOT_UA = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)";
+const NRNY_GOOGLEBOT_HEADERS = {
+  "User-Agent": NRNY_GOOGLEBOT_UA,
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,text/calendar;q=0.9,*/*;q=0.8",
+};
+
+// Fetch a URL trying browser UA first, then Googlebot UA on 403/401.
+// Returns final Response (may still be non-OK — caller decides).
+async function nrnyFetchPolite(url, opts) {
+  const cfInit = (opts && opts.cf) || { cacheTtl: 3600 };
+  const first = await fetch(url, { headers: NRNY_BROWSER_HEADERS, cf: cfInit, redirect: "follow" });
+  if (first.status !== 403 && first.status !== 401) return first;
+  // Retry with Googlebot UA
+  return await fetch(url, { headers: NRNY_GOOGLEBOT_HEADERS, cf: cfInit, redirect: "follow" });
+}
+
+// Resolve relative URL against a base
+function nrnyResolveUrl(base, href) {
+  try { return new URL(href, base).toString(); }
+  catch (_) { return href.startsWith("http") ? href : (base.replace(/\/$/, "") + "/" + href.replace(/^\//, "")); }
+}
+
+// Discover calendar/event feeds for a domain. Returns array of discovered
+// feed URLs with type + how-they-were-discovered.
+async function nrnyDiscoverFeeds(domainOrUrl) {
+  const homeUrl = domainOrUrl.startsWith("http") ? domainOrUrl : `https://${domainOrUrl}`;
+  const feeds = [];
+  const diag = { attempts: {}, home_status: null, home_error: null };
+  const errors = [];
+
+  // ─── Method 1 + 2: fetch home page, scan <link> tags for calendar/RSS ─
+  // v2.7.11.2: don't bail if home page is blocked — many WAFs only cover
+  // root paths. Continue to probes/sitemap even if home 403s.
+  try {
+    const resp = await nrnyFetchPolite(homeUrl, { cf: { cacheTtl: 3600 } });
+    diag.home_status = resp.status;
+    if (resp.ok) {
+      const html = await resp.text();
+      // <link rel="alternate" type="text/calendar" href="...">
+      const linkRe = /<link[^>]+rel=["']alternate["'][^>]*type=["']text\/calendar["'][^>]*href=["']([^"']+)["']/gi;
+      let m;
+      while ((m = linkRe.exec(html)) !== null) {
+        feeds.push({ type: "ical", url: nrnyResolveUrl(homeUrl, m[1]), discovered_via: "link-alternate-calendar" });
+      }
+      // Reverse tag order (href before type)
+      const linkRe2 = /<link[^>]+href=["']([^"']+)["'][^>]*type=["']text\/calendar["']/gi;
+      while ((m = linkRe2.exec(html)) !== null) {
+        const url = nrnyResolveUrl(homeUrl, m[1]);
+        if (!feeds.find(f => f.url === url)) feeds.push({ type: "ical", url, discovered_via: "link-alternate-calendar" });
+      }
+      // RSS/Atom with "event" or "calendar" in URL
+      const rssRe = /<link[^>]+rel=["']alternate["'][^>]*type=["']application\/(?:rss\+xml|atom\+xml)["'][^>]*href=["']([^"']*(?:event|calendar)[^"']*)["']/gi;
+      while ((m = rssRe.exec(html)) !== null) {
+        feeds.push({ type: "rss", url: nrnyResolveUrl(homeUrl, m[1]), discovered_via: "link-alternate-rss" });
+      }
+    } else {
+      diag.home_error = `home HTTP ${resp.status} — likely CDN/WAF block; continuing to probes + sitemap`;
+      errors.push(diag.home_error);
+    }
+  } catch (e) {
+    diag.home_error = `home fetch threw: ${(e && e.message) || String(e)}`;
+    errors.push(diag.home_error);
+  }
+
+  // ─── Method 3: probe common calendar paths ───────────────────────────
+  // Runs REGARDLESS of home status. WAF rules commonly block "/" but not
+  // "/calendar.ics" — worth trying.
+  const probePaths = [
+    "/events.ics", "/calendar.ics", "/events/feed.ics",
+    "/events/ical", "/calendar/ical.ics", "/events/rss.ics",
+    "/events/feed", "/calendar/feed", "/rss/events",
+    "/api/calendar.ics", "/ical",
+  ];
+  diag.attempts.probes = [];
+  for (const path of probePaths) {
+    const probeUrl = homeUrl.replace(/\/$/, "") + path;
+    try {
+      const probeResp = await nrnyFetchPolite(probeUrl, { cf: { cacheTtl: 3600 } });
+      const ct = (probeResp.headers.get("content-type") || "").toLowerCase();
+      const isCal = ct.includes("calendar") || ct.includes("ics");
+      const isRss = ct.includes("rss") || ct.includes("atom") || ct.includes("xml");
+      diag.attempts.probes.push({ url: probeUrl, status: probeResp.status, ct });
+      if (probeResp.ok && isCal) {
+        if (!feeds.find(f => f.url === probeUrl)) feeds.push({ type: "ical", url: probeUrl, discovered_via: "path-probe-content-type" });
+      } else if (probeResp.ok && isRss && path.includes("event")) {
+        if (!feeds.find(f => f.url === probeUrl)) feeds.push({ type: "rss", url: probeUrl, discovered_via: "path-probe-rss" });
+      }
+    } catch (_) { /* skip */ }
+  }
+
+  // ─── Method 4 (v2.7.11.2): try sitemap.xml — often bypasses root WAF ─
+  // Sitemaps are meant for bots — many gov sites explicitly whitelist them.
+  const sitemapCandidates = [
+    homeUrl.replace(/\/$/, "") + "/sitemap.xml",
+    homeUrl.replace(/\/$/, "") + "/sitemap_index.xml",
+  ];
+  diag.attempts.sitemaps = [];
+  for (const smUrl of sitemapCandidates) {
+    try {
+      const smResp = await nrnyFetchPolite(smUrl, { cf: { cacheTtl: 3600 } });
+      diag.attempts.sitemaps.push({ url: smUrl, status: smResp.status });
+      if (smResp.ok) {
+        // Just note that sitemap exists — the sitemap-crawler adapter
+        // handles extraction. Add as a "sitemap" feed hint.
+        feeds.push({ type: "sitemap_hint", url: smUrl, discovered_via: "sitemap-probe" });
+      }
+    } catch (_) {}
+  }
+
+  return { feeds, error: (feeds.length === 0 && errors.length > 0) ? errors.join("; ") : null, diag };
+}
+
+// Discovery endpoint — helpful for you to preview what a domain exposes
+// before adding it to the registry.
+//   GET /api/events-discover?domain=sanjoseca.gov
+async function handleEventsDiscover(url, env, ctx) {
+  const domain = url.searchParams.get("domain") || url.searchParams.get("url");
+  if (!domain) return json({ error: "Missing domain" }, 400);
+  const result = await nrnyDiscoverFeeds(domain);
+  return json({ domain, ...result });
+}
+
+// ─── Sitemap crawler: extract event URLs, scrape each for schema.org ────
+async function nrnyCrawlSitemap(baseUrl, eventPathFilters, maxEventUrls) {
+  const feeds = [];
+  const maxEvents = Math.min(maxEventUrls || 200, 500);
+  const eventUrls = [];
+  const attempts = [];
+
+  // Common sitemap locations
+  const sitemapUrls = [
+    `${baseUrl.replace(/\/$/, "")}/sitemap.xml`,
+    `${baseUrl.replace(/\/$/, "")}/sitemap_index.xml`,
+    `${baseUrl.replace(/\/$/, "")}/sitemap-events.xml`,
+    `${baseUrl.replace(/\/$/, "")}/sitemaps/sitemap.xml`,
+  ];
+
+  for (const smUrl of sitemapUrls) {
+    if (eventUrls.length >= maxEvents) break;
+    // v2.7.11.4: single try/catch with error surfacing (previously all
+    // errors silently swallowed — PCFMA returned zero attempts because
+    // every fetch threw and no diag surfaced why).
+    try {
+      const resp = await nrnyFetchPolite(smUrl, { cf: { cacheTtl: 3600 } });
+      attempts.push({ url: smUrl, status: resp.status });
+      if (!resp.ok) continue;
+      const xml = await resp.text();
+      // Extract <loc>URL</loc> entries
+      const locRe = /<loc>([^<]+)<\/loc>/gi;
+      let m;
+      while ((m = locRe.exec(xml)) !== null && eventUrls.length < maxEvents) {
+        const url = m[1].trim();
+        // If this loc points to another sitemap (contains "sitemap" in path), recurse once
+        if (/sitemap[a-z0-9_-]*\.xml/i.test(url) && url !== smUrl) {
+          try {
+            const subResp = await nrnyFetchPolite(url, { cf: { cacheTtl: 3600 } });
+            if (subResp.ok) {
+              const subXml = await subResp.text();
+              let sm;
+              const subLocRe = /<loc>([^<]+)<\/loc>/gi;
+              while ((sm = subLocRe.exec(subXml)) !== null && eventUrls.length < maxEvents) {
+                const suburl = sm[1].trim();
+                if (nrnyLooksLikeEventUrl(suburl, eventPathFilters)) eventUrls.push(suburl);
+              }
+            }
+          } catch (subE) {
+            attempts.push({ url, sub_error: (subE && subE.message) || String(subE) });
+          }
+        } else if (nrnyLooksLikeEventUrl(url, eventPathFilters)) {
+          eventUrls.push(url);
+        }
+      }
+    } catch (e) {
+      attempts.push({ url: smUrl, status: null, error: (e && e.message) || String(e) });
+    }
+  }
+
+  // Now scrape schema.org from each event URL
+  const events = [];
+  const errors = [];
+  for (const evUrl of eventUrls.slice(0, maxEvents)) {
+    try {
+      const resp = await nrnyFetchPolite(evUrl, { cf: { cacheTtl: 3600 } });
+      if (!resp.ok) { errors.push({ url: evUrl, status: resp.status }); continue; }
+      const html = await resp.text();
+      const parsed = nrnyParseSchemaOrgEvents(html, evUrl);
+      events.push(...parsed);
+    } catch (e) {
+      errors.push({ url: evUrl, error: (e && e.message) || String(e) });
+    }
+  }
+  return { events, sitemap_urls_tried: attempts, event_urls_discovered: eventUrls.length, errors: errors.slice(0, 10) };
+}
+
+function nrnyLooksLikeEventUrl(url, filters) {
+  const u = url.toLowerCase();
+  const defaultFilters = ["/event", "/events/", "/programs/", "/calendar/", "/happening", "/whats-on"];
+  const active = (Array.isArray(filters) && filters.length) ? filters : defaultFilters;
+  return active.some(f => u.includes(f));
+}
+
+// ─── Federal aggregators ─────────────────────────────────────────────────
+// NPS Events API — needs env.NPS_KEY (already configured).
+// Docs: https://www.nps.gov/subjects/developer/api-documentation.htm
+async function nrnyFetchNpsEventsForState(env, state) {
+  if (!env || !env.NPS_KEY) return { events: [], error: "NPS_KEY not configured" };
+  // First get parks in state
+  const parksUrl = `https://developer.nps.gov/api/v1/parks?stateCode=${state.toUpperCase()}&limit=50&api_key=${env.NPS_KEY}`;
+  try {
+    const parksResp = await fetch(parksUrl, { cf: { cacheTtl: 86400 } });
+    if (!parksResp.ok) return { events: [], error: `NPS parks HTTP ${parksResp.status}` };
+    const parksData = await parksResp.json();
+    const parkCodes = (parksData.data || []).map(p => p.parkCode);
+    const events = [];
+    // Fetch events per park (paged)
+    for (const code of parkCodes.slice(0, 20)) {   // cap parks per state
+      const evUrl = `https://developer.nps.gov/api/v1/events?parkCode=${code}&pageSize=50&api_key=${env.NPS_KEY}`;
+      try {
+        const evResp = await fetch(evUrl, { cf: { cacheTtl: 3600 } });
+        if (!evResp.ok) continue;
+        const evData = await evResp.json();
+        for (const raw of (evData.data || [])) {
+          const dates = raw.dates || [];
+          for (const dateStr of dates) {
+            events.push({
+              title: raw.title,
+              description: (raw.description || "").slice(0, 500),
+              start_date: dateStr,
+              end_date: dateStr,
+              url: raw.infourl || raw.regurl || `https://www.nps.gov/${code}/`,
+              image: raw.images && raw.images[0] ? raw.images[0].url : null,
+              venue_name: raw.location || (raw.sitename || code.toUpperCase()),
+              venue_address: raw.location || null,
+              lat: parseFloat(raw.latitude) || null,
+              lon: parseFloat(raw.longitude) || null,
+              category: "nature",
+              _raw_type: "NPS Event",
+              source_id: "nps",
+              source_name: "National Park Service",
+            });
+          }
+        }
+      } catch (_) {}
+    }
+    return { events, error: null };
+  } catch (e) { return { events: [], error: (e && e.message) || String(e) }; }
+}
+
+// ─── BiblioCommons gateway API adapter (v2.7.11.4) ──────────────────────
+// BiblioCommons /events pages are JavaScript SPAs — raw HTML has no
+// schema.org, no event content. But the SPA's backing API at
+// gateway.bibliocommons.com/v2 is publicly accessible without auth.
+// Discovered 2026-07-20 during research: sjpl returns 6,877 events.
+//
+// Two calls per library:
+//   1. /v2/libraries/{slug}/locations → branch list with mapLocation.centrePoint
+//   2. /v2/libraries/{slug}/events?limit=100&page=N → paginated events with
+//      definition.branchLocationId (join to #1 for lat/lng)
+//
+// Locations cached per-library in KV for 24h (small dataset, stable).
+
+const NRNY_BC_LOC_KEY_PREFIX = "nrny:bc:loc:";      // per-library location cache
+
+async function nrnyFetchBiblioCommonsLocations(env, slug) {
+  // Try KV cache first
+  const cacheKey = NRNY_BC_LOC_KEY_PREFIX + slug;
+  try {
+    const cached = await env.EVENTS_KV.get(cacheKey, "json");
+    if (cached && cached.locations && Object.keys(cached.locations).length > 0) {
+      return { locations: cached.locations, error: null, from_cache: true };
+    }
+  } catch (_) {}
+
+  const url = `https://gateway.bibliocommons.com/v2/libraries/${encodeURIComponent(slug)}/locations`;
+  try {
+    const resp = await fetch(url, {
+      headers: { ...NRNY_BROWSER_HEADERS, "Accept": "application/json" },
+      cf: { cacheTtl: 86400 },
+    });
+    if (!resp.ok) return { locations: {}, error: `BC locations HTTP ${resp.status}` };
+    const data = await resp.json();
+    // Response has entities.locations[id] = { mapLocation.centrePoint.{lat,lng}, address.{...}, name }
+    const rawLocs = (data.entities && data.entities.locations) || {};
+    const locations = {};
+    for (const [id, loc] of Object.entries(rawLocs)) {
+      const cp = loc.mapLocation && loc.mapLocation.centrePoint;
+      if (cp && Number.isFinite(cp.lat) && Number.isFinite(cp.lng)) {
+        locations[id] = {
+          lat: cp.lat,
+          lon: cp.lng,
+          name: loc.name || null,
+          address: loc.address ? [loc.address.number, loc.address.street, loc.address.city, loc.address.state, loc.address.zip].filter(Boolean).join(" ") : null,
+          city: (loc.address && loc.address.city) || null,
+          state: (loc.address && loc.address.state) || null,
+        };
+      }
+    }
+    // Cache for 24h
+    try {
+      await env.EVENTS_KV.put(cacheKey, JSON.stringify({ locations, cached_at: new Date().toISOString() }), { expirationTtl: 86400 });
+    } catch (_) {}
+    return { locations, error: null, from_cache: false };
+  } catch (e) { return { locations: {}, error: (e && e.message) || String(e) }; }
+}
+
+async function nrnyFetchBiblioCommonsEvents(env, slug, opts) {
+  const options = opts || {};
+  const maxPages = options.maxPages || 3;         // 300 events per library default
+  const perPage = 100;
+  const { locations, error: locErr } = await nrnyFetchBiblioCommonsLocations(env, slug);
+  const events = [];
+  const diag = { pages_fetched: 0, raw_event_count: 0, locations_count: Object.keys(locations || {}).length, loc_error: locErr };
+
+  for (let page = 1; page <= maxPages; page++) {
+    const url = `https://gateway.bibliocommons.com/v2/libraries/${encodeURIComponent(slug)}/events?limit=${perPage}&page=${page}`;
+    try {
+      const resp = await fetch(url, {
+        headers: { ...NRNY_BROWSER_HEADERS, "Accept": "application/json" },
+        cf: { cacheTtl: 3600 },
+      });
+      if (!resp.ok) { diag.last_error = `BC events HTTP ${resp.status} on page ${page}`; break; }
+      const data = await resp.json();
+      diag.pages_fetched = page;
+      const items = (data.events && data.events.items) || [];
+      const entities = (data.entities && data.entities.events) || {};
+      diag.raw_event_count += Object.keys(entities).length;
+
+      // Iterate event entities (items[] is just IDs; entities is where the data is)
+      for (const [eventId, evEntity] of Object.entries(entities)) {
+        const def = evEntity.definition || {};
+        const branchLocId = def.branchLocationId;
+        const nonBranchLocId = def.nonBranchLocationId;
+        const loc = (branchLocId && locations[branchLocId]) || (nonBranchLocId && locations[nonBranchLocId]) || null;
+        // Prefer indexStart/indexEnd (ISO Z) over definition.start (naked ISO local)
+        const startISO = evEntity.indexStart || def.start || null;
+        const endISO = evEntity.indexEnd || def.end || null;
+        events.push({
+          title: def.title || "Library Event",
+          description: (def.description || "").slice(0, 500),
+          start_date: startISO,
+          end_date: endISO,
+          url: `https://${slug}.bibliocommons.com/events/${eventId}`,
+          image: (evEntity.image && evEntity.image.url) || null,
+          venue_name: loc ? loc.name : null,
+          venue_address: loc ? loc.address : null,
+          lat: loc ? loc.lat : null,
+          lon: loc ? loc.lon : null,
+          category: "library",
+          _raw_type: "BiblioCommons Event",
+          is_recurring: !!evEntity.isRecurring,
+          is_cancelled: !!evEntity.isCancelled,
+        });
+      }
+      // Stop if fewer items than perPage (last page)
+      if (items.length < perPage) break;
+    } catch (e) {
+      diag.last_error = (e && e.message) || String(e);
+      break;
+    }
+  }
+  return { events, diag, error: diag.last_error || null };
+}
+
+// USDA Local Food Portal — nationwide farmers markets.
+// v2.7.11.4: REQUIRES env.USDA_KEY (free registration:
+// https://www.usdalocalfoodportal.com/fe/fregisterpublicapi/).
+// State must be 2-letter LOWERCASE code. Prior versions passed full state
+// name — that returned the string "apikey error" which the parser treated
+// as an empty array (0 records with no error surfaced).
+async function nrnyFetchUsdaFarmersMarketsForState(env, state) {
+  if (!env || !env.USDA_KEY) {
+    return { events: [], error: "USDA_KEY not configured — register at https://www.usdalocalfoodportal.com/fe/fregisterpublicapi/ and add USDA_KEY secret" };
+  }
+  const stateLower = state.toLowerCase();
+  const url = `https://www.usdalocalfoodportal.com/api/farmersmarket/?apikey=${encodeURIComponent(env.USDA_KEY)}&state=${encodeURIComponent(stateLower)}`;
+  try {
+    const resp = await fetch(url, {
+      headers: { ...NRNY_BROWSER_HEADERS, "Accept": "application/json" },
+      cf: { cacheTtl: 86400 },
+    });
+    if (!resp.ok) return { events: [], error: `USDA HTTP ${resp.status}` };
+    const bodyText = await resp.text();
+    // Detect the "apikey error" plain-string response (indicates bad/missing key)
+    if (/^\s*["']?apikey error["']?\s*$/i.test(bodyText)) {
+      return { events: [], error: "USDA API returned 'apikey error' — check that USDA_KEY secret is set correctly" };
+    }
+    let data;
+    try { data = JSON.parse(bodyText); } catch (_) {
+      return { events: [], error: `USDA response was not JSON: ${bodyText.slice(0, 100)}` };
+    }
+    const rows = Array.isArray(data) ? data : (data.data || data.markets || []);
+    const events = rows.map(row => ({
+      title: row.listing_name || row.market_name || row.name || "Farmers Market",
+      description: (row.brief_desc || row.description || `Farmers market in ${state.toUpperCase()}`).slice(0, 500),
+      start_date: null,
+      end_date: null,
+      url: row.listing_website || row.market_url || row.website || "https://www.usdalocalfoodportal.com/",
+      image: null,
+      venue_name: row.listing_name || row.market_name || null,
+      venue_address: [row.location_address, row.location_city, row.location_state || state.toUpperCase(), row.location_zipcode].filter(Boolean).join(", "),
+      lat: parseFloat(row.location_y || row.lat || row.latitude) || null,
+      lon: parseFloat(row.location_x || row.lon || row.longitude) || null,
+      category: "market",
+      _raw_type: "USDA Farmers Market",
+      source_id: "usda_farmers_markets",
+      source_name: "USDA Local Food Directory",
+    })).filter(e => e.lat && e.lon);
+    return { events, error: null, raw_count: rows.length };
+  } catch (e) { return { events: [], error: (e && e.message) || String(e) }; }
+}
+
+// ─── v2.7.11.4 seed sources — federal + BiblioCommons API + sitemap ─────
+// Registry rows support:
+//   type: "federal"           → wired federal aggregator (nps, usda)
+//   type: "bibliocommons_api" → gateway.bibliocommons.com/v2 (new in v2.7.11.4)
+//   type: "ical"              → static URL for iCal file
+//   type: "sitemap"           → nrnyCrawlSitemap fetches sitemap + extracts events
+//   type: "schema_org"        → static URL with server-rendered JSON-LD
+//   type: "discover"          → nrnyDiscoverFeeds (retained for future non-.gov use)
+const NRNY_EV_V711_SEEDS = {
+  // ─── Federal (nationwide, one row each) ───────────────────────────
+  "usda_farmers_markets": { name: "USDA Local Food Directory (Farmers Markets)", type: "federal", provider: "usda", per_state: true },
+  "nps_events":           { name: "National Park Service Events",                 type: "federal", provider: "nps",  per_state: true },
+
+  // ─── BiblioCommons libraries (via gateway.bibliocommons.com/v2 API) ──
+  // v2.7.11.4: pivoted from schema.org scraping (SPA, returned 0) to the
+  // undocumented but public gateway API. Verified sjpl returns 6,877 events.
+  // Adding a new library = one row here with slug matching the subdomain.
+  "sjpl_biblio":       { name: "San Jose Public Library",         type: "bibliocommons_api", slug: "sjpl",              state: "CA", metro: "san-jose" },
+  "sfpl_biblio":       { name: "SF Public Library",               type: "bibliocommons_api", slug: "sfpl",              state: "CA", metro: "san-francisco" },
+  "berkeley_biblio":   { name: "Berkeley Public Library",         type: "bibliocommons_api", slug: "berkeley",          state: "CA", metro: "berkeley" },
+  "oakland_biblio":    { name: "Oakland Public Library",          type: "bibliocommons_api", slug: "oaklandlibrary",    state: "CA", metro: "oakland" },
+  "scc_biblio":        { name: "Santa Clara County Library",      type: "bibliocommons_api", slug: "sccl",              state: "CA", metro: "santa-clara" },
+  "smc_biblio":        { name: "San Mateo County Library",        type: "bibliocommons_api", slug: "smcl",              state: "CA", metro: "san-mateo" },
+  "marin_biblio":      { name: "Marin County Library",            type: "bibliocommons_api", slug: "marinlibrary",      state: "CA", metro: "marin" },
+  "contracosta_biblio":{ name: "Contra Costa County Library",     type: "bibliocommons_api", slug: "ccclib",            state: "CA", metro: "contra-costa" },
+  "alameda_biblio":    { name: "Alameda County Library",          type: "bibliocommons_api", slug: "aclibrary",         state: "CA", metro: "alameda" },
+  "lapl_biblio":       { name: "LA County Library",               type: "bibliocommons_api", slug: "lacountylibrary",   state: "CA", metro: "los-angeles" },
+  "sdpl_biblio":       { name: "San Diego Public Library",        type: "bibliocommons_api", slug: "sdplibrary",        state: "CA", metro: "san-diego" },
+  "nypl_biblio":       { name: "New York Public Library",         type: "bibliocommons_api", slug: "nypl",              state: "NY", metro: "new-york" },
+  "bklyn_biblio":      { name: "Brooklyn Public Library",         type: "bibliocommons_api", slug: "bklynlibrary",      state: "NY", metro: "brooklyn" },
+  "queens_biblio":     { name: "Queens Public Library",           type: "bibliocommons_api", slug: "queenslibrary",     state: "NY", metro: "queens" },
+  "chipublib_biblio":  { name: "Chicago Public Library",          type: "bibliocommons_api", slug: "chipublib",         state: "IL", metro: "chicago" },
+  "boston_biblio":     { name: "Boston Public Library",           type: "bibliocommons_api", slug: "bpl",               state: "MA", metro: "boston" },
+  "cambridge_biblio":  { name: "Cambridge Public Library",        type: "bibliocommons_api", slug: "cambridgema",       state: "MA", metro: "cambridge" },
+  "kcls_biblio":       { name: "King County Library",             type: "bibliocommons_api", slug: "kcls",              state: "WA", metro: "seattle-east" },
+  "spl_biblio":        { name: "Seattle Public Library",          type: "bibliocommons_api", slug: "spl",               state: "WA", metro: "seattle" },
+  "mcl_biblio":        { name: "Multnomah County Library",        type: "bibliocommons_api", slug: "multcolib",         state: "OR", metro: "portland" },
+  "dcpl_biblio":       { name: "DC Public Library",               type: "bibliocommons_api", slug: "dclibrary",         state: "DC", metro: "washington-dc" },
+  "mcpl_biblio":       { name: "Montgomery County Library",       type: "bibliocommons_api", slug: "montgomerycountymd",state: "MD", metro: "montgomery-md" },
+  "houston_biblio":    { name: "Houston Public Library",          type: "bibliocommons_api", slug: "houstonlibrary",    state: "TX", metro: "houston" },
+  "dallas_biblio":     { name: "Dallas Public Library",           type: "bibliocommons_api", slug: "dallaslibrary",     state: "TX", metro: "dallas" },
+  "miami_biblio":      { name: "Miami-Dade Library",              type: "bibliocommons_api", slug: "mdpls",             state: "FL", metro: "miami" },
+  "orange_biblio":     { name: "Orange County Library (FL)",      type: "bibliocommons_api", slug: "ocls",              state: "FL", metro: "orlando" },
+  "denver_biblio":     { name: "Denver Public Library",           type: "bibliocommons_api", slug: "denverlibrary",     state: "CO", metro: "denver" },
+  "phx_biblio":        { name: "Phoenix Public Library",          type: "bibliocommons_api", slug: "phoenixpubliclibrary", state: "AZ", metro: "phoenix" },
+  "lvccld_biblio":     { name: "Las Vegas Library",               type: "bibliocommons_api", slug: "lvccld",            state: "NV", metro: "las-vegas" },
+  "slcpl_biblio":      { name: "Salt Lake City Library",          type: "bibliocommons_api", slug: "slcpl",             state: "UT", metro: "salt-lake" },
+
+  // ─── Sitemap-crawl sources (server-rendered CMS event pages) ─────
+  "pcfma_sitemap":     { name: "PCFMA Farmers Markets (via sitemap)", type: "sitemap", domain: "https://pcfma.org", event_paths: ["/markets/", "/market/"], state: "CA", metro: "bay-area" },
+
+  // ─── DROPPED in v2.7.11.4: ebrpd_ical (no working feed exists — ebparks.org
+  // /calendar is server-rendered HTML with no coordinates; would require
+  // scraping 76 pages + hand-maintaining park-name-to-lat/lon lookup. Not
+  // worth v1 investment; revisit if EBRPD publishes a feed.)
+};
+
+async function handleEventsSourcesSeed(url, env, ctx) {
+  const provided = url.searchParams.get("admin_token") || "";
+  if (env.ADMIN_TOKEN && provided !== env.ADMIN_TOKEN) return json({ error: "Forbidden" }, 403);
+  const overwrite = url.searchParams.get("overwrite") === "1";
+  const existing = await nrnyEvReadSources(env);
+  const seed = NRNY_EV_V711_SEEDS;
+  const merged = overwrite ? seed : { ...seed, ...existing };
+  const result = await nrnyEvWriteSources(env, merged);
+  return json({ ok: true, count: result.count, seeded_sources: Object.keys(seed).length, overwrite, note: "v2.7.11.3: federal (USDA+NPS nationwide) + BiblioCommons libraries + PCFMA sitemap — .gov city rows dropped after CF Worker TLS fingerprint block confirmed" });
+}
+
+// ─── UPDATED ingest orchestrator: handles all source types ────────────
+// v2.7.11.4: added sourceFilter to keep per-invocation subrequests under
+// Cloudflare's 50-request cap. Pass e.g. ["nps"] or ["libraries"] to run
+// only that source group. Empty/omitted = run everything (may hit cap).
+//   Filter values map to:
+//     "nps"       → federal provider=nps
+//     "usda"      → federal provider=usda
+//     "libraries" → type=bibliocommons_api
+//     "sitemap"   → type=sitemap
+//     "ical"      → type=ical
+//     "discover"  → type=discover
+async function nrnyRunEventsIngestForState(env, state, sources, sourceFilter) {
+  const filter = (sourceFilter && sourceFilter.length) ? new Set(sourceFilter.map(s => s.toLowerCase())) : null;
+  const report = { state, started_at: new Date().toISOString(), source_filter: sourceFilter || null, sources: {}, total_events: 0 };
+  const allEvents = [];
+  for (const [srcId, cfg] of Object.entries(sources)) {
+    if (cfg.state && cfg.state.toUpperCase() !== state.toUpperCase()) continue;
+    // Federal sources are per_state opt-in (they run for ANY state ingest)
+    if (cfg.type === "federal") { /* no state check for federal per-state providers */ }
+
+    // Apply source filter if set
+    if (filter) {
+      let groupKey;
+      if (cfg.type === "federal") groupKey = cfg.provider;   // "nps" or "usda"
+      else if (cfg.type === "bibliocommons_api") groupKey = "libraries";
+      else groupKey = cfg.type;
+      if (!filter.has(groupKey)) continue;
+    }
+
+    const srcReport = { type: cfg.type, fetched: 0, geocoded: 0, error: null, diag: null };
+    try {
+      let parsed = [];
+
+      // --- Discovery-based (cities, libraries with .org domains) ---
+      if (cfg.type === "discover") {
+        const { feeds, error, diag } = await nrnyDiscoverFeeds(cfg.domain);
+        srcReport.diag = { discovered: feeds.map(f => ({ type: f.type, url: f.url, via: f.discovered_via })), home_status: diag && diag.home_status };
+        if (error) srcReport.error = error;
+        for (const feed of feeds) {
+          try {
+            const feedResp = await nrnyFetchPolite(feed.url, { cf: { cacheTtl: 3600 } });
+            if (!feedResp.ok) continue;
+            const body = await feedResp.text();
+            if (feed.type === "ical") parsed.push(...nrnyParseICal(body, feed.url));
+            // (Skipping RSS parsing for now — RSS event feeds vary too much
+            // in schema; add generic RSS event parser in v2.7.12 if needed)
+          } catch (_) {}
+        }
+      }
+
+      // --- Sitemap crawl ---
+      else if (cfg.type === "sitemap") {
+        const result = await nrnyCrawlSitemap(cfg.domain, cfg.event_paths, cfg.max_urls || 100);
+        srcReport.diag = { sitemap_urls_tried: result.sitemap_urls_tried, event_urls_discovered: result.event_urls_discovered, sample_errors: result.errors };
+        parsed = result.events;
+      }
+
+      // --- Federal aggregator ---
+      else if (cfg.type === "federal") {
+        if (cfg.provider === "nps") {
+          const { events, error } = await nrnyFetchNpsEventsForState(env, state);
+          if (error) srcReport.error = error;
+          parsed = events;
+        } else if (cfg.provider === "usda") {
+          const { events, error, raw_count } = await nrnyFetchUsdaFarmersMarketsForState(env, state);
+          if (error) srcReport.error = error;
+          if (Number.isFinite(raw_count)) srcReport.diag = { raw_count };
+          parsed = events;
+        } else {
+          srcReport.error = `Unknown federal provider: ${cfg.provider}`;
+        }
+      }
+
+      // --- BiblioCommons gateway API (v2.7.11.4) ---
+      else if (cfg.type === "bibliocommons_api") {
+        const { events, diag, error } = await nrnyFetchBiblioCommonsEvents(env, cfg.slug, { maxPages: cfg.max_pages || 2 });
+        if (error) srcReport.error = error;
+        srcReport.diag = diag;
+        parsed = events;
+      }
+
+      // --- Legacy direct URL (schema.org or ical) ---
+      else if (cfg.type === "schema_org" || cfg.type === "ical") {
+        const resp = await nrnyFetchPolite(cfg.url, { cf: { cacheTtl: 3600 } });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const body = await resp.text();
+        if (cfg.type === "schema_org") parsed = nrnyParseSchemaOrgEvents(body, cfg.url);
+        else parsed = nrnyParseICal(body, cfg.url);
+      } else {
+        throw new Error(`Unknown source type: ${cfg.type}`);
+      }
+
+      srcReport.fetched = parsed.length;
+      // Tag events with source metadata
+      const tagged = parsed.map(e => ({
+        ...e,
+        source_id: e.source_id || srcId,
+        source_name: e.source_name || (cfg.name || srcId),
+        source_state: cfg.state || state,
+        source_metro: cfg.metro || null,
+        source_url: e.source_url || (cfg.url || cfg.domain || null),
+      }));
+      allEvents.push(...tagged);
+    } catch (e) {
+      srcReport.error = srcReport.error || ((e && e.message) || String(e));
+    }
+    report.sources[srcId] = srcReport;
+  }
+
+  // Batch geocode events without lat/lon
+  const needGeo = allEvents.filter(e => !(Number.isFinite(e.lat) && Number.isFinite(e.lon)) && e.venue_address).map((e, i) => ({
+    id: `ev-${i}`,
+    address: (e.venue_address || "").split(",")[0] || "",
+    city: (e.venue_address || "").split(",")[1] || "",
+    state: state,
+    zip: "",
+    _idx: allEvents.indexOf(e),
+  })).filter(r => r.address);
+
+  if (needGeo.length > 0) {
+    try {
+      for (let i = 0; i < needGeo.length; i += 1000) {
+        const batch = needGeo.slice(i, i + 1000);
+        const { geocoded } = await nrnyCensusBatchGeocode(batch, `events-chunk-${i}`);
+        for (const rec of batch) {
+          const g = geocoded[rec.id];
+          if (g) {
+            allEvents[rec._idx].lat = g.lat;
+            allEvents[rec._idx].lon = g.lon;
+          }
+        }
+      }
+    } catch (e) { report.geocode_error = (e && e.message) || String(e); }
+  }
+
+  const geocoded = allEvents.filter(e => Number.isFinite(e.lat) && Number.isFinite(e.lon));
+  report.total_events = allEvents.length;
+  report.geocoded_events = geocoded.length;
+
+  await nrnyEvWriteState(env, state, geocoded);
+  const meta = (await env.EVENTS_KV.get(NRNY_EV_META_KEY, "json")) || { states: {}, last_run: null };
+  meta.states[state] = { count: geocoded.length, updated_at: new Date().toISOString(), sources: Object.keys(report.sources).length };
+  meta.last_run = new Date().toISOString();
+  await env.EVENTS_KV.put(NRNY_EV_META_KEY, JSON.stringify(meta), { expirationTtl: 30 * 86400 });
+  return report;
+}
+
+async function handleEventsRadius(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  if (!isFinite(lat) || !isFinite(lon)) return json({ error: "Missing lat/lon" }, 400);
+  const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  if (!state) return json({ error: "Missing state (2-letter)" }, 400);
+  const radiusMi = clamp(parseFloat(url.searchParams.get("radius_mi") || "25"), 1, 100);
+  const limit = clamp(parseInt(url.searchParams.get("limit") || "50"), 1, 200);
+  const catParam = (url.searchParams.get("category") || "").toLowerCase();
+  const whenParam = (url.searchParams.get("when") || "").toLowerCase();   // "today" | "week" | "month" | "all"
+  const crossState = (url.searchParams.get("cross_state") || "auto").toLowerCase();
+
+  const statesToQuery = nrnyResolveStatesForRadius(state, radiusMi, crossState);
+  const t0 = Date.now();
+
+  try {
+    const readPromises = statesToQuery.map(st => nrnyEvReadState(env, st));
+    const arrays = await Promise.all(readPromises);
+    const events = arrays.flat();
+
+    if (events.length === 0) {
+      return json({
+        results: [], count: 0,
+        meta: { kv_hit: false, source_states: statesToQuery,
+                note: `No events ingested for ${statesToQuery.join(", ")}. Run /api/admin/events-ingest?state=${state} to populate.` }
+      });
+    }
+
+    const now = Date.now();
+    const weekMs = 7 * 86400 * 1000;
+    const monthMs = 31 * 86400 * 1000;
+    const inWindow = (startISO) => {
+      if (!startISO || whenParam === "all" || whenParam === "") return true;
+      const t = new Date(startISO).getTime();
+      if (!isFinite(t)) return true;
+      if (whenParam === "today") return t >= now && (t - now) < 86400 * 1000;
+      if (whenParam === "week")  return t >= now && (t - now) < weekMs;
+      if (whenParam === "month") return t >= now && (t - now) < monthMs;
+      return true;
+    };
+
+    const withDist = events
+      .filter(e => isFinite(e.lat) && isFinite(e.lon))
+      .filter(e => !catParam || (e.category === catParam))
+      .filter(e => inWindow(e.start_date))
+      .map(e => ({
+        ...e,
+        distance_mi: Math.round(nrnyHaversineMi(lat, lon, e.lat, e.lon) * 10) / 10,
+      }))
+      .filter(e => e.distance_mi <= radiusMi)
+      .sort((a, b) => {
+        // Primary: soonest first. Fallback: by distance.
+        const ta = new Date(a.start_date || 0).getTime() || Number.MAX_SAFE_INTEGER;
+        const tb = new Date(b.start_date || 0).getTime() || Number.MAX_SAFE_INTEGER;
+        if (ta !== tb) return ta - tb;
+        return a.distance_mi - b.distance_mi;
+      });
+
+    // Dedupe by (title + start_date)
+    const seen = new Set();
+    const unique = withDist.filter(e => {
+      const k = `${(e.title || "").toLowerCase().trim()}|${e.start_date || ""}`;
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+
+    return json({
+      results: unique.slice(0, limit),
+      count: Math.min(unique.length, limit),
+      meta: {
+        kv_hit: true,
+        source_states: statesToQuery,
+        total_matched: unique.length,
+        radius_mi: radiusMi,
+        category: catParam || null,
+        when: whenParam || null,
+        elapsed_ms: Date.now() - t0,
+      }
+    });
+  } catch (e) {
+    return json({ error: (e && e.message) || "events-radius failed", elapsed_ms: Date.now() - t0 }, 500);
+  }
+}
+
 // ─── NPPES (National Plan & Provider Enumeration System) ───────────────
 // CMS-maintained, free, no API key. Returns providers (individuals + orgs).
 // Docs: https://npiregistry.cms.hhs.gov/api-page
@@ -4263,19 +5359,23 @@ async function handleMedicareQuality(url, env, ctx) {
     if (!resp.ok) throw new Error(`Medicare ${resp.status}`);
     return await resp.json();
   };
+  // v2.7.9.4: use real CMS field names (citytown, telephone_number, facility_name)
+  const _hCity  = (h) => h.citytown || h.city_town || h.city || null;
+  const _hName  = (h) => h.facility_name || h.hospital_name || h.name || "Hospital";
+  const _hPhone = (h) => h.telephone_number || h.phone_number || h.phone || null;
   const shape = (h) => ({
-    name: h.hospital_name || h.facility_name || "Hospital",
-    address: [h.address, h.city, h.state, h.zip_code].filter(Boolean).join(", "),
-    city: h.city || null,
+    name: _hName(h),
+    address: [h.address, _hCity(h), h.state, h.zip_code].filter(Boolean).join(", "),
+    city: _hCity(h),
     state: h.state || null,
     zip: h.zip_code || null,
-    phone: h.phone_number || null,
+    phone: _hPhone(h),
     hospital_type: h.hospital_type || null,
     overall_rating: h.hospital_overall_rating ? parseInt(h.hospital_overall_rating, 10) : null,
     emergency_services: (h.emergency_services || "").toLowerCase() === "yes",
     source: "Medicare Care Compare (CMS)",
-    source_url: h.hospital_name
-      ? `https://www.medicare.gov/care-compare/results?searchType=Hospital&searchTerm=${encodeURIComponent(h.hospital_name)}`
+    source_url: _hName(h) !== "Hospital"
+      ? `https://www.medicare.gov/care-compare/results?searchType=Hospital&searchTerm=${encodeURIComponent(_hName(h))}`
       : "https://www.medicare.gov/care-compare/",
     trust_label: "Official source",
   });
