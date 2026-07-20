@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.9.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.13</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.9.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.13</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -17911,6 +17911,69 @@ async function fetchApiEventsForLocation(geo, radiusMi, keyword) {
     return [];
   }
 }
+// v2.7.13: fetch /api/events-radius (the new KV-backed pipeline built in
+// v2.7.10-v2.7.12: Ticketmaster + NPS + USDA + BiblioCommons + Socrata).
+// Returns normalized events in the same shape as fetchApiEventsForLocation
+// so mergeAndDedupeEvents + _renderEventsCalendar can consume them without
+// changes. Complements (not replaces) the legacy /api/events path — both
+// feed into the same merged listing.
+async function fetchEventsRadiusForLocation(geo, radiusMi) {
+  if (!geo) return [];
+  const lat = parseFloat(geo.lat);
+  const lon = parseFloat(geo.lon);
+  if (!isFinite(lat) || !isFinite(lon)) return [];
+  const addr = geo.address || {};
+  const stateCode = (typeof getStateCode === "function" ? getStateCode(addr) : null) || (addr.state || "").slice(0, 2).toUpperCase();
+  if (!stateCode) return [];
+  const r = radiusMi
+    || geo._mapRadius
+    || Math.max(TIER_CAPS.regional, (typeof CURRENT_RADIUS_MI === "number" ? CURRENT_RADIUS_MI : 25));
+  const key = `radius:${lat.toFixed(2)}:${lon.toFixed(2)}:${r}:${stateCode}`;
+  if (_apiEventsCache.has(key)) return _apiEventsCache.get(key);
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon), state: stateCode, radius_mi: String(r), limit: "200" });
+  // NEARNITY_API_BASE = "/api/events"; strip the "/events" suffix to get the
+  // API root, then append /events-radius. Keeps the base configurable.
+  const apiRoot = NEARNITY_API_BASE.replace(/\/events$/, "");
+  const url = `${apiRoot}/events-radius?${params.toString()}`;
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 6000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) { _apiEventsCache.set(key, []); return []; }
+    const data = await resp.json();
+    const raw = Array.isArray(data.results) ? data.results
+              : Array.isArray(data.events)  ? data.events
+              : [];
+    // Normalize events-radius shape → legacy events shape expected by
+    // mergeAndDedupeEvents (title/starts/venue/url/source).
+    const normalized = raw.map(e => ({
+      title: e.title,
+      starts: e.start_date || e.starts || null,
+      ends:   e.end_date   || e.ends   || null,
+      venue: e.venue_name || e.venue_address || e.venue || "",
+      city: (addr.city || addr.town || addr.village || "").toLowerCase(),
+      state: stateCode,
+      lat: (typeof e.lat === "number") ? e.lat : parseFloat(e.lat),
+      lon: (typeof e.lon === "number") ? e.lon : parseFloat(e.lon),
+      category: (e.category || "other").toLowerCase(),
+      url: e.url || e.source_url || "",
+      source: e.source_name || e.source_id || "Nearnity events index",
+      verified: true,
+      free: !!e.free,
+      distance_mi: e.distance_mi,
+      _from: "events-radius",
+    })).filter(ev => ev.title && ev.url);
+    _apiEventsCache.set(key, normalized);
+    if (window.NEARNITY_DEBUG) console.log("[events-radius]", url, "returned", normalized.length, "events");
+    return normalized;
+  } catch (e) {
+    if (window.NEARNITY_DEBUG) console.warn("[events-radius] failed:", e.message);
+    _apiEventsCache.set(key, []);
+    return [];
+  }
+}
+
 function mergeAndDedupeEvents(a, b) {
   const seen = new Set();
   const out = [];
@@ -17976,9 +18039,23 @@ function renderEventsListings(geo, eventsArg) {
   Promise.all([
     fetchApiEventsForLocation(geo, null, keyword),
     fetchFarmExperiences(geo, null, keyword),
-  ]).then(([apiEvents, farmEvents]) => {
+    // v2.7.13: also pull the new KV-backed pipeline (Ticketmaster + NPS +
+    // USDA + BiblioCommons + Socrata). Merged with legacy + curated below.
+    fetchEventsRadiusForLocation(geo, null),
+  ]).then(([apiEvents, farmEvents, radiusEvents]) => {
     const filteredApi = applyTierFilter(apiEvents, geo);
-    const combinedApi = [...filteredApi, ...farmEvents];
+    // v2.7.13: radius events already come from the state's KV shard filtered
+    // by haversine — no additional tier filter needed (they're already
+    // location-anchored). Keyword filter applied on the merged list below.
+    const kwLower = (keyword || "").toLowerCase();
+    const filteredRadius = kwLower
+      ? radiusEvents.filter(ev =>
+          (ev.title || "").toLowerCase().includes(kwLower) ||
+          (ev.venue || "").toLowerCase().includes(kwLower) ||
+          (ev.category || "").toLowerCase().includes(kwLower) ||
+          (ev.source || "").toLowerCase().includes(kwLower))
+      : radiusEvents;
+    const combinedApi = [...filteredApi, ...farmEvents, ...filteredRadius];
     if (!combinedApi.length) {
       updatePill(curated.length);
       if (!curated.length) _renderEventsEmpty(geo, tb, keyword);
