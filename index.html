@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.13</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.14</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.13</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.14</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -11092,21 +11092,42 @@ function renderListWithMore(items, cityKey, opts = {}) {
 
 // v0.33.4: per-item map-marker label (letter + color) so schools and parks
 // are visually distinguishable on the map, not just generic blue pins.
+// v2.7.14: public schools get zone-aware coloring — teal (#0a9396) when the
+// school is in the user's NCES-assigned district, muted gray (#8a8a8a) when
+// it's a nearby OSM public school outside the district. Grade letter (E/M/H)
+// preserved in both colors so users still see level at a glance.
 function markerLabelFor(item) {
   if (!item) return null;
   const sub = (item.subtype || "").toLowerCase();
   const cat = (item.category || "").toLowerCase();
-  // Schools — color-coded by level
+  // Schools — color-coded by level + district-assignment
   if (cat === "public" || cat === "private" || cat === "other" || sub === "elementary" || sub === "middle" || sub === "high" || sub.includes("k-8") || sub.includes("k-12") || sub.includes("mixed")) {
-    if (sub === "elementary")              return { label: "E",  bg: "#2d6a4f" };
-    if (sub === "middle")                  return { label: "M",  bg: "#2b5a9e" };
-    if (sub === "high")                    return { label: "H",  bg: "#1d3a5f" };
-    if (sub.includes("k-8") || sub.includes("k-12") || sub.includes("mixed")) return { label: "K-12", bg: "#8a5a1f" };
-    // Charter / magnet
+    // v2.7.14: derive the grade-letter label first, then override color if
+    // this is a public school with a known district-assignment status.
+    let label = "S";
+    if (sub === "elementary") label = "E";
+    else if (sub === "middle") label = "M";
+    else if (sub === "high") label = "H";
+    else if (sub.includes("k-8") || sub.includes("k-12") || sub.includes("mixed")) label = "K-12";
+
+    if (cat === "public") {
+      // Assigned to user's district → teal (brand). Not assigned → gray.
+      // If _zone_assigned is undefined (NCES fallback path), keep legacy
+      // green (treat as "we don't know for sure — show it neutrally").
+      if (item._zone_assigned === true)  return { label, bg: "#0a9396" };
+      if (item._zone_assigned === false) return { label, bg: "#8a8a8a" };
+      // legacy default when zone status unknown (OSM-only path, no NCES)
+      if (label === "E")   return { label, bg: "#2d6a4f" };
+      if (label === "M")   return { label, bg: "#2b5a9e" };
+      if (label === "H")   return { label, bg: "#1d3a5f" };
+      if (label === "K-12")return { label, bg: "#8a5a1f" };
+      return { label: "S", bg: "#2d6a4f" };
+    }
+    // Charter / magnet — always purple, never zone-assigned
     if (cat === "other") return { label: "Ch", bg: "#6b4d8a" };
-    // Private prefix on subtype
+    // Private — always dark blue, never zone-assigned
     if (cat === "private") return { label: "P", bg: "#46508a" };
-    return { label: "S", bg: "#2d6a4f" };
+    return { label, bg: "#2d6a4f" };
   }
   // Education other
   if (cat === "higher" || sub.includes("college") || sub.includes("university")) return { label: "U", bg: "#1d3a5f" };
@@ -13613,6 +13634,11 @@ function levelRow(level, item, cityKey) {
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
       <span class="school-dist-tag ${distCls}">${(typeof item.dist === "number" && Number.isFinite(item.dist)) ? item.dist.toFixed(1) + " mi" : "≈"}</span>
+      ${item._zone_assigned === true
+        ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#0a9396;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.2px;">🎯 Your district</span>`
+        : (item._zone_assigned === false
+          ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#e7e7e7;color:#666;font-size:11px;font-weight:500;">Outside district</span>`
+          : "")}
       <div class="school-meta" style="margin-top:4px;">
         <a href="${gsUrl}" target="_blank" rel="noopener" style="color:var(--primary); font-size:12px; font-weight:500; text-decoration:none;">Open GreatSchools rating →</a>
       </div>
@@ -13724,7 +13750,7 @@ async function loadNearbySchools(geo) {
     const elements = osmElements.status === "fulfilled" ? osmElements.value : [];
 
     // Transform OSM Overpass elements as before (private, charter, higher, enrichment)
-    const osmItems = elements
+    let osmItems = elements
       .map(classifyEducationItem)
       .filter(Boolean)
       .map(it => ({ ...it, dist: haversineMiles(lat, lon, it.lat, it.lon) }))
@@ -13736,6 +13762,7 @@ async function loadNearbySchools(geo) {
     let districtBadge = null;
     if (zone && zone.district && Array.isArray(zone.schools) && zone.schools.length > 0) {
       // NCES schools — only public + non-charter. Charters go to the "other" pool.
+      // v2.7.14: tag with _zone_assigned:true so map + card render can color-code.
       publicItems = zone.schools
         .filter(s => !s.charter)
         .filter(s => s.lat != null && s.lon != null)
@@ -13751,9 +13778,28 @@ async function loadNearbySchools(geo) {
           source_url: s.source_url,
           source: "NCES Common Core of Data",
           district_name: zone.district.name,
+          _zone_assigned: true,   // v2.7.14: in the user's assigned district
         }))
         .filter(i => i.subtype) // drop K-only / N/A levels we can't classify
         .sort((a, b) => a.dist - b.dist);
+
+      // v2.7.14: also surface OSM-derived public schools that are NOT in the
+      // NCES district roster, marked _zone_assigned:false. Lets the user see
+      // nearby schools OUTSIDE their district for comparison (e.g. "why is
+      // the closest school NOT the assigned one?"). Dedupe by fuzzy name +
+      // coord proximity to avoid double-counting.
+      const nrnyNameKey = (n) => (n || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
+      const nrnyCoordKey = (la, lo) => `${la.toFixed(3)}:${lo.toFixed(3)}`;
+      const assignedNameSet = new Set(publicItems.map(i => nrnyNameKey(i.name)));
+      const assignedCoordSet = new Set(publicItems.map(i => nrnyCoordKey(i.lat, i.lon)));
+      const osmPublicNotAssigned = osmItems
+        .filter(i => i.category === "public")
+        .filter(i => !assignedNameSet.has(nrnyNameKey(i.name)) && !assignedCoordSet.has(nrnyCoordKey(i.lat, i.lon)))
+        .map(i => ({ ...i, _zone_assigned: false }));
+      publicItems = [...publicItems, ...osmPublicNotAssigned].sort((a, b) => a.dist - b.dist);
+      // Remove OSM public from the general osmItems list since we've moved
+      // them into publicItems (prevents double-count in the final `items` merge).
+      osmItems = osmItems.filter(i => i.category !== "public");
 
       // Charters from NCES go to "other" if any
       const ncesCharters = zone.schools
