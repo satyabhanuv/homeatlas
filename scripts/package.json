@@ -1,0 +1,12 @@
+{
+  "name": "nearnity-sabs-preprocess",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "One-time preprocessing of NCES SABS 2015-16 attendance-zone shapefile into per-state GeoJSON, uploaded to Cloudflare Workers KV. Runs inside GitHub Actions (.github/workflows/sabs-load.yml). Not intended for local execution.",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "mapshaper": "^0.6.90"
+  }
+}
