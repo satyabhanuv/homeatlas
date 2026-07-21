@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────
+# Nearnity — NCES SABS attendance-boundary loader
+# ─────────────────────────────────────────────────────────────────────
+# One-time (manual-trigger) workflow that populates Cloudflare Workers KV
+# with per-state attendance-zone GeoJSON for real address→school lookups.
+#
+# Trigger: GitHub UI → Actions tab → "Load NCES SABS to Cloudflare KV"
+#          → Run workflow. No Mac / local dev needed.
+#
+# Prerequisites (one-time setup — see README section "SABS setup"):
+#   Repo Settings → Secrets and variables → Actions → add:
+#     • CF_ACCOUNT_ID           (from CF dashboard URL: dash.cloudflare.com/<ID>)
+#     • CF_API_TOKEN            (CF dashboard → My Profile → API Tokens
+#                                → Create Token → "Workers KV Storage: Edit"
+#                                template. Scoped to only your account.)
+#     • CF_KV_NAMESPACE_ID      (CF dashboard → Workers & Pages → KV → click
+#                                EVENTS_KV namespace → copy Namespace ID)
+#
+# Runtime: ~10-15 min. GitHub free tier runners have 7 GB RAM and 14 GB disk,
+# plenty for the 556 MB SABS shapefile + mapshaper processing.
+#
+# What it does:
+#   1. Downloads SABS_1516.zip from nces.ed.gov (~556 MB)
+#   2. Extracts shapefile
+#   3. Runs mapshaper: convert → simplify 1% → split by stAbbrev
+#   4. For each state file: adds bbox per feature, uploads to KV as
+#      nrny:sabs:{ST} via CF API
+#
+# Data is one-time (SABS is a discontinued experimental federal survey —
+# 2015-16 is the last release). Re-running this workflow re-uploads the
+# same data — safe but not usually needed.
+name: Load NCES SABS to Cloudflare KV
+
+on:
+  workflow_dispatch:      # manual trigger from Actions UI
+    inputs:
+      dry_run:
+        description: "Skip KV upload (test preprocessing only)"
+        required: false
+        default: "false"
+
+jobs:
+  load-sabs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install system tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq unzip curl
+
+      - name: Install script dependencies (mapshaper)
+        working-directory: scripts
+        run: npm install --no-audit --no-fund
+
+      - name: Run SABS preprocessing + KV upload
+        env:
+          CF_ACCOUNT_ID:      ${{ secrets.CF_ACCOUNT_ID }}
+          CF_API_TOKEN:       ${{ secrets.CF_API_TOKEN }}
+          CF_KV_NAMESPACE_ID: ${{ secrets.CF_KV_NAMESPACE_ID }}
+          DRY_RUN:            ${{ github.event.inputs.dry_run }}
+        working-directory: scripts
+        run: node sabs-preprocess.mjs
+
+      - name: Upload artifacts (per-state GeoJSON for inspection)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sabs-per-state-geojson
+          path: scripts/sabs-output/
+          retention-days: 7
