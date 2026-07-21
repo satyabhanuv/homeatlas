@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2a</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2a</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -13779,7 +13779,8 @@ async function loadNearbySchools(geo) {
           source_url: s.source_url,
           source: "NCES Common Core of Data",
           district_name: zone.district.name,
-          _zone_assigned: true,   // v2.7.14: in the user's assigned district
+          ncessch: s.ncessch,   // v2.8.2a: needed for SABS assignment match
+          _zone_assigned: true,
         }))
         .filter(i => i.subtype) // drop K-only / N/A levels we can't classify
         .sort((a, b) => a.dist - b.dist);
@@ -13798,13 +13799,40 @@ async function loadNearbySchools(geo) {
       publicItems = [...publicItems, ...osmPublicNotAssigned].sort((a, b) => a.dist - b.dist);
       osmItems = osmItems.filter(i => i.category !== "public");
 
-      // v2.8.1: DROPPED "closest = assigned" heuristic. Confirmed 2026-07-21
-      // that closest-per-level lies at boundary addresses (house on street
-      // between two elementary schools → one is assigned, the other isn't,
-      // NCES district data can't tell them apart). Until SABS point-in-polygon
-      // ships in v2.8.2, we DO NOT claim any school is "assigned". All NCES
-      // roster schools render as "In your district" (gray) with a prominent
-      // link to the district's official school-finder. Honest > false teal.
+      // v2.8.1: DROPPED "closest = assigned" heuristic. NCES district data
+      // can't tell one elementary from another at boundary addresses.
+      // v2.8.2a: parallel call to /api/school-assignment does the real
+      // point-in-polygon lookup against NCES SABS attendance zones. When
+      // KV has data for this state, the response includes ncessch IDs of
+      // actually-assigned schools. We match those against our publicItems
+      // roster and set _sabs_assigned:true → teal. Otherwise everything
+      // stays gray + user gets the "verify with district" link.
+      try {
+        const stateCode = (typeof getStateCode === "function" ? getStateCode(geo.address || {}) : null) || "";
+        const assignUrl = `/api/school-assignment?lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}${stateCode ? "&state=" + encodeURIComponent(stateCode) : ""}`;
+        const assignResp = await fetch(assignUrl, { signal: AbortSignal.timeout ? AbortSignal.timeout(5000) : undefined });
+        if (assignResp.ok) {
+          const assignData = await assignResp.json();
+          if (assignData && assignData.available && assignData.assigned) {
+            const assignedIds = new Set();
+            const a = assignData.assigned;
+            if (a.E && a.E.ncessch) assignedIds.add(a.E.ncessch);
+            if (a.M && a.M.ncessch) assignedIds.add(a.M.ncessch);
+            if (a.H && a.H.ncessch) assignedIds.add(a.H.ncessch);
+            if (Array.isArray(a.other)) a.other.forEach(o => o && o.ncessch && assignedIds.add(o.ncessch));
+            let matched = 0;
+            for (const s of publicItems) {
+              // NCES record has `ncessch` field from zone.schools API response
+              if (s.ncessch && assignedIds.has(s.ncessch)) { s._sabs_assigned = true; matched++; }
+            }
+            if (window.NEARNITY_DEBUG) console.log(`[sabs] state=${stateCode} matched=${matched}/${assignedIds.size} caveat: ${assignData.caveat}`);
+          } else if (window.NEARNITY_DEBUG) {
+            console.log(`[sabs] not available for state ${stateCode}: ${assignData && assignData.reason}`);
+          }
+        }
+      } catch (e) {
+        if (window.NEARNITY_DEBUG) console.warn("[sabs] lookup failed:", e && e.message);
+      }
 
       // Charters from NCES go to "other" if any
       const ncesCharters = zone.schools
