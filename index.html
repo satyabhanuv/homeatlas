@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.14</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.1</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.7.14</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -11111,23 +11111,22 @@ function markerLabelFor(item) {
     else if (sub.includes("k-8") || sub.includes("k-12") || sub.includes("mixed")) label = "K-12";
 
     if (cat === "public") {
-      // Assigned to user's district → teal (brand). Not assigned → gray.
-      // If _zone_assigned is undefined (NCES fallback path), keep legacy
-      // green (treat as "we don't know for sure — show it neutrally").
-      if (item._zone_assigned === true)  return { label, bg: "#0a9396" };
-      if (item._zone_assigned === false) return { label, bg: "#8a8a8a" };
-      // legacy default when zone status unknown (OSM-only path, no NCES)
-      if (label === "E")   return { label, bg: "#2d6a4f" };
-      if (label === "M")   return { label, bg: "#2b5a9e" };
-      if (label === "H")   return { label, bg: "#1d3a5f" };
-      if (label === "K-12")return { label, bg: "#8a5a1f" };
-      return { label: "S", bg: "#2d6a4f" };
+      // v2.8.1: DISTINCT 3-color palette per user directive (no shades of same
+      // color — accessibility + color-impairment friendly).
+      //   TEAL (#0a9396)   = genuinely-assigned (needs SABS in v2.8.2; not
+      //                      set today. Reserved so we don't lie visually.)
+      //   GRAY (#8a8a8a)   = all other public schools (in-district OR out).
+      //                      Card lists a link to district's school finder
+      //                      so user can verify actual assignment.
+      if (item._sabs_assigned === true) return { label, bg: "#0a9396" };
+      return { label, bg: "#8a8a8a" };
     }
-    // Charter / magnet — always purple, never zone-assigned
-    if (cat === "other") return { label: "Ch", bg: "#6b4d8a" };
-    // Private — always dark blue, never zone-assigned
-    if (cat === "private") return { label: "P", bg: "#46508a" };
-    return { label, bg: "#2d6a4f" };
+    // Private — DARK BLUE, distinct from public gray. Never zone-assigned.
+    if (cat === "private") return { label: "P", bg: "#1d3a5f" };
+    // Charter / magnet — GRAY (same as public non-assigned) since neither
+    // is definitively "yours" without paid data.
+    if (cat === "other") return { label: "Ch", bg: "#8a8a8a" };
+    return { label, bg: "#8a8a8a" };
   }
   // Education other
   if (cat === "higher" || sub.includes("college") || sub.includes("university")) return { label: "U", bg: "#1d3a5f" };
@@ -13634,11 +13633,13 @@ function levelRow(level, item, cityKey) {
       <a class="school-name" href="${reach}" target="_blank" rel="noopener">${escapeHtml(item.name)}</a>
       <span class="school-level-tag ${tagClass}">${escapeHtml(level)}</span>
       <span class="school-dist-tag ${distCls}">${(typeof item.dist === "number" && Number.isFinite(item.dist)) ? item.dist.toFixed(1) + " mi" : "≈"}</span>
-      ${item._zone_assigned === true
-        ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#0a9396;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.2px;">🎯 Your district</span>`
-        : (item._zone_assigned === false
-          ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#e7e7e7;color:#666;font-size:11px;font-weight:500;">Outside district</span>`
-          : "")}
+      ${item._sabs_assigned === true
+        ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#0a9396;color:#fff;font-size:11px;font-weight:600;letter-spacing:0.2px;" title="Confirmed assigned to your address via attendance-zone lookup (NCES SABS).">🎯 Assigned to your address</span>`
+        : (item._zone_assigned === true
+          ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#e7e7e7;color:#555;font-size:11px;font-weight:500;" title="One of several schools in your district. Verify which is assigned to your specific address using the district's official school finder.">In your district — verify assignment</span>`
+          : (item._zone_assigned === false
+            ? `<span class="school-zone-badge" style="display:inline-block;margin-left:6px;padding:2px 8px;border-radius:10px;background:#e7e7e7;color:#555;font-size:11px;font-weight:500;">Outside your district</span>`
+            : ""))}
       <div class="school-meta" style="margin-top:4px;">
         <a href="${gsUrl}" target="_blank" rel="noopener" style="color:var(--primary); font-size:12px; font-weight:500; text-decoration:none;">Open GreatSchools rating →</a>
       </div>
@@ -13783,11 +13784,9 @@ async function loadNearbySchools(geo) {
         .filter(i => i.subtype) // drop K-only / N/A levels we can't classify
         .sort((a, b) => a.dist - b.dist);
 
-      // v2.7.14: also surface OSM-derived public schools that are NOT in the
-      // NCES district roster, marked _zone_assigned:false. Lets the user see
-      // nearby schools OUTSIDE their district for comparison (e.g. "why is
-      // the closest school NOT the assigned one?"). Dedupe by fuzzy name +
-      // coord proximity to avoid double-counting.
+      // v2.7.15: surface OSM public schools NOT in the NCES district roster
+      // (dedupe by fuzzy name + coord proximity) — these are "outside district"
+      // and render in gray for contrast against likely-assigned schools.
       const nrnyNameKey = (n) => (n || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
       const nrnyCoordKey = (la, lo) => `${la.toFixed(3)}:${lo.toFixed(3)}`;
       const assignedNameSet = new Set(publicItems.map(i => nrnyNameKey(i.name)));
@@ -13797,9 +13796,15 @@ async function loadNearbySchools(geo) {
         .filter(i => !assignedNameSet.has(nrnyNameKey(i.name)) && !assignedCoordSet.has(nrnyCoordKey(i.lat, i.lon)))
         .map(i => ({ ...i, _zone_assigned: false }));
       publicItems = [...publicItems, ...osmPublicNotAssigned].sort((a, b) => a.dist - b.dist);
-      // Remove OSM public from the general osmItems list since we've moved
-      // them into publicItems (prevents double-count in the final `items` merge).
       osmItems = osmItems.filter(i => i.category !== "public");
+
+      // v2.8.1: DROPPED "closest = assigned" heuristic. Confirmed 2026-07-21
+      // that closest-per-level lies at boundary addresses (house on street
+      // between two elementary schools → one is assigned, the other isn't,
+      // NCES district data can't tell them apart). Until SABS point-in-polygon
+      // ships in v2.8.2, we DO NOT claim any school is "assigned". All NCES
+      // roster schools render as "In your district" (gray) with a prominent
+      // link to the district's official school-finder. Honest > false teal.
 
       // Charters from NCES go to "other" if any
       const ncesCharters = zone.schools
@@ -13825,10 +13830,18 @@ async function loadNearbySchools(geo) {
       if (window.NEARNITY_DEBUG) console.log("[school-zone] unavailable, fell back to OSM distance query");
     }
 
-    // Surface district name in the schools header so users see "your district"
+    // Surface district name + finder-link in the schools header. v2.8.1:
+    // until SABS point-in-polygon assignment lands (v2.8.2), users need a
+    // clear path to verify their EXACT assigned school (attendance zones
+    // vary block-by-block within a district). Link goes to a Google search
+    // for the district's official school finder — user's district site has
+    // the authoritative address-to-school lookup.
     if (districtBadge) {
       const metaEl = $("school-meta");
-      if (metaEl) metaEl.textContent = `Schools in ${districtBadge}`;
+      if (metaEl) {
+        const finderUrl = `https://www.google.com/search?q=${encodeURIComponent(districtBadge + " school finder attendance zone lookup")}`;
+        metaEl.innerHTML = `Schools in <b>${escapeHtml(districtBadge)}</b> · <a href="${finderUrl}" target="_blank" rel="noopener" style="color:var(--primary);font-weight:500;text-decoration:none;">Find your assigned school →</a>`;
+      }
       const valueEl = $("school-value");
       if (valueEl && (!valueEl.textContent || valueEl.textContent === "—")) {
         valueEl.textContent = districtBadge;
