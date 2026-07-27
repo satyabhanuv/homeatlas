@@ -627,7 +627,7 @@
 
     <!-- Two big primary actions (50/50 use case split from spec) -->
     <div class="hero-primary-actions">
-      <a href="#urgent-care" class="hero-primary-card">
+      <a href="#" class="hero-primary-card" data-jump-tab="emergency" data-jump-subnav="urgent">
         <div class="hero-primary-icon emergency">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 3 L15 3 L15 9 L21 9 L21 15 L15 15 L15 21 L9 21 L9 15 L3 15 L3 9 L9 9 Z"/>
@@ -638,7 +638,7 @@
           <div class="hero-primary-sub">Open now · with phone &amp; directions</div>
         </div>
       </a>
-      <a href="#weekend-events" class="hero-primary-card">
+      <a href="#" class="hero-primary-card" data-jump-tab="around" data-jump-subnav="events">
         <div class="hero-primary-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -675,13 +675,13 @@
       </form>
 
       <div class="quick-chips">
-        <button class="quick-chip">🚑 Emergency rooms</button>
-        <button class="quick-chip">🏥 Urgent care</button>
-        <button class="quick-chip">🎉 Events near you</button>
-        <button class="quick-chip">🥬 Farmers market</button>
-        <button class="quick-chip">🥫 Food bank</button>
-        <button class="quick-chip">📚 Library</button>
-        <button class="quick-chip">🚗 DMV</button>
+        <button class="quick-chip" data-jump-tab="emergency" data-jump-subnav="hospitals">🚑 Emergency rooms</button>
+        <button class="quick-chip" data-jump-tab="emergency" data-jump-subnav="urgent">🏥 Urgent care</button>
+        <button class="quick-chip" data-jump-tab="around" data-jump-subnav="events">🎉 Events near you</button>
+        <button class="quick-chip" data-jump-tab="around" data-jump-subnav="events">🥬 Farmers market</button>
+        <button class="quick-chip" data-jump-tab="help" data-jump-subnav="food">🥫 Food bank</button>
+        <button class="quick-chip" data-jump-tab="around" data-jump-subnav="events">📚 Library</button>
+        <button class="quick-chip" data-jump-tab="govt" data-jump-subnav="dmv">🚗 DMV</button>
       </div>
     </div>
   </div>
@@ -980,7 +980,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.0-alpha",
+  version: "v3.0.0-alpha.1",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1375,11 +1375,73 @@ document.addEventListener("DOMContentLoaded", () => {
     nrnySwitchTab(NRNY.activeTab);
   });
 
-  // Quick chips shortcut → prefills q input + focuses "where"
+  // v3.0.0-alpha.1: Hero primary cards + quick chips → jump directly to
+  // the mapped cat-tab + subnav. If no address yet, prefill Looking-for
+  // and focus the address field so user can complete the search.
+  const jumpToTab = (tab, subnav) => {
+    // Update sidebar active state
+    document.querySelectorAll(".cat-tab").forEach(t => {
+      t.classList.toggle("active", t.dataset.tab === tab);
+    });
+    NRNY.activeTab = tab;
+    NRNY.activeSubnav = subnav;
+    // Re-render subnav bar with active subnav preselected
+    const meta = NRNY_TAB_META[tab];
+    if (meta) {
+      $("nrny-content-h2").textContent = meta.title;
+      $("nrny-content-desc").textContent = meta.desc;
+    }
+    const bar = $("nrny-subnav");
+    const items = NRNY_SUBNAVS[tab] || [];
+    bar.hidden = items.length === 0;
+    bar.innerHTML = items.map(s => `
+      <button class="subnav-tab${s.id === subnav ? " active" : ""}" data-subnav="${escapeHtml(s.id)}">${escapeHtml(s.label)}</button>
+    `).join("");
+    bar.querySelectorAll(".subnav-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        bar.querySelectorAll(".subnav-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        NRNY.activeSubnav = btn.dataset.subnav;
+        nrnyRenderSubnav(NRNY.activeTab, NRNY.activeSubnav);
+      });
+    });
+    nrnyRenderSubnav(tab, subnav);
+    // Scroll to the content area so user sees the result
+    document.querySelector(".shell").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  // Hero primary CTA cards
+  document.querySelectorAll(".hero-primary-card[data-jump-tab]").forEach(card => {
+    card.addEventListener("click", (e) => {
+      e.preventDefault();
+      const tab = card.dataset.jumpTab;
+      const subnav = card.dataset.jumpSubnav;
+      if (!NRNY.geo) {
+        whereInput.focus();
+        whereInput.placeholder = "Enter address first, then this loads " + tab + " → " + subnav;
+        return;
+      }
+      jumpToTab(tab, subnav);
+    });
+  });
+
+  // Quick chips → jump-to-tab
   document.querySelectorAll(".quick-chip").forEach(chip => {
     chip.addEventListener("click", () => {
-      $("nrny-q").value = chip.textContent.trim().replace(/^[^\w]+/, "");
-      whereInput.focus();
+      const tab = chip.dataset.jumpTab;
+      const subnav = chip.dataset.jumpSubnav;
+      if (tab && subnav) {
+        if (!NRNY.geo) {
+          $("nrny-q").value = chip.textContent.trim().replace(/^[^\w]+/, "").trim();
+          whereInput.focus();
+          whereInput.placeholder = "Enter address first, then " + chip.textContent.trim() + " loads";
+          return;
+        }
+        jumpToTab(tab, subnav);
+      } else {
+        $("nrny-q").value = chip.textContent.trim().replace(/^[^\w]+/, "");
+        whereInput.focus();
+      }
     });
   });
 
