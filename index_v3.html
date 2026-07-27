@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nearnity — v3 prototype</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0050c2">
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%25' stop-color='%23006aff'/><stop offset='100%25' stop-color='%230050c2'/></linearGradient></defs><path d='M32 4 C18 4 8 14 8 26 C8 40 22 56 32 60 C42 56 56 40 56 26 C56 14 46 4 32 4 Z' fill='url(%23g)'/><path d='M22 38 L22 25 L32 15 L38 21 L38 17 L40 17 L40 23 L42 25 L42 38 Z M29 38 L29 31 L35 31 L35 38 Z' fill='%23ffffff' fill-rule='evenodd'/></svg>">
+
+<style>
+  /* ════════════════════════════════════════════════════════════════
+     v3 PROTOTYPE — Airbnb-warm, single-rectangle layout, color-coded
+     trust borders. Decisions locked from spec:
+     • Aesthetic: Airbnb (warm, soft, generous whitespace)
+     • Nav: rectangle (sidebar left + subnav top + results center)
+     • Icons: inline SVG only in cat tabs, Govt keeps emoji
+     • Density: medium auto-fit grid
+     • Trust borders: Teal/Indigo/Coral/Slate (modern, not govt)
+     • Colors: blue primary + green/red/amber for accent semantics
+     ════════════════════════════════════════════════════════════════ */
+
+  :root {
+    --bg:           #fafafa;
+    --surface:      #ffffff;
+    --line:         #ebebeb;
+    --line-strong:  #d4d4d4;
+    --ink:          #222222;
+    --ink-soft:     #717171;
+    --ink-faint:    #aaaaaa;
+
+    --primary:      #006aff;
+    --primary-2:    #0050c2;
+    --primary-soft: #e9efff;
+
+    --tier-teal:    #0D9488;
+    --tier-indigo:  #4F46E5;
+    --tier-coral:   #FB923C;
+    --tier-slate:   #94A3B8;
+
+    --emergency:    #dc2626;
+    --emergency-bg: #fee2e2;
+
+    --radius:       14px;
+    --radius-sm:    10px;
+    --radius-pill:  999px;
+
+    --shadow-card:  0 1px 2px rgba(0,0,0,0.04), 0 1px 4px rgba(0,0,0,0.04);
+    --shadow-card-hover: 0 4px 12px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--primary); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  button { font-family: inherit; cursor: pointer; }
+
+  /* ──── 911 emergency bar ──────────────────────────────────────── */
+  .top-emergency {
+    background: linear-gradient(135deg, #7f1d1d 0%, #b91c1c 100%);
+    color: #fff;
+    padding: 8px 0;
+    font-size: 13px;
+  }
+  .top-emergency-inner {
+    max-width: 1480px; margin: 0 auto; padding: 0 24px;
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .top-emergency-label { font-weight: 700; letter-spacing: 0.05em; opacity: 0.95; }
+  .top-emergency-chip {
+    background: rgba(255,255,255,0.16);
+    border-radius: var(--radius-pill);
+    padding: 4px 12px;
+    display: inline-flex; align-items: center; gap: 8px;
+    color: #fff; font-weight: 600;
+  }
+  .top-emergency-chip b { font-size: 14px; }
+  .top-emergency-chip:hover { background: rgba(255,255,255,0.25); text-decoration: none; }
+
+  /* ──── Header ─────────────────────────────────────────────────── */
+  .site-header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .site-header-inner {
+    max-width: 1480px; margin: 0 auto;
+    padding: 18px 24px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; }
+  .brand-mark { width: 36px; height: 36px; }
+  .brand-name {
+    font-size: 22px; font-weight: 700; color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .brand-tag {
+    color: var(--ink-soft); font-size: 13px;
+    margin-left: 4px;
+  }
+  @media (max-width: 600px) {
+    .brand-tag { display: none; }
+  }
+  .header-spacer { flex: 1; }
+  .header-link {
+    color: var(--ink-soft); font-size: 14px; font-weight: 500;
+    padding: 6px 12px; border-radius: var(--radius-pill);
+  }
+  .header-link:hover { background: #f4f4f4; text-decoration: none; }
+
+  /* ──── Hero ───────────────────────────────────────────────────── */
+  .hero {
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-inner {
+    max-width: 1480px; margin: 0 auto;
+    padding: 56px 24px 40px;
+    display: flex; flex-direction: column; align-items: center;
+    text-align: center;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    margin: 0 0 12px;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  .hero h1 em { color: var(--primary); font-style: normal; }
+  .hero-lead {
+    font-size: 16px;
+    color: var(--ink-soft);
+    margin: 0 0 32px;
+    max-width: 70ch;
+    text-wrap: pretty;
+    line-height: 1.55;
+  }
+  .hero-primary-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(240px, 360px));
+    gap: 16px;
+    margin: 0 0 24px;
+    width: 100%; max-width: 760px;
+  }
+  @media (max-width: 600px) {
+    .hero-primary-actions { grid-template-columns: 1fr; }
+  }
+  .hero-primary-card {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    text-align: left;
+    transition: box-shadow 0.18s, border-color 0.18s, transform 0.1s;
+    text-decoration: none; color: inherit;
+  }
+  .hero-primary-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--ink-soft);
+    transform: translateY(-1px);
+    text-decoration: none;
+  }
+  .hero-primary-icon {
+    width: 44px; height: 44px; flex-shrink: 0;
+    display: grid; place-items: center;
+    background: var(--primary-soft);
+    color: var(--primary-2);
+    border-radius: 12px;
+  }
+  .hero-primary-icon.emergency { background: var(--emergency-bg); color: var(--emergency); }
+  .hero-primary-body { flex: 1; min-width: 0; }
+  .hero-primary-title { font-weight: 700; font-size: 16px; margin-bottom: 2px; color: var(--ink); }
+  .hero-primary-sub { font-size: 13px; color: var(--ink-soft); }
+
+  /* Search bar */
+  .search-wrap { width: 100%; max-width: 920px; margin: 0; }
+  .searchbar {
+    display: flex; align-items: stretch; gap: 0;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    padding: 6px;
+    box-shadow: var(--shadow-card);
+  }
+  .searchbar:focus-within {
+    border-color: var(--ink-soft);
+    box-shadow: var(--shadow-card-hover);
+  }
+  .search-field {
+    flex: 1; min-width: 0;
+    padding: 8px 20px;
+    border-radius: var(--radius-pill);
+    transition: background 0.12s;
+  }
+  .search-field:hover { background: #f7f7f7; }
+  .search-field-label {
+    font-size: 11px; font-weight: 700;
+    color: var(--ink); letter-spacing: 0.04em;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+  }
+  .search-field input {
+    border: none; outline: none; background: transparent;
+    font-size: 14px; color: var(--ink);
+    width: 100%; padding: 0;
+    font-family: inherit;
+  }
+  .search-field input::placeholder { color: var(--ink-faint); }
+  .search-divider {
+    width: 1px; background: var(--line); margin: 10px 0;
+  }
+  .search-submit {
+    background: var(--primary);
+    color: #fff; border: none;
+    border-radius: var(--radius-pill);
+    padding: 0 24px;
+    font-weight: 700; font-size: 14px;
+    display: flex; align-items: center; gap: 8px;
+    transition: background 0.12s;
+  }
+  .search-submit:hover { background: var(--primary-2); }
+  @media (max-width: 600px) {
+    .searchbar { flex-direction: column; border-radius: var(--radius); }
+    .search-divider { width: auto; height: 1px; margin: 0 10px; }
+    .search-submit { width: 100%; padding: 14px; border-radius: var(--radius); }
+  }
+
+  /* Quick search chips */
+  .quick-chips {
+    margin-top: 24px;
+    display: flex; flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    max-width: 1100px;
+  }
+  .quick-chip {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    padding: 8px 14px;
+    font-size: 13px; font-weight: 500;
+    color: var(--ink);
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: border-color 0.12s, background 0.12s, transform 0.1s;
+  }
+  .quick-chip:hover {
+    border-color: var(--ink-soft);
+    background: #f7f7f7;
+    transform: translateY(-1px);
+  }
+
+  /* ──── Main shell (rectangle layout) ─────────────────────────── */
+  .shell {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 32px 24px 64px;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    gap: 32px;
+  }
+  @media (max-width: 900px) {
+    .shell { grid-template-columns: 1fr; gap: 0; padding: 16px; }
+  }
+
+  /* Sidebar */
+  .sidebar {
+    position: sticky;
+    top: 16px;
+    align-self: start;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px;
+    height: fit-content;
+  }
+  @media (max-width: 900px) {
+    .sidebar {
+      position: static;
+      display: flex; gap: 6px; overflow-x: auto;
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+      scrollbar-width: thin;
+    }
+  }
+  .cat-tab {
+    display: flex; align-items: center; gap: 12px;
+    width: 100%;
+    padding: 12px 14px;
+    background: transparent;
+    border: none;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 14px; font-weight: 600;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.12s;
+  }
+  .cat-tab:hover { background: #f4f4f4; }
+  .cat-tab.active {
+    background: var(--primary-soft);
+    color: var(--primary-2);
+  }
+  .cat-tab svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .cat-tab-emoji { font-size: 18px; line-height: 1; width: 20px; display: inline-block; text-align: center; }
+  @media (max-width: 900px) {
+    .cat-tab { flex: 0 0 auto; padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+  }
+
+  /* Content area */
+  .content { min-width: 0; }
+  .content-header {
+    margin-bottom: 20px;
+  }
+  .content-header h2 {
+    font-size: 28px; font-weight: 700;
+    letter-spacing: -0.015em;
+    margin: 0 0 4px;
+  }
+  .content-header p { color: var(--ink-soft); margin: 0; font-size: 15px; }
+
+  /* Address summary bar (single line) */
+  .address-bar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 20px;
+    margin-bottom: 20px;
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px;
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .address-bar b { color: var(--ink); }
+  .address-bar-chip {
+    background: #f4f4f4;
+    border-radius: var(--radius-pill);
+    padding: 3px 10px;
+    font-size: 12px; font-weight: 600;
+    color: var(--ink);
+  }
+  .address-bar-chip.is-good { background: #d1fae5; color: #065f46; }
+
+  /* Subnav (top of content area) */
+  .subnav {
+    display: flex; gap: 4px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+  .subnav-tab {
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 10px 16px;
+    font-size: 14px; font-weight: 600;
+    color: var(--ink-soft);
+    cursor: pointer;
+    transition: color 0.12s, border-color 0.12s;
+    white-space: nowrap;
+  }
+  .subnav-tab:hover { color: var(--ink); }
+  .subnav-tab.active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+  }
+  .subnav-tab-count {
+    background: #f4f4f4;
+    color: var(--ink-soft);
+    border-radius: var(--radius-pill);
+    padding: 1px 7px;
+    font-size: 11px; margin-left: 4px;
+    font-weight: 600;
+  }
+
+  /* Results grid */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left-width: 4px;
+    border-radius: var(--radius);
+    padding: 18px 18px 16px;
+    transition: box-shadow 0.18s, transform 0.1s;
+    display: flex; flex-direction: column;
+  }
+  .card:hover {
+    box-shadow: var(--shadow-card-hover);
+    transform: translateY(-1px);
+  }
+  /* Tier border colors */
+  .card.tier-authoritative { border-left-color: var(--tier-teal); }
+  .card.tier-public        { border-left-color: var(--tier-indigo); }
+  .card.tier-community     { border-left-color: var(--tier-coral); }
+  .card.tier-third-party   { border-left-color: var(--tier-slate); }
+  .card.tier-emergency     { border-left-color: var(--emergency); }
+
+  .card-tier-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .card.tier-authoritative .card-tier-label { color: var(--tier-teal); }
+  .card.tier-public        .card-tier-label { color: var(--tier-indigo); }
+  .card.tier-community     .card-tier-label { color: var(--tier-coral); }
+  .card.tier-third-party   .card-tier-label { color: var(--tier-slate); }
+  .card.tier-emergency     .card-tier-label { color: var(--emergency); }
+
+  .card-title {
+    font-size: 16px; font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 4px;
+    line-height: 1.3;
+  }
+  .card-sub {
+    font-size: 13px; color: var(--ink-soft);
+    margin: 0 0 8px;
+  }
+  .card-meta {
+    font-size: 13px; color: var(--ink);
+    margin: 4px 0;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .card-meta svg { width: 14px; height: 14px; color: var(--ink-faint); }
+
+  .card-actions {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+  .card-action {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    font-size: 12px; font-weight: 600;
+    color: var(--ink);
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: background 0.12s, border-color 0.12s;
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .card-action:hover {
+    background: #f4f4f4;
+    border-color: var(--ink-soft);
+    text-decoration: none;
+  }
+  .card-action.primary {
+    background: var(--ink);
+    color: #fff;
+    border-color: var(--ink);
+  }
+  .card-action.primary:hover { background: #000; }
+  .card-action.emergency {
+    background: var(--emergency);
+    color: #fff;
+    border-color: var(--emergency);
+  }
+
+  /* ──── Color legend (helps users learn the tier colors) ────── */
+  .tier-legend {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 14px 18px;
+    margin-top: 32px;
+    font-size: 13px;
+  }
+  .tier-legend-title {
+    font-weight: 700; color: var(--ink);
+    margin-bottom: 8px;
+  }
+  .tier-legend-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px 16px;
+  }
+  .tier-legend-item {
+    display: flex; align-items: center; gap: 8px;
+    color: var(--ink-soft);
+  }
+  .tier-legend-swatch {
+    width: 4px; height: 16px; border-radius: 2px; flex-shrink: 0;
+  }
+  .tier-legend-item b { color: var(--ink); font-weight: 700; }
+
+  /* ──── Footer (compact) ──────────────────────────────────────── */
+  .site-footer {
+    border-top: 1px solid var(--line);
+    background: var(--surface);
+    padding: 32px 0 24px;
+  }
+  .site-footer-inner {
+    max-width: 1480px; margin: 0 auto; padding: 0 24px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 720px) { .site-footer-inner { grid-template-columns: 1fr; } }
+  .site-footer-brand {
+    font-size: 13px; color: var(--ink-soft);
+  }
+  .site-footer-brand b { color: var(--ink); font-size: 14px; }
+  .site-footer-links {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+  .site-footer-links a {
+    color: var(--ink-soft); font-size: 13px;
+  }
+  .site-footer-version {
+    background: var(--primary-soft); color: var(--primary-2);
+    padding: 2px 8px; border-radius: 4px;
+    font-family: ui-monospace, "SF Mono", monospace;
+    font-size: 11px;
+  }
+
+  /* Privacy & data — collapsed details */
+  .privacy-summary {
+    margin: 24px auto 0;
+    max-width: 1480px; padding: 0 24px;
+  }
+  .privacy-summary details {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 12px 18px;
+    font-size: 13px;
+  }
+  .privacy-summary summary {
+    cursor: pointer; color: var(--ink-soft);
+    list-style: none;
+  }
+  .privacy-summary summary::-webkit-details-marker { display: none; }
+  .privacy-summary summary b { color: var(--ink); }
+
+  /* ──── Floating feedback ──────────────────────────────────────── */
+  .fab-feedback {
+    position: fixed; right: 20px; bottom: 20px;
+    background: var(--primary); color: #fff;
+    border: none;
+    padding: 12px 18px;
+    border-radius: var(--radius-pill);
+    font-weight: 700; font-size: 13px;
+    box-shadow: 0 6px 20px rgba(0,80,194,0.3);
+    display: inline-flex; align-items: center; gap: 8px;
+    z-index: 100; cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.12s;
+  }
+  .fab-feedback:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(0,80,194,0.4); }
+
+  /* ──── Prototype-only banner (delete in v3.0 production) ───── */
+  .proto-banner {
+    background: linear-gradient(135deg, #fef9c3 0%, #fef3c7 100%);
+    border-bottom: 1px solid #fde68a;
+    padding: 10px 24px;
+    text-align: center;
+    font-size: 13px; color: #854d0e;
+    font-weight: 600;
+  }
+  .proto-banner b { color: #713f12; }
+</style>
+</head>
+<body>
+
+<div class="proto-banner">
+  🚧 <b>v3.0.0-alpha</b> — Emergency cat-tab wired to live data (v2.7.9 /api/medical-radius). Other cat-tabs land per weekly rollout. Full launch Sep 15.
+</div>
+
+<!-- ════ 911 emergency strip ════ -->
+<div class="top-emergency">
+  <div class="top-emergency-inner">
+    <span class="top-emergency-label">🆘 Need help now?</span>
+    <a href="tel:911" class="top-emergency-chip"><b>911</b> · life-threatening emergency</a>
+    <a href="tel:988" class="top-emergency-chip"><b>988</b> · crisis &amp; mental health</a>
+    <a href="tel:211" class="top-emergency-chip"><b>211</b> · food, shelter, utilities</a>
+  </div>
+</div>
+
+<!-- ════ Header ════ -->
+<header class="site-header">
+  <div class="site-header-inner">
+    <a href="#" class="brand">
+      <svg class="brand-mark" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <linearGradient id="bg-mark" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stop-color="#006aff"/>
+            <stop offset="100%" stop-color="#0050c2"/>
+          </linearGradient>
+        </defs>
+        <path d="M32 4 C18 4 8 14 8 26 C8 40 22 56 32 60 C42 56 56 40 56 26 C56 14 46 4 32 4 Z" fill="url(#bg-mark)"/>
+        <path d="M22 38 L22 25 L32 15 L38 21 L38 17 L40 17 L40 23 L42 25 L42 38 Z M29 38 L29 31 L35 31 L35 38 Z" fill="#ffffff" fill-rule="evenodd"/>
+      </svg>
+      <span class="brand-name">nearnity</span>
+      <span class="brand-tag">Source-linked · No paid placement</span>
+    </a>
+    <div class="header-spacer"></div>
+    <a href="#" class="header-link">About</a>
+    <a href="#" class="header-link">How it works</a>
+  </div>
+</header>
+
+<!-- ════ Hero ════ -->
+<section class="hero">
+  <div class="hero-inner">
+    <h1>Find what's around you — from <em>trusted public sources</em>.</h1>
+    <p class="hero-lead">
+      Free clinics, events, parks, utilities, schools, civic services, and risk data — one clean page per address. No accounts. No tracking. No paid placement.
+    </p>
+
+    <!-- Two big primary actions (50/50 use case split from spec) -->
+    <div class="hero-primary-actions">
+      <a href="#urgent-care" class="hero-primary-card">
+        <div class="hero-primary-icon emergency">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 3 L15 3 L15 9 L21 9 L21 15 L15 15 L15 21 L9 21 L9 15 L3 15 L3 9 L9 9 Z"/>
+          </svg>
+        </div>
+        <div class="hero-primary-body">
+          <div class="hero-primary-title">Find urgent care nearest me</div>
+          <div class="hero-primary-sub">Open now · with phone &amp; directions</div>
+        </div>
+      </a>
+      <a href="#weekend-events" class="hero-primary-card">
+        <div class="hero-primary-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div class="hero-primary-body">
+          <div class="hero-primary-title">What's happening this weekend</div>
+          <div class="hero-primary-sub">Free events, markets, kids &amp; family</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Search bar -->
+    <div class="search-wrap">
+      <form class="searchbar" id="nrny-search-form">
+        <div class="search-field">
+          <div class="search-field-label">Looking for</div>
+          <input type="text" id="nrny-q" placeholder="farmers market, hospital, food bank...">
+        </div>
+        <div class="search-divider"></div>
+        <div class="search-field">
+          <div class="search-field-label">Near</div>
+          <input type="text" id="nrny-where" placeholder="address, city, ZIP, or near me">
+        </div>
+        <button type="submit" class="search-submit">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          Search
+        </button>
+      </form>
+
+      <div class="quick-chips">
+        <button class="quick-chip">🚑 Emergency rooms</button>
+        <button class="quick-chip">🏥 Urgent care</button>
+        <button class="quick-chip">🎉 Events near you</button>
+        <button class="quick-chip">🥬 Farmers market</button>
+        <button class="quick-chip">🥫 Food bank</button>
+        <button class="quick-chip">📚 Library</button>
+        <button class="quick-chip">🚗 DMV</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ════ Main shell: sidebar + content rectangle ════ -->
+<div class="shell">
+
+  <!-- Sidebar with 6 cat tabs -->
+  <aside class="sidebar">
+    <button class="cat-tab active" data-tab="around">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/>
+        <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
+      </svg>
+      Around me
+    </button>
+    <button class="cat-tab" data-tab="home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12 L12 4 L21 12"/>
+        <path d="M5 11 L5 20 L19 20 L19 11"/>
+        <path d="M16 5 L16 8"/>
+      </svg>
+      My home
+    </button>
+    <button class="cat-tab" data-tab="help">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
+        <path d="M12 5L9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.86a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/>
+      </svg>
+      Help
+    </button>
+    <button class="cat-tab" data-tab="govt">
+      <span class="cat-tab-emoji">🏛️</span>
+      Govt functions
+    </button>
+    <button class="cat-tab" data-tab="emergency">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 3 L15 3 L15 9 L21 9 L21 15 L15 15 L15 21 L9 21 L9 15 L3 15 L3 9 L9 9 Z"/>
+      </svg>
+      Emergency
+    </button>
+    <button class="cat-tab" data-tab="saved">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
+      </svg>
+      Saved
+    </button>
+  </aside>
+
+  <!-- Content area -->
+  <main class="content" id="nrny-content">
+
+    <div class="content-header" id="nrny-content-header">
+      <h2 id="nrny-content-h2">Around me</h2>
+      <p id="nrny-content-desc">Enter an address in the search bar to see what's nearby.</p>
+    </div>
+
+    <div class="address-bar" id="nrny-address-bar" hidden>
+      📍 <b>Serves this address:</b> <span id="nrny-address-text">—</span>
+    </div>
+
+    <nav class="subnav" id="nrny-subnav" hidden></nav>
+
+    <!-- Section map (Leaflet). Hidden until data loads. -->
+    <div id="nrny-section-map" style="height: 320px; border-radius: 14px; overflow: hidden; margin: 20px 0; border: 1px solid var(--line);" hidden></div>
+
+    <!-- Loading state -->
+    <div id="nrny-loading" style="text-align:center; padding:40px; color:var(--ink-soft);" hidden>Loading…</div>
+
+    <!-- Results grid (populated by JS) -->
+    <div class="results-grid" id="nrny-results-grid">
+      <!-- Placeholder cards below (v3 prototype samples). Replaced when
+           user searches. Keeping for design reference until v3.0.1. -->
+      <div id="nrny-placeholder-samples">
+
+      <!-- Tier: Authoritative (Teal) — federal / state -->
+      <article class="card tier-authoritative">
+        <div class="card-tier-label">Federal source</div>
+        <h3 class="card-title">Free Mobile Vaccine Clinic — Milpitas Public Library</h3>
+        <p class="card-sub">Sat, Jun 28 · 10:00 AM – 2:00 PM</p>
+        <p class="card-meta">160 N Main St, Milpitas · 0.8 mi away</p>
+        <p class="card-meta">Hosted by Santa Clara County Public Health</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Public dataset (Indigo) — verified open data -->
+      <article class="card tier-public">
+        <div class="card-tier-label">Public dataset</div>
+        <h3 class="card-title">Berryessa Farmers' Market</h3>
+        <p class="card-sub">Every Saturday · 9:00 AM – 1:00 PM</p>
+        <p class="card-meta">Berryessa Community Center, San Jose · 4.2 mi away</p>
+        <p class="card-meta">From PCFMA registry · Free admission</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Community-reviewed (Coral) — curated submission -->
+      <article class="card tier-community">
+        <div class="card-tier-label">Community-reviewed</div>
+        <h3 class="card-title">Pop-up Yoga in the Park</h3>
+        <p class="card-sub">Sun, Jun 29 · 8:30 AM – 9:30 AM</p>
+        <p class="card-meta">Cardoza Park, Milpitas · 1.1 mi away</p>
+        <p class="card-meta">Submitted by a neighbor · Free, bring a mat</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Third-party source-linked (Slate) — Ticketmaster etc -->
+      <article class="card tier-third-party">
+        <div class="card-tier-label">Source-linked</div>
+        <h3 class="card-title">Cirque du Soleil — ECHO</h3>
+        <p class="card-sub">Fri, Jul 11 · 7:30 PM</p>
+        <p class="card-meta">SAP Center, San Jose · 8.7 mi away · 💲 Ticketed</p>
+        <p class="card-meta">Source: Ticketmaster · We display, don't verify</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Get tickets</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Authoritative again -->
+      <article class="card tier-authoritative">
+        <div class="card-tier-label">Federal source</div>
+        <h3 class="card-title">El Camino Hospital — Mountain View</h3>
+        <p class="card-sub">⭐⭐⭐⭐ 4-star · Medicare Care Compare</p>
+        <p class="card-meta">2500 Grant Rd · 12.5 mi · ER open 24/7</p>
+        <p class="card-meta">Trauma Level II · 247 beds</p>
+        <div class="card-actions">
+          <a class="card-action emergency" href="tel:6509407000">📞 Call ER</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">☆ Save</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Public dataset -->
+      <article class="card tier-public">
+        <div class="card-tier-label">Public dataset</div>
+        <h3 class="card-title">Cardoza Park</h3>
+        <p class="card-sub">11.2 acres · Playground, dog park, basketball</p>
+        <p class="card-meta">630 Cardoza Dr, Milpitas · 1.1 mi away</p>
+        <p class="card-meta">From OpenStreetMap · Free admission, open dawn-dusk</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">☆ Save</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Community-reviewed -->
+      <article class="card tier-community">
+        <div class="card-tier-label">Community-reviewed</div>
+        <h3 class="card-title">Dublin Music &amp; Sound</h3>
+        <p class="card-sub">Violin / guitar repair · Lesson rentals</p>
+        <p class="card-meta">7211 Dublin Blvd, Dublin · 14.3 mi away</p>
+        <p class="card-meta">Recommended by 2 neighbors · Phone: (925) 829-1234</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="tel:9258291234">📞 Call</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">↗ Website</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Third-party -->
+      <article class="card tier-third-party">
+        <div class="card-tier-label">Source-linked</div>
+        <h3 class="card-title">Independent Sushi Cafe</h3>
+        <p class="card-sub">Restaurant · Open daily 11am-10pm</p>
+        <p class="card-meta">123 Main St, Milpitas · 0.6 mi away</p>
+        <p class="card-meta">From OpenStreetMap · We display, don't verify</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Emergency-tier (red border for life-critical alerts) -->
+      <article class="card tier-emergency">
+        <div class="card-tier-label">Active alert</div>
+        <h3 class="card-title">Heat Advisory through Sunday 8pm</h3>
+        <p class="card-sub">National Weather Service · Effective now</p>
+        <p class="card-meta">Highs near 102°F. Hydrate. Check on elderly neighbors.</p>
+        <p class="card-meta">Cooling center: Milpitas Community Center, 457 E Calaveras</p>
+        <div class="card-actions">
+          <a class="card-action emergency" href="#">Full alert →</a>
+          <a class="card-action" href="#">🧭 Directions to cooling center</a>
+          <a class="card-action" href="#">Source: NWS</a>
+        </div>
+      </article>
+      </div>
+    </div>
+
+    <!-- Tier color legend (educates users on the color system) -->
+    <div class="tier-legend">
+      <div class="tier-legend-title">What the card colors mean</div>
+      <div class="tier-legend-list">
+        <div class="tier-legend-item">
+          <span class="tier-legend-swatch" style="background: #0D9488;"></span>
+          <span><b>Federal source</b> — government / state authority data</span>
+        </div>
+        <div class="tier-legend-item">
+          <span class="tier-legend-swatch" style="background: #4F46E5;"></span>
+          <span><b>Public dataset</b> — open data, verified registries</span>
+        </div>
+        <div class="tier-legend-item">
+          <span class="tier-legend-swatch" style="background: #FB923C;"></span>
+          <span><b>Community-reviewed</b> — neighbor-submitted, curated</span>
+        </div>
+        <div class="tier-legend-item">
+          <span class="tier-legend-swatch" style="background: #94A3B8;"></span>
+          <span><b>Source-linked</b> — third-party feed, we display without verifying</span>
+        </div>
+        <div class="tier-legend-item">
+          <span class="tier-legend-swatch" style="background: #dc2626;"></span>
+          <span><b>Active alert</b> — live emergency or time-critical</span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Privacy & data (collapsed) -->
+<div class="privacy-summary">
+  <details>
+    <summary><b>Privacy &amp; data</b> — we don't store your address · saved places stay on your device · email digest is opt-in <span style="color:var(--ink-faint);">(click for detail)</span></summary>
+    <div style="padding-top: 10px;">
+      <p style="margin:0 0 8px;"><b>We do not store your address on Nearnity servers.</b> Your browser sends location to public map services to load nearby results.</p>
+      <p style="margin:0 0 8px;"><b>Saved places stay on your device.</b> Browser local storage only — not synced.</p>
+      <p style="margin:0;"><b>Email digest is opt-in.</b> Stored only if you subscribe. Unsubscribe anytime.</p>
+    </div>
+  </details>
+</div>
+
+<!-- Footer -->
+<footer class="site-footer">
+  <div class="site-footer-inner">
+    <div class="site-footer-brand">
+      <b>Nearnity</b> · Public-data tool · No paid placement · Free for residents<br>
+      © 2026 Nearnity. <span class="site-footer-version">v3.0</span> — source-linked data on utilities, schools, parks, free clinics, events, and civic services.
+    </div>
+    <div class="site-footer-links">
+      <a href="#">Send feedback</a>
+      <a href="#">Privacy</a>
+      <a href="#">Data sources</a>
+      <a href="#">About</a>
+    </div>
+  </div>
+</footer>
+
+<button class="fab-feedback">💬 Feedback</button>
+
+<!-- Leaflet CDN for section maps -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════
+// Nearnity v3.0.0-alpha — Emergency cat-tab launch (Sep 15 target)
+// ═══════════════════════════════════════════════════════════════════════
+// Decisions locked 2026-07-21:
+//   D1 Maps: Leaflet per section (this version scaffolds; renders in v3.0.1)
+//   D2 Nav: flat subnav, no 2-level nesting
+//   D3 Empty state: anchor cards (911 / poison / Google Maps / district finder)
+//   D4 Cadence: Emergency cat-tab first, others land weekly
+//
+// This build ships the Emergency cat-tab wired to v2.7.9 /api/medical-radius.
+// Around me / My home / Help / Govt / Saved show "Coming soon" placeholders
+// until their weekly rollout lands (per Roadmap_Checklist.md).
+
+const NRNY = {
+  version: "v3.0.0-alpha",
+  apiBase: "",             // same-origin: nearnity.com/api/*
+  radiusMi: 25,
+  geo: null,               // { lat, lon, address: {city,state,county,...} }
+  activeTab: "around",
+  activeSubnav: null,
+  _sectionMap: null,       // Leaflet map instance
+  _sectionMarkers: [],
+};
+
+// ─── Subnav registry per cat-tab (flat, per D2) ────────────────────────
+const NRNY_SUBNAVS = {
+  around: [
+    { id: "events",    label: "Events",          impl: "coming_soon" },
+    { id: "biz",       label: "Local businesses",impl: "coming_soon" },
+    { id: "schools",   label: "Schools",         impl: "coming_soon" },
+    { id: "parks",     label: "Parks & rec",     impl: "coming_soon" },
+  ],
+  home: [
+    { id: "utils",     label: "Utilities",       impl: "coming_soon" },
+    { id: "trash",     label: "Trash & recycling", impl: "coming_soon" },
+    { id: "weather",   label: "Weather & risk",  impl: "coming_soon" },
+    { id: "services",  label: "Home services",   impl: "coming_soon" },
+  ],
+  help: [
+    { id: "food",      label: "Food resources",  impl: "coming_soon" },
+    { id: "health",    label: "Free/low-cost health", impl: "coming_soon" },
+    { id: "housing",   label: "Housing",         impl: "coming_soon" },
+    { id: "family",    label: "Family services", impl: "coming_soon" },
+    { id: "legal",     label: "Legal aid",       impl: "coming_soon" },
+  ],
+  govt: [
+    { id: "officials", label: "Elected officials", impl: "coming_soon" },
+    { id: "dmv",       label: "DMV / vehicle",     impl: "coming_soon" },
+    { id: "court",     label: "Court / civic",     impl: "coming_soon" },
+    { id: "voting",    label: "Voting",            impl: "coming_soon" },
+  ],
+  emergency: [
+    { id: "hospitals", label: "Hospitals",   impl: "medical", taxonomy: "hospital" },
+    { id: "urgent",    label: "Urgent care", impl: "medical", taxonomy: "urgent" },
+    { id: "fire",      label: "Fire station",impl: "coming_soon" },
+    { id: "poison",    label: "Poison control", impl: "static_poison" },
+    { id: "alerts",    label: "Active alerts",impl: "coming_soon" },
+  ],
+  saved: [
+    { id: "list",      label: "Saved places", impl: "saved" },
+  ],
+};
+
+const NRNY_TAB_META = {
+  around:    { title: "Around me",       desc: "Events, businesses, parks, schools — within 25 miles of your address." },
+  home:      { title: "My home",         desc: "Utilities, weather, home services, trash & recycling for your address." },
+  help:      { title: "Help",            desc: "Food, health, housing, family, and legal resources — free or low-cost." },
+  govt:      { title: "Govt functions",  desc: "Elected officials, DMV, courts, voting — for your specific address." },
+  emergency: { title: "Emergency",       desc: "Hospitals, urgent care, fire, poison control, active alerts near you." },
+  saved:     { title: "Saved",           desc: "Places you saved from other tabs. Stored on your device only." },
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
+const escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const haversineMi = (a, b, c, d) => {
+  const R = 3958.8, toR = x => x * Math.PI / 180;
+  const dLat = toR(c - a), dLon = toR(d - b);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a)) * Math.cos(toR(c)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+};
+const distFmt = (mi) => (Number.isFinite(mi) ? mi.toFixed(1) + " mi" : "—");
+
+// ─── Geocoding: Nominatim primary + Census fallback ───────────────────
+async function nrnyGeocode(query) {
+  if (!query || !query.trim()) return null;
+  const q = query.trim();
+  // 1. Nominatim
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&limit=1&countrycodes=us`;
+    const resp = await fetch(url, { headers: { "Accept": "application/json" } });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (data && data[0]) {
+        const r = data[0];
+        return {
+          lat: parseFloat(r.lat),
+          lon: parseFloat(r.lon),
+          display_name: r.display_name,
+          address: r.address || {},
+        };
+      }
+    }
+  } catch (_) {}
+  // 2. Census fallback (US only, more forgiving of typos on street numbers)
+  try {
+    const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(q)}&benchmark=Public_AR_Current&format=json`;
+    const resp = await fetch(url);
+    if (resp.ok) {
+      const data = await resp.json();
+      const m = data && data.result && data.result.addressMatches && data.result.addressMatches[0];
+      if (m) {
+        return {
+          lat: m.coordinates.y,
+          lon: m.coordinates.x,
+          display_name: m.matchedAddress,
+          address: {
+            house_number: m.addressComponents.fromAddress,
+            road: m.addressComponents.streetName,
+            city: m.addressComponents.city,
+            state: m.addressComponents.state,
+            postcode: m.addressComponents.zip,
+          },
+        };
+      }
+    }
+  } catch (_) {}
+  return null;
+}
+
+// Derive 2-letter state from geocode result
+function nrnyStateOf(geo) {
+  const a = (geo && geo.address) || {};
+  const s = a.state || "";
+  // Nominatim returns "California"; Census returns "CA"
+  if (s.length === 2) return s.toUpperCase();
+  const STATES = {"Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA","Colorado":"CO","Connecticut":"CT","Delaware":"DE","District of Columbia":"DC","Florida":"FL","Georgia":"GA","Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD","Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO","Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY"};
+  return STATES[s] || "";
+}
+
+function nrnyAddressChip(geo) {
+  const a = (geo && geo.address) || {};
+  const city = a.city || a.town || a.village || a.hamlet || a.county || "";
+  const state = nrnyStateOf(geo);
+  return [city, state].filter(Boolean).join(", ");
+}
+
+// ─── /api/medical-radius fetcher (Emergency tab) ──────────────────────
+async function nrnyFetchMedical(geo, taxonomy) {
+  const state = nrnyStateOf(geo);
+  if (!state) return { results: [], error: "Could not resolve state from address" };
+  const url = `${NRNY.apiBase}/api/medical-radius?lat=${geo.lat}&lon=${geo.lon}&state=${state}&radius_mi=${NRNY.radiusMi}&taxonomy=${taxonomy}&limit=30`;
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return { results: [], error: `HTTP ${resp.status}` };
+    const data = await resp.json();
+    return { results: data.results || [], meta: data.meta || null, error: null };
+  } catch (e) { return { results: [], error: (e && e.message) || String(e) }; }
+}
+
+// ─── Card rendering (v3 tier system) ──────────────────────────────────
+function nrnyRenderMedicalCard(item, taxonomy) {
+  const name = escapeHtml(item.name || "Facility");
+  const addr = escapeHtml(item.address || "");
+  const city = escapeHtml(item.city || "");
+  const state = escapeHtml(item.state || "");
+  const dist = distFmt(item.distance_mi);
+  const phone = item.phone || "";
+  const rating = item.rating || item.stars;
+  const src = item.source || "CMS / NPPES";
+  const sourceUrl = item.source_url || (item.provider_id ? `https://www.medicare.gov/care-compare/details/hospital/${item.provider_id}` : "https://data.cms.gov/provider-data/dataset/xubh-q36u");
+  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`;
+  const isER = taxonomy === "hospital" && (item.emergency_services === true || (item.category || "").includes("er"));
+  const callBtn = phone
+    ? `<a class="card-action ${isER ? "emergency" : "primary"}" href="tel:${phone.replace(/[^\d+]/g, "")}">📞 ${isER ? "Call ER" : "Call"}</a>`
+    : "";
+  return `
+<article class="card tier-authoritative">
+  <div class="card-tier-label">Federal source</div>
+  <h3 class="card-title">${name}</h3>
+  <p class="card-sub">${rating ? `⭐ ${rating}/5 · ` : ""}${escapeHtml(src)}${isER ? " · ER 24/7" : ""}</p>
+  <p class="card-meta">${addr}${addr && (city || state) ? ", " : ""}${city}${state ? " " + state : ""} · ${dist}</p>
+  ${item.beds ? `<p class="card-meta">${item.beds} beds${item.trauma_level ? ` · Trauma Level ${escapeHtml(item.trauma_level)}` : ""}</p>` : ""}
+  <div class="card-actions">
+    ${callBtn}
+    <a class="card-action" href="${directionsUrl}" target="_blank" rel="noopener">🧭 Directions</a>
+    <a class="card-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Source</a>
+    <a class="card-action" href="#" data-action="save" data-item="${escapeHtml(JSON.stringify({ name: item.name, lat: item.lat, lon: item.lon, source: src }))}">☆ Save</a>
+    <a class="card-action" href="mailto:feedback@nearnity.com?subject=Report: ${encodeURIComponent(name)}">⚠ Report</a>
+  </div>
+</article>`;
+}
+
+// ─── Anchor cards for empty states (D3: 911 + poison + Google Maps) ───
+function nrnyAnchorCardsFor(geo, taxonomy) {
+  const q = taxonomy === "hospital" ? "hospitals near me" : taxonomy === "urgent" ? "urgent care near me" : "clinic near me";
+  const gmapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(q)}/@${geo.lat},${geo.lon},13z`;
+  return `
+<article class="card tier-emergency">
+  <div class="card-tier-label">Life-critical</div>
+  <h3 class="card-title">🚑 Call 911 for a real emergency</h3>
+  <p class="card-sub">Life-threatening injuries or symptoms</p>
+  <p class="card-meta">Dispatchers get GPS from your call and route the nearest ambulance.</p>
+  <div class="card-actions">
+    <a class="card-action emergency" href="tel:911">📞 Call 911</a>
+  </div>
+</article>
+<article class="card tier-authoritative">
+  <div class="card-tier-label">Federal source</div>
+  <h3 class="card-title">☎ Poison Control — 1-800-222-1222</h3>
+  <p class="card-sub">Free, 24/7, all US states</p>
+  <p class="card-meta">Nurses + toxicologists answer. Faster than any web search for accidental ingestion.</p>
+  <div class="card-actions">
+    <a class="card-action primary" href="tel:18002221222">📞 Call</a>
+  </div>
+</article>
+<article class="card tier-third-party">
+  <div class="card-tier-label">Fallback</div>
+  <h3 class="card-title">🗺 Search Google Maps</h3>
+  <p class="card-sub">If nothing above worked</p>
+  <p class="card-meta">Fastest way to find any nearby ${taxonomy === "urgent" ? "urgent care" : "hospital"} we don't yet have indexed.</p>
+  <div class="card-actions">
+    <a class="card-action primary" href="${gmapsUrl}" target="_blank" rel="noopener">Open Google Maps →</a>
+  </div>
+</article>`;
+}
+
+// ─── Section map (Leaflet, per D1) ────────────────────────────────────
+function nrnySetupMap(items, centerLat, centerLon) {
+  const el = $("nrny-section-map");
+  if (!el || !window.L) return;
+  el.hidden = false;
+  // Clear old
+  if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
+  NRNY._sectionMap = L.map(el, { scrollWheelZoom: false }).setView([centerLat, centerLon], 12);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
+    attribution: '&copy; OpenStreetMap · CARTO',
+    maxZoom: 19,
+  }).addTo(NRNY._sectionMap);
+  // Home marker
+  L.marker([centerLat, centerLon], { title: "Your location" }).addTo(NRNY._sectionMap).bindPopup("<b>Your location</b>");
+  // Item markers (teal = federal medical tier)
+  for (const it of items) {
+    if (!Number.isFinite(it.lat) || !Number.isFinite(it.lon)) continue;
+    const icon = L.divIcon({
+      className: "nrny-pin",
+      html: `<div style="background:#0D9488;color:#fff;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">🏥</div>`,
+      iconSize: [26, 26], iconAnchor: [13, 13],
+    });
+    L.marker([it.lat, it.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(it.name || "")}</b><br>${distFmt(it.distance_mi)}`);
+  }
+}
+
+// ─── Main render for a subnav ─────────────────────────────────────────
+async function nrnyRenderSubnav(tab, subnav) {
+  const grid = $("nrny-results-grid");
+  const loading = $("nrny-loading");
+  const map = $("nrny-section-map");
+  // Hide placeholder samples on first real render
+  const ph = $("nrny-placeholder-samples");
+  if (ph) ph.style.display = "none";
+
+  grid.innerHTML = "";
+  map.hidden = true;
+  loading.hidden = false;
+
+  if (!NRNY.geo) {
+    loading.hidden = true;
+    grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Enter an address in the search bar above to see results.</p>`;
+    return;
+  }
+
+  const cfg = (NRNY_SUBNAVS[tab] || []).find(s => s.id === subnav);
+  if (!cfg) {
+    loading.hidden = true;
+    grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Unknown section.</p>`;
+    return;
+  }
+
+  if (cfg.impl === "coming_soon") {
+    loading.hidden = true;
+    grid.innerHTML = `
+<article class="card tier-third-party" style="grid-column: 1 / -1;">
+  <div class="card-tier-label">Coming soon</div>
+  <h3 class="card-title">${escapeHtml(cfg.label)} — landing in weekly rollout</h3>
+  <p class="card-sub">v3.0.0-alpha ships with Emergency cat-tab wired. Other cat-tabs follow, per the Sep 15 launch plan.</p>
+  <p class="card-meta">Meanwhile: use the v2 experience at <a href="https://nearnity.com" style="color:var(--primary);">nearnity.com</a> for this data.</p>
+</article>`;
+    return;
+  }
+
+  if (cfg.impl === "static_poison") {
+    loading.hidden = true;
+    grid.innerHTML = `
+<article class="card tier-emergency" style="grid-column: 1 / -1;">
+  <div class="card-tier-label">Life-critical · 24/7</div>
+  <h3 class="card-title">☎ Poison Control — 1-800-222-1222</h3>
+  <p class="card-sub">Free · Any state · Nurses and toxicologists on the line 24/7</p>
+  <p class="card-meta">Faster than any web search for accidental ingestion, exposure, or overdose. They stay on the line and coordinate with EMS.</p>
+  <div class="card-actions">
+    <a class="card-action emergency" href="tel:18002221222">📞 Call Poison Control</a>
+    <a class="card-action" href="https://www.poisonhelp.org/" target="_blank" rel="noopener">Source</a>
+  </div>
+</article>`;
+    return;
+  }
+
+  if (cfg.impl === "medical") {
+    const { results, error } = await nrnyFetchMedical(NRNY.geo, cfg.taxonomy);
+    loading.hidden = true;
+    if (error) {
+      grid.innerHTML = `<p style="grid-column:1/-1;color:var(--emergency);padding:20px;">Couldn't reach medical index: ${escapeHtml(error)}. Try again shortly.</p>` + nrnyAnchorCardsFor(NRNY.geo, cfg.taxonomy);
+      return;
+    }
+    if (results.length === 0) {
+      // Empty state: anchor cards + honest note
+      grid.innerHTML = `
+<p style="grid-column:1/-1;color:var(--ink-soft);padding:8px 0;">No ${escapeHtml(cfg.label.toLowerCase())} indexed within ${NRNY.radiusMi} mi of ${escapeHtml(nrnyAddressChip(NRNY.geo))} yet. Try these:</p>
+${nrnyAnchorCardsFor(NRNY.geo, cfg.taxonomy)}`;
+      return;
+    }
+    grid.innerHTML = results.map(r => nrnyRenderMedicalCard(r, cfg.taxonomy)).join("");
+    nrnySetupMap(results, NRNY.geo.lat, NRNY.geo.lon);
+    return;
+  }
+
+  if (cfg.impl === "saved") {
+    loading.hidden = true;
+    const saved = JSON.parse(localStorage.getItem("nearnity-saved-v3") || "[]");
+    if (saved.length === 0) {
+      grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Nothing saved yet. Tap ☆ Save on any card to bookmark it here. Stored on your device only.</p>`;
+      return;
+    }
+    grid.innerHTML = saved.map(it => `
+<article class="card tier-community">
+  <div class="card-tier-label">Saved</div>
+  <h3 class="card-title">${escapeHtml(it.name)}</h3>
+  <p class="card-meta">${escapeHtml(it.source || "")}</p>
+</article>`).join("");
+    return;
+  }
+
+  grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Unknown section handler: ${escapeHtml(cfg.impl)}</p>`;
+}
+
+// ─── Cat-tab switching ────────────────────────────────────────────────
+function nrnyRenderSubnavBar(tab) {
+  const bar = $("nrny-subnav");
+  const items = NRNY_SUBNAVS[tab] || [];
+  if (items.length === 0) { bar.hidden = true; return; }
+  bar.hidden = false;
+  bar.innerHTML = items.map((s, i) => `
+    <button class="subnav-tab${i === 0 ? " active" : ""}" data-subnav="${escapeHtml(s.id)}">${escapeHtml(s.label)}</button>
+  `).join("");
+  bar.querySelectorAll(".subnav-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      bar.querySelectorAll(".subnav-tab").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      NRNY.activeSubnav = btn.dataset.subnav;
+      nrnyRenderSubnav(NRNY.activeTab, NRNY.activeSubnav);
+    });
+  });
+  NRNY.activeSubnav = items[0].id;
+}
+
+function nrnySwitchTab(tab) {
+  NRNY.activeTab = tab;
+  const meta = NRNY_TAB_META[tab];
+  if (meta) {
+    $("nrny-content-h2").textContent = meta.title;
+    $("nrny-content-desc").textContent = meta.desc;
+  }
+  nrnyRenderSubnavBar(tab);
+  nrnyRenderSubnav(tab, NRNY.activeSubnav);
+}
+
+// ─── Wire everything up ───────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  // Cat-tab click
+  document.querySelectorAll(".cat-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll(".cat-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      nrnySwitchTab(tab.dataset.tab);
+    });
+  });
+
+  // Address search
+  const form = $("nrny-search-form");
+  const whereInput = $("nrny-where");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const query = whereInput.value.trim();
+    if (!query) { whereInput.focus(); return; }
+    $("nrny-loading").hidden = false;
+    $("nrny-loading").textContent = "Locating address…";
+    const geo = await nrnyGeocode(query);
+    if (!geo) {
+      $("nrny-loading").textContent = "Couldn't locate that address. Try including city + state.";
+      return;
+    }
+    NRNY.geo = geo;
+    $("nrny-address-bar").hidden = false;
+    $("nrny-address-text").textContent = geo.display_name || nrnyAddressChip(geo);
+    $("nrny-loading").hidden = true;
+    nrnySwitchTab(NRNY.activeTab);
+  });
+
+  // Quick chips shortcut → prefills q input + focuses "where"
+  document.querySelectorAll(".quick-chip").forEach(chip => {
+    chip.addEventListener("click", () => {
+      $("nrny-q").value = chip.textContent.trim().replace(/^[^\w]+/, "");
+      whereInput.focus();
+    });
+  });
+
+  // Initialize with default tab (Around me)
+  nrnyRenderSubnavBar("around");
+
+  // Version stamp in footer
+  const fv = document.querySelector(".site-footer-version");
+  if (fv) fv.textContent = NRNY.version;
+
+  console.log("[nearnity]", NRNY.version, "ready");
+});
+</script>
+
+</body>
+</html>
