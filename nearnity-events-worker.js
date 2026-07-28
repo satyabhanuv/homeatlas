@@ -50,7 +50,7 @@ export default {
     if (url.pathname.endsWith("/health")) {
       return json({
         status: "ok",
-        worker_version: "v2.7.11.4",   // v2.7.11.4: BiblioCommons gateway API + USDA key + split-ingest filter + PCFMA debug + EBRPD drop
+        worker_version: "v3.0.1.2",   // v3.0.1.2: expanded NPPES taxonomies (HOSPITAL org + Clinic/Center + Ambulatory Surgical) to catch Kaiser MOBs + hospital orgs
         deployed_features: {
           "v2.4": "federal adapters (NPPES, Medicare, SAMHSA, HRSA)",
           "v2.7.3": "school-zone endpoint (Census + NCES district lookup)",
@@ -65,6 +65,12 @@ export default {
           "v2.7.11.2": "Discovery robustness — v2.7.11.1 confirmed sanjoseca.gov is CDN-level TLS-fingerprint blocked (not UA-blocked); no UA rotation beats it. Fixes: (a) discovery no longer bails on home 403 — probes + sitemap always attempted since WAF rules commonly block only root path, not sub-paths, (b) added sitemap.xml probing as a 4th discovery method (sitemaps are meant for bots and often whitelisted even when root is blocked), (c) home_error surfaced in diag for observability. The .gov home-page approach is fundamentally limited — expect ~30-40% of city .gov domains to be fully blocked. Federal + friendly sources (BiblioCommons libraries, USDA, NPS) carry the coverage story.",
           "v2.7.11.3": "Registry pivot — dropped all 27 .gov city 'discover' rows after confirming TLS-fingerprint block on sanjoseca.gov is universal to CF Workers. Registry now = 2 federal (USDA + NPS nationwide) + 30 BiblioCommons libraries (schema.org, WAF-friendly) + 1 regional park iCal (EBRPD) + 1 sitemap crawler (PCFMA) = 34 sources total, all bot-friendly. Discovery + sitemap-crawler + federal code paths still intact for future additions from non-.gov domains (Socrata open-data portals in v2.7.12).",
           "v2.7.11.4": "Data-source overhaul from v2.7.11.3 QA feedback: (a) BiblioCommons pivoted from schema.org scraping (SPA-blocked, returned 0) to undocumented gateway.bibliocommons.com/v2 API — verified sjpl returns 6,877 events. New type 'bibliocommons_api' fetches /events + /locations, joins branchLocationId to lat/lng. Locations cached per-library in KV 24h. (b) USDA fetch fixed: needs env.USDA_KEY (free registration) and state as 2-letter lowercase; prior versions passed full state name and got 'apikey error' string that parser silently treated as 0 records. Now surfaces error properly. (c) EBRPD dropped — no working feed exists (ebparks.org/calendar is HTML with no coords, /events.ics 404s). (d) PCFMA sitemap silent-swallow fixed — errors now surfaced in attempts[].error. (e) Split ingest: /api/admin/events-ingest?source=nps|usda|libraries|sitemap keeps each invocation under CF's 50-subrequest cap. Comma-separated for multi-source runs.",
+          "v2.7.11.5": "v2.7.11.4 QA fixes: (a) SDPL BiblioCommons slug corrected: sdplibrary→sandiego (verified /locations returns 37). (b) Dropped 3 rows that don't work on BiblioCommons: SFPL (events feature disabled at tenant level; uses sfpl.org/calendar separately), Berkeley PL + LA County Library (both use Communico api.communico.co, not BC — Communico adapter is v2.7.12 work, would unlock dozens of US libraries). (c) PCFMA replaced sitemap approach (all 4 std paths 404) with custom /visit HTML table parser + per-market detail scrape for schema.org LocalBusiness lat/lon. New type 'pcfma_html'. (d) Per-source geocoded counter fixed (was always 0). (e) Seed note string updated to reflect actual registry.",
+          "v2.7.11.6": "v2.7.11.5 QA fixes: (a) SDPL dropped — /locations worked but /events 403s same as SFPL (tenant-level disable). (b) PCFMA parser rewritten: replaced brittle <tr>/<td> regex with permalink-based extraction (any href='/market/{slug}' with an anchor text = market row). Added rich diagnostics to ingest response: html_length, tr_count, table_count, market_link_count, html_head_500 sample, so we can see what CF Worker actually received without guessing at HTML structure.",
+          "v2.7.12": "Aggregators over point-solutions — user directive: stop per-city debug (SFPL/SDPL/PCFMA custom code is anti-pattern), build adapters that scale per-adapter. Ships: (a) Ticketmaster Discovery API adapter feeds new events-radius KV pipeline (was only wired to old /api/events path); nationwide, 50 states, ~100k events. Provider 'ticketmaster' under federal type. (b) Socrata generic adapter (nrnyFetchSocrataDataset) reads any Socrata Open Data event dataset via URL + field_map config. Seed rows: Chicago Park District (has lat/lon), NYC Permitted Events + Seattle Special Events + Austin Convention (need Census geocoding of address fields). One code path unlocks any US city with a Socrata events dataset. Uses SOCRATA_APP_TOKEN if set (higher rate limit) — token optional. Communico DROPPED after research confirmed per-library OAuth needed (not scalable). ArcGIS Hub + CKAN adapters deferred to v2.7.13.",
+          "v2.7.15": "Bulk-ingest orchestrator — replaces the Mac-only bulk-ingest.sh terminal dependency. Two triggers, same code path: (a) GET /api/admin/bulk-ingest?admin_token=X returns an auto-refreshing HTML dashboard that advances a KV cursor through all 51 states × 6 sources (306 steps). Hit from ANY browser, close the tab safely, reopen to resume. (b) Cloudflare scheduled() cron handler (configure crons in wrangler.jsonc, e.g. '*/5 * * * *' = every 5 min) advances the SAME cursor unattended. Auto-resets 7 days after last completion for weekly refresh. Chunked one-state-one-source per invocation to stay under CF's 50-subrequest cap. Includes ?status=1 for JSON progress + ?reset=1 to start over. No terminal, no ADMIN_TOKEN in bash history.",
+          "v2.8.1": "Frontend school-map honest labeling — dropped 'closest school = assigned' heuristic (lied at boundary addresses per user report). Palette redone with distinct colors (accessibility): TEAL for genuinely-SABS-assigned schools (reserved until v2.8.2b data loads), GRAY for all other public + charter, DARK BLUE for private. Card badges show 'In your district — verify assignment' with a district-finder link (Google-searches for the district's official school-finder) so users can look up their exact zoned school.",
+          "v2.8.2a": "SABS attendance-zone Worker plumbing — /api/school-assignment endpoint + pure-JS point-in-polygon (ray-casting) + bbox pre-filter. Reads per-state SABS GeoJSON from KV (key: nrny:sabs:{ST}). Returns {available:false} gracefully when state's SABS not loaded. Frontend then merges: if a school's ncessch matches assignment result, sets _sabs_assigned:true → renders teal + '🎯 Assigned to your address'. Data pipeline (v2.8.2b) uploads the actual SABS_1516 GeoJSON per state to KV. Data source: NCES SABS 2015-16, 10 years stale — every response includes a caveat string user MUST surface in UI.",
         },
         endpoints: [
           "/health", "/events", "/alerts", "/quakes", "/aqi",
@@ -91,6 +97,10 @@ export default {
           "/admin/events-ingest", "/admin/events-sources-seed",
           // v2.7.11 — auto-discovery preview
           "/events-discover",
+          // v2.7.15 — browser-triggered bulk ingest + cron
+          "/admin/bulk-ingest",
+          // v2.8.2a — SABS point-in-polygon assignment lookup
+          "/school-assignment",
         ],
         ticketmaster:  env.TICKETMASTER_KEY  ? "configured" : "missing",
         seatgeek:      env.SEATGEEK_CLIENT_ID ? "configured" : "missing",
@@ -170,6 +180,8 @@ export default {
     // v2.7.3: school zoning — point→district lookup via Census geographies,
     // then NCES CCD roster filtered by LEAID. Replaces distance-based query.
     if (url.pathname.endsWith("/school-zone"))      { return await handleSchoolZone(url, env, ctx); }
+    // v2.8.2a: point-in-polygon over NCES SABS attendance-zone data
+    if (url.pathname.endsWith("/school-assignment")){ return await handleSchoolAssignment(url, env, ctx); }
     // v2.7.9: pre-geocoded medical index — read-side inspection endpoint.
     // Ingest + query endpoints added in steps 2 + 4.
     if (url.pathname.endsWith("/geo-index-info"))   { return await handleGeoIndexInfo(url, env, ctx); }
@@ -184,6 +196,10 @@ export default {
     if (url.pathname.endsWith("/events-sources"))      { return await handleEventsSources(url, env, ctx); }
     if (url.pathname.endsWith("/admin/events-ingest")) { return await handleEventsIngest(url, env, ctx); }
     if (url.pathname.endsWith("/admin/events-sources-seed")) { return await handleEventsSourcesSeed(url, env, ctx); }
+    // v2.7.15: browser-triggered bulk ingest — orchestrates geo + all events
+    // sources across all 51 states via a persistent KV cursor. Same code
+    // path is called by scheduled() cron handler for weekly auto-refresh.
+    if (url.pathname.endsWith("/admin/bulk-ingest")) { return await handleBulkIngest(url, env, ctx); }
     // v2.7.11: scalable-scraping additions — auto-discovery + federal + sitemap crawler
     if (url.pathname.endsWith("/events-discover"))     { return await handleEventsDiscover(url, env, ctx); }
     // v2.5: city open-data business licenses — generic adapter that pulls
@@ -907,6 +923,20 @@ export default {
       hidden_counts,
       ...radius_metadata,
     });
+  },
+
+  // v2.7.15: Scheduled cron handler. Configure crons in wrangler.jsonc:
+  //   "triggers": { "crons": ["*/5 * * * *"] }  → every 5 min
+  // Each tick advances the bulk-ingest cursor by ONE (state, source) pair.
+  // Full cycle = 306 pairs × 5 min = ~25.5 hrs.
+  // Cursor auto-resets 7 days after last completion, so this is effectively
+  // a weekly refresh with no manual intervention.
+  async scheduled(event, env, ctx) {
+    try {
+      await nrnyBulkScheduled(event, env, ctx);
+    } catch (e) {
+      console.error("[bulk-ingest cron] failed:", (e && e.stack) || e);
+    }
   },
 };
 
@@ -3500,10 +3530,22 @@ async function handleGeoIndexInfo(url, env, ctx) {
 //
 // Returns diagnostic JSON with per-source counts + geocode success rate.
 
+// v3.0.1.2: matched to production's 7-tab layout (Emergency rooms · Hospitals ·
+// Urgent care · Clinics · Pharmacies · Fire · Police · Dentists). Each bucket
+// maps to a visible tab. Kaiser Skyport (MOB) → CLINIC bucket → Clinics tab.
+// Kaiser Santa Clara Medical Center → HOSPITAL bucket → Hospitals tab.
 const NRNY_TAXONOMY_BUCKETS = {
+  HOSPITAL: ["general acute care hospital", "hospital", "acute care", "children's hospital"],
   ER:       ["emergency medicine", "emergency medical services"],
-  UC:       ["urgent care", "walk-in"],
-  CLINIC:   ["clinic/center", "clinic", "family medicine", "internal medicine", "primary care"],
+  UC:       ["urgent care", "walk-in", "clinic/center - urgent care"],
+  CLINIC:   [
+              // v3.0.1.2: expanded to catch Kaiser MOBs + specialty centers +
+              // primary care that isn't urgent-care-branded. These surface in
+              // the Clinics tab (production has a dedicated tab for these).
+              "clinic/center", "clinic", "family medicine", "internal medicine",
+              "primary care", "ambulatory health care", "multi-specialty",
+              "community health", "ambulatory surgical",
+            ],
   DENTIST:  ["dentist", "dental"],
   PHARMACY: ["pharmacy", "community/retail pharmacy"],
 };
@@ -3652,11 +3694,23 @@ async function nrnyFetchCmsForState(state) {
 // any) into the diag object so the next failure surfaces the actual reason.
 const NRNY_NPPES_QUERY_TAXONOMIES = [
   // Each entry: { bucket, taxonomies_to_try }
-  // We iterate taxonomies_to_try until one returns results (NPPES sometimes
-  // matches partial strings differently). NPPES uses NUCC taxonomy descriptions.
+  // v3.0.1.2: expanded to include ORG-level facility taxonomies. Previously
+  // we only queried physician taxonomies (Emergency Medicine, Family Medicine)
+  // which return individual doctors, missing whole classes of facilities:
+  // Kaiser MOBs, ambulatory clinics, hospital orgs. NPPES has Type 1 (individual)
+  // and Type 2 (organization) NPIs — org taxonomies unlock the Type 2 records.
+  { bucket: "HOSPITAL", queries: ["General Acute Care Hospital", "Hospital"] },  // v3.0.1.2 NEW
   { bucket: "ER",       queries: ["Emergency Medicine"] },
-  { bucket: "UC",       queries: ["Urgent Care"] },
-  { bucket: "CLINIC",   queries: ["Family Medicine", "Internal Medicine"] },
+  { bucket: "UC",       queries: ["Urgent Care", "Clinic/Center - Urgent Care"] },  // v3.0.1.2: added org variant
+  { bucket: "CLINIC",   queries: [
+      "Family Medicine",
+      "Internal Medicine",
+      "Clinic/Center - Family Medicine",             // v3.0.1.2: Kaiser MOBs + similar
+      "Clinic/Center - Community Health",            // v3.0.1.2: FQHCs
+      "Clinic/Center - Ambulatory Health Care",      // v3.0.1.2: outpatient centers
+      "Clinic/Center - Multi-Specialty",             // v3.0.1.2: catch-all for multi-specialty MOBs
+    ] },
+  { bucket: "SURGERY",  queries: ["Ambulatory Surgical"] },  // v3.0.1.2 NEW
   { bucket: "DENTIST",  queries: ["Dentist"] },
   { bucket: "PHARMACY", queries: ["Pharmacy"] },
 ];
@@ -4162,7 +4216,13 @@ async function handleMedicalRadius(url, env, ctx) {
 
 const NRNY_EV_SOURCES_KEY = "nearnity:events:sources:v1";
 const NRNY_EV_META_KEY    = "nearnity:events:meta";
+// v3.0.1: per-source keys instead of one-key-per-state. Fixes the overwrite
+// bug where running e.g. USDA ingest wiped Ticketmaster events from the
+// same state. Legacy single-key path retained as fallback for reads so we
+// don't lose pre-v3.0.1 data before it expires.
 function nrnyEvByStateKey(state) { return `nearnity:events:by-state:${(state || "").toUpperCase().slice(0, 2)}`; }
+function nrnyEvBySourceKey(state, sourceId) { return `nearnity:events:by-state:${(state || "").toUpperCase().slice(0, 2)}:${sourceId}`; }
+const NRNY_EV_INFLIGHT_KEY = (state) => `nearnity:events:inflight:${(state || "").toUpperCase().slice(0, 2)}`;
 
 async function nrnyEvReadSources(env) {
   if (!env || !env.EVENTS_KV) return {};
@@ -4174,13 +4234,66 @@ async function nrnyEvWriteSources(env, sources) {
   await env.EVENTS_KV.put(NRNY_EV_SOURCES_KEY, JSON.stringify(sources), { expirationTtl: 365 * 86400 });
   return { ok: true, count: Object.keys(sources).length };
 }
+
+// v3.0.1: Read all per-source event arrays for a state, merged.
+// Also reads the legacy single-key (for pre-v3.0.1 data still in KV).
 async function nrnyEvReadState(env, state) {
   if (!env || !env.EVENTS_KV) return [];
+  const stateAbbr = (state || "").toUpperCase().slice(0, 2);
+  const meta = (await env.EVENTS_KV.get(NRNY_EV_META_KEY, "json")) || null;
+  const knownSources = (meta && meta.states && meta.states[stateAbbr] && meta.states[stateAbbr].source_ids) || [];
+  const merged = [];
+  // Read all known per-source keys in parallel
+  if (knownSources.length > 0) {
+    const arrays = await Promise.all(knownSources.map(async (sid) => {
+      try {
+        const v = await env.EVENTS_KV.get(nrnyEvBySourceKey(stateAbbr, sid), "json");
+        return Array.isArray(v) ? v : [];
+      } catch (_) { return []; }
+    }));
+    for (const a of arrays) merged.push(...a);
+  }
+  // Legacy fallback: single-key data written pre-v3.0.1
   try {
-    const v = await env.EVENTS_KV.get(nrnyEvByStateKey(state), "json");
-    return Array.isArray(v) ? v : [];
-  } catch (_) { return []; }
+    const legacy = await env.EVENTS_KV.get(nrnyEvByStateKey(stateAbbr), "json");
+    if (Array.isArray(legacy) && legacy.length) {
+      // Only include legacy if we don't already have a source that covers it
+      // (dedupe below in events-radius handler).
+      merged.push(...legacy);
+    }
+  } catch (_) {}
+  return merged;
 }
+
+// v3.0.1: Write ONE source's events for a state. Doesn't overwrite other
+// sources' data. Also updates meta.states[state].source_ids so the reader
+// knows which per-source keys exist.
+async function nrnyEvWriteStateSource(env, state, sourceId, events) {
+  if (!env || !env.EVENTS_KV) return { ok: false };
+  const stateAbbr = (state || "").toUpperCase().slice(0, 2);
+  await env.EVENTS_KV.put(
+    nrnyEvBySourceKey(stateAbbr, sourceId),
+    JSON.stringify(events),
+    { expirationTtl: 30 * 86400 }
+  );
+  // Update meta.states so reader knows this source exists for this state
+  try {
+    const meta = (await env.EVENTS_KV.get(NRNY_EV_META_KEY, "json")) || { states: {}, last_run: null };
+    if (!meta.states[stateAbbr]) meta.states[stateAbbr] = { count: 0, updated_at: null, source_ids: [] };
+    if (!Array.isArray(meta.states[stateAbbr].source_ids)) meta.states[stateAbbr].source_ids = [];
+    if (!meta.states[stateAbbr].source_ids.includes(sourceId)) {
+      meta.states[stateAbbr].source_ids.push(sourceId);
+    }
+    meta.states[stateAbbr].updated_at = new Date().toISOString();
+    meta.last_run = new Date().toISOString();
+    await env.EVENTS_KV.put(NRNY_EV_META_KEY, JSON.stringify(meta), { expirationTtl: 30 * 86400 });
+  } catch (_) {}
+  return { ok: true, count: events.length };
+}
+
+// v3.0.1: Legacy write kept for one-shot callers that write the merged set.
+// Only used by ingest orchestrator when writing the geocoded superset;
+// prefer nrnyEvWriteStateSource for per-source writes.
 async function nrnyEvWriteState(env, state, events) {
   if (!env || !env.EVENTS_KV) return { ok: false };
   await env.EVENTS_KV.put(nrnyEvByStateKey(state), JSON.stringify(events), { expirationTtl: 30 * 86400 });
@@ -4326,6 +4439,240 @@ function nrnyParseICal(icsText, sourceUrl) {
 // further down that also handles type="discover", type="sitemap", and
 // type="federal" in addition to legacy schema_org / ical.)
 
+// ═══════════════════════════════════════════════════════════════════════
+// v2.7.15 — Bulk-ingest orchestrator (browser-triggered + cron-scheduled)
+// ═══════════════════════════════════════════════════════════════════════
+// Replaces the terminal bulk-ingest.sh dependency. Two triggers:
+//   1. Manual: GET /api/admin/bulk-ingest?admin_token=X (from ANY browser)
+//              Returns an HTML page that auto-refreshes every 4s until done.
+//   2. Cron:   scheduled() handler, one step per tick. Configure crons
+//              in wrangler.jsonc → "triggers": { "crons": ["*/5 * * * *"] }
+//
+// Both share the same cursor stored in EVENTS_KV so manual and cron can
+// coexist without racing (each takes the next step from wherever cursor
+// happens to be). Chunked ONE state × ONE source per invocation so each
+// stays well under Cloudflare's 50-subrequest cap.
+
+const NRNY_BULK_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","DC","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
+
+const NRNY_BULK_SOURCES = [
+  { kind: "geo",    label: "Medical (CMS + NPPES)" },
+  { kind: "events", source: "nps",           label: "NPS events" },
+  { kind: "events", source: "usda",          label: "USDA farmers markets" },
+  { kind: "events", source: "ticketmaster",  label: "Ticketmaster" },
+  { kind: "events", source: "libraries",     label: "BiblioCommons libraries" },
+  { kind: "events", source: "socrata",       label: "Socrata city datasets" },
+];
+
+const NRNY_BULK_CURSOR_KEY = "nrny:bulk:cursor";
+const NRNY_BULK_AUTO_RESET_MS = 7 * 24 * 3600 * 1000;   // 7 days
+
+async function nrnyBulkGetCursor(env) {
+  try {
+    const c = await env.EVENTS_KV.get(NRNY_BULK_CURSOR_KEY, "json");
+    return c || { state_idx: 0, source_idx: 0, started_at: null, completed_at: null, results: {} };
+  } catch (_) {
+    return { state_idx: 0, source_idx: 0, started_at: null, completed_at: null, results: {} };
+  }
+}
+
+async function nrnyBulkSetCursor(env, cursor) {
+  await env.EVENTS_KV.put(NRNY_BULK_CURSOR_KEY, JSON.stringify(cursor), { expirationTtl: 30 * 86400 });
+}
+
+// Run one (state, source) step. Advances cursor + persists result.
+async function nrnyBulkStep(env, ctx) {
+  const total = NRNY_BULK_STATES.length * NRNY_BULK_SOURCES.length;
+  const cursor = await nrnyBulkGetCursor(env);
+
+  if (cursor.state_idx >= NRNY_BULK_STATES.length) {
+    return { done: true, cursor, total, step: null };
+  }
+  if (!cursor.started_at) cursor.started_at = new Date().toISOString();
+
+  const state = NRNY_BULK_STATES[cursor.state_idx];
+  const src = NRNY_BULK_SOURCES[cursor.source_idx];
+  const sourceLabel = src.kind === "geo" ? "geo" : src.source;
+  const stepKey = `${state}:${sourceLabel}`;
+
+  let stepResult;
+  const stepStart = Date.now();
+  try {
+    if (src.kind === "geo") {
+      // Reuse existing handleGeoIngest by passing a synthetic URL.
+      const innerUrl = new URL(`https://internal/api/admin/geo-ingest?state=${state}&admin_token=${encodeURIComponent(env.ADMIN_TOKEN || "")}`);
+      const resp = await handleGeoIngest(innerUrl, env, ctx);
+      stepResult = await resp.json();
+    } else if (src.kind === "events") {
+      const sources = await nrnyEvReadSources(env);
+      if (Object.keys(sources).length === 0) {
+        stepResult = { error: "No event sources registered. Run /api/admin/events-sources-seed?overwrite=1 first.", state };
+      } else {
+        stepResult = await nrnyRunEventsIngestForState(env, state, sources, [src.source]);
+      }
+    }
+  } catch (e) {
+    stepResult = { error: (e && e.message) || String(e) };
+  }
+  const elapsedMs = Date.now() - stepStart;
+
+  // Normalize summary counts across geo and events reports.
+  const total_events = (stepResult && typeof stepResult.total_events === "number")
+    ? stepResult.total_events
+    : ((stepResult && (stepResult.cms_fetched || 0)) + (stepResult && (stepResult.nppes_fetched || 0)));
+  const geocoded_events = (stepResult && typeof stepResult.geocoded_events === "number")
+    ? stepResult.geocoded_events
+    : ((stepResult && (stepResult.cms_geocoded || 0)) + (stepResult && (stepResult.nppes_geocoded || 0)));
+
+  cursor.results[stepKey] = {
+    total_events,
+    geocoded_events,
+    elapsed_ms: elapsedMs,
+    error: (stepResult && stepResult.error) || null,
+    at: new Date().toISOString(),
+  };
+
+  // Advance cursor
+  cursor.source_idx++;
+  if (cursor.source_idx >= NRNY_BULK_SOURCES.length) {
+    cursor.source_idx = 0;
+    cursor.state_idx++;
+  }
+  if (cursor.state_idx >= NRNY_BULK_STATES.length) {
+    cursor.completed_at = new Date().toISOString();
+  }
+  await nrnyBulkSetCursor(env, cursor);
+
+  return {
+    done: cursor.state_idx >= NRNY_BULK_STATES.length,
+    cursor, total,
+    step: { state, source: sourceLabel, result: cursor.results[stepKey] },
+  };
+}
+
+function _nrnyEscHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function nrnyBulkIngestPageHtml(url, stepResult) {
+  const { done, cursor, total, step } = stepResult;
+  const doneCount = Math.min(cursor.state_idx * NRNY_BULK_SOURCES.length + cursor.source_idx, total);
+  const pct = Math.round((doneCount / total) * 100);
+  const adminToken = url.searchParams.get("admin_token") || "";
+  const selfUrl = `/api/admin/bulk-ingest?admin_token=${encodeURIComponent(adminToken)}`;
+  const resetUrl = `${selfUrl}&reset=1`;
+  const statusUrl = `${selfUrl}&status=1`;
+
+  const refreshMeta = done
+    ? ""
+    : `<meta http-equiv="refresh" content="4;url=${_nrnyEscHtml(selfUrl)}">`;
+
+  const nextState = cursor.state_idx < NRNY_BULK_STATES.length ? NRNY_BULK_STATES[cursor.state_idx] : "—";
+  const nextSrc = cursor.source_idx < NRNY_BULK_SOURCES.length ? (NRNY_BULK_SOURCES[cursor.source_idx].label) : "—";
+
+  const lastStepHtml = step
+    ? `<p style="margin:14px 0"><b>Last step:</b> ${_nrnyEscHtml(step.state)} · ${_nrnyEscHtml(step.source)} — <code>total=${step.result.total_events}</code>, <code>geocoded=${step.result.geocoded_events}</code>, <code>${step.result.elapsed_ms}ms</code>${step.result.error ? `, <span style="color:#b34d4d">error: ${_nrnyEscHtml(step.result.error)}</span>` : ""}</p>`
+    : "";
+
+  const doneBanner = done
+    ? `<p style="color:#2d6a4f;font-weight:600;font-size:16px;">✅ All ${total} steps complete — cursor stays here until manual reset OR auto-reset after 7 days.</p>`
+    : `<p><b>Next:</b> ${_nrnyEscHtml(nextState)} · ${_nrnyEscHtml(nextSrc)} — auto-refresh in 4s…</p>`;
+
+  return `<!DOCTYPE html>
+<html><head>
+<title>Nearnity Bulk Ingest</title>
+${refreshMeta}
+<style>
+body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 20px; color: #333; line-height: 1.5; }
+h1 { color: #0a9396; margin-bottom: 8px; }
+.progress { background: #eee; height: 26px; border-radius: 4px; overflow: hidden; margin: 16px 0; position: relative; }
+.progress-bar { background: linear-gradient(90deg, #0a9396, #005f73); height: 100%; transition: width 0.3s; }
+.progress-label { position: absolute; top: 0; left: 0; right: 0; text-align: center; color: white; font-weight: 600; font-size: 13px; line-height: 26px; text-shadow: 0 1px 2px rgba(0,0,0,0.3); }
+pre { background: #f6f6f6; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 11px; max-height: 300px; }
+.actions { margin: 20px 0; }
+.actions a { display: inline-block; padding: 8px 16px; background: #0a9396; color: white; text-decoration: none; border-radius: 4px; margin-right: 8px; font-weight: 500; }
+.actions a.secondary { background: #666; }
+.actions a.warn { background: #b34d4d; }
+code { font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #f6f6f6; padding: 1px 5px; border-radius: 3px; }
+.meta { color: #666; font-size: 13px; margin-top: 20px; }
+</style>
+</head><body>
+<h1>Nearnity bulk ingest</h1>
+<p><b>Progress:</b> ${doneCount} / ${total} steps · state ${Math.min(cursor.state_idx + 1, NRNY_BULK_STATES.length)}/${NRNY_BULK_STATES.length}</p>
+<div class="progress">
+  <div class="progress-bar" style="width: ${pct}%;"></div>
+  <div class="progress-label">${pct}%</div>
+</div>
+${doneBanner}
+${lastStepHtml}
+<div class="actions">
+  ${done ? `<a href="${_nrnyEscHtml(resetUrl)}" class="warn">Reset + start over</a>` : `<a href="${_nrnyEscHtml(selfUrl)}">Continue now</a>`}
+  <a href="${_nrnyEscHtml(statusUrl)}" target="_blank" class="secondary">JSON status</a>
+</div>
+<div class="meta">
+  <p>Cursor persists in KV. Safe to close this tab — cron will keep advancing every 5 min. Or reopen this URL anytime to resume manually. Full cycle takes ~25 min manual (4s/step) or ~25 hrs via cron (5 min/step).</p>
+</div>
+<details>
+<summary>Full cursor state</summary>
+<pre>${_nrnyEscHtml(JSON.stringify(cursor, null, 2))}</pre>
+</details>
+</body></html>`;
+}
+
+async function handleBulkIngest(url, env, ctx) {
+  const provided = url.searchParams.get("admin_token") || "";
+  if (env.ADMIN_TOKEN && provided !== env.ADMIN_TOKEN) return json({ error: "Forbidden" }, 403);
+
+  const reset = url.searchParams.get("reset") === "1";
+  if (reset) {
+    try { await env.EVENTS_KV.delete(NRNY_BULK_CURSOR_KEY); } catch (_) {}
+    // Show the reset page (no step taken)
+    const cursor = { state_idx: 0, source_idx: 0, started_at: null, completed_at: null, results: {} };
+    const html = nrnyBulkIngestPageHtml(url, { done: false, cursor, total: NRNY_BULK_STATES.length * NRNY_BULK_SOURCES.length, step: null });
+    return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+  }
+
+  const statusOnly = url.searchParams.get("status") === "1";
+  if (statusOnly) {
+    const cursor = await nrnyBulkGetCursor(env);
+    const total = NRNY_BULK_STATES.length * NRNY_BULK_SOURCES.length;
+    const doneCount = Math.min(cursor.state_idx * NRNY_BULK_SOURCES.length + cursor.source_idx, total);
+    return json({
+      cursor,
+      total,
+      progress_pct: Math.round((doneCount / total) * 100),
+      done: cursor.state_idx >= NRNY_BULK_STATES.length,
+      next_state: cursor.state_idx < NRNY_BULK_STATES.length ? NRNY_BULK_STATES[cursor.state_idx] : null,
+      next_source: cursor.source_idx < NRNY_BULK_SOURCES.length ? NRNY_BULK_SOURCES[cursor.source_idx] : null,
+    });
+  }
+
+  // Take one step
+  const stepResult = await nrnyBulkStep(env, ctx);
+  const html = nrnyBulkIngestPageHtml(url, stepResult);
+  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } });
+}
+
+// Scheduled cron handler — one step per tick + weekly auto-reset.
+async function nrnyBulkScheduled(event, env, ctx) {
+  const cursor = await nrnyBulkGetCursor(env);
+  const now = Date.now();
+
+  // Auto-reset if last completion is stale
+  if (cursor.completed_at && (now - new Date(cursor.completed_at).getTime() > NRNY_BULK_AUTO_RESET_MS)) {
+    try { await env.EVENTS_KV.delete(NRNY_BULK_CURSOR_KEY); } catch (_) {}
+    console.log("[bulk-ingest cron] Weekly reset — starting fresh cycle");
+  }
+
+  const c2 = await nrnyBulkGetCursor(env);
+  if (c2.state_idx >= NRNY_BULK_STATES.length) {
+    // Nothing to do — waiting for weekly reset window
+    return;
+  }
+  const stepResult = await nrnyBulkStep(env, ctx);
+  console.log(`[bulk-ingest cron] step: ${stepResult.step && stepResult.step.state} · ${stepResult.step && stepResult.step.source} → total=${stepResult.step && stepResult.step.result.total_events} geocoded=${stepResult.step && stepResult.step.result.geocoded_events}`);
+}
+
 async function handleEventsIngest(url, env, ctx) {
   const provided = url.searchParams.get("admin_token") || "";
   if (env.ADMIN_TOKEN && provided !== env.ADMIN_TOKEN) return json({ error: "Forbidden" }, 403);
@@ -4339,6 +4686,24 @@ async function handleEventsIngest(url, env, ctx) {
   const sources = await nrnyEvReadSources(env);
   if (Object.keys(sources).length === 0) {
     return json({ error: "No sources registered. Call /api/admin/events-sources-seed first.", state }, 400);
+  }
+  // v3.0.1.1: validate source filter tokens up-front so typos like
+  // "tickermaster" return a clear error instead of silently running 0 sources.
+  if (sourceFilter && sourceFilter.length) {
+    const validGroups = new Set();
+    for (const cfg of Object.values(sources)) {
+      if (cfg.type === "federal") validGroups.add(cfg.provider);
+      else if (cfg.type === "bibliocommons_api") validGroups.add("libraries");
+      else validGroups.add(cfg.type);
+    }
+    const unknown = sourceFilter.filter(s => !validGroups.has(s.toLowerCase()));
+    if (unknown.length > 0) {
+      return json({
+        error: `Unknown source filter: ${unknown.join(", ")}`,
+        valid_sources: Array.from(validGroups).sort(),
+        hint: "Common typos: 'tickermaster' → 'ticketmaster'. Case-insensitive.",
+      }, 400);
+    }
   }
   const report = await nrnyRunEventsIngestForState(env, state, sources, sourceFilter);
   return json(report);
@@ -4813,6 +5178,220 @@ async function nrnyFetchBiblioCommonsEvents(env, slug, opts) {
   return { events, diag, error: diag.last_error || null };
 }
 
+// ─── Ticketmaster Discovery API adapter (v2.7.12) ────────────────────
+// The old /api/events path already calls Ticketmaster via fetchTicketmaster()
+// but that was per-lat/lon-request. For the new KV pipeline we want to
+// pre-ingest per state so events-radius queries are cache-hot. TM Discovery
+// supports stateCode= param, 200/page, paginated.
+async function nrnyFetchTicketmasterForState(env, state) {
+  if (!env || !env.TICKETMASTER_KEY) return { events: [], error: "TICKETMASTER_KEY not configured" };
+  const now = new Date();
+  const horizon = new Date(now.getTime() + 60 * 24 * 3600 * 1000);   // 60 days out
+  const events = [];
+  const diag = { pages_fetched: 0, raw_event_count: 0 };
+  const maxPages = 10;   // v3.0.1.1: bumped from 5 to catch major-venue concerts past the 1000-event cap (e.g. Nick Cave was missed at 1000)
+
+  for (let page = 0; page < maxPages; page++) {
+    const u = new URL("https://app.ticketmaster.com/discovery/v2/events.json");
+    u.searchParams.set("apikey", env.TICKETMASTER_KEY);
+    u.searchParams.set("stateCode", state.toUpperCase());
+    u.searchParams.set("countryCode", "US");
+    u.searchParams.set("size", "200");
+    u.searchParams.set("page", String(page));
+    u.searchParams.set("sort", "date,asc");
+    u.searchParams.set("startDateTime", now.toISOString().replace(/\.\d{3}Z$/, "Z"));
+    u.searchParams.set("endDateTime", horizon.toISOString().replace(/\.\d{3}Z$/, "Z"));
+    try {
+      const resp = await fetch(u.toString(), { cf: { cacheTtl: 1800 } });
+      if (!resp.ok) { diag.last_error = `TM HTTP ${resp.status} on page ${page}`; break; }
+      const data = await resp.json();
+      diag.pages_fetched = page + 1;
+      const raw = (data._embedded && data._embedded.events) || [];
+      diag.raw_event_count += raw.length;
+      for (const e of raw) {
+        const venue = e._embedded && e._embedded.venues && e._embedded.venues[0];
+        const lat = venue && venue.location && parseFloat(venue.location.latitude);
+        const lon = venue && venue.location && parseFloat(venue.location.longitude);
+        const startISO = (e.dates && e.dates.start && e.dates.start.dateTime)
+          || (e.dates && e.dates.start && e.dates.start.localDate ? `${e.dates.start.localDate}T${e.dates.start.localTime || "19:00"}` : null);
+        // v3.0.1.1: filter TM events whose URL is the bare-ID pattern
+        // (ticketmaster.com/event/{alphanum}). Those are TM's internal ID
+        // slugs — often stale (e.g. Trevor Noah past show). The full-slug
+        // URL (e.g. .../simple-plan-bigger-.../event/12345) is the real
+        // clickable one. Drop stale ID-only ones.
+        const url = e.url || "";
+        const isBareIdUrl = /^https:\/\/(?:www\.)?ticketmaster\.com\/event\/[A-Za-z0-9_-]+\/?$/.test(url);
+        if (isBareIdUrl) { diag.stale_url_skipped = (diag.stale_url_skipped || 0) + 1; continue; }
+        events.push({
+          title: e.name,
+          description: (e.info || e.pleaseNote || "").slice(0, 500),
+          start_date: startISO,
+          end_date: (e.dates && e.dates.end && e.dates.end.dateTime) || null,
+          url,
+          image: (e.images && e.images[0] && e.images[0].url) || null,
+          venue_name: venue ? venue.name : null,
+          venue_address: venue ? [venue.address && venue.address.line1, venue.city && venue.city.name, venue.state && venue.state.stateCode, venue.postalCode].filter(Boolean).join(", ") : null,
+          lat: Number.isFinite(lat) ? lat : null,
+          lon: Number.isFinite(lon) ? lon : null,
+          category: (e.classifications && e.classifications[0] && e.classifications[0].segment && e.classifications[0].segment.name || "event").toLowerCase(),
+          _raw_type: "Ticketmaster Event",
+          source_id: "ticketmaster_events",
+          source_name: "Ticketmaster",
+        });
+      }
+      // Stop when TM says we've exhausted results
+      const totalPages = (data.page && data.page.totalPages) || 0;
+      if (page + 1 >= totalPages) break;
+    } catch (e) { diag.last_error = (e && e.message) || String(e); break; }
+  }
+  return { events, error: diag.last_error || null, diag };
+}
+
+// ─── Socrata generic adapter (v2.7.12) ──────────────────────────────
+// Reads any Socrata Open Data dataset. Config passes `endpoint` (full URL
+// including domain + /resource/{id}.json) and `field_map` telling the
+// adapter which dataset columns hold title, dates, address, lat/lon.
+// Chicago's tn7v-6rnw ships lat/lon inline; others need Census geocoding
+// via the existing pipeline (address field passed through).
+async function nrnyFetchSocrataDataset(env, cfg) {
+  const url = cfg.endpoint + (cfg.endpoint.includes("?") ? "&" : "?") + "$limit=" + (cfg.limit || 500);
+  try {
+    const headers = { "Accept": "application/json", ...NRNY_BROWSER_HEADERS };
+    if (env && env.SOCRATA_APP_TOKEN) headers["X-App-Token"] = env.SOCRATA_APP_TOKEN;
+    const resp = await fetch(url, { headers, cf: { cacheTtl: 3600 } });
+    if (!resp.ok) return { events: [], error: `Socrata HTTP ${resp.status}`, diag: null };
+    const rows = await resp.json();
+    if (!Array.isArray(rows)) return { events: [], error: "Socrata response was not an array", diag: null };
+    const fm = cfg.field_map || {};
+    const events = rows.map(row => {
+      const lat = fm.lat ? parseFloat(row[fm.lat]) : null;
+      const lon = fm.lon ? parseFloat(row[fm.lon]) : null;
+      const addr = fm.address ? row[fm.address] : null;
+      return {
+        title: fm.title ? (row[fm.title] || "Event") : "Event",
+        description: fm.description ? (row[fm.description] || "").slice(0, 500) : "",
+        start_date: fm.start_date ? row[fm.start_date] : null,
+        end_date: fm.end_date ? row[fm.end_date] : null,
+        url: fm.url ? (typeof row[fm.url] === "string" ? row[fm.url] : (row[fm.url] && row[fm.url].url)) : (cfg.source_url || null),
+        image: null,
+        venue_name: fm.venue ? row[fm.venue] : null,
+        venue_address: addr || null,
+        lat: Number.isFinite(lat) ? lat : null,
+        lon: Number.isFinite(lon) ? lon : null,
+        category: cfg.category || "event",
+        _raw_type: `Socrata ${cfg.name || cfg.endpoint}`,
+      };
+    });
+    return { events, error: null, diag: { rows_fetched: rows.length } };
+  } catch (e) { return { events: [], error: (e && e.message) || String(e), diag: null }; }
+}
+
+// ─── PCFMA farmers markets parser (v2.7.11.5) ───────────────────────────
+// pcfma.org/visit is a Drupal Views page with a plain HTML <table> listing
+// all 36 Bay Area farmers markets. Each row has: Market name (linked to
+// /market/{slug}), City, Open Time, Open Days. Detail pages have address
+// + coords in schema.org LocalBusiness markup.
+async function nrnyFetchPcfmaMarkets(env) {
+  try {
+    const resp = await nrnyFetchPolite("https://www.pcfma.org/visit", { cf: { cacheTtl: 86400 } });
+    if (!resp.ok) return { events: [], error: `PCFMA HTTP ${resp.status}`, diag: { http_status: resp.status } };
+    const html = await resp.text();
+
+    // v2.7.11.6: capture diagnostics so we can debug parser mismatches
+    // without guessing at HTML structure. Count key elements + sample links.
+    const trCount = (html.match(/<tr[\s>]/gi) || []).length;
+    const tableCount = (html.match(/<table[\s>]/gi) || []).length;
+    const marketLinkCount = (html.match(/href=["']\/market\/[^"']+/gi) || []).length;
+    const marketLinkSamples = [];
+    const linkSampleRe = /href=["']\/market\/([^"'#?]+)/gi;
+    let lm;
+    while ((lm = linkSampleRe.exec(html)) !== null && marketLinkSamples.length < 5) {
+      if (!marketLinkSamples.includes(lm[1])) marketLinkSamples.push(lm[1]);
+    }
+
+    // Extract market permalinks — most reliable anchor since we know they
+    // exist. Then treat each unique /market/{slug} as a market row.
+    // Fall back to <table> parse only if permalinks don't surface names.
+    const uniqueMarkets = {};
+    const marketRe = /<a[^>]+href=["']\/market\/([^"'#?]+)["'][^>]*>([^<]+)<\/a>/gi;
+    let mm;
+    while ((mm = marketRe.exec(html)) !== null) {
+      const slug = mm[1];
+      const name = mm[2].trim();
+      if (!uniqueMarkets[slug] || name.length > uniqueMarkets[slug].name.length) {
+        uniqueMarkets[slug] = { slug, name, city: null, hours: null, days: null };
+      }
+    }
+    const rows = Object.values(uniqueMarkets);
+
+    const diag = {
+      http_status: resp.status,
+      html_length: html.length,
+      table_element_count: tableCount,
+      tr_element_count: trCount,
+      market_link_count: marketLinkCount,
+      unique_markets_found: rows.length,
+      sample_slugs: rows.slice(0, 5).map(r => r.slug),
+      html_head_500: html.slice(0, 500),
+    };
+    const events = [];
+
+    // Fetch each detail page for address + coords. Cap at 40 to stay
+    // safely under CF's 50-subrequest cap (we already used 1 for /visit).
+    const maxDetails = Math.min(rows.length, 40);
+    for (let i = 0; i < maxDetails; i++) {
+      const row = rows[i];
+      try {
+        const detailResp = await nrnyFetchPolite(`https://www.pcfma.org/market/${row.slug}`, { cf: { cacheTtl: 86400 } });
+        if (!detailResp.ok) continue;
+        const detailHtml = await detailResp.text();
+        // Look for schema.org LocalBusiness or address block
+        let lat = null, lon = null, address = null;
+        const jsonLdRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+        let ld;
+        while ((ld = jsonLdRe.exec(detailHtml)) !== null) {
+          try {
+            const obj = JSON.parse(ld[1]);
+            const nodes = Array.isArray(obj) ? obj : [obj];
+            for (const node of nodes) {
+              if (node.geo && Number.isFinite(node.geo.latitude) && Number.isFinite(node.geo.longitude)) {
+                lat = node.geo.latitude;
+                lon = node.geo.longitude;
+              }
+              if (node.address) {
+                const a = node.address;
+                address = [a.streetAddress, a.addressLocality, a.addressRegion, a.postalCode].filter(Boolean).join(", ");
+              }
+            }
+          } catch (_) {}
+        }
+        // Fallback: parse address from a common markup pattern
+        if (!address) {
+          const addrMatch = detailHtml.match(/<address[^>]*>([\s\S]*?)<\/address>/i);
+          if (addrMatch) address = addrMatch[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+        }
+        events.push({
+          title: row.name || "Farmers Market",
+          description: `${row.days || ""} ${row.hours || ""} in ${row.city || "Bay Area"}`.trim(),
+          start_date: null,
+          end_date: null,
+          url: `https://www.pcfma.org/market/${row.slug}`,
+          image: null,
+          venue_name: row.name,
+          venue_address: address || `${row.name}, ${row.city || "Bay Area"}, CA`,
+          lat,
+          lon,
+          category: "market",
+          _raw_type: "PCFMA Market",
+          source_id: "pcfma_visit",
+          source_name: "PCFMA Farmers Markets",
+        });
+      } catch (_) { /* skip individual failure */ }
+    }
+    return { events, error: null, diag };
+  } catch (e) { return { events: [], error: (e && e.message) || String(e), diag: null }; }
+}
+
 // USDA Local Food Portal — nationwide farmers markets.
 // v2.7.11.4: REQUIRES env.USDA_KEY (free registration:
 // https://www.usdalocalfoodportal.com/fe/fregisterpublicapi/).
@@ -4873,22 +5452,62 @@ const NRNY_EV_V711_SEEDS = {
   // ─── Federal (nationwide, one row each) ───────────────────────────
   "usda_farmers_markets": { name: "USDA Local Food Directory (Farmers Markets)", type: "federal", provider: "usda", per_state: true },
   "nps_events":           { name: "National Park Service Events",                 type: "federal", provider: "nps",  per_state: true },
+  "ticketmaster_events":  { name: "Ticketmaster (concerts, sports, arts)",        type: "federal", provider: "ticketmaster", per_state: true },
+
+  // ─── Socrata Open Data event datasets (v2.7.12) ─────────────────
+  // ONE adapter (nrnyFetchSocrataDataset) reads any Socrata dataset.
+  // Chicago's tn7v-6rnw ships lat/lon inline (100% geocode rate).
+  // Others rely on the existing Census batch geocoder to fill lat/lon
+  // from address fields (venue_address). Filter param optional via
+  // ?source=socrata after v2.7.12 ships.
+  "chi_parks_socrata":    { name: "Chicago Park District Activities",  type: "socrata", state: "IL", metro: "chicago",
+    endpoint: "https://data.cityofchicago.org/resource/tn7v-6rnw.json",
+    field_map: { title: "title", description: "description", start_date: "start_date", end_date: "end_date",
+                 venue: "location_facility", address: "address", lat: "latitude", lon: "longitude", url: "information_link" },
+    source_url: "https://data.cityofchicago.org/Parks-Recreation/Park-District-Activities/tn7v-6rnw",
+    category: "recreation" },
+  "nyc_events_socrata":   { name: "NYC Permitted Events",              type: "socrata", state: "NY", metro: "new-york",
+    endpoint: "https://data.cityofnewyork.us/resource/tvpp-9vvx.json",
+    field_map: { title: "event_name", description: "event_type", start_date: "start_date_time", end_date: "end_date_time",
+                 venue: "event_location", address: "event_location" },
+    source_url: "https://data.cityofnewyork.us/City-Government/NYC-Permitted-Event-Information/tvpp-9vvx",
+    category: "event" },
+  "sea_events_socrata":   { name: "Seattle Special Events Permits",    type: "socrata", state: "WA", metro: "seattle",
+    endpoint: "https://data.seattle.gov/resource/dm95-f8w5.json",
+    field_map: { title: "name_of_event", description: "permit_type", start_date: "event_start_date", end_date: "event_end_date",
+                 venue: "event_location_neighborhood", address: "event_location_neighborhood" },
+    source_url: "https://data.seattle.gov/Community-and-Culture/Special-Events-Permits/dm95-f8w5",
+    category: "event" },
+  "aus_events_socrata":   { name: "Austin Convention Center Events",   type: "socrata", state: "TX", metro: "austin",
+    endpoint: "https://data.austintexas.gov/resource/p9ma-z6y9.json",
+    field_map: { title: "event_name", description: "location", start_date: "arrive_date", end_date: "depart_date",
+                 venue: "location", address: "location", url: "website" },
+    source_url: "https://data.austintexas.gov/Events/Austin-Convention-Center-Event-Listings/p9ma-z6y9",
+    category: "event" },
 
   // ─── BiblioCommons libraries (via gateway.bibliocommons.com/v2 API) ──
   // v2.7.11.4: pivoted from schema.org scraping (SPA, returned 0) to the
   // undocumented but public gateway API. Verified sjpl returns 6,877 events.
   // Adding a new library = one row here with slug matching the subdomain.
   "sjpl_biblio":       { name: "San Jose Public Library",         type: "bibliocommons_api", slug: "sjpl",              state: "CA", metro: "san-jose" },
-  "sfpl_biblio":       { name: "SF Public Library",               type: "bibliocommons_api", slug: "sfpl",              state: "CA", metro: "san-francisco" },
-  "berkeley_biblio":   { name: "Berkeley Public Library",         type: "bibliocommons_api", slug: "berkeley",          state: "CA", metro: "berkeley" },
+  // ─── DROPPED in v2.7.11.5 ────────────────────────────────────────
+  // sfpl: on BiblioCommons but events feature disabled at tenant level (returns
+  //       "Events feature not available"). SFPL uses sfpl.org/calendar (separate
+  //       WordPress-like system). TODO v2.7.12: build sfpl.org scraper.
+  // berkeley: NOT on BiblioCommons — uses Communico (api.communico.co client
+  //           `berkeleypubliclibrary`). TODO v2.7.12: build Communico adapter.
+  // lapl: NOT on BiblioCommons — uses Communico (client `lacountylibrary`).
+  //       Same TODO. Communico adapter would unlock dozens of US libraries.
   "oakland_biblio":    { name: "Oakland Public Library",          type: "bibliocommons_api", slug: "oaklandlibrary",    state: "CA", metro: "oakland" },
   "scc_biblio":        { name: "Santa Clara County Library",      type: "bibliocommons_api", slug: "sccl",              state: "CA", metro: "santa-clara" },
   "smc_biblio":        { name: "San Mateo County Library",        type: "bibliocommons_api", slug: "smcl",              state: "CA", metro: "san-mateo" },
   "marin_biblio":      { name: "Marin County Library",            type: "bibliocommons_api", slug: "marinlibrary",      state: "CA", metro: "marin" },
   "contracosta_biblio":{ name: "Contra Costa County Library",     type: "bibliocommons_api", slug: "ccclib",            state: "CA", metro: "contra-costa" },
   "alameda_biblio":    { name: "Alameda County Library",          type: "bibliocommons_api", slug: "aclibrary",         state: "CA", metro: "alameda" },
-  "lapl_biblio":       { name: "LA County Library",               type: "bibliocommons_api", slug: "lacountylibrary",   state: "CA", metro: "los-angeles" },
-  "sdpl_biblio":       { name: "San Diego Public Library",        type: "bibliocommons_api", slug: "sdplibrary",        state: "CA", metro: "san-diego" },
+  // sdpl: DROPPED v2.7.11.6. Same tenant-level events disable as SFPL —
+  // /locations returns 10 branches but /events returns 403. SDPL runs its
+  // event calendar on sandiego.gov/public-library separately. Same v2.7.12
+  // TODO as SFPL: build a WordPress/civic-CMS calendar scraper.
   "nypl_biblio":       { name: "New York Public Library",         type: "bibliocommons_api", slug: "nypl",              state: "NY", metro: "new-york" },
   "bklyn_biblio":      { name: "Brooklyn Public Library",         type: "bibliocommons_api", slug: "bklynlibrary",      state: "NY", metro: "brooklyn" },
   "queens_biblio":     { name: "Queens Public Library",           type: "bibliocommons_api", slug: "queenslibrary",     state: "NY", metro: "queens" },
@@ -4909,13 +5528,19 @@ const NRNY_EV_V711_SEEDS = {
   "lvccld_biblio":     { name: "Las Vegas Library",               type: "bibliocommons_api", slug: "lvccld",            state: "NV", metro: "las-vegas" },
   "slcpl_biblio":      { name: "Salt Lake City Library",          type: "bibliocommons_api", slug: "slcpl",             state: "UT", metro: "salt-lake" },
 
-  // ─── Sitemap-crawl sources (server-rendered CMS event pages) ─────
-  "pcfma_sitemap":     { name: "PCFMA Farmers Markets (via sitemap)", type: "sitemap", domain: "https://pcfma.org", event_paths: ["/markets/", "/market/"], state: "CA", metro: "bay-area" },
+  // ─── PCFMA farmers markets (custom HTML parser, v2.7.11.5) ─────────
+  // v2.7.11.4 attempted sitemap crawl — all 4 standard sitemap paths 404'd.
+  // Correct source: /visit page has a server-rendered <table> with all 36
+  // Bay Area markets (name, city, hours, days) + permalinks to /market/{slug}
+  // where address + coords live. Parser reads /visit, extracts table rows,
+  // fetches each market detail page for lat/lon.
+  "pcfma_visit":       { name: "PCFMA Farmers Markets", type: "pcfma_html", url: "https://www.pcfma.org/visit", state: "CA", metro: "bay-area" },
 
-  // ─── DROPPED in v2.7.11.4: ebrpd_ical (no working feed exists — ebparks.org
-  // /calendar is server-rendered HTML with no coordinates; would require
-  // scraping 76 pages + hand-maintaining park-name-to-lat/lon lookup. Not
-  // worth v1 investment; revisit if EBRPD publishes a feed.)
+  // ─── DROPPED in v2.7.11.4/5: rows that don't work + why ─────────
+  // ebrpd_ical: no working feed exists — ebparks.org/calendar is HTML with
+  //             no coordinates; would need /calendar HTML scrape + hand-maintained
+  //             park-name-to-lat/lon lookup. Not worth v1 investment.
+  // pcfma_sitemap: replaced by pcfma_visit above (sitemap paths all 404'd).
 };
 
 async function handleEventsSourcesSeed(url, env, ctx) {
@@ -4926,7 +5551,7 @@ async function handleEventsSourcesSeed(url, env, ctx) {
   const seed = NRNY_EV_V711_SEEDS;
   const merged = overwrite ? seed : { ...seed, ...existing };
   const result = await nrnyEvWriteSources(env, merged);
-  return json({ ok: true, count: result.count, seeded_sources: Object.keys(seed).length, overwrite, note: "v2.7.11.3: federal (USDA+NPS nationwide) + BiblioCommons libraries + PCFMA sitemap — .gov city rows dropped after CF Worker TLS fingerprint block confirmed" });
+  return json({ ok: true, count: result.count, seeded_sources: Object.keys(seed).length, overwrite, note: "v2.7.11.5: federal (USDA+NPS) + BiblioCommons libraries (SDPL slug fixed; SFPL/Berkeley/LACL dropped — different platforms) + PCFMA HTML parser (replaces broken sitemap crawl)" });
 }
 
 // ─── UPDATED ingest orchestrator: handles all source types ────────────
@@ -4997,14 +5622,35 @@ async function nrnyRunEventsIngestForState(env, state, sources, sourceFilter) {
           if (error) srcReport.error = error;
           if (Number.isFinite(raw_count)) srcReport.diag = { raw_count };
           parsed = events;
+        } else if (cfg.provider === "ticketmaster") {
+          const { events, error, diag } = await nrnyFetchTicketmasterForState(env, state);
+          if (error) srcReport.error = error;
+          srcReport.diag = diag;
+          parsed = events;
         } else {
           srcReport.error = `Unknown federal provider: ${cfg.provider}`;
         }
       }
 
+      // --- Socrata generic (v2.7.12) ---
+      else if (cfg.type === "socrata") {
+        const { events, error, diag } = await nrnyFetchSocrataDataset(env, cfg);
+        if (error) srcReport.error = error;
+        srcReport.diag = diag;
+        parsed = events;
+      }
+
       // --- BiblioCommons gateway API (v2.7.11.4) ---
       else if (cfg.type === "bibliocommons_api") {
         const { events, diag, error } = await nrnyFetchBiblioCommonsEvents(env, cfg.slug, { maxPages: cfg.max_pages || 2 });
+        if (error) srcReport.error = error;
+        srcReport.diag = diag;
+        parsed = events;
+      }
+
+      // --- PCFMA farmers markets (v2.7.11.5) — custom HTML parser ---
+      else if (cfg.type === "pcfma_html") {
+        const { events, error, diag } = await nrnyFetchPcfmaMarkets(env);
         if (error) srcReport.error = error;
         srcReport.diag = diag;
         parsed = events;
@@ -5022,6 +5668,20 @@ async function nrnyRunEventsIngestForState(env, state, sources, sourceFilter) {
       }
 
       srcReport.fetched = parsed.length;
+      // v3.0.1: filter out clearly-past events at ingest time. Grace window
+      // of 1 day past today accounts for TZ + all-day events. Events with
+      // null start_date (recurring farmers markets, ongoing exhibits) are
+      // kept — those don't stale the same way concert dates do.
+      const now = Date.now();
+      const graceMs = 24 * 3600 * 1000;
+      const cutoff = now - graceMs;
+      const beforeFilter = parsed.length;
+      parsed = parsed.filter(e => {
+        if (!e.start_date) return true;   // no date → keep (recurring)
+        const t = Date.parse(e.start_date);
+        return !Number.isFinite(t) || t >= cutoff;
+      });
+      srcReport.filtered_past = beforeFilter - parsed.length;
       // Tag events with source metadata
       const tagged = parsed.map(e => ({
         ...e,
@@ -5031,6 +5691,9 @@ async function nrnyRunEventsIngestForState(env, state, sources, sourceFilter) {
         source_metro: cfg.metro || null,
         source_url: e.source_url || (cfg.url || cfg.domain || null),
       }));
+      // v3.0.1: track per-source arrays separately so we can write per-source
+      // KV keys (fixes the overwrite bug where USDA was wiping Ticketmaster).
+      srcReport._events_for_source = tagged;
       allEvents.push(...tagged);
     } catch (e) {
       srcReport.error = srcReport.error || ((e && e.message) || String(e));
@@ -5068,11 +5731,32 @@ async function nrnyRunEventsIngestForState(env, state, sources, sourceFilter) {
   report.total_events = allEvents.length;
   report.geocoded_events = geocoded.length;
 
-  await nrnyEvWriteState(env, state, geocoded);
-  const meta = (await env.EVENTS_KV.get(NRNY_EV_META_KEY, "json")) || { states: {}, last_run: null };
-  meta.states[state] = { count: geocoded.length, updated_at: new Date().toISOString(), sources: Object.keys(report.sources).length };
-  meta.last_run = new Date().toISOString();
-  await env.EVENTS_KV.put(NRNY_EV_META_KEY, JSON.stringify(meta), { expirationTtl: 30 * 86400 });
+  // v2.7.11.5: per-source geocoded counter (was always 0). Count how many
+  // of the geocoded events came from each source_id after geocoding pass.
+  for (const ev of geocoded) {
+    const sid = ev.source_id;
+    if (sid && report.sources[sid]) {
+      report.sources[sid].geocoded = (report.sources[sid].geocoded || 0) + 1;
+    }
+  }
+
+  // v3.0.1: write PER-SOURCE keys instead of one merged blob for the state.
+  // Prevents the overwrite bug where running USDA wiped Ticketmaster events.
+  // Only writes sources that were actually run in THIS invocation (source
+  // filter) — others' data stays untouched.
+  for (const [srcId, srcReport] of Object.entries(report.sources)) {
+    const events = srcReport._events_for_source || [];
+    // Only keep events that got geocoded (or were pre-geocoded)
+    const geoOnly = events.filter(e => Number.isFinite(e.lat) && Number.isFinite(e.lon));
+    if (geoOnly.length > 0) {
+      await nrnyEvWriteStateSource(env, state, srcId, geoOnly);
+    } else if (srcReport.fetched === 0) {
+      // Source returned 0 events (legitimately empty). Clear the source key
+      // so stale data from a prior run doesn't linger.
+      try { await env.EVENTS_KV.delete(nrnyEvBySourceKey(state, srcId)); } catch (_) {}
+    }
+    delete srcReport._events_for_source;   // don't leak into JSON response
+  }
   return report;
 }
 
@@ -5097,16 +5781,52 @@ async function handleEventsRadius(url, env, ctx) {
     const events = arrays.flat();
 
     if (events.length === 0) {
+      // v3.0.1: reactive on-demand ingest. Fire per-state ingest in background
+      // so the NEXT user in this state gets real data. Prevents "admin has to
+      // trigger it manually" gap. In-flight guard prevents thundering-herd
+      // when many users hit the same empty state at once.
+      const inflightKey = NRNY_EV_INFLIGHT_KEY(state);
+      const alreadyInflight = await env.EVENTS_KV.get(inflightKey);
+      if (!alreadyInflight && ctx && typeof ctx.waitUntil === "function") {
+        // Mark in-flight (5-min TTL so a stuck job doesn't block retries forever)
+        await env.EVENTS_KV.put(inflightKey, new Date().toISOString(), { expirationTtl: 300 });
+        ctx.waitUntil((async () => {
+          try {
+            const sources = await nrnyEvReadSources(env);
+            if (Object.keys(sources).length > 0) {
+              // Kick off high-yield sources first (federal, one adapter unlocks all states)
+              await nrnyRunEventsIngestForState(env, state, sources, ["ticketmaster", "usda", "nps"]);
+            }
+          } catch (e) { console.error("[reactive-ingest]", state, (e && e.message) || String(e)); }
+          finally { try { await env.EVENTS_KV.delete(inflightKey); } catch (_) {} }
+        })());
+      }
       return json({
         results: [], count: 0,
-        meta: { kv_hit: false, source_states: statesToQuery,
-                note: `No events ingested for ${statesToQuery.join(", ")}. Run /api/admin/events-ingest?state=${state} to populate.` }
+        meta: {
+          kv_hit: false,
+          source_states: statesToQuery,
+          reactive_ingest: !alreadyInflight,
+          note: alreadyInflight
+            ? `Populating events for ${state} — try again in 30-60 seconds.`
+            : `Started background ingest for ${state}. Refresh in 30-60 seconds for real data.`
+        }
       });
     }
 
     const now = Date.now();
     const weekMs = 7 * 86400 * 1000;
     const monthMs = 31 * 86400 * 1000;
+    // v3.0.1: ALWAYS drop past events at query time regardless of `when`
+    // filter. Catches stale KV records (e.g. Trevor Noah past show whose
+    // TM URL now 404s). Grace window: 1 day back for TZ / all-day events.
+    const pastCutoff = now - 86400 * 1000;
+    const isNotPast = (startISO) => {
+      if (!startISO) return true;   // null start = recurring (farmers markets), keep
+      const t = new Date(startISO).getTime();
+      if (!isFinite(t)) return true;
+      return t >= pastCutoff;
+    };
     const inWindow = (startISO) => {
       if (!startISO || whenParam === "all" || whenParam === "") return true;
       const t = new Date(startISO).getTime();
@@ -5117,10 +5837,23 @@ async function handleEventsRadius(url, env, ctx) {
       return true;
     };
 
+    // v3.0.1: dedupe merged events by (title + start_date + venue) — the
+    // per-source key change can double-count if two sources indexed the
+    // same event (e.g. Ticketmaster + Socrata for the same concert).
+    const seenKeys = new Set();
+    const dedupe = (e) => {
+      const k = `${(e.title || "").toLowerCase().slice(0, 40)}|${(e.start_date || "").slice(0, 16)}|${(e.venue_name || "").toLowerCase().slice(0, 25)}`;
+      if (seenKeys.has(k)) return false;
+      seenKeys.add(k);
+      return true;
+    };
+
     const withDist = events
       .filter(e => isFinite(e.lat) && isFinite(e.lon))
       .filter(e => !catParam || (e.category === catParam))
+      .filter(e => isNotPast(e.start_date))
       .filter(e => inWindow(e.start_date))
+      .filter(dedupe)
       .map(e => ({
         ...e,
         distance_mi: Math.round(nrnyHaversineMi(lat, lon, e.lat, e.lon) * 10) / 10,
@@ -5592,6 +6325,153 @@ async function handleNCESSchools(url, env, ctx) {
 // Census returns named-key arrays in result.geographies. Most US addresses
 // fall in a Unified district; some (NY, MA, NJ) have separate Elementary +
 // Secondary instead. We prefer Unified, fall back to combining the others.
+// ═══════════════════════════════════════════════════════════════════════
+// v2.8.2a — SABS attendance-zone lookup
+// ═══════════════════════════════════════════════════════════════════════
+// Free NCES SABS 2015-16 GeoJSON gives us actual attendance-zone polygons.
+// Preprocessing (v2.8.2b) uploads per-state GeoJSON to KV keyed by state
+// abbrev. This code path reads that KV, filters candidates by bbox, and
+// runs point-in-polygon on the survivors to return the actual assigned
+// school NCES IDs for a given lat/lon.
+//
+// Ships gracefully: when SABS KV is empty for a state, endpoint returns
+// { available: false, reason: "not loaded" }. Frontend falls back to
+// the current gray "In your district — verify assignment" behavior.
+//
+// DATA STALENESS: SABS was an experimental NCES survey run only in
+// 2013-14 and 2015-16. No newer federal release exists (verified 2026-07-21).
+// Zones redraw regularly in growth-belt metros (TX, FL, GA, NC) — expect
+// 15-20% inaccuracy vs current 2026 zones. UI must caveat with "NCES
+// 2015-16 data, verify with your district" — never present as current.
+
+const NRNY_SABS_KEY_PREFIX = "nrny:sabs:";   // per-state key: nrny:sabs:{ST}
+
+// Pure-JS ray-casting point-in-polygon test for a single ring.
+// Coords format: [[lon, lat], [lon, lat], ...] (GeoJSON convention).
+function nrnyPipRing(lat, lon, ring) {
+  let inside = false;
+  const n = ring.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const [xi, yi] = ring[i];   // xi=lon, yi=lat
+    const [xj, yj] = ring[j];
+    const intersects = ((yi > lat) !== (yj > lat)) &&
+      (lon < (xj - xi) * (lat - yi) / (yj - yi + Number.EPSILON) + xi);
+    if (intersects) inside = !inside;
+  }
+  return inside;
+}
+
+// PIP for a Polygon (outer ring + optional holes) or MultiPolygon.
+// GeoJSON Polygon = [[outer_ring], [hole1], [hole2], ...]
+// GeoJSON MultiPolygon = [Polygon1, Polygon2, ...]
+function nrnyPointInPolygon(lat, lon, geometry) {
+  if (!geometry) return false;
+  const t = geometry.type;
+  const c = geometry.coordinates;
+  if (t === "Polygon") {
+    if (!nrnyPipRing(lat, lon, c[0])) return false;
+    // Check holes: if inside any hole, point is not in polygon
+    for (let h = 1; h < c.length; h++) {
+      if (nrnyPipRing(lat, lon, c[h])) return false;
+    }
+    return true;
+  }
+  if (t === "MultiPolygon") {
+    for (const poly of c) {
+      if (!nrnyPipRing(lat, lon, poly[0])) continue;
+      let inHole = false;
+      for (let h = 1; h < poly.length; h++) {
+        if (nrnyPipRing(lat, lon, poly[h])) { inHole = true; break; }
+      }
+      if (!inHole) return true;
+    }
+    return false;
+  }
+  return false;
+}
+
+// Bounding-box filter — cheap check to skip polygons that can't contain
+// the point. Preprocessing (v2.8.2b) precomputes bbox per zone so this
+// runs in O(N_zones) constant time, well under CPU budget.
+function nrnyBboxContains(bbox, lat, lon) {
+  if (!Array.isArray(bbox) || bbox.length < 4) return true;   // no bbox = don't filter
+  const [minLon, minLat, maxLon, maxLat] = bbox;
+  return lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
+}
+
+// Read a state's SABS zones from KV.
+// KV value shape (produced by v2.8.2b preprocessing):
+//   { state, generated_at, features: [
+//       { id, ncessch, leaid, schnam, level, grade_low, grade_high, bbox, geometry },
+//       ...
+//   ]}
+async function nrnySabsGetState(env, stateAbbrev) {
+  try {
+    const key = NRNY_SABS_KEY_PREFIX + stateAbbrev.toUpperCase();
+    return await env.EVENTS_KV.get(key, "json");
+  } catch (_) { return null; }
+}
+
+// Main lookup: for (lat, lon, state), return { E: ncessch, M: ncessch, H: ncessch }
+// with the assigned school for each grade level. Missing levels return null.
+async function nrnySabsLookup(env, lat, lon, stateAbbrev) {
+  const data = await nrnySabsGetState(env, stateAbbrev);
+  if (!data || !Array.isArray(data.features) || data.features.length === 0) {
+    return { available: false, reason: `No SABS data loaded for ${stateAbbrev}. Run v2.8.2b preprocessing.` };
+  }
+  const assigned = { E: null, M: null, H: null, other: [] };
+  let checked = 0, matched = 0;
+  for (const f of data.features) {
+    if (!nrnyBboxContains(f.bbox, lat, lon)) continue;
+    checked++;
+    if (!nrnyPointInPolygon(lat, lon, f.geometry)) continue;
+    matched++;
+    // NCES `level` codes: P=Primary(elementary), M=Middle, H=High, O=Other
+    const lvl = (f.level || "").toUpperCase();
+    if (lvl === "P" || lvl === "E") assigned.E = { ncessch: f.ncessch, leaid: f.leaid, name: f.schnam, grade_low: f.grade_low, grade_high: f.grade_high };
+    else if (lvl === "M")            assigned.M = { ncessch: f.ncessch, leaid: f.leaid, name: f.schnam, grade_low: f.grade_low, grade_high: f.grade_high };
+    else if (lvl === "H")            assigned.H = { ncessch: f.ncessch, leaid: f.leaid, name: f.schnam, grade_low: f.grade_low, grade_high: f.grade_high };
+    else                             assigned.other.push({ ncessch: f.ncessch, leaid: f.leaid, name: f.schnam, level: lvl });
+  }
+  return {
+    available: true,
+    assigned,
+    diag: { state: stateAbbrev, feature_count: data.features.length, bbox_survivors: checked, pip_matches: matched, generated_at: data.generated_at || null },
+    caveat: "Based on NCES SABS 2015-16 attendance-zone data — 10 years old. Zones redraw regularly, especially in growth-belt metros. Verify with your district's official school finder.",
+  };
+}
+
+// GET /api/school-assignment?lat=X&lon=Y&state=CA  (state optional; derived
+// from Census reverse-geo if omitted, but that's an extra subrequest; frontend
+// should pass state when it already knows it).
+async function handleSchoolAssignment(url, env, ctx) {
+  const lat = parseFloat(url.searchParams.get("lat"));
+  const lon = parseFloat(url.searchParams.get("lon"));
+  if (!isFinite(lat) || !isFinite(lon)) return json({ error: "Missing lat/lon" }, 400);
+  let state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
+  if (!state) {
+    // Reverse-geo the state via Census (same call handleSchoolZone uses)
+    try {
+      const u = new URL("https://geocoding.geo.census.gov/geocoder/geographies/coordinates");
+      u.searchParams.set("x", String(lon));
+      u.searchParams.set("y", String(lat));
+      u.searchParams.set("benchmark", "Public_AR_Current");
+      u.searchParams.set("vintage", "Current_Current");
+      u.searchParams.set("layers", "States");
+      u.searchParams.set("format", "json");
+      const r = await fetch(u.toString());
+      if (r.ok) {
+        const d = await r.json();
+        const s = d && d.result && d.result.geographies && d.result.geographies.States && d.result.geographies.States[0];
+        if (s && s.STUSAB) state = s.STUSAB.toUpperCase();
+      }
+    } catch (_) {}
+  }
+  if (!state) return json({ available: false, reason: "Could not resolve state from lat/lon" });
+  const result = await nrnySabsLookup(env, lat, lon, state);
+  return json(result);
+}
+
 async function handleSchoolZone(url, env, ctx) {
   const lat = parseFloat(url.searchParams.get("lat"));
   const lon = parseFloat(url.searchParams.get("lon"));
