@@ -752,153 +752,14 @@
     <!-- Loading state -->
     <div id="nrny-loading" style="text-align:center; padding:40px; color:var(--ink-soft);" hidden>Loading…</div>
 
-    <!-- Results grid (populated by JS) -->
+    <!-- Results grid (populated by JS). v3.0.0-alpha.2: removed the
+         prototype sample cards — they were causing full-width stacked
+         layout (wrapper div was a single grid item containing all samples)
+         and confusing users into thinking data had loaded. -->
     <div class="results-grid" id="nrny-results-grid">
-      <!-- Placeholder cards below (v3 prototype samples). Replaced when
-           user searches. Keeping for design reference until v3.0.1. -->
-      <div id="nrny-placeholder-samples">
-
-      <!-- Tier: Authoritative (Teal) — federal / state -->
-      <article class="card tier-authoritative">
-        <div class="card-tier-label">Federal source</div>
-        <h3 class="card-title">Free Mobile Vaccine Clinic — Milpitas Public Library</h3>
-        <p class="card-sub">Sat, Jun 28 · 10:00 AM – 2:00 PM</p>
-        <p class="card-meta">160 N Main St, Milpitas · 0.8 mi away</p>
-        <p class="card-meta">Hosted by Santa Clara County Public Health</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="#">Details</a>
-          <a class="card-action" href="#">📅 Add to calendar</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Public dataset (Indigo) — verified open data -->
-      <article class="card tier-public">
-        <div class="card-tier-label">Public dataset</div>
-        <h3 class="card-title">Berryessa Farmers' Market</h3>
-        <p class="card-sub">Every Saturday · 9:00 AM – 1:00 PM</p>
-        <p class="card-meta">Berryessa Community Center, San Jose · 4.2 mi away</p>
-        <p class="card-meta">From PCFMA registry · Free admission</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="#">Details</a>
-          <a class="card-action" href="#">📅 Add to calendar</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Community-reviewed (Coral) — curated submission -->
-      <article class="card tier-community">
-        <div class="card-tier-label">Community-reviewed</div>
-        <h3 class="card-title">Pop-up Yoga in the Park</h3>
-        <p class="card-sub">Sun, Jun 29 · 8:30 AM – 9:30 AM</p>
-        <p class="card-meta">Cardoza Park, Milpitas · 1.1 mi away</p>
-        <p class="card-meta">Submitted by a neighbor · Free, bring a mat</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="#">Details</a>
-          <a class="card-action" href="#">📅 Add to calendar</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Third-party source-linked (Slate) — Ticketmaster etc -->
-      <article class="card tier-third-party">
-        <div class="card-tier-label">Source-linked</div>
-        <h3 class="card-title">Cirque du Soleil — ECHO</h3>
-        <p class="card-sub">Fri, Jul 11 · 7:30 PM</p>
-        <p class="card-meta">SAP Center, San Jose · 8.7 mi away · 💲 Ticketed</p>
-        <p class="card-meta">Source: Ticketmaster · We display, don't verify</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="#">Get tickets</a>
-          <a class="card-action" href="#">📅 Add to calendar</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Authoritative again -->
-      <article class="card tier-authoritative">
-        <div class="card-tier-label">Federal source</div>
-        <h3 class="card-title">El Camino Hospital — Mountain View</h3>
-        <p class="card-sub">⭐⭐⭐⭐ 4-star · Medicare Care Compare</p>
-        <p class="card-meta">2500 Grant Rd · 12.5 mi · ER open 24/7</p>
-        <p class="card-meta">Trauma Level II · 247 beds</p>
-        <div class="card-actions">
-          <a class="card-action emergency" href="tel:6509407000">📞 Call ER</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">☆ Save</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Public dataset -->
-      <article class="card tier-public">
-        <div class="card-tier-label">Public dataset</div>
-        <h3 class="card-title">Cardoza Park</h3>
-        <p class="card-sub">11.2 acres · Playground, dog park, basketball</p>
-        <p class="card-meta">630 Cardoza Dr, Milpitas · 1.1 mi away</p>
-        <p class="card-meta">From OpenStreetMap · Free admission, open dawn-dusk</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="#">Details</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">☆ Save</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Community-reviewed -->
-      <article class="card tier-community">
-        <div class="card-tier-label">Community-reviewed</div>
-        <h3 class="card-title">Dublin Music &amp; Sound</h3>
-        <p class="card-sub">Violin / guitar repair · Lesson rentals</p>
-        <p class="card-meta">7211 Dublin Blvd, Dublin · 14.3 mi away</p>
-        <p class="card-meta">Recommended by 2 neighbors · Phone: (925) 829-1234</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="tel:9258291234">📞 Call</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">↗ Website</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Tier: Third-party -->
-      <article class="card tier-third-party">
-        <div class="card-tier-label">Source-linked</div>
-        <h3 class="card-title">Independent Sushi Cafe</h3>
-        <p class="card-sub">Restaurant · Open daily 11am-10pm</p>
-        <p class="card-meta">123 Main St, Milpitas · 0.6 mi away</p>
-        <p class="card-meta">From OpenStreetMap · We display, don't verify</p>
-        <div class="card-actions">
-          <a class="card-action primary" href="#">Details</a>
-          <a class="card-action" href="#">🧭 Directions</a>
-          <a class="card-action" href="#">Source</a>
-          <a class="card-action" href="#">⚠ Report</a>
-        </div>
-      </article>
-
-      <!-- Emergency-tier (red border for life-critical alerts) -->
-      <article class="card tier-emergency">
-        <div class="card-tier-label">Active alert</div>
-        <h3 class="card-title">Heat Advisory through Sunday 8pm</h3>
-        <p class="card-sub">National Weather Service · Effective now</p>
-        <p class="card-meta">Highs near 102°F. Hydrate. Check on elderly neighbors.</p>
-        <p class="card-meta">Cooling center: Milpitas Community Center, 457 E Calaveras</p>
-        <div class="card-actions">
-          <a class="card-action emergency" href="#">Full alert →</a>
-          <a class="card-action" href="#">🧭 Directions to cooling center</a>
-          <a class="card-action" href="#">Source: NWS</a>
-        </div>
-      </article>
-      </div>
+      <p style="grid-column:1/-1;color:var(--ink-soft);padding:40px 20px;text-align:center;font-size:15px;">
+        Enter an address in the search bar above to see what's around you.
+      </p>
     </div>
 
     <!-- Tier color legend (educates users on the color system) -->
@@ -980,7 +841,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.0-alpha.1",
+  version: "v3.0.0-alpha.2",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1225,17 +1086,13 @@ async function nrnyRenderSubnav(tab, subnav) {
   const grid = $("nrny-results-grid");
   const loading = $("nrny-loading");
   const map = $("nrny-section-map");
-  // Hide placeholder samples on first real render
-  const ph = $("nrny-placeholder-samples");
-  if (ph) ph.style.display = "none";
-
   grid.innerHTML = "";
   map.hidden = true;
   loading.hidden = false;
 
   if (!NRNY.geo) {
     loading.hidden = true;
-    grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Enter an address in the search bar above to see results.</p>`;
+    grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:40px 20px;text-align:center;font-size:15px;">Enter an address in the search bar above to see results for <b>${escapeHtml(NRNY_TAB_META[tab] && NRNY_TAB_META[tab].title || tab)}</b>.</p>`;
     return;
   }
 
@@ -1445,8 +1302,11 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // Initialize with default tab (Around me)
+  // Initialize with default tab (Around me → Events subnav). Since no
+  // address is set on first load, nrnyRenderSubnav shows the "enter
+  // address" prompt in the results grid.
   nrnyRenderSubnavBar("around");
+  nrnyRenderSubnav("around", "events");
 
   // Version stamp in footer
   const fv = document.querySelector(".site-footer-version");
