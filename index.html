@@ -6834,7 +6834,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2a</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2b</span>
     </div>
   </header>
 
@@ -8457,7 +8457,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2a</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2b</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -19989,19 +19989,27 @@ function renderCivicSection(addr) {
   $("card-civic").hidden = false;
   setText("civic-value", stateCode ? `For ${stateName}` : `Civic resources`);
 
-  // v2.0.1.1: if public-services data hasn't been fetched yet (user went straight
-  // to Civic without visiting Safety), kick off the Overpass query that
-  // populates DMV office locations + civic offices. The loader's completion
-  // handler will re-call renderCivicSection (wired in v2.0.1), which then
-  // renders the DMV tiles above the static state portal links.
+  // v2.0.1.1 → v2.8.2b hotfix: if public-services data hasn't been fetched yet
+  // (user went straight to Civic without visiting Safety), kick off the
+  // Overpass query that populates DMV office locations + civic offices.
+  //
+  // CRITICAL FIX 2026-07-28: previous guard checked `civic.length > 0` but
+  // loadNearbyPublicServices returns MEDICAL items, not civic ones. When OSM
+  // returns 0 civic and federal returns 60 medical, civic.length stayed 0
+  // forever → guard always true → INFINITE LOOP of medical-radius fetches
+  // (12k+ requests observed in DevTools). Fixed with a "once per geo" flag
+  // keyed on lat/lon so we fire the eager fetch once and don't retry unless
+  // the address changes.
   try {
-    const haveData = (typeof sectionState !== "undefined")
-      && sectionState["card-public-services"]
-      && sectionState["card-public-services"].grouped
-      && (sectionState["card-public-services"].grouped.civic || []).length > 0;
-    if (!haveData && typeof loadNearbyPublicServices === "function" && typeof lastGeo !== "undefined" && lastGeo) {
-      // Fire-and-forget — completion will re-render civic with the data
-      console.log("[civic] eagerly triggering public-services fetch for DMV locations");
+    const geoKey = lastGeo && lastGeo.lat && lastGeo.lon
+      ? `${Number(lastGeo.lat).toFixed(4)},${Number(lastGeo.lon).toFixed(4)}`
+      : null;
+    if (geoKey
+        && typeof loadNearbyPublicServices === "function"
+        && typeof lastGeo !== "undefined" && lastGeo
+        && window.__nrny_civic_eager_fired !== geoKey) {
+      window.__nrny_civic_eager_fired = geoKey;   // set BEFORE firing to defeat re-entry
+      console.log("[civic] eagerly triggering public-services fetch for DMV locations (once per geo)");
       loadNearbyPublicServices(lastGeo);
     }
   } catch (e) {}
