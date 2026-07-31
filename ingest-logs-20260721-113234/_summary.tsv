@@ -1,0 +1,19 @@
+state	source	http_status	fetched	geocoded	error
+CA	geo	403			
+CA	nps	403			
+CA	usda	403			
+CA	ticketmaster	403			
+CA	libraries	403			
+CA	socrata	403			
+TX	geo	403			
+TX	nps	403			
+TX	usda	403			
+TX	ticketmaster	403			
+TX	libraries	403			
+TX	socrata	403			
+NY	geo	403			
+NY	nps	403			
+NY	usda	403			
+NY	ticketmaster	403			
+NY	libraries	403			
+NY	socrata	403			

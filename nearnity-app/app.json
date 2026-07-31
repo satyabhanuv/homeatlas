@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Nearnity",
+    "slug": "nearnity",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#006aff"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.nearnity.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Nearnity uses your location to show verified public information about where you are — schools, clinics, alerts, and civic services nearby.",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "Nearnity uses your location to show what's nearby."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#006aff"
+      },
+      "package": "com.nearnity.app",
+      "permissions": [
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY"
+        }
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Nearnity uses your location to show verified public information about where you are.",
+          "locationAlwaysAndWhenInUsePermission": "Nearnity uses your location to show what's nearby."
+        }
+      ]
+    ],
+    "scheme": "nearnity",
+    "extra": {
+      "eas": {
+        "projectId": "REPLACE_WITH_EAS_PROJECT_ID"
+      }
+    }
+  }
+}
