@@ -581,7 +581,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.0-alpha</b> — Emergency cat-tab wired to live data (v2.7.9 /api/medical-radius). Other cat-tabs land per weekly rollout. Full launch Sep 15.
+  ⚠ <b>v3 PROTOTYPE</b> — static placeholder data, no live API calls. Review the design only. Production wiring lands in Phase 2.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -627,7 +627,7 @@
 
     <!-- Two big primary actions (50/50 use case split from spec) -->
     <div class="hero-primary-actions">
-      <a href="#" class="hero-primary-card" data-jump-tab="emergency" data-jump-subnav="urgent">
+      <a href="#urgent-care" class="hero-primary-card">
         <div class="hero-primary-icon emergency">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M9 3 L15 3 L15 9 L21 9 L21 15 L15 15 L15 21 L9 21 L9 15 L3 15 L3 9 L9 9 Z"/>
@@ -638,7 +638,7 @@
           <div class="hero-primary-sub">Open now · with phone &amp; directions</div>
         </div>
       </a>
-      <a href="#" class="hero-primary-card" data-jump-tab="around" data-jump-subnav="events">
+      <a href="#weekend-events" class="hero-primary-card">
         <div class="hero-primary-icon">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="4" width="18" height="18" rx="2"/>
@@ -656,15 +656,15 @@
 
     <!-- Search bar -->
     <div class="search-wrap">
-      <form class="searchbar" id="nrny-search-form">
+      <form class="searchbar" onsubmit="event.preventDefault();">
         <div class="search-field">
           <div class="search-field-label">Looking for</div>
-          <input type="text" id="nrny-q" placeholder="farmers market, hospital, food bank...">
+          <input type="text" placeholder="farmers market, hospital, food bank...">
         </div>
         <div class="search-divider"></div>
         <div class="search-field">
           <div class="search-field-label">Near</div>
-          <input type="text" id="nrny-where" placeholder="address, city, ZIP, or near me">
+          <input type="text" placeholder="address, city, ZIP, or near me">
         </div>
         <button type="submit" class="search-submit">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -675,13 +675,13 @@
       </form>
 
       <div class="quick-chips">
-        <button class="quick-chip" data-jump-tab="emergency" data-jump-subnav="hospitals">🚑 Emergency rooms</button>
-        <button class="quick-chip" data-jump-tab="emergency" data-jump-subnav="urgent">🏥 Urgent care</button>
-        <button class="quick-chip" data-jump-tab="around" data-jump-subnav="events">🎉 Events near you</button>
-        <button class="quick-chip" data-jump-tab="around" data-jump-subnav="events">🥬 Farmers market</button>
-        <button class="quick-chip" data-jump-tab="help" data-jump-subnav="food">🥫 Food bank</button>
-        <button class="quick-chip" data-jump-tab="around" data-jump-subnav="events">📚 Library</button>
-        <button class="quick-chip" data-jump-tab="govt" data-jump-subnav="dmv">🚗 DMV</button>
+        <button class="quick-chip">🚑 Emergency rooms</button>
+        <button class="quick-chip">🏥 Urgent care</button>
+        <button class="quick-chip">🎉 Events near you</button>
+        <button class="quick-chip">🥬 Farmers market</button>
+        <button class="quick-chip">🥫 Food bank</button>
+        <button class="quick-chip">📚 Library</button>
+        <button class="quick-chip">🚗 DMV</button>
       </div>
     </div>
   </div>
@@ -692,14 +692,16 @@
 
   <!-- Sidebar with 6 cat tabs -->
   <aside class="sidebar">
-    <button class="cat-tab active" data-tab="around">
+    <button class="cat-tab active">
+      <!-- Compass needle -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/>
         <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>
       </svg>
       Around me
     </button>
-    <button class="cat-tab" data-tab="home">
+    <button class="cat-tab">
+      <!-- House with chimney -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 12 L12 4 L21 12"/>
         <path d="M5 11 L5 20 L19 20 L19 11"/>
@@ -707,24 +709,27 @@
       </svg>
       My home
     </button>
-    <button class="cat-tab" data-tab="help">
+    <button class="cat-tab">
+      <!-- Hands / heart-handshake -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/>
         <path d="M12 5L9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.86a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/>
       </svg>
       Help
     </button>
-    <button class="cat-tab" data-tab="govt">
+    <button class="cat-tab">
       <span class="cat-tab-emoji">🏛️</span>
       Govt functions
     </button>
-    <button class="cat-tab" data-tab="emergency">
+    <button class="cat-tab">
+      <!-- Medical cross -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M9 3 L15 3 L15 9 L21 9 L21 15 L15 15 L15 21 L9 21 L9 15 L3 15 L3 9 L9 9 Z"/>
       </svg>
       Emergency
     </button>
-    <button class="cat-tab" data-tab="saved">
+    <button class="cat-tab">
+      <!-- Bookmark -->
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
       </svg>
@@ -733,33 +738,172 @@
   </aside>
 
   <!-- Content area -->
-  <main class="content" id="nrny-content">
+  <main class="content">
 
-    <div class="content-header" id="nrny-content-header">
-      <h2 id="nrny-content-h2">Around me</h2>
-      <p id="nrny-content-desc">Enter an address in the search bar to see what's nearby.</p>
+    <div class="content-header">
+      <h2>Around me</h2>
+      <p>Events, businesses, parks, schools — within 10 miles of your address.</p>
     </div>
 
-    <div class="address-bar" id="nrny-address-bar" hidden>
-      📍 <b>Serves this address:</b> <span id="nrny-address-text">—</span>
+    <div class="address-bar">
+      📍 <b>Serves this address:</b> Milpitas · Santa Clara County · CA
+      <span class="address-bar-chip is-good">Coverage: High</span>
+      <span class="address-bar-chip">Electric: PG&amp;E</span>
+      <span class="address-bar-chip">Schools: Milpitas USD</span>
+      <span class="address-bar-chip">Climate risks: Significant (7/10)</span>
     </div>
 
-    <nav class="subnav" id="nrny-subnav" hidden></nav>
+    <nav class="subnav">
+      <button class="subnav-tab active">Events <span class="subnav-tab-count">14</span></button>
+      <button class="subnav-tab">Local businesses <span class="subnav-tab-count">38</span></button>
+      <button class="subnav-tab">Schools <span class="subnav-tab-count">22</span></button>
+      <button class="subnav-tab">Parks &amp; rec <span class="subnav-tab-count">11</span></button>
+    </nav>
 
-    <!-- Section map (Leaflet). Hidden until data loads. -->
-    <div id="nrny-section-map" style="height: 320px; border-radius: 14px; overflow: hidden; margin: 20px 0; border: 1px solid var(--line);" hidden></div>
+    <!-- ════ Results grid (9 sample cards across 4 tier colors) ════ -->
+    <div class="results-grid">
 
-    <!-- Loading state -->
-    <div id="nrny-loading" style="text-align:center; padding:40px; color:var(--ink-soft);" hidden>Loading…</div>
+      <!-- Tier: Authoritative (Teal) — federal / state -->
+      <article class="card tier-authoritative">
+        <div class="card-tier-label">Federal source</div>
+        <h3 class="card-title">Free Mobile Vaccine Clinic — Milpitas Public Library</h3>
+        <p class="card-sub">Sat, Jun 28 · 10:00 AM – 2:00 PM</p>
+        <p class="card-meta">160 N Main St, Milpitas · 0.8 mi away</p>
+        <p class="card-meta">Hosted by Santa Clara County Public Health</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
 
-    <!-- Results grid (populated by JS). v3.0.0-alpha.2: removed the
-         prototype sample cards — they were causing full-width stacked
-         layout (wrapper div was a single grid item containing all samples)
-         and confusing users into thinking data had loaded. -->
-    <div class="results-grid" id="nrny-results-grid">
-      <p style="grid-column:1/-1;color:var(--ink-soft);padding:40px 20px;text-align:center;font-size:15px;">
-        Enter an address in the search bar above to see what's around you.
-      </p>
+      <!-- Tier: Public dataset (Indigo) — verified open data -->
+      <article class="card tier-public">
+        <div class="card-tier-label">Public dataset</div>
+        <h3 class="card-title">Berryessa Farmers' Market</h3>
+        <p class="card-sub">Every Saturday · 9:00 AM – 1:00 PM</p>
+        <p class="card-meta">Berryessa Community Center, San Jose · 4.2 mi away</p>
+        <p class="card-meta">From PCFMA registry · Free admission</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Community-reviewed (Coral) — curated submission -->
+      <article class="card tier-community">
+        <div class="card-tier-label">Community-reviewed</div>
+        <h3 class="card-title">Pop-up Yoga in the Park</h3>
+        <p class="card-sub">Sun, Jun 29 · 8:30 AM – 9:30 AM</p>
+        <p class="card-meta">Cardoza Park, Milpitas · 1.1 mi away</p>
+        <p class="card-meta">Submitted by a neighbor · Free, bring a mat</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Third-party source-linked (Slate) — Ticketmaster etc -->
+      <article class="card tier-third-party">
+        <div class="card-tier-label">Source-linked</div>
+        <h3 class="card-title">Cirque du Soleil — ECHO</h3>
+        <p class="card-sub">Fri, Jul 11 · 7:30 PM</p>
+        <p class="card-meta">SAP Center, San Jose · 8.7 mi away · 💲 Ticketed</p>
+        <p class="card-meta">Source: Ticketmaster · We display, don't verify</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Get tickets</a>
+          <a class="card-action" href="#">📅 Add to calendar</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Authoritative again -->
+      <article class="card tier-authoritative">
+        <div class="card-tier-label">Federal source</div>
+        <h3 class="card-title">El Camino Hospital — Mountain View</h3>
+        <p class="card-sub">⭐⭐⭐⭐ 4-star · Medicare Care Compare</p>
+        <p class="card-meta">2500 Grant Rd · 12.5 mi · ER open 24/7</p>
+        <p class="card-meta">Trauma Level II · 247 beds</p>
+        <div class="card-actions">
+          <a class="card-action emergency" href="tel:6509407000">📞 Call ER</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">☆ Save</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Public dataset -->
+      <article class="card tier-public">
+        <div class="card-tier-label">Public dataset</div>
+        <h3 class="card-title">Cardoza Park</h3>
+        <p class="card-sub">11.2 acres · Playground, dog park, basketball</p>
+        <p class="card-meta">630 Cardoza Dr, Milpitas · 1.1 mi away</p>
+        <p class="card-meta">From OpenStreetMap · Free admission, open dawn-dusk</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">☆ Save</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Community-reviewed -->
+      <article class="card tier-community">
+        <div class="card-tier-label">Community-reviewed</div>
+        <h3 class="card-title">Dublin Music &amp; Sound</h3>
+        <p class="card-sub">Violin / guitar repair · Lesson rentals</p>
+        <p class="card-meta">7211 Dublin Blvd, Dublin · 14.3 mi away</p>
+        <p class="card-meta">Recommended by 2 neighbors · Phone: (925) 829-1234</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="tel:9258291234">📞 Call</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">↗ Website</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Tier: Third-party -->
+      <article class="card tier-third-party">
+        <div class="card-tier-label">Source-linked</div>
+        <h3 class="card-title">Independent Sushi Cafe</h3>
+        <p class="card-sub">Restaurant · Open daily 11am-10pm</p>
+        <p class="card-meta">123 Main St, Milpitas · 0.6 mi away</p>
+        <p class="card-meta">From OpenStreetMap · We display, don't verify</p>
+        <div class="card-actions">
+          <a class="card-action primary" href="#">Details</a>
+          <a class="card-action" href="#">🧭 Directions</a>
+          <a class="card-action" href="#">Source</a>
+          <a class="card-action" href="#">⚠ Report</a>
+        </div>
+      </article>
+
+      <!-- Emergency-tier (red border for life-critical alerts) -->
+      <article class="card tier-emergency">
+        <div class="card-tier-label">Active alert</div>
+        <h3 class="card-title">Heat Advisory through Sunday 8pm</h3>
+        <p class="card-sub">National Weather Service · Effective now</p>
+        <p class="card-meta">Highs near 102°F. Hydrate. Check on elderly neighbors.</p>
+        <p class="card-meta">Cooling center: Milpitas Community Center, 457 E Calaveras</p>
+        <div class="card-actions">
+          <a class="card-action emergency" href="#">Full alert →</a>
+          <a class="card-action" href="#">🧭 Directions to cooling center</a>
+          <a class="card-action" href="#">Source: NWS</a>
+        </div>
+      </article>
+
     </div>
 
     <!-- Tier color legend (educates users on the color system) -->
@@ -822,502 +966,20 @@
 
 <button class="fab-feedback">💬 Feedback</button>
 
-<!-- Leaflet CDN for section maps -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
 <script>
-// ═══════════════════════════════════════════════════════════════════════
-// Nearnity v3.0.0-alpha — Emergency cat-tab launch (Sep 15 target)
-// ═══════════════════════════════════════════════════════════════════════
-// Decisions locked 2026-07-21:
-//   D1 Maps: Leaflet per section (this version scaffolds; renders in v3.0.1)
-//   D2 Nav: flat subnav, no 2-level nesting
-//   D3 Empty state: anchor cards (911 / poison / Google Maps / district finder)
-//   D4 Cadence: Emergency cat-tab first, others land weekly
-//
-// This build ships the Emergency cat-tab wired to v2.7.9 /api/medical-radius.
-// Around me / My home / Help / Govt / Saved show "Coming soon" placeholders
-// until their weekly rollout lands (per Roadmap_Checklist.md).
-
-const NRNY = {
-  version: "v3.0.0-alpha.3",
-  apiBase: "",             // same-origin: nearnity.com/api/*
-  radiusMi: 25,
-  geo: null,               // { lat, lon, address: {city,state,county,...} }
-  activeTab: "around",
-  activeSubnav: null,
-  _sectionMap: null,       // Leaflet map instance
-  _sectionMarkers: [],
-};
-
-// ─── Subnav registry per cat-tab (flat, per D2) ────────────────────────
-const NRNY_SUBNAVS = {
-  around: [
-    { id: "events",    label: "Events",          impl: "coming_soon" },
-    { id: "biz",       label: "Local businesses",impl: "coming_soon" },
-    { id: "schools",   label: "Schools",         impl: "coming_soon" },
-    { id: "parks",     label: "Parks & rec",     impl: "coming_soon" },
-  ],
-  home: [
-    { id: "utils",     label: "Utilities",       impl: "coming_soon" },
-    { id: "trash",     label: "Trash & recycling", impl: "coming_soon" },
-    { id: "weather",   label: "Weather & risk",  impl: "coming_soon" },
-    { id: "services",  label: "Home services",   impl: "coming_soon" },
-  ],
-  help: [
-    { id: "food",      label: "Food resources",  impl: "coming_soon" },
-    { id: "health",    label: "Free/low-cost health", impl: "coming_soon" },
-    { id: "housing",   label: "Housing",         impl: "coming_soon" },
-    { id: "family",    label: "Family services", impl: "coming_soon" },
-    { id: "legal",     label: "Legal aid",       impl: "coming_soon" },
-  ],
-  govt: [
-    { id: "officials", label: "Elected officials", impl: "coming_soon" },
-    { id: "dmv",       label: "DMV / vehicle",     impl: "coming_soon" },
-    { id: "court",     label: "Court / civic",     impl: "coming_soon" },
-    { id: "voting",    label: "Voting",            impl: "coming_soon" },
-  ],
-  emergency: [
-    { id: "hospitals", label: "Hospitals",   impl: "medical", taxonomy: "hospital" },
-    { id: "urgent",    label: "Urgent care", impl: "medical", taxonomy: "urgent" },
-    // v3.0.0-alpha.3: Clinics tab to match v2 production. Kaiser MOBs +
-    // primary-care ambulatory locations that aren't hospitals or UC.
-    { id: "clinics",   label: "Clinics",     impl: "medical", taxonomy: "clinic" },
-    { id: "pharmacies",label: "Pharmacies",  impl: "medical", taxonomy: "pharmacy" },
-    { id: "fire",      label: "Fire station",impl: "coming_soon" },
-    { id: "poison",    label: "Poison control", impl: "static_poison" },
-    { id: "alerts",    label: "Active alerts",impl: "coming_soon" },
-  ],
-  saved: [
-    { id: "list",      label: "Saved places", impl: "saved" },
-  ],
-};
-
-const NRNY_TAB_META = {
-  around:    { title: "Around me",       desc: "Events, businesses, parks, schools — within 25 miles of your address." },
-  home:      { title: "My home",         desc: "Utilities, weather, home services, trash & recycling for your address." },
-  help:      { title: "Help",            desc: "Food, health, housing, family, and legal resources — free or low-cost." },
-  govt:      { title: "Govt functions",  desc: "Elected officials, DMV, courts, voting — for your specific address." },
-  emergency: { title: "Emergency",       desc: "Hospitals, urgent care, fire, poison control, active alerts near you." },
-  saved:     { title: "Saved",           desc: "Places you saved from other tabs. Stored on your device only." },
-};
-
-// ─── Helpers ──────────────────────────────────────────────────────────
-const $ = (id) => document.getElementById(id);
-const escapeHtml = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const haversineMi = (a, b, c, d) => {
-  const R = 3958.8, toR = x => x * Math.PI / 180;
-  const dLat = toR(c - a), dLon = toR(d - b);
-  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(a)) * Math.cos(toR(c)) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
-};
-const distFmt = (mi) => (Number.isFinite(mi) ? mi.toFixed(1) + " mi" : "—");
-
-// ─── Geocoding: Nominatim primary + Census fallback ───────────────────
-async function nrnyGeocode(query) {
-  if (!query || !query.trim()) return null;
-  const q = query.trim();
-  // 1. Nominatim
-  try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=jsonv2&addressdetails=1&limit=1&countrycodes=us`;
-    const resp = await fetch(url, { headers: { "Accept": "application/json" } });
-    if (resp.ok) {
-      const data = await resp.json();
-      if (data && data[0]) {
-        const r = data[0];
-        return {
-          lat: parseFloat(r.lat),
-          lon: parseFloat(r.lon),
-          display_name: r.display_name,
-          address: r.address || {},
-        };
-      }
-    }
-  } catch (_) {}
-  // 2. Census fallback (US only, more forgiving of typos on street numbers)
-  try {
-    const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(q)}&benchmark=Public_AR_Current&format=json`;
-    const resp = await fetch(url);
-    if (resp.ok) {
-      const data = await resp.json();
-      const m = data && data.result && data.result.addressMatches && data.result.addressMatches[0];
-      if (m) {
-        return {
-          lat: m.coordinates.y,
-          lon: m.coordinates.x,
-          display_name: m.matchedAddress,
-          address: {
-            house_number: m.addressComponents.fromAddress,
-            road: m.addressComponents.streetName,
-            city: m.addressComponents.city,
-            state: m.addressComponents.state,
-            postcode: m.addressComponents.zip,
-          },
-        };
-      }
-    }
-  } catch (_) {}
-  return null;
-}
-
-// Derive 2-letter state from geocode result
-function nrnyStateOf(geo) {
-  const a = (geo && geo.address) || {};
-  const s = a.state || "";
-  // Nominatim returns "California"; Census returns "CA"
-  if (s.length === 2) return s.toUpperCase();
-  const STATES = {"Alabama":"AL","Alaska":"AK","Arizona":"AZ","Arkansas":"AR","California":"CA","Colorado":"CO","Connecticut":"CT","Delaware":"DE","District of Columbia":"DC","Florida":"FL","Georgia":"GA","Hawaii":"HI","Idaho":"ID","Illinois":"IL","Indiana":"IN","Iowa":"IA","Kansas":"KS","Kentucky":"KY","Louisiana":"LA","Maine":"ME","Maryland":"MD","Massachusetts":"MA","Michigan":"MI","Minnesota":"MN","Mississippi":"MS","Missouri":"MO","Montana":"MT","Nebraska":"NE","Nevada":"NV","New Hampshire":"NH","New Jersey":"NJ","New Mexico":"NM","New York":"NY","North Carolina":"NC","North Dakota":"ND","Ohio":"OH","Oklahoma":"OK","Oregon":"OR","Pennsylvania":"PA","Rhode Island":"RI","South Carolina":"SC","South Dakota":"SD","Tennessee":"TN","Texas":"TX","Utah":"UT","Vermont":"VT","Virginia":"VA","Washington":"WA","West Virginia":"WV","Wisconsin":"WI","Wyoming":"WY"};
-  return STATES[s] || "";
-}
-
-function nrnyAddressChip(geo) {
-  const a = (geo && geo.address) || {};
-  const city = a.city || a.town || a.village || a.hamlet || a.county || "";
-  const state = nrnyStateOf(geo);
-  return [city, state].filter(Boolean).join(", ");
-}
-
-// ─── /api/medical-radius fetcher (Emergency tab) ──────────────────────
-async function nrnyFetchMedical(geo, taxonomy) {
-  const state = nrnyStateOf(geo);
-  if (!state) return { results: [], error: "Could not resolve state from address" };
-  const url = `${NRNY.apiBase}/api/medical-radius?lat=${geo.lat}&lon=${geo.lon}&state=${state}&radius_mi=${NRNY.radiusMi}&taxonomy=${taxonomy}&limit=30`;
-  try {
-    const resp = await fetch(url);
-    if (!resp.ok) return { results: [], error: `HTTP ${resp.status}` };
-    const data = await resp.json();
-    return { results: data.results || [], meta: data.meta || null, error: null };
-  } catch (e) { return { results: [], error: (e && e.message) || String(e) }; }
-}
-
-// ─── Card rendering (v3 tier system) ──────────────────────────────────
-function nrnyRenderMedicalCard(item, taxonomy) {
-  const name = escapeHtml(item.name || "Facility");
-  const addr = escapeHtml(item.address || "");
-  const city = escapeHtml(item.city || "");
-  const state = escapeHtml(item.state || "");
-  const dist = distFmt(item.distance_mi);
-  const phone = item.phone || "";
-  const rating = item.rating || item.stars;
-  const src = item.source || "CMS / NPPES";
-  const sourceUrl = item.source_url || (item.provider_id ? `https://www.medicare.gov/care-compare/details/hospital/${item.provider_id}` : "https://data.cms.gov/provider-data/dataset/xubh-q36u");
-  const directionsUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`;
-  const isER = taxonomy === "hospital" && (item.emergency_services === true || (item.category || "").includes("er"));
-  const callBtn = phone
-    ? `<a class="card-action ${isER ? "emergency" : "primary"}" href="tel:${phone.replace(/[^\d+]/g, "")}">📞 ${isER ? "Call ER" : "Call"}</a>`
-    : "";
-  return `
-<article class="card tier-authoritative">
-  <div class="card-tier-label">Federal source</div>
-  <h3 class="card-title">${name}</h3>
-  <p class="card-sub">${rating ? `⭐ ${rating}/5 · ` : ""}${escapeHtml(src)}${isER ? " · ER 24/7" : ""}</p>
-  <p class="card-meta">${addr}${addr && (city || state) ? ", " : ""}${city}${state ? " " + state : ""} · ${dist}</p>
-  ${item.beds ? `<p class="card-meta">${item.beds} beds${item.trauma_level ? ` · Trauma Level ${escapeHtml(item.trauma_level)}` : ""}</p>` : ""}
-  <div class="card-actions">
-    ${callBtn}
-    <a class="card-action" href="${directionsUrl}" target="_blank" rel="noopener">🧭 Directions</a>
-    <a class="card-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">Source</a>
-    <a class="card-action" href="#" data-action="save" data-item="${escapeHtml(JSON.stringify({ name: item.name, lat: item.lat, lon: item.lon, source: src }))}">☆ Save</a>
-    <a class="card-action" href="mailto:feedback@nearnity.com?subject=Report: ${encodeURIComponent(name)}">⚠ Report</a>
-  </div>
-</article>`;
-}
-
-// ─── Anchor cards for empty states (D3: 911 + poison + Google Maps) ───
-function nrnyAnchorCardsFor(geo, taxonomy) {
-  const q = taxonomy === "hospital" ? "hospitals near me" : taxonomy === "urgent" ? "urgent care near me" : "clinic near me";
-  const gmapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(q)}/@${geo.lat},${geo.lon},13z`;
-  return `
-<article class="card tier-emergency">
-  <div class="card-tier-label">Life-critical</div>
-  <h3 class="card-title">🚑 Call 911 for a real emergency</h3>
-  <p class="card-sub">Life-threatening injuries or symptoms</p>
-  <p class="card-meta">Dispatchers get GPS from your call and route the nearest ambulance.</p>
-  <div class="card-actions">
-    <a class="card-action emergency" href="tel:911">📞 Call 911</a>
-  </div>
-</article>
-<article class="card tier-authoritative">
-  <div class="card-tier-label">Federal source</div>
-  <h3 class="card-title">☎ Poison Control — 1-800-222-1222</h3>
-  <p class="card-sub">Free, 24/7, all US states</p>
-  <p class="card-meta">Nurses + toxicologists answer. Faster than any web search for accidental ingestion.</p>
-  <div class="card-actions">
-    <a class="card-action primary" href="tel:18002221222">📞 Call</a>
-  </div>
-</article>
-<article class="card tier-third-party">
-  <div class="card-tier-label">Fallback</div>
-  <h3 class="card-title">🗺 Search Google Maps</h3>
-  <p class="card-sub">If nothing above worked</p>
-  <p class="card-meta">Fastest way to find any nearby ${taxonomy === "urgent" ? "urgent care" : "hospital"} we don't yet have indexed.</p>
-  <div class="card-actions">
-    <a class="card-action primary" href="${gmapsUrl}" target="_blank" rel="noopener">Open Google Maps →</a>
-  </div>
-</article>`;
-}
-
-// ─── Section map (Leaflet, per D1) ────────────────────────────────────
-function nrnySetupMap(items, centerLat, centerLon) {
-  const el = $("nrny-section-map");
-  if (!el || !window.L) return;
-  el.hidden = false;
-  // Clear old
-  if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
-  NRNY._sectionMap = L.map(el, { scrollWheelZoom: false }).setView([centerLat, centerLon], 12);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
-    subdomains: "abcd",
-    attribution: '&copy; OpenStreetMap · CARTO',
-    maxZoom: 19,
-  }).addTo(NRNY._sectionMap);
-  // Home marker
-  L.marker([centerLat, centerLon], { title: "Your location" }).addTo(NRNY._sectionMap).bindPopup("<b>Your location</b>");
-  // Item markers (teal = federal medical tier)
-  for (const it of items) {
-    if (!Number.isFinite(it.lat) || !Number.isFinite(it.lon)) continue;
-    const icon = L.divIcon({
-      className: "nrny-pin",
-      html: `<div style="background:#0D9488;color:#fff;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">🏥</div>`,
-      iconSize: [26, 26], iconAnchor: [13, 13],
-    });
-    L.marker([it.lat, it.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(it.name || "")}</b><br>${distFmt(it.distance_mi)}`);
-  }
-}
-
-// ─── Main render for a subnav ─────────────────────────────────────────
-async function nrnyRenderSubnav(tab, subnav) {
-  const grid = $("nrny-results-grid");
-  const loading = $("nrny-loading");
-  const map = $("nrny-section-map");
-  grid.innerHTML = "";
-  map.hidden = true;
-  loading.hidden = false;
-
-  if (!NRNY.geo) {
-    loading.hidden = true;
-    grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:40px 20px;text-align:center;font-size:15px;">Enter an address in the search bar above to see results for <b>${escapeHtml(NRNY_TAB_META[tab] && NRNY_TAB_META[tab].title || tab)}</b>.</p>`;
-    return;
-  }
-
-  const cfg = (NRNY_SUBNAVS[tab] || []).find(s => s.id === subnav);
-  if (!cfg) {
-    loading.hidden = true;
-    grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Unknown section.</p>`;
-    return;
-  }
-
-  if (cfg.impl === "coming_soon") {
-    loading.hidden = true;
-    grid.innerHTML = `
-<article class="card tier-third-party" style="grid-column: 1 / -1;">
-  <div class="card-tier-label">Coming soon</div>
-  <h3 class="card-title">${escapeHtml(cfg.label)} — landing in weekly rollout</h3>
-  <p class="card-sub">v3.0.0-alpha ships with Emergency cat-tab wired. Other cat-tabs follow, per the Sep 15 launch plan.</p>
-  <p class="card-meta">Meanwhile: use the v2 experience at <a href="https://nearnity.com" style="color:var(--primary);">nearnity.com</a> for this data.</p>
-</article>`;
-    return;
-  }
-
-  if (cfg.impl === "static_poison") {
-    loading.hidden = true;
-    grid.innerHTML = `
-<article class="card tier-emergency" style="grid-column: 1 / -1;">
-  <div class="card-tier-label">Life-critical · 24/7</div>
-  <h3 class="card-title">☎ Poison Control — 1-800-222-1222</h3>
-  <p class="card-sub">Free · Any state · Nurses and toxicologists on the line 24/7</p>
-  <p class="card-meta">Faster than any web search for accidental ingestion, exposure, or overdose. They stay on the line and coordinate with EMS.</p>
-  <div class="card-actions">
-    <a class="card-action emergency" href="tel:18002221222">📞 Call Poison Control</a>
-    <a class="card-action" href="https://www.poisonhelp.org/" target="_blank" rel="noopener">Source</a>
-  </div>
-</article>`;
-    return;
-  }
-
-  if (cfg.impl === "medical") {
-    const { results, error } = await nrnyFetchMedical(NRNY.geo, cfg.taxonomy);
-    loading.hidden = true;
-    if (error) {
-      grid.innerHTML = `<p style="grid-column:1/-1;color:var(--emergency);padding:20px;">Couldn't reach medical index: ${escapeHtml(error)}. Try again shortly.</p>` + nrnyAnchorCardsFor(NRNY.geo, cfg.taxonomy);
-      return;
-    }
-    if (results.length === 0) {
-      // Empty state: anchor cards + honest note
-      grid.innerHTML = `
-<p style="grid-column:1/-1;color:var(--ink-soft);padding:8px 0;">No ${escapeHtml(cfg.label.toLowerCase())} indexed within ${NRNY.radiusMi} mi of ${escapeHtml(nrnyAddressChip(NRNY.geo))} yet. Try these:</p>
-${nrnyAnchorCardsFor(NRNY.geo, cfg.taxonomy)}`;
-      return;
-    }
-    grid.innerHTML = results.map(r => nrnyRenderMedicalCard(r, cfg.taxonomy)).join("");
-    nrnySetupMap(results, NRNY.geo.lat, NRNY.geo.lon);
-    return;
-  }
-
-  if (cfg.impl === "saved") {
-    loading.hidden = true;
-    const saved = JSON.parse(localStorage.getItem("nearnity-saved-v3") || "[]");
-    if (saved.length === 0) {
-      grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Nothing saved yet. Tap ☆ Save on any card to bookmark it here. Stored on your device only.</p>`;
-      return;
-    }
-    grid.innerHTML = saved.map(it => `
-<article class="card tier-community">
-  <div class="card-tier-label">Saved</div>
-  <h3 class="card-title">${escapeHtml(it.name)}</h3>
-  <p class="card-meta">${escapeHtml(it.source || "")}</p>
-</article>`).join("");
-    return;
-  }
-
-  grid.innerHTML = `<p style="grid-column:1/-1;color:var(--ink-soft);padding:20px;">Unknown section handler: ${escapeHtml(cfg.impl)}</p>`;
-}
-
-// ─── Cat-tab switching ────────────────────────────────────────────────
-function nrnyRenderSubnavBar(tab) {
-  const bar = $("nrny-subnav");
-  const items = NRNY_SUBNAVS[tab] || [];
-  if (items.length === 0) { bar.hidden = true; return; }
-  bar.hidden = false;
-  bar.innerHTML = items.map((s, i) => `
-    <button class="subnav-tab${i === 0 ? " active" : ""}" data-subnav="${escapeHtml(s.id)}">${escapeHtml(s.label)}</button>
-  `).join("");
-  bar.querySelectorAll(".subnav-tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-      bar.querySelectorAll(".subnav-tab").forEach(b => b.classList.remove("active"));
-      btn.classList.add("active");
-      NRNY.activeSubnav = btn.dataset.subnav;
-      nrnyRenderSubnav(NRNY.activeTab, NRNY.activeSubnav);
+  // Cat-tab click swaps active state. No data loading in prototype.
+  document.querySelectorAll('.cat-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.cat-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
     });
   });
-  NRNY.activeSubnav = items[0].id;
-}
-
-function nrnySwitchTab(tab) {
-  NRNY.activeTab = tab;
-  const meta = NRNY_TAB_META[tab];
-  if (meta) {
-    $("nrny-content-h2").textContent = meta.title;
-    $("nrny-content-desc").textContent = meta.desc;
-  }
-  nrnyRenderSubnavBar(tab);
-  nrnyRenderSubnav(tab, NRNY.activeSubnav);
-}
-
-// ─── Wire everything up ───────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-  // Cat-tab click
-  document.querySelectorAll(".cat-tab").forEach(tab => {
-    tab.addEventListener("click", () => {
-      document.querySelectorAll(".cat-tab").forEach(t => t.classList.remove("active"));
-      tab.classList.add("active");
-      nrnySwitchTab(tab.dataset.tab);
+  document.querySelectorAll('.subnav-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.subnav-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
     });
   });
-
-  // Address search
-  const form = $("nrny-search-form");
-  const whereInput = $("nrny-where");
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const query = whereInput.value.trim();
-    if (!query) { whereInput.focus(); return; }
-    $("nrny-loading").hidden = false;
-    $("nrny-loading").textContent = "Locating address…";
-    const geo = await nrnyGeocode(query);
-    if (!geo) {
-      $("nrny-loading").textContent = "Couldn't locate that address. Try including city + state.";
-      return;
-    }
-    NRNY.geo = geo;
-    $("nrny-address-bar").hidden = false;
-    $("nrny-address-text").textContent = geo.display_name || nrnyAddressChip(geo);
-    $("nrny-loading").hidden = true;
-    nrnySwitchTab(NRNY.activeTab);
-  });
-
-  // v3.0.0-alpha.1: Hero primary cards + quick chips → jump directly to
-  // the mapped cat-tab + subnav. If no address yet, prefill Looking-for
-  // and focus the address field so user can complete the search.
-  const jumpToTab = (tab, subnav) => {
-    // Update sidebar active state
-    document.querySelectorAll(".cat-tab").forEach(t => {
-      t.classList.toggle("active", t.dataset.tab === tab);
-    });
-    NRNY.activeTab = tab;
-    NRNY.activeSubnav = subnav;
-    // Re-render subnav bar with active subnav preselected
-    const meta = NRNY_TAB_META[tab];
-    if (meta) {
-      $("nrny-content-h2").textContent = meta.title;
-      $("nrny-content-desc").textContent = meta.desc;
-    }
-    const bar = $("nrny-subnav");
-    const items = NRNY_SUBNAVS[tab] || [];
-    bar.hidden = items.length === 0;
-    bar.innerHTML = items.map(s => `
-      <button class="subnav-tab${s.id === subnav ? " active" : ""}" data-subnav="${escapeHtml(s.id)}">${escapeHtml(s.label)}</button>
-    `).join("");
-    bar.querySelectorAll(".subnav-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        bar.querySelectorAll(".subnav-tab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        NRNY.activeSubnav = btn.dataset.subnav;
-        nrnyRenderSubnav(NRNY.activeTab, NRNY.activeSubnav);
-      });
-    });
-    nrnyRenderSubnav(tab, subnav);
-    // Scroll to the content area so user sees the result
-    document.querySelector(".shell").scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  // Hero primary CTA cards
-  document.querySelectorAll(".hero-primary-card[data-jump-tab]").forEach(card => {
-    card.addEventListener("click", (e) => {
-      e.preventDefault();
-      const tab = card.dataset.jumpTab;
-      const subnav = card.dataset.jumpSubnav;
-      if (!NRNY.geo) {
-        whereInput.focus();
-        whereInput.placeholder = "Enter address first, then this loads " + tab + " → " + subnav;
-        return;
-      }
-      jumpToTab(tab, subnav);
-    });
-  });
-
-  // Quick chips → jump-to-tab
-  document.querySelectorAll(".quick-chip").forEach(chip => {
-    chip.addEventListener("click", () => {
-      const tab = chip.dataset.jumpTab;
-      const subnav = chip.dataset.jumpSubnav;
-      if (tab && subnav) {
-        if (!NRNY.geo) {
-          $("nrny-q").value = chip.textContent.trim().replace(/^[^\w]+/, "").trim();
-          whereInput.focus();
-          whereInput.placeholder = "Enter address first, then " + chip.textContent.trim() + " loads";
-          return;
-        }
-        jumpToTab(tab, subnav);
-      } else {
-        $("nrny-q").value = chip.textContent.trim().replace(/^[^\w]+/, "");
-        whereInput.focus();
-      }
-    });
-  });
-
-  // Initialize with default tab (Around me → Events subnav). Since no
-  // address is set on first load, nrnyRenderSubnav shows the "enter
-  // address" prompt in the results grid.
-  nrnyRenderSubnavBar("around");
-  nrnyRenderSubnav("around", "events");
-
-  // Version stamp in footer
-  const fv = document.querySelector(".site-footer-version");
-  if (fv) fv.textContent = NRNY.version;
-
-  console.log("[nearnity]", NRNY.version, "ready");
-});
 </script>
 
 </body>

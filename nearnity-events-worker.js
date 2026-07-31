@@ -50,7 +50,7 @@ export default {
     if (url.pathname.endsWith("/health")) {
       return json({
         status: "ok",
-        worker_version: "v3.0.1.2",   // v3.0.1.2: expanded NPPES taxonomies (HOSPITAL org + Clinic/Center + Ambulatory Surgical) to catch Kaiser MOBs + hospital orgs
+        worker_version: "v3.0.1.8",   // v3.0.1.8: bumped bucket cap 1000→2500 so CLINIC actually iterates all 6 taxonomies instead of stopping after Family Medicine fills 1000 slots
         deployed_features: {
           "v2.4": "federal adapters (NPPES, Medicare, SAMHSA, HRSA)",
           "v2.7.3": "school-zone endpoint (Census + NCES district lookup)",
@@ -3584,25 +3584,37 @@ async function nrnyCensusBatchGeocode(records, diagLabel) {
   fd.append("addressFile", new Blob([csv], { type: "text/csv" }), "addresses.csv");
   fd.append("benchmark", "Public_AR_Current");
 
-  // v2.7.9.4: retry loop on transient upstream failures (502/503/504/429).
-  // Census's batch geocoder is generally reliable but occasionally 502s under
-  // load. Prior version treated 502 as fatal and aborted the entire ingest.
-  // Now: up to 3 attempts with exponential backoff (1s → 3s → 9s).
+  // v2.7.9.4 → v3.0.1.5: retry loop on transient upstream failures.
+  // v3.0.1.5 additions:
+  //   • Added 520-524 (Cloudflare-in-front-of-origin errors — Census fronts
+  //     via CloudFront/similar and returns 524 "origin timeout" under load)
+  //   • Bumped max attempts 3 → 5 with longer backoff, since large batches
+  //     (1000 records) can genuinely take Census 30-60s under load
+  //   • Also retry the whole batch by REBUILDING FormData (spent Blob was
+  //     part of the original bug but not always caught)
   let resp;
   let attempt = 0;
-  const maxAttempts = 3;
-  const backoffs = [1000, 3000, 9000];
-  const retryable = new Set([408, 429, 500, 502, 503, 504]);
+  const maxAttempts = 5;
+  const backoffs = [2000, 5000, 12000, 25000, 45000];
+  const retryable = new Set([408, 429, 500, 502, 503, 504, 520, 522, 523, 524]);
   while (attempt < maxAttempts) {
-    resp = await fetch("https://geocoding.geo.census.gov/geocoder/locations/addressbatch", {
-      method: "POST",
-      body: fd,
-    });
-    if (resp.ok) break;
-    if (!retryable.has(resp.status)) break;   // non-retryable — bail
+    // v3.0.1.5: rebuild FormData every attempt — Blob body can be consumed on first send
+    const attemptFd = new FormData();
+    attemptFd.append("addressFile", new Blob([csv], { type: "text/csv" }), "addresses.csv");
+    attemptFd.append("benchmark", "Public_AR_Current");
+    try {
+      resp = await fetch("https://geocoding.geo.census.gov/geocoder/locations/addressbatch", {
+        method: "POST",
+        body: attemptFd,
+      });
+      if (resp.ok) break;
+      if (!retryable.has(resp.status)) break;   // non-retryable — bail
+    } catch (e) {
+      // Network-level failure (Worker fetch throw). Treat as retryable.
+      resp = { status: 0, ok: false, text: async () => `fetch threw: ${(e && e.message) || String(e)}` };
+    }
     attempt++;
     if (attempt >= maxAttempts) break;
-    // Wait then retry — need to rebuild FormData since a spent Blob can't be reused reliably
     await new Promise(r => setTimeout(r, backoffs[attempt - 1]));
   }
   const diag = { label: diagLabel, sent: records.length, matched: 0, http_status: resp.status, retries: attempt };
@@ -3715,19 +3727,36 @@ const NRNY_NPPES_QUERY_TAXONOMIES = [
   { bucket: "PHARMACY", queries: ["Pharmacy"] },
 ];
 
-async function nrnyFetchNppesForState(state, maxTotalPerBucket, diag) {
-  const cap = maxTotalPerBucket || 1000;
+async function nrnyFetchNppesForState(state, maxTotalPerBucket, diag, onlyBuckets) {
+  // v3.0.1.7: bumped default cap 1000 → 2500 since we now accumulate across
+  // multiple taxonomies per bucket. CLINIC especially can pull 6 taxonomies
+  // × up to 1000 each = up to 2500 unique NPIs after dedupe.
+  const cap = maxTotalPerBucket || 2500;
   const perBucket = {};       // bucket → array of raw NPPES records
   const perBucketDiag = {};
+  // v3.0.1.6: honor onlyBuckets filter so ?bucket=HOSPITAL runs just that one
+  const filter = (onlyBuckets && onlyBuckets.length) ? new Set(onlyBuckets) : null;
 
   for (const spec of NRNY_NPPES_QUERY_TAXONOMIES) {
+    if (filter && !filter.has(spec.bucket)) continue;
     let bucketResults = [];
     let queryTried = null;
     let http_status = null;
     let result_count = null;
     let error = null;
 
+    // v3.0.1.7: accumulate results across ALL taxonomies in the bucket
+    // instead of stopping at first hit. Original design assumed alternate
+    // taxonomies were fuzzy-match variants (same providers). Wrong for
+    // CLINIC where each taxonomy targets a DIFFERENT provider class:
+    //   "Family Medicine" = individual doctor NPIs (Type 1)
+    //   "Clinic/Center - Family Medicine" = org NPIs (Kaiser MOBs, Type 2)
+    //   "Clinic/Center - Multi-Specialty" = Kaiser Skyport class
+    // Dedupe by NPI number so overlapping matches don't inflate counts.
+    const seenNpis = new Set();
+    const queriesUsed = [];
     for (const taxonomyDesc of spec.queries) {
+      if (bucketResults.length >= cap) break;
       const pageSize = 200;
       let bucketPaged = [];
       let skip = 0;
@@ -3759,17 +3788,25 @@ async function nrnyFetchNppesForState(state, maxTotalPerBucket, diag) {
         }
       }
 
-      queryTried = taxonomyDesc;
-      if (bucketPaged.length > 0) {
-        bucketResults = bucketPaged;
-        break;   // stop trying alternate taxonomies once one works
+      // Dedupe by NPI + append to bucketResults
+      let added = 0;
+      for (const p of bucketPaged) {
+        const npi = p.number;
+        if (!npi || seenNpis.has(npi)) continue;
+        if (bucketResults.length >= cap) break;
+        seenNpis.add(npi);
+        bucketResults.push(p);
+        added++;
       }
+      queriesUsed.push({ taxonomy: taxonomyDesc, fetched: bucketPaged.length, unique_added: added });
+      queryTried = taxonomyDesc;   // last one tried (kept for backward compat)
     }
 
     perBucket[spec.bucket] = bucketResults;
     perBucketDiag[spec.bucket] = {
       count: bucketResults.length,
-      taxonomy_used: queryTried,
+      taxonomy_used: queryTried,                       // last taxonomy tried (legacy)
+      taxonomies_used: queriesUsed,                    // v3.0.1.7: per-taxonomy breakdown
       http_status,
       result_count_reported: result_count,
       error,
@@ -3789,11 +3826,42 @@ async function handleGeoIngest(url, env, ctx) {
   const state = (url.searchParams.get("state") || "").toUpperCase().slice(0, 2);
   if (!state || !/^[A-Z]{2}$/.test(state)) return json({ error: "Missing/invalid state (2-letter)" }, 400);
 
+  // v3.0.1.6: ?bucket= param splits the ingest so each request finishes in
+  // 30-60s instead of 3-8min. Was timing out browsers with "site not reachable"
+  // (Cloudflare's default 100s request cap). User hits per-bucket URLs
+  // sequentially — each fast, each independently retryable.
+  // Values:
+  //   cms       → CMS Care Compare hospitals only (~30s)
+  //   HOSPITAL, ER, UC, CLINIC, SURGERY, DENTIST, PHARMACY → single NPPES bucket (~30-60s)
+  //   all       → default = everything in one call (legacy, may time out on big states)
+  const bucketParam = (url.searchParams.get("bucket") || "all").toUpperCase();
+  const doCms = bucketParam === "ALL" || bucketParam === "CMS";
+  const nppesBucketsToRun = bucketParam === "ALL"
+    ? NRNY_NPPES_QUERY_TAXONOMIES.map(s => s.bucket)
+    : (bucketParam === "CMS" ? [] : [bucketParam]);
+  // Validate bucket name
+  if (bucketParam !== "ALL" && bucketParam !== "CMS") {
+    const validBuckets = new Set(NRNY_NPPES_QUERY_TAXONOMIES.map(s => s.bucket));
+    if (!validBuckets.has(bucketParam)) {
+      return json({
+        error: `Unknown bucket "${bucketParam}"`,
+        valid: ["all", "cms", ...NRNY_NPPES_QUERY_TAXONOMIES.map(s => s.bucket)],
+        hint: "Run ?bucket=CMS first, then one call per NPPES bucket (HOSPITAL, ER, UC, CLINIC, SURGERY, DENTIST, PHARMACY). Each finishes in 30-60s. Omit ?bucket= to try everything in one call (may time out on large states).",
+      }, 400);
+    }
+  }
+
   const start = Date.now();
-  const report = { state, started_at: new Date().toISOString() };
+  const report = { state, started_at: new Date().toISOString(), bucket_scope: bucketParam };
 
   try {
     // ── 1. CMS hospitals for state ────────────────────────────────────
+    // v3.0.1.6: skip if bucket param excludes CMS
+    if (!doCms) {
+      report.cms_skipped = true;
+      report.cms_fetched = 0;
+      report.cms_written = 0;
+    } else {
     const cmsRaw = await nrnyFetchCmsForState(state);
     report.cms_fetched = cmsRaw.length;
 
@@ -3878,11 +3946,23 @@ async function handleGeoIngest(url, env, ctx) {
     await nrnyGeoWrite(env, "cms", state, null, cmsRecords);
     await nrnyGeoUpdateMeta(env, state, "cms", null, cmsRecords.length);
     report.cms_written = cmsRecords.length;
+    }   // end if (doCms)
 
     // ── 2. NPPES providers for state (per taxonomy) ───────────────────
+    // v3.0.1.6: skip entirely if bucket param is "cms" (no NPPES buckets to run)
+    if (nppesBucketsToRun.length === 0) {
+      report.nppes_skipped = true;
+      report.elapsed_ms = Date.now() - start;
+      report.ok = true;
+      return json(report);
+    }
     // v2.7.9.2: query per taxonomy_description instead of state alone
     // (state-only returned 0). Each bucket now populated by its own query.
-    const nppesByBucketRaw = await nrnyFetchNppesForState(state, 1000, report);
+    // v3.0.1.8: bumped cap 1000 → 2500 so CLINIC bucket can accumulate across
+    // all 6 taxonomies (Family Medicine + Internal Medicine + 4 Clinic/Center
+    // org variants). Previously cap=1000 meant Family Medicine filled it in
+    // one shot and the org-level taxonomies (Kaiser MOBs) never got queried.
+    const nppesByBucketRaw = await nrnyFetchNppesForState(state, 2500, report, nppesBucketsToRun);
     // report.nppes_per_bucket was populated inside the fetch (per-bucket diag)
     report.nppes_fetched = Object.values(nppesByBucketRaw).reduce((sum, arr) => sum + arr.length, 0);
 
@@ -3906,19 +3986,36 @@ async function handleGeoIngest(url, env, ctx) {
     }
     report.nppes_geo_input = nppesForGeo.length;
 
+    // v3.0.1.5: catch per-batch failures so ONE bad batch doesn't abort the
+    // whole ingest. Previously a Census 524 on chunk 3 threw all 7000 records
+    // to /dev/null. Now: log the failed chunk in diag, keep the other batches.
     const nppesGeocoded = {};
     const nppesGeoDiags = [];
+    const failedChunks = [];
     for (let i = 0; i < nppesForGeo.length; i += 1000) {
       const batch = nppesForGeo.slice(i, i + 1000);
-      const { geocoded, diag } = await nrnyCensusBatchGeocode(batch, `nppes-chunk-${i}`);
-      Object.assign(nppesGeocoded, geocoded);
-      nppesGeoDiags.push(diag);
+      try {
+        const { geocoded, diag } = await nrnyCensusBatchGeocode(batch, `nppes-chunk-${i}`);
+        Object.assign(nppesGeocoded, geocoded);
+        nppesGeoDiags.push(diag);
+      } catch (e) {
+        const errMsg = (e && e.message) || String(e);
+        console.error(`[geo-ingest] chunk-${i} failed after retries:`, errMsg);
+        failedChunks.push({ chunk_offset: i, size: batch.length, error: errMsg.slice(0, 300) });
+        nppesGeoDiags.push({ label: `nppes-chunk-${i}`, sent: batch.length, matched: 0, error: errMsg.slice(0, 300) });
+      }
     }
     report.nppes_geocoded = Object.keys(nppesGeocoded).length;
     report.nppes_geo_diag = nppesGeoDiags;
+    if (failedChunks.length > 0) report.nppes_failed_chunks = failedChunks;
 
-    // Shape into per-bucket final records (bucket already assigned by query)
-    const byBucket = { ER: [], UC: [], CLINIC: [], DENTIST: [], PHARMACY: [] };
+    // Shape into per-bucket final records (bucket already assigned by query).
+    // v3.0.1.4: byBucket seeds from NRNY_NPPES_QUERY_TAXONOMIES so new buckets
+    // (HOSPITAL, SURGERY, and any future ones) don't crash the writer with
+    // "Cannot read properties of undefined (reading 'push')". Was hardcoded
+    // to 5 keys — added HOSPITAL + SURGERY in v3.0.1.2 without updating this.
+    const byBucket = {};
+    for (const spec of NRNY_NPPES_QUERY_TAXONOMIES) byBucket[spec.bucket] = [];
     for (const r of nppesForGeo) {
       const geo = nppesGeocoded[r.id];
       if (!geo) continue;
@@ -3927,6 +4024,7 @@ async function handleGeoIngest(url, env, ctx) {
       const taxonomies = p.taxonomies || [];
       const primary = taxonomies.find(t => t.primary) || taxonomies[0] || {};
       const bucket = r._bucket;
+      if (!byBucket[bucket]) byBucket[bucket] = [];   // defensive: unknown bucket
       const name = p.basic && (p.basic.organization_name
         || [p.basic.first_name, p.basic.last_name].filter(Boolean).join(" "));
       byBucket[bucket].push({
@@ -3940,7 +4038,12 @@ async function handleGeoIngest(url, env, ctx) {
         specialty: primary.desc || null,
         credential: p.basic ? p.basic.credential : null,
         npi: p.number,
-        category: bucket === "ER" ? "er" : (bucket === "UC" ? "urgent" : bucket.toLowerCase()),
+        // v3.0.1.4: extended category mapping for HOSPITAL + SURGERY buckets
+        category: bucket === "ER" ? "er"
+                : bucket === "UC" ? "urgent"
+                : bucket === "HOSPITAL" ? "hospital"
+                : bucket === "SURGERY" ? "surgery"
+                : bucket.toLowerCase(),
         subtype: primary.desc || bucket,
         source: "NPPES (CMS)",
         source_url: `https://npiregistry.cms.hhs.gov/provider-view/${p.number}`,
@@ -4083,8 +4186,14 @@ function nrnyResolveStatesForRadius(state, radiusMi, crossState) {
 async function nrnyFetchGeoRecords(env, states, taxonomies) {
   const wantCms = taxonomies.includes("all") || taxonomies.includes("er") || taxonomies.includes("hospital");
   const nppesBuckets = [];
-  if (taxonomies.includes("all")) nppesBuckets.push("ER", "UC", "CLINIC", "DENTIST", "PHARMACY");
+  // v3.0.1.3: added HOSPITAL bucket to "all" + explicit hospital taxonomy so
+  // NPPES-sourced hospital orgs (General Acute Care Hospital taxonomy, new
+  // in v3.0.1.2) surface under the Hospitals tab. Previously only CMS Care
+  // Compare records surfaced — hospitals missing from CMS (e.g. specialty
+  // hospitals, VA hospitals, some new openings) were invisible.
+  if (taxonomies.includes("all")) nppesBuckets.push("HOSPITAL", "ER", "UC", "CLINIC", "DENTIST", "PHARMACY");
   else {
+    if (taxonomies.includes("hospital")) nppesBuckets.push("HOSPITAL");
     if (taxonomies.includes("er"))       nppesBuckets.push("ER");
     if (taxonomies.includes("urgent"))   nppesBuckets.push("UC");
     if (taxonomies.includes("clinic"))   nppesBuckets.push("CLINIC");

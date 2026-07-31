@@ -8,6 +8,57 @@ A running log of every shipped iteration. Newest version on top.
 
 ---
 
+## v2.7.8.1 — 2026-07-07 — HOTFIX: string→number coercion in renderPublicServices
+
+**Silent TypeError killing v2.7.8.** Deployed v2.7.8 built ok, footer showed `v2.7.8`, but every emergency-services search left tiles as skeletons + "Searching…" text forever + map showing stale "No matches found" overlay.
+
+### What went wrong
+
+Photon and Nominatim (our geocoders) return `lat` / `lon` as **strings**. My v2.7.8 anchor-card code did:
+
+```js
+const geoLat = (lastGeo && lastGeo.lat) || (lastPsGeo && lastPsGeo.lat) || null;
+`@${geoLat.toFixed(5)},${geoLon.toFixed(5)},14z`
+```
+
+`"37.5".toFixed(5)` → TypeError. The whole `renderPublicServices` function threw, the outer catch quietly set a hidden loading-guard element, and no tbody ever got its skeletons replaced. **Perfect silent failure.**
+
+### The fix
+
+```js
+const _rawLat = (lastGeo && lastGeo.lat) ?? (lastPsGeo && lastPsGeo.lat) ?? null;
+const _rawLon = (lastGeo && lastGeo.lon) ?? (lastPsGeo && lastPsGeo.lon) ?? null;
+const geoLat = (_rawLat != null && Number.isFinite(+_rawLat)) ? +_rawLat : null;
+const geoLon = (_rawLon != null && Number.isFinite(+_rawLon)) ? +_rawLon : null;
+const gmapsBase = (geoLat != null && geoLon != null)
+  ? `@${geoLat.toFixed(5)},${geoLon.toFixed(5)},14z`
+  : "";
+```
+
+Guards on `Number.isFinite(+val)` before calling `.toFixed()`. Falls back to empty gmapsBase when coords are missing (still generates valid Google Maps URLs, just without the map center anchor).
+
+### Files touched
+
+- `index.html`: +5 lines (string→number coercion in `renderPublicServices`), footer × 2 → v2.7.8.1.
+
+### Validation
+
+- `node --check` clean on extracted JS
+- Markers: `_rawLat` × 2, `Number.isFinite` × 3, `v2.7.8.1` footer × 3
+
+### QA after deploy
+
+The same v2.7.8 QA list from yesterday now applies — the code that was silently failing will actually run:
+
+| Test | Expected |
+|---|---|
+| Search "ER" or "Urgent care" near San Jose / Oakland / SF | Red / orange anchor card at TOP of results (911 button + Google Maps deep-link) |
+| Federal data cards appear in list | Medicare hospitals + NPPES ER + NPPES urgent care all populate. No more skeletons. |
+| Empty state (rural or bad geo) | Anchor card still visible + honest "no matches" text below. Never fully empty. |
+| Footer | **v2.7.8.1** |
+
+---
+
 ## v2.7.8 — 2026-07-07 — Federal medical fallback + search-never-fails anchor card
 
 **First release of the 5-tier data-layer buildout.** Directly addresses the primary July 4 QA failure: hospitals/ER/urgent-care returning empty state in Bay Area even after the v2.7.7 radius cap.
