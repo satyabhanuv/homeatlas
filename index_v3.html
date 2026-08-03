@@ -581,7 +581,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.0-alpha</b> — Emergency cat-tab wired to live data (v2.7.9 /api/medical-radius). Other cat-tabs land per weekly rollout. Full launch Sep 15.
+  🚧 <b>v3.0.1</b> — Emergency + Events wired to live data. Schools + Parks + Fire + Alerts landing this week. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -841,7 +841,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.0-alpha.3",
+  version: "v3.0.1.9",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -854,7 +854,7 @@ const NRNY = {
 // ─── Subnav registry per cat-tab (flat, per D2) ────────────────────────
 const NRNY_SUBNAVS = {
   around: [
-    { id: "events",    label: "Events",          impl: "coming_soon" },
+    { id: "events",    label: "Events",          impl: "events" },
     { id: "biz",       label: "Local businesses",impl: "coming_soon" },
     { id: "schools",   label: "Schools",         impl: "coming_soon" },
     { id: "parks",     label: "Parks & rec",     impl: "coming_soon" },
@@ -1024,6 +1024,132 @@ function nrnyRenderMedicalCard(item, taxonomy) {
 </article>`;
 }
 
+// ─── /api/events-radius fetcher (Around me → Events) ─────────────────
+// v3.0.1.9: pulls merged events from all sources — Ticketmaster (Slate),
+// USDA/PCFMA farmers markets (Indigo), BiblioCommons libraries (Indigo),
+// NPS (Teal), Socrata city open-data (Indigo). Sorted upcoming-first;
+// dateless (recurring farmers markets) go to the end.
+async function nrnyFetchEvents(geo) {
+  const state = nrnyStateOf(geo);
+  if (!state) return { results: [], error: "Could not resolve state from address" };
+  const url = `${NRNY.apiBase}/api/events-radius?lat=${geo.lat}&lon=${geo.lon}&state=${state}&radius_mi=${NRNY.radiusMi}&limit=100`;
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 8000);
+    const resp = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) return { results: [], error: `HTTP ${resp.status}` };
+    const data = await resp.json();
+    const raw = Array.isArray(data.results) ? data.results : (Array.isArray(data.events) ? data.events : []);
+    raw.sort((a, b) => {
+      const ta = a.start_date ? Date.parse(a.start_date) : Infinity;
+      const tb = b.start_date ? Date.parse(b.start_date) : Infinity;
+      return ta - tb;
+    });
+    return { results: raw, meta: data.meta || null, error: null };
+  } catch (e) {
+    return { results: [], error: (e && e.message) || String(e) };
+  }
+}
+
+// Source-id → tier + friendly name mapping.
+// Tier maps to card border color per v3 legend:
+//   authoritative (teal)  = federal / gov authority
+//   public (indigo)       = open datasets, verified registries
+//   community (coral)     = curated / neighbor-submitted
+//   third-party (slate)   = source-linked feed, we display without verifying
+const NRNY_EVENT_SOURCE_MAP = {
+  "nps":                  { tier: "authoritative", label: "Federal source",     name: "National Park Service" },
+  "ticketmaster_events":  { tier: "third-party",   label: "Source-linked",      name: "Ticketmaster" },
+  "usda_farmers_markets": { tier: "public",        label: "Public dataset",     name: "USDA Farmers Markets" },
+  "pcfma_visit":          { tier: "public",        label: "Public dataset",     name: "PCFMA (Bay Area markets)" },
+  "seed_bay_area":        { tier: "public",        label: "Public dataset",     name: "Bay Area seed dataset" },
+  "manual_admin_events":  { tier: "community",     label: "Community-reviewed", name: "Nearnity-curated" },
+};
+function nrnyEventTierFor(item) {
+  const src = item.source_id || "";
+  if (NRNY_EVENT_SOURCE_MAP[src]) return NRNY_EVENT_SOURCE_MAP[src];
+  if (src.startsWith("bibliocommons_")) return { tier: "public",      label: "Public dataset",  name: "Library (BiblioCommons)" };
+  if (src.startsWith("socrata_"))       return { tier: "public",      label: "Public dataset",  name: "City open-data" };
+  if (src.startsWith("ical_") || src.startsWith("schema_")) {
+    return { tier: "third-party", label: "Source-linked", name: item.source_name || "Event feed" };
+  }
+  return { tier: "third-party", label: "Source-linked", name: item.source_name || src || "Event feed" };
+}
+
+// Format a date range for the card. Handles: full ISO datetime, date-only,
+// and null (ongoing recurring farmers markets).
+function nrnyEventDateChip(start, end) {
+  if (!start) return "Ongoing";
+  const s = new Date(start);
+  if (isNaN(s.getTime())) return "Ongoing";
+  const dateStr = s.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+  // Only include time if the string has a "T<digit>" AND isn't midnight UTC (which usually means date-only)
+  const hasRealTime = /T\d/.test(String(start)) && !/T00:00:00/.test(String(start));
+  const timeStr = hasRealTime
+    ? " · " + s.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
+    : "";
+  return dateStr + timeStr;
+}
+
+// Card renderer for events (v3 tier system)
+function nrnyRenderEventCard(item) {
+  const tierInfo = nrnyEventTierFor(item);
+  const title = escapeHtml(item.title || "Untitled event");
+  const dateChip = escapeHtml(nrnyEventDateChip(item.start_date, item.end_date));
+  const venue = escapeHtml(item.venue_name || item.venue_address || item.venue || item.address || "");
+  const dist = Number.isFinite(item.distance_mi) ? distFmt(item.distance_mi) : "";
+  const url = item.url || item.source_url || "";
+  const category = escapeHtml((item.category || "").replace(/_/g, " "));
+  const isFree = item.free || /\bfree\b/i.test(item.title || "");
+  const src = escapeHtml(tierInfo.name);
+  const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
+    ? `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
+    : (venue ? `https://www.google.com/maps/search/${encodeURIComponent(venue)}` : "");
+  const saveData = escapeHtml(JSON.stringify({ name: item.title, source: src, url, start_date: item.start_date }));
+  return `
+<article class="card tier-${tierInfo.tier}">
+  <div class="card-tier-label">${escapeHtml(tierInfo.label)}${isFree ? " · Free" : ""}</div>
+  <h3 class="card-title">${title}</h3>
+  <p class="card-sub">${src}${category ? " · " + category : ""}</p>
+  <p class="card-meta">📅 ${dateChip}</p>
+  ${venue ? `<p class="card-meta">📍 ${venue}${dist ? " · " + dist : ""}</p>` : (dist ? `<p class="card-meta">${dist}</p>` : "")}
+  <div class="card-actions">
+    ${url ? `<a class="card-action primary" href="${escapeHtml(url)}" target="_blank" rel="noopener">Details →</a>` : ""}
+    ${gmapsUrl ? `<a class="card-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+    <a class="card-action" href="#" data-action="save" data-item="${saveData}">☆ Save</a>
+    <a class="card-action" href="mailto:feedback@nearnity.com?subject=Report: ${encodeURIComponent(item.title || 'event')}">⚠ Report</a>
+  </div>
+</article>`;
+}
+
+// Map setup for the events section — pins colored by source tier.
+function nrnySetupEventsMap(items, centerLat, centerLon) {
+  const el = $("nrny-section-map");
+  if (!el || !window.L) return;
+  el.hidden = false;
+  if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
+  NRNY._sectionMap = L.map(el, { scrollWheelZoom: false }).setView([centerLat, centerLon], 11);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
+    attribution: '&copy; OpenStreetMap · CARTO',
+    maxZoom: 19,
+  }).addTo(NRNY._sectionMap);
+  L.marker([centerLat, centerLon], { title: "Your location" }).addTo(NRNY._sectionMap).bindPopup("<b>Your location</b>");
+  const tierPinColor = { "authoritative": "#0D9488", "public": "#4F46E5", "community": "#FB923C", "third-party": "#94A3B8" };
+  for (const it of items) {
+    if (!Number.isFinite(it.lat) || !Number.isFinite(it.lon)) continue;
+    const tierInfo = nrnyEventTierFor(it);
+    const color = tierPinColor[tierInfo.tier] || "#94A3B8";
+    const icon = L.divIcon({
+      className: "nrny-pin",
+      html: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">📅</div>`,
+      iconSize: [24, 24], iconAnchor: [12, 12],
+    });
+    L.marker([it.lat, it.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(it.title || '')}</b><br>${escapeHtml(tierInfo.name)}`);
+  }
+}
+
 // ─── Anchor cards for empty states (D3: 911 + poison + Google Maps) ───
 function nrnyAnchorCardsFor(geo, taxonomy) {
   const q = taxonomy === "hospital" ? "hospitals near me" : taxonomy === "urgent" ? "urgent care near me" : "clinic near me";
@@ -1132,6 +1258,35 @@ async function nrnyRenderSubnav(tab, subnav) {
     <a class="card-action" href="https://www.poisonhelp.org/" target="_blank" rel="noopener">Source</a>
   </div>
 </article>`;
+    return;
+  }
+
+  if (cfg.impl === "events") {
+    const { results, error } = await nrnyFetchEvents(NRNY.geo);
+    loading.hidden = true;
+    if (error) {
+      grid.innerHTML = `<p style="grid-column:1/-1;color:var(--emergency);padding:20px;">Couldn't reach events index: ${escapeHtml(error)}. Try again shortly.</p>`;
+      return;
+    }
+    if (results.length === 0) {
+      // Empty state — per empty-state design memory: "we don't have it yet,
+      // help us add it" beats dumping aggregator deep-links. Nearnity's
+      // positioning is that we index public data; if we don't have it,
+      // ask the user to point us to a source.
+      grid.innerHTML = `
+<article class="card tier-community" style="grid-column: 1 / -1;">
+  <div class="card-tier-label">No events yet</div>
+  <h3 class="card-title">No events indexed for ${escapeHtml(nrnyAddressChip(NRNY.geo))} yet</h3>
+  <p class="card-sub">We source events from Ticketmaster, USDA farmers markets, National Parks, and local library systems. Your area isn't covered yet — help us add it.</p>
+  <p class="card-meta">Know a great local calendar we should add? Tell us — we prioritize by request volume.</p>
+  <div class="card-actions">
+    <a class="card-action primary" href="mailto:feedback@nearnity.com?subject=Add events source for ${encodeURIComponent(nrnyAddressChip(NRNY.geo))}">Suggest a source</a>
+  </div>
+</article>`;
+      return;
+    }
+    grid.innerHTML = results.map(r => nrnyRenderEventCard(r)).join("");
+    nrnySetupEventsMap(results, NRNY.geo.lat, NRNY.geo.lon);
     return;
   }
 
