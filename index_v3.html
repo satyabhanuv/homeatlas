@@ -652,7 +652,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.13</b> — Around me → Schools wired. Teal for SABS-assigned, indigo for public in district, coral for charter. District finder link + 2015-16 SABS caveat. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.15</b> — Around me → Parks & rec wired. NPS (teal) + local OSM parks (indigo) in two columns. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -915,7 +915,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.13",
+  version: "v3.0.1.15",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -930,6 +930,7 @@ const NRNY = {
   _lastEvents: null,       // cache last events results for toggle re-render
   _lastMedical: null,      // cache last medical results for toggle re-render
   _lastSchools: null,      // cache last schools results for toggle re-render
+  _lastParks: null,        // cache last parks results for toggle re-render
 };
 
 // ─── Subnav registry per cat-tab (flat, per D2) ────────────────────────
@@ -938,7 +939,7 @@ const NRNY_SUBNAVS = {
     { id: "events",    label: "Events",          impl: "events" },
     { id: "biz",       label: "Local businesses",impl: "coming_soon" },
     { id: "schools",   label: "Schools",         impl: "schools" },
-    { id: "parks",     label: "Parks & rec",     impl: "coming_soon" },
+    { id: "parks",     label: "Parks & rec",     impl: "parks" },
   ],
   home: [
     { id: "utils",     label: "Utilities",       impl: "coming_soon" },
@@ -1433,6 +1434,141 @@ function nrnySetupSchoolsMap(items, centerLat, centerLon) {
   }
 }
 
+// ─── Parks fetchers (v3.0.1.15) ───────────────────────────────────────
+// Two sources merged into one Parks & rec view:
+//   1. NPS Parks API (via Worker /api/parks-nps) — federal parks, monuments,
+//      historic sites, recreation areas. Nationwide. Teal (federal) tier.
+//   2. Overpass API (direct from browser) — OSM leisure=park + playground +
+//      nature_reserve + recreation_ground. City/regional parks. Indigo tier.
+// Both fetched in parallel; results grouped into columns by source.
+async function nrnyFetchParksNPS(geo) {
+  try {
+    // /api/parks-nps uses `radius` in miles (not radius_mi); returns { parks: [...] }
+    const url = `${NRNY.apiBase}/api/parks-nps?lat=${geo.lat}&lon=${geo.lon}&radius=${NRNY.radiusMi}`;
+    const resp = await fetch(url);
+    if (!resp.ok) return { parks: [], error: `HTTP ${resp.status}` };
+    const data = await resp.json();
+    const parks = (Array.isArray(data.parks) ? data.parks : []).map(p => ({
+      _source: "nps",
+      name: p.name || p.fullName || "National Park",
+      designation: p.designation || "National Park Service unit",
+      lat: p.lat, lon: p.lon,
+      distance_mi: p.distance_miles != null ? p.distance_miles : null,
+      url: p.url || (p.id ? `https://www.nps.gov/${p.id}/index.htm` : ""),
+      description: p.description || "",
+      states: p.states || "",
+    }));
+    return { parks, error: null };
+  } catch (e) { return { parks: [], error: (e && e.message) || String(e) }; }
+}
+
+async function nrnyFetchParksOSM(geo) {
+  // Overpass query — 5-mile radius (~8km), named leisure spaces only.
+  // 100 result cap keeps payload sane. `out center` returns lat/lon
+  // for ways/relations (not just nodes).
+  const radiusMeters = Math.min(NRNY.radiusMi, 5) * 1609.34;   // cap at 5mi for local
+  const query = `[out:json][timeout:20];
+nwr["leisure"~"^(park|nature_reserve|recreation_ground|playground)$"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+out center 100;`;
+  try {
+    const ctrl = new AbortController();
+    const timeout = setTimeout(() => ctrl.abort(), 10000);
+    const resp = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(query),
+      signal: ctrl.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return { parks: [], error: `Overpass HTTP ${resp.status}` };
+    const data = await resp.json();
+    const parks = (Array.isArray(data.elements) ? data.elements : [])
+      .map(el => {
+        const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
+        const lon = el.lon != null ? el.lon : (el.center && el.center.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+        const tags = el.tags || {};
+        const leisureType = tags.leisure || "park";
+        const typeLabel = leisureType === "nature_reserve" ? "Nature reserve"
+                        : leisureType === "recreation_ground" ? "Recreation ground"
+                        : leisureType === "playground" ? "Playground"
+                        : "Park";
+        const dist = haversineMi(geo.lat, geo.lon, lat, lon);
+        return {
+          _source: "osm",
+          name: tags.name,
+          designation: typeLabel,
+          lat, lon,
+          distance_mi: +dist.toFixed(2),
+          url: tags.website || tags["contact:website"] || `https://www.google.com/maps/search/${encodeURIComponent(tags.name + " park")}/@${lat},${lon},15z`,
+          description: tags.description || "",
+          amenities: [tags.playground === "yes" ? "Playground" : null, tags.dog_park === "yes" ? "Dog park" : null, tags.bbq === "yes" ? "BBQ" : null].filter(Boolean),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.distance_mi - b.distance_mi);
+    return { parks, error: null };
+  } catch (e) { return { parks: [], error: (e && e.message) || String(e) }; }
+}
+
+// Card renderer for a park (v3 tier system).
+// Teal (authoritative) = NPS federal source. Indigo (public) = OSM local.
+function nrnyRenderParkCard(item) {
+  const isNPS = item._source === "nps";
+  const tier = isNPS ? "authoritative" : "public";
+  const tierLabel = isNPS ? "Federal source · NPS" : "Public dataset · OSM";
+  const name = escapeHtml(item.name || "Park");
+  const designation = escapeHtml(item.designation || "Park");
+  const dist = item.distance_mi != null ? distFmt(item.distance_mi) : "";
+  const url = item.url || "";
+  const desc = item.description ? escapeHtml(String(item.description).slice(0, 180)) + (item.description.length > 180 ? "…" : "") : "";
+  const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
+    ? `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
+    : "";
+  const amenitiesChip = (item.amenities && item.amenities.length)
+    ? ` · ${escapeHtml(item.amenities.join(" · "))}`
+    : "";
+  return `
+<article class="card tier-${tier}">
+  <div class="card-tier-label">${tierLabel}</div>
+  <h3 class="card-title">${name}</h3>
+  <p class="card-sub">${designation}${amenitiesChip}${dist ? " · " + dist : ""}</p>
+  ${desc ? `<p class="card-meta">${desc}</p>` : ""}
+  <div class="card-actions">
+    ${url ? `<a class="card-action primary" href="${escapeHtml(url)}" target="_blank" rel="noopener">Details →</a>` : ""}
+    ${gmapsUrl ? `<a class="card-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+    <a class="card-action" href="mailto:feedback@nearnity.com?subject=Report: ${encodeURIComponent(item.name || 'park')}">⚠ Report</a>
+  </div>
+</article>`;
+}
+
+// Parks map — teal 🌲 for NPS, indigo 🌳 for OSM local parks.
+function nrnySetupParksMap(items, centerLat, centerLon) {
+  const el = $("nrny-section-map");
+  if (!el || !window.L) return;
+  el.hidden = false;
+  if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
+  NRNY._sectionMap = L.map(el, { scrollWheelZoom: false }).setView([centerLat, centerLon], 11);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
+    attribution: '&copy; OpenStreetMap · CARTO',
+    maxZoom: 19,
+  }).addTo(NRNY._sectionMap);
+  L.marker([centerLat, centerLon], { title: "Your location" }).addTo(NRNY._sectionMap).bindPopup("<b>Your location</b>");
+  for (const p of items) {
+    if (!Number.isFinite(p.lat) || !Number.isFinite(p.lon)) continue;
+    const isNPS = p._source === "nps";
+    const color = isNPS ? "#0D9488" : "#4F46E5";
+    const emoji = isNPS ? "🌲" : "🌳";
+    const icon = L.divIcon({
+      className: "nrny-pin",
+      html: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">${emoji}</div>`,
+      iconSize: [24, 24], iconAnchor: [12, 12],
+    });
+    L.marker([p.lat, p.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(p.name || "")}</b><br>${escapeHtml(p.designation || "")}`);
+  }
+}
+
 // Map setup for the events section — pins colored by source tier.
 function nrnySetupEventsMap(items, centerLat, centerLon) {
   const el = $("nrny-section-map");
@@ -1534,7 +1670,7 @@ async function nrnyRenderSubnav(tab, subnav) {
   // v3.0.1.10: only show map toggle for impls that render a map. Toggle
   // button label reflects current state; click handler is bound once at boot.
   const cfgPreview = (NRNY_SUBNAVS[tab] || []).find(s => s.id === subnav);
-  const showToggle = cfgPreview && (cfgPreview.impl === "events" || cfgPreview.impl === "medical" || cfgPreview.impl === "schools");
+  const showToggle = cfgPreview && (cfgPreview.impl === "events" || cfgPreview.impl === "medical" || cfgPreview.impl === "schools" || cfgPreview.impl === "parks");
   if (mapToggle) {
     mapToggle.hidden = !showToggle;
     mapToggle.textContent = NRNY.showMap ? "🗺 Hide map" : "🗺 Show map";
@@ -1644,6 +1780,50 @@ async function nrnyRenderSubnav(tab, subnav) {
     // Cache for map-toggle re-render + only paint map if user opted in.
     NRNY._lastEvents = deduped;
     if (NRNY.showMap) nrnySetupEventsMap(deduped, NRNY.geo.lat, NRNY.geo.lon);
+    return;
+  }
+
+  if (cfg.impl === "parks") {
+    // Fetch NPS + OSM in parallel — different sources, different failure modes.
+    // If one fails, still show the other.
+    const [npsResult, osmResult] = await Promise.all([
+      nrnyFetchParksNPS(NRNY.geo),
+      nrnyFetchParksOSM(NRNY.geo),
+    ]);
+    loading.hidden = true;
+    const npsParks = (npsResult.parks || []).sort((a, b) => (a.distance_mi || 0) - (b.distance_mi || 0));
+    const osmParks = (osmResult.parks || []);
+    const allParks = [...npsParks, ...osmParks];
+    if (allParks.length === 0) {
+      const errs = [npsResult.error, osmResult.error].filter(Boolean).join(" · ");
+      grid.innerHTML = `
+<article class="card tier-community" style="grid-column: 1 / -1;">
+  <div class="card-tier-label">No parks found</div>
+  <h3 class="card-title">No parks indexed near ${escapeHtml(nrnyAddressChip(NRNY.geo))}</h3>
+  <p class="card-sub">We source parks from the National Park Service + OpenStreetMap. If OSM has no named parks tagged near your address, they won't appear here.</p>
+  ${errs ? `<p class="card-meta">Debug: ${escapeHtml(errs)}</p>` : ""}
+</article>`;
+      return;
+    }
+    // Group into columns: NPS first (federal, more prestigious), then OSM local.
+    const groups = [
+      { id: "nps", icon: "🌲", label: "National Park Service", items: npsParks },
+      { id: "osm", icon: "🌳", label: "Local parks",           items: osmParks },
+    ].filter(g => g.items.length > 0);
+    const columnsHtml = groups.map(g => `
+<div class="events-column">
+  <div class="events-col-header">
+    <span class="events-col-icon">${g.icon}</span>
+    <h4>${escapeHtml(g.label)}</h4>
+    <span class="events-col-count">${g.items.length}</span>
+  </div>
+  <div class="events-col-stack">
+    ${g.items.map(nrnyRenderParkCard).join("")}
+  </div>
+</div>`).join("");
+    grid.innerHTML = `<div class="events-columns-wrap" style="grid-column: 1 / -1;">${columnsHtml}</div>`;
+    NRNY._lastParks = allParks;
+    if (NRNY.showMap) nrnySetupParksMap(allParks, NRNY.geo.lat, NRNY.geo.lon);
     return;
   }
 
@@ -1830,6 +2010,8 @@ document.addEventListener("DOMContentLoaded", () => {
           nrnySetupMap(NRNY._lastMedical, NRNY.geo.lat, NRNY.geo.lon);
         } else if (NRNY.activeTab === "around" && NRNY.activeSubnav === "schools" && Array.isArray(NRNY._lastSchools) && NRNY._lastSchools.length) {
           nrnySetupSchoolsMap(NRNY._lastSchools, NRNY.geo.lat, NRNY.geo.lon);
+        } else if (NRNY.activeTab === "around" && NRNY.activeSubnav === "parks" && Array.isArray(NRNY._lastParks) && NRNY._lastParks.length) {
+          nrnySetupParksMap(NRNY._lastParks, NRNY.geo.lat, NRNY.geo.lon);
         }
       } else {
         // Hide map, tear down Leaflet instance so scroll doesn't get eaten.
