@@ -631,7 +631,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.10</b> — Events grouped by category (farmers markets · kids · music · sports · library · outdoor). Map collapsed by default. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.11</b> — Events grouped by category. Map collapsed by default. Farmers market Details now link to real market pages (was: USDA portal). Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -894,7 +894,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.10",
+  version: "v3.0.1.11",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1208,7 +1208,24 @@ function nrnyRenderEventCard(item) {
   const dateChip = escapeHtml(nrnyEventDateChip(item.start_date, item.end_date));
   const venue = escapeHtml(item.venue_name || item.venue_address || item.venue || item.address || "");
   const dist = Number.isFinite(item.distance_mi) ? distFmt(item.distance_mi) : "";
-  const url = item.url || item.source_url || "";
+  const rawUrl = item.url || item.source_url || "";
+  // v3.0.1.11: some sources fall back to the aggregator homepage when the
+  // per-event URL is missing (USDA farmers markets is the loudest offender —
+  // >90% of listings have no listing_website). "Details →" on those cards
+  // was landing on usdalocalfoodportal.com homepage, which is useless.
+  // Detect the aggregator-home pattern and substitute a Google Maps search
+  // using the market name + address — that reliably shows hours, phone,
+  // reviews, and photos.
+  const src = String(item.source_id || "");
+  const looksLikeAggregatorHome =
+    /^https?:\/\/(?:www\.)?usdalocalfoodportal\.com\/?(?:\?[^#]*)?(?:#.*)?$/i.test(rawUrl) ||
+    /^https?:\/\/search\.ams\.usda\.gov\/farmersmarkets\/?$/i.test(rawUrl) ||
+    !rawUrl;
+  let url = rawUrl;
+  if (looksLikeAggregatorHome && (src === "usda_farmers_markets" || src === "pcfma_visit" || /market|farm/i.test(item.category || ""))) {
+    const query = [item.title, item.venue_address, item.venue_name].filter(Boolean).join(" ").trim();
+    if (query) url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+  }
   // v3.0.1.10: Ticketmaster sometimes returns literal "undefined" string
   // for classifications when segment/genre is missing. Drop it so the card
   // doesn't say "Ticketmaster · undefined".
@@ -1217,16 +1234,16 @@ function nrnyRenderEventCard(item) {
     ? escapeHtml(rawCat.replace(/_/g, " "))
     : "";
   const isFree = item.free || /\bfree\b/i.test(item.title || "");
-  const src = escapeHtml(tierInfo.name);
+  const srcName = escapeHtml(tierInfo.name);
   const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
     ? `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
     : (venue ? `https://www.google.com/maps/search/${encodeURIComponent(venue)}` : "");
-  const saveData = escapeHtml(JSON.stringify({ name: item.title, source: src, url, start_date: item.start_date }));
+  const saveData = escapeHtml(JSON.stringify({ name: item.title, source: srcName, url, start_date: item.start_date }));
   return `
 <article class="card tier-${tierInfo.tier}">
   <div class="card-tier-label">${escapeHtml(tierInfo.label)}${isFree ? " · Free" : ""}</div>
   <h3 class="card-title">${title}</h3>
-  <p class="card-sub">${src}${category ? " · " + category : ""}</p>
+  <p class="card-sub">${srcName}${category ? " · " + category : ""}</p>
   <p class="card-meta">📅 ${dateChip}</p>
   ${venue ? `<p class="card-meta">📍 ${venue}${dist ? " · " + dist : ""}</p>` : (dist ? `<p class="card-meta">${dist}</p>` : "")}
   <div class="card-actions">
