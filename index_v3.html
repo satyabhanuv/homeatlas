@@ -389,6 +389,56 @@
     gap: 16px;
   }
 
+  /* ──── Map toggle (v3.0.1.10) ────────────────────────────────────
+     Section map is opt-in — user clicks toggle to expand. Keeps
+     results (esp. events) above the fold. */
+  .section-map-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px;
+    font-size: 13px; font-weight: 600;
+    color: var(--ink);
+    margin: 0 0 16px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+  }
+  .section-map-toggle:hover { background: #f4f4f4; border-color: var(--ink-soft); }
+
+  /* ──── Events grouped columns (v3.0.1.10) ─────────────────────────
+     Events grouped by category (farmers, kids, music, sports, library,
+     outdoor, other). Each column is a vertical stack sorted chronologically.
+     Responsive: columns collapse to single-column stack on narrow screens. */
+  .events-columns-wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  .events-column { min-width: 0; }
+  .events-col-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+  }
+  .events-col-icon { font-size: 18px; line-height: 1; }
+  .events-col-header h4 {
+    flex: 1; margin: 0;
+    font-size: 14px; font-weight: 700;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .events-col-count {
+    background: var(--primary-soft); color: var(--primary-2);
+    border-radius: var(--radius-pill); padding: 2px 8px;
+    font-size: 12px; font-weight: 700;
+  }
+  .events-col-stack { display: flex; flex-direction: column; gap: 12px; }
+
   /* Card */
   .card {
     background: var(--surface);
@@ -581,7 +631,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1</b> — Emergency + Events wired to live data. Schools + Parks + Fire + Alerts landing this week. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.10</b> — Events grouped by category (farmers markets · kids · music · sports · library · outdoor). Map collapsed by default. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -746,8 +796,11 @@
 
     <nav class="subnav" id="nrny-subnav" hidden></nav>
 
-    <!-- Section map (Leaflet). Hidden until data loads. -->
-    <div id="nrny-section-map" style="height: 320px; border-radius: 14px; overflow: hidden; margin: 20px 0; border: 1px solid var(--line);" hidden></div>
+    <!-- v3.0.1.10: Map toggle. Hidden by default so results stay above the fold. -->
+    <button class="section-map-toggle" id="nrny-map-toggle" hidden>🗺 Show map</button>
+
+    <!-- Section map (Leaflet). Hidden until user clicks toggle. -->
+    <div id="nrny-section-map" style="height: 320px; border-radius: 14px; overflow: hidden; margin: 0 0 20px; border: 1px solid var(--line);" hidden></div>
 
     <!-- Loading state -->
     <div id="nrny-loading" style="text-align:center; padding:40px; color:var(--ink-soft);" hidden>Loading…</div>
@@ -841,7 +894,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.9",
+  version: "v3.0.1.10",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -849,6 +902,12 @@ const NRNY = {
   activeSubnav: null,
   _sectionMap: null,       // Leaflet map instance
   _sectionMarkers: [],
+  // v3.0.1.10: map is opt-in per section — collapsed by default so events
+  // and results are immediately visible without scroll. User preference
+  // persisted in localStorage.
+  showMap: (typeof localStorage !== "undefined" && localStorage.getItem("nearnity-show-map-v3") === "1"),
+  _lastEvents: null,       // cache last events results for toggle re-render
+  _lastMedical: null,      // cache last medical results for toggle re-render
 };
 
 // ─── Subnav registry per cat-tab (flat, per D2) ────────────────────────
@@ -1052,6 +1111,56 @@ async function nrnyFetchEvents(geo) {
   }
 }
 
+// ─── Event categorization (v3.0.1.10) ─────────────────────────────────
+// Fixed category taxonomy + ordering. Every event maps to exactly one
+// bucket. Priority: farmers → outdoor → library → kids → sports → music
+// → other. Uses source_id first, then category, then title keywords.
+const NRNY_EVENT_CATEGORIES = [
+  { id: "farmers", icon: "🥬", label: "Farmers markets" },
+  { id: "kids",    icon: "👨‍👩‍👧", label: "Kids & family" },
+  { id: "music",   icon: "🎵", label: "Music & shows" },
+  { id: "sports",  icon: "⚽", label: "Sports" },
+  { id: "library", icon: "📚", label: "Library & community" },
+  { id: "outdoor", icon: "🌲", label: "Outdoor & parks" },
+  { id: "other",   icon: "📅", label: "Other" },
+];
+
+function nrnyCategorizeEvent(item) {
+  const src = String(item.source_id || "");
+  const rawCat = String(item.category || "").toLowerCase();
+  const cat = (rawCat && rawCat !== "undefined") ? rawCat : "";
+  const title = String(item.title || "").toLowerCase();
+  const venue = String(item.venue_name || item.venue_address || item.venue || "").toLowerCase();
+
+  // 1. Farmers markets — dedicated sources + title keywords
+  if (src === "usda_farmers_markets" || src === "pcfma_visit") return "farmers";
+  if (/farmers?[\s.-]market|farm[\s.-]market|swap[\s.-]meet|produce[\s.-]market/i.test(title)) return "farmers";
+
+  // 2. Outdoor / NPS — nature, trails, ranger programs
+  if (src === "nps") return "outdoor";
+  if (/\b(trail|hike|nature[\s.-]walk|birding|ranger[\s.-](?:talk|walk|program)|stargaz|astronomy[\s.-]night|campfire)\b/i.test(title)) return "outdoor";
+
+  // 3. Library & community — BiblioCommons + civic
+  if (src.startsWith("bibliocommons_")) return "library";
+  if (/\b(library|storytime|story[\s.-]time|book[\s.-]club|reading|literacy|book[\s.-]sale|author[\s.-]talk)\b/i.test(title)) return "library";
+  if (/\blibrary\b/i.test(venue)) return "library";
+
+  // 4. Kids & family — title/category keywords
+  if (/\b(kids?|children|family[\s.-]friendly|toddler|preschool|youth|teen|camp[\s.-](?:day|week)?|storytime)\b/i.test(title)) return "kids";
+  if (cat === "kids" || cat === "family" || cat === "family_events") return "kids";
+
+  // 5. Sports — TM sports category + team keywords
+  if (cat === "sports" || cat === "sport") return "sports";
+  if (/\b(giants|warriors|niners|49ers|sharks|earthquakes|athletics|kings|rams|lakers|clippers|dodgers|padres|angels|mets|yankees|patriots|celtics|red[\s.-]sox|bruins|knicks|cowboys|stars|astros|texans|spurs|mavericks|rockets|nba|nhl|nfl|mlb|game|match|tournament|championship|racing)\b/i.test(title)) return "sports";
+
+  // 6. Music & shows — TM music + arts_and_theatre
+  if (cat === "music" || cat === "arts" || cat === "arts_and_theatre" || cat === "arts_theatre" || cat === "theatre" || cat === "miscellaneous") return "music";
+  if (/\b(concert|tour|show|comedy|orchestra|opera|festival|band|dj|jazz|hip[\s.-]hop|open[\s.-]mic)\b/i.test(title)) return "music";
+
+  // 7. Fallback
+  return "other";
+}
+
 // Source-id → tier + friendly name mapping.
 // Tier maps to card border color per v3 legend:
 //   authoritative (teal)  = federal / gov authority
@@ -1100,7 +1209,13 @@ function nrnyRenderEventCard(item) {
   const venue = escapeHtml(item.venue_name || item.venue_address || item.venue || item.address || "");
   const dist = Number.isFinite(item.distance_mi) ? distFmt(item.distance_mi) : "";
   const url = item.url || item.source_url || "";
-  const category = escapeHtml((item.category || "").replace(/_/g, " "));
+  // v3.0.1.10: Ticketmaster sometimes returns literal "undefined" string
+  // for classifications when segment/genre is missing. Drop it so the card
+  // doesn't say "Ticketmaster · undefined".
+  const rawCat = String(item.category || "");
+  const category = (rawCat && rawCat !== "undefined")
+    ? escapeHtml(rawCat.replace(/_/g, " "))
+    : "";
   const isFree = item.free || /\bfree\b/i.test(item.title || "");
   const src = escapeHtml(tierInfo.name);
   const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
@@ -1216,9 +1331,19 @@ async function nrnyRenderSubnav(tab, subnav) {
   const grid = $("nrny-results-grid");
   const loading = $("nrny-loading");
   const map = $("nrny-section-map");
+  const mapToggle = $("nrny-map-toggle");
   grid.innerHTML = "";
   map.hidden = true;
+  if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
   loading.hidden = false;
+  // v3.0.1.10: only show map toggle for impls that render a map. Toggle
+  // button label reflects current state; click handler is bound once at boot.
+  const cfgPreview = (NRNY_SUBNAVS[tab] || []).find(s => s.id === subnav);
+  const showToggle = cfgPreview && (cfgPreview.impl === "events" || cfgPreview.impl === "medical");
+  if (mapToggle) {
+    mapToggle.hidden = !showToggle;
+    mapToggle.textContent = NRNY.showMap ? "🗺 Hide map" : "🗺 Show map";
+  }
 
   if (!NRNY.geo) {
     loading.hidden = true;
@@ -1270,9 +1395,7 @@ async function nrnyRenderSubnav(tab, subnav) {
     }
     if (results.length === 0) {
       // Empty state — per empty-state design memory: "we don't have it yet,
-      // help us add it" beats dumping aggregator deep-links. Nearnity's
-      // positioning is that we index public data; if we don't have it,
-      // ask the user to point us to a source.
+      // help us add it" beats dumping aggregator deep-links.
       grid.innerHTML = `
 <article class="card tier-community" style="grid-column: 1 / -1;">
   <div class="card-tier-label">No events yet</div>
@@ -1285,8 +1408,44 @@ async function nrnyRenderSubnav(tab, subnav) {
 </article>`;
       return;
     }
-    grid.innerHTML = results.map(r => nrnyRenderEventCard(r)).join("");
-    nrnySetupEventsMap(results, NRNY.geo.lat, NRNY.geo.lon);
+
+    // v3.0.1.10: group by category, sort within each column by start_date.
+    // Dateless events (ongoing farmers markets, recurring library programs)
+    // sink to the bottom of their column via Infinity sentinel.
+    const grouped = {};
+    for (const ev of results) {
+      const catId = nrnyCategorizeEvent(ev);
+      if (!grouped[catId]) grouped[catId] = [];
+      grouped[catId].push(ev);
+    }
+    for (const catId of Object.keys(grouped)) {
+      grouped[catId].sort((a, b) => {
+        const ta = a.start_date ? Date.parse(a.start_date) : Infinity;
+        const tb = b.start_date ? Date.parse(b.start_date) : Infinity;
+        if (Number.isNaN(ta)) return 1;
+        if (Number.isNaN(tb)) return -1;
+        return ta - tb;
+      });
+    }
+    // Render columns in canonical NRNY_EVENT_CATEGORIES order, skip empty.
+    const columnsHtml = NRNY_EVENT_CATEGORIES
+      .filter(cat => grouped[cat.id] && grouped[cat.id].length > 0)
+      .map(cat => `
+<div class="events-column">
+  <div class="events-col-header">
+    <span class="events-col-icon">${cat.icon}</span>
+    <h4>${escapeHtml(cat.label)}</h4>
+    <span class="events-col-count">${grouped[cat.id].length}</span>
+  </div>
+  <div class="events-col-stack">
+    ${grouped[cat.id].map(r => nrnyRenderEventCard(r)).join("")}
+  </div>
+</div>`).join("");
+
+    grid.innerHTML = `<div class="events-columns-wrap" style="grid-column: 1 / -1;">${columnsHtml}</div>`;
+    // Cache for map-toggle re-render + only paint map if user opted in.
+    NRNY._lastEvents = results;
+    if (NRNY.showMap) nrnySetupEventsMap(results, NRNY.geo.lat, NRNY.geo.lon);
     return;
   }
 
@@ -1305,7 +1464,8 @@ ${nrnyAnchorCardsFor(NRNY.geo, cfg.taxonomy)}`;
       return;
     }
     grid.innerHTML = results.map(r => nrnyRenderMedicalCard(r, cfg.taxonomy)).join("");
-    nrnySetupMap(results, NRNY.geo.lat, NRNY.geo.lon);
+    NRNY._lastMedical = results;
+    if (NRNY.showMap) nrnySetupMap(results, NRNY.geo.lat, NRNY.geo.lon);
     return;
   }
 
@@ -1390,6 +1550,32 @@ document.addEventListener("DOMContentLoaded", () => {
     $("nrny-loading").hidden = true;
     nrnySwitchTab(NRNY.activeTab);
   });
+
+  // v3.0.1.10: Map toggle. Persists preference to localStorage so users who
+  // want the map stay-open get it back on every section switch.
+  const mapToggleBtn = $("nrny-map-toggle");
+  if (mapToggleBtn) {
+    mapToggleBtn.addEventListener("click", () => {
+      NRNY.showMap = !NRNY.showMap;
+      try { localStorage.setItem("nearnity-show-map-v3", NRNY.showMap ? "1" : "0"); } catch (_) {}
+      mapToggleBtn.textContent = NRNY.showMap ? "🗺 Hide map" : "🗺 Show map";
+      if (NRNY.showMap) {
+        // Paint map using last-fetched results for active section (no re-fetch).
+        if (NRNY.activeTab === "around" && NRNY.activeSubnav === "events" && Array.isArray(NRNY._lastEvents) && NRNY._lastEvents.length) {
+          nrnySetupEventsMap(NRNY._lastEvents, NRNY.geo.lat, NRNY.geo.lon);
+        } else if (NRNY.activeTab === "emergency" && Array.isArray(NRNY._lastMedical) && NRNY._lastMedical.length) {
+          nrnySetupMap(NRNY._lastMedical, NRNY.geo.lat, NRNY.geo.lon);
+        }
+      } else {
+        // Hide map, tear down Leaflet instance so scroll doesn't get eaten.
+        $("nrny-section-map").hidden = true;
+        if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
+        // Scroll back to top of results so user sees content immediately.
+        const subnavEl = $("nrny-subnav");
+        if (subnavEl) subnavEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
 
   // v3.0.0-alpha.1: Hero primary cards + quick chips → jump directly to
   // the mapped cat-tab + subnav. If no address yet, prefill Looking-for
