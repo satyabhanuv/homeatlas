@@ -439,6 +439,27 @@
   }
   .events-col-stack { display: flex; flex-direction: column; gap: 12px; }
 
+  /* ──── Schools district banner (v3.0.1.13) ────────────────────────
+     Shown above the assigned/public/charter columns. Includes a
+     "verify assignment →" link because NCES SABS data is 2015-16
+     vintage and can be off by a school at block-boundary addresses. */
+  .school-district-banner {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--tier-teal);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .school-district-banner b { color: var(--ink); font-weight: 700; }
+  .school-district-banner a { color: var(--primary); font-weight: 600; }
+  .school-district-banner .sabs-caveat {
+    color: var(--ink-soft); font-size: 12px; flex-basis: 100%;
+    padding-top: 6px; border-top: 1px dashed var(--line);
+  }
+
   /* Card */
   .card {
     background: var(--surface);
@@ -631,7 +652,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.12</b> — Events dedupe + coord-anchored maps fallback. Duplicate market cards collapsed; USDA stale-address bug worked around. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.13</b> — Around me → Schools wired. Teal for SABS-assigned, indigo for public in district, coral for charter. District finder link + 2015-16 SABS caveat. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -894,7 +915,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.12",
+  version: "v3.0.1.13",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -908,6 +929,7 @@ const NRNY = {
   showMap: (typeof localStorage !== "undefined" && localStorage.getItem("nearnity-show-map-v3") === "1"),
   _lastEvents: null,       // cache last events results for toggle re-render
   _lastMedical: null,      // cache last medical results for toggle re-render
+  _lastSchools: null,      // cache last schools results for toggle re-render
 };
 
 // ─── Subnav registry per cat-tab (flat, per D2) ────────────────────────
@@ -915,7 +937,7 @@ const NRNY_SUBNAVS = {
   around: [
     { id: "events",    label: "Events",          impl: "events" },
     { id: "biz",       label: "Local businesses",impl: "coming_soon" },
-    { id: "schools",   label: "Schools",         impl: "coming_soon" },
+    { id: "schools",   label: "Schools",         impl: "schools" },
     { id: "parks",     label: "Parks & rec",     impl: "coming_soon" },
   ],
   home: [
@@ -1299,6 +1321,118 @@ function nrnyRenderEventCard(item) {
 </article>`;
 }
 
+// ─── /api/school-zone + /api/school-assignment fetcher (v3.0.1.13) ────
+// Two-endpoint pattern from v2.8.2a:
+//   1. school-zone: Census point→district + NCES CCD roster for that
+//      district. Nationwide coverage for public schools.
+//   2. school-assignment: NCES SABS 2015-16 point-in-polygon to identify
+//      the actually-assigned school (E/M/H). Available only for states
+//      whose SABS data has been preprocessed to KV (v2.8.2b pipeline).
+// Merge: tag zone schools whose ncessch appears in SABS output as
+// _sabs_assigned:true → teal card. Everyone else stays public/charter.
+async function nrnyFetchSchools(geo) {
+  const state = nrnyStateOf(geo);
+  const commonParams = `lat=${geo.lat}&lon=${geo.lon}${state ? "&state=" + state : ""}`;
+  try {
+    const [zoneResp, assignResp] = await Promise.all([
+      fetch(`${NRNY.apiBase}/api/school-zone?${commonParams}`),
+      fetch(`${NRNY.apiBase}/api/school-assignment?${commonParams}`),
+    ]);
+    let zone = null, assign = null;
+    if (zoneResp && zoneResp.ok) zone = await zoneResp.json().catch(() => null);
+    if (assignResp && assignResp.ok) assign = await assignResp.json().catch(() => null);
+    if (!zone || !Array.isArray(zone.schools)) {
+      return { district: (zone && zone.district) || null, schools: [], sabsAvailable: false, sabsCaveat: null, error: (zone && zone.error) || null };
+    }
+    // Collect assigned NCES IDs from SABS result
+    const assignedIds = new Set();
+    if (assign && assign.available && assign.assigned) {
+      const a = assign.assigned;
+      if (a.E && a.E.ncessch) assignedIds.add(a.E.ncessch);
+      if (a.M && a.M.ncessch) assignedIds.add(a.M.ncessch);
+      if (a.H && a.H.ncessch) assignedIds.add(a.H.ncessch);
+      if (Array.isArray(a.other)) a.other.forEach(o => o && o.ncessch && assignedIds.add(o.ncessch));
+    }
+    const schools = zone.schools.map(s => ({
+      ...s,
+      _sabs_assigned: !!(s.ncessch && assignedIds.has(s.ncessch)),
+    }));
+    return {
+      district: zone.district || null,
+      schools,
+      sabsAvailable: !!(assign && assign.available),
+      sabsCaveat: (assign && assign.caveat) || null,
+      error: null,
+    };
+  } catch (e) {
+    return { district: null, schools: [], sabsAvailable: false, sabsCaveat: null, error: (e && e.message) || String(e) };
+  }
+}
+
+// Card renderer for a school (v3 tier system).
+// Tier mapping:
+//   _sabs_assigned=true → authoritative (teal) — "Your assigned school"
+//   charter=true       → community (coral)    — "Charter school"
+//   otherwise          → public (indigo)      — "Public — district"
+function nrnyRenderSchoolCard(item) {
+  const isAssigned = item._sabs_assigned === true;
+  const isCharter = item.charter === true;
+  const isMagnet = item.magnet === true;
+  const tier = isAssigned ? "authoritative" : (isCharter ? "community" : "public");
+  const tierLabel = isAssigned ? "Your assigned school" : (isCharter ? "Charter" : "Public — district");
+  const name = escapeHtml(item.name || "School");
+  const addr = escapeHtml(item.address || "");
+  const phone = String(item.phone || "");
+  const gradeLow = item.grade_low != null ? String(item.grade_low) : "";
+  const gradeHigh = item.grade_high != null ? String(item.grade_high) : "";
+  const grades = (gradeLow || gradeHigh) ? `Grades ${escapeHtml(gradeLow || "?")}–${escapeHtml(gradeHigh || "?")}` : "";
+  const enrollment = item.enrollment ? `${item.enrollment.toLocaleString()} students` : "";
+  const type = escapeHtml(item.level_text || item.type || "School");
+  const sourceUrl = item.source_url || "";
+  const magnetChip = isMagnet ? " · Magnet" : "";
+  const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
+    ? `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
+    : "";
+  return `
+<article class="card tier-${tier}">
+  <div class="card-tier-label">${tierLabel}${magnetChip}</div>
+  <h3 class="card-title">${name}</h3>
+  <p class="card-sub">${type}${grades ? " · " + grades : ""}</p>
+  ${addr ? `<p class="card-meta">📍 ${addr}</p>` : ""}
+  ${enrollment ? `<p class="card-meta">👥 ${enrollment}</p>` : ""}
+  <div class="card-actions">
+    ${phone ? `<a class="card-action ${isAssigned ? "primary" : ""}" href="tel:${phone.replace(/[^\d+]/g,"")}">📞 Call</a>` : ""}
+    ${gmapsUrl ? `<a class="card-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+    ${sourceUrl ? `<a class="card-action" href="${escapeHtml(sourceUrl)}" target="_blank" rel="noopener">NCES record</a>` : ""}
+  </div>
+</article>`;
+}
+
+// Schools map — teal for SABS-assigned, indigo for public, coral for charter.
+function nrnySetupSchoolsMap(items, centerLat, centerLon) {
+  const el = $("nrny-section-map");
+  if (!el || !window.L) return;
+  el.hidden = false;
+  if (NRNY._sectionMap) { try { NRNY._sectionMap.remove(); } catch(_){} NRNY._sectionMap = null; }
+  NRNY._sectionMap = L.map(el, { scrollWheelZoom: false }).setView([centerLat, centerLon], 12);
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    subdomains: "abcd",
+    attribution: '&copy; OpenStreetMap · CARTO',
+    maxZoom: 19,
+  }).addTo(NRNY._sectionMap);
+  L.marker([centerLat, centerLon], { title: "Your location" }).addTo(NRNY._sectionMap).bindPopup("<b>Your location</b>");
+  for (const s of items) {
+    if (!Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
+    const color = s._sabs_assigned ? "#0D9488" : (s.charter ? "#FB923C" : "#4F46E5");
+    const icon = L.divIcon({
+      className: "nrny-pin",
+      html: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">🏫</div>`,
+      iconSize: [24, 24], iconAnchor: [12, 12],
+    });
+    L.marker([s.lat, s.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(s.name || "")}</b><br>${s._sabs_assigned ? "Your assigned school" : (s.charter ? "Charter" : "Public in district")}`);
+  }
+}
+
 // Map setup for the events section — pins colored by source tier.
 function nrnySetupEventsMap(items, centerLat, centerLon) {
   const el = $("nrny-section-map");
@@ -1400,7 +1534,7 @@ async function nrnyRenderSubnav(tab, subnav) {
   // v3.0.1.10: only show map toggle for impls that render a map. Toggle
   // button label reflects current state; click handler is bound once at boot.
   const cfgPreview = (NRNY_SUBNAVS[tab] || []).find(s => s.id === subnav);
-  const showToggle = cfgPreview && (cfgPreview.impl === "events" || cfgPreview.impl === "medical");
+  const showToggle = cfgPreview && (cfgPreview.impl === "events" || cfgPreview.impl === "medical" || cfgPreview.impl === "schools");
   if (mapToggle) {
     mapToggle.hidden = !showToggle;
     mapToggle.textContent = NRNY.showMap ? "🗺 Hide map" : "🗺 Show map";
@@ -1510,6 +1644,71 @@ async function nrnyRenderSubnav(tab, subnav) {
     // Cache for map-toggle re-render + only paint map if user opted in.
     NRNY._lastEvents = deduped;
     if (NRNY.showMap) nrnySetupEventsMap(deduped, NRNY.geo.lat, NRNY.geo.lon);
+    return;
+  }
+
+  if (cfg.impl === "schools") {
+    const { district, schools, sabsAvailable, sabsCaveat, error } = await nrnyFetchSchools(NRNY.geo);
+    loading.hidden = true;
+    if (error) {
+      grid.innerHTML = `<p style="grid-column:1/-1;color:var(--emergency);padding:20px;">Couldn't reach school lookup: ${escapeHtml(error)}. Try again shortly.</p>`;
+      return;
+    }
+    if (!district || schools.length === 0) {
+      grid.innerHTML = `
+<article class="card tier-community" style="grid-column: 1 / -1;">
+  <div class="card-tier-label">No school data</div>
+  <h3 class="card-title">Couldn't find a school district for ${escapeHtml(nrnyAddressChip(NRNY.geo))}</h3>
+  <p class="card-sub">This can happen for very new addresses or unincorporated areas.</p>
+  <p class="card-meta">Try searching your district's official school finder for authoritative assignment info.</p>
+</article>`;
+      return;
+    }
+    // District banner + verify-assignment link. NCES SABS data is 2015-16
+    // vintage — always caveat and give the user a way to double-check.
+    const finderUrl = `https://www.google.com/search?q=${encodeURIComponent(district.name + " school finder attendance zone lookup")}`;
+    const districtBanner = `
+<div class="school-district-banner" style="grid-column: 1 / -1;">
+  <span>📚 <b>Schools in ${escapeHtml(district.name)}</b></span>
+  <a href="${finderUrl}" target="_blank" rel="noopener">Verify assignment on the district site →</a>
+  ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — every card shows as "public in district" until we upload it.</div>` : "")}
+</div>`;
+
+    // Group: assigned (teal) first, then charter (coral), then rest public (indigo).
+    const assigned = schools.filter(s => s._sabs_assigned);
+    const charters = schools.filter(s => !s._sabs_assigned && s.charter);
+    const otherPublic = schools.filter(s => !s._sabs_assigned && !s.charter);
+    // Within each group, sort by grade_low then name (so K-5s come before 6-8s before 9-12s)
+    const sortKey = (s) => {
+      const g = String(s.grade_low || "99").replace(/[^0-9K]/gi, "").replace(/K/i, "-1");
+      const gnum = g === "-1" ? -1 : (parseInt(g, 10) || 99);
+      return `${String(gnum).padStart(3, "0")}|${(s.name || "").toLowerCase()}`;
+    };
+    assigned.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    charters.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    otherPublic.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+
+    const groups = [
+      { id: "assigned", icon: "🏫", label: "Your assigned school",      items: assigned },
+      { id: "charter",  icon: "🎓", label: "Charter schools",           items: charters },
+      { id: "public",   icon: "🏛️", label: "Other public in district",  items: otherPublic },
+    ].filter(g => g.items.length > 0);
+
+    const columnsHtml = groups.map(g => `
+<div class="events-column">
+  <div class="events-col-header">
+    <span class="events-col-icon">${g.icon}</span>
+    <h4>${escapeHtml(g.label)}</h4>
+    <span class="events-col-count">${g.items.length}</span>
+  </div>
+  <div class="events-col-stack">
+    ${g.items.map(nrnyRenderSchoolCard).join("")}
+  </div>
+</div>`).join("");
+
+    grid.innerHTML = `${districtBanner}<div class="events-columns-wrap" style="grid-column: 1 / -1;">${columnsHtml}</div>`;
+    NRNY._lastSchools = schools;
+    if (NRNY.showMap) nrnySetupSchoolsMap(schools, NRNY.geo.lat, NRNY.geo.lon);
     return;
   }
 
@@ -1629,6 +1828,8 @@ document.addEventListener("DOMContentLoaded", () => {
           nrnySetupEventsMap(NRNY._lastEvents, NRNY.geo.lat, NRNY.geo.lon);
         } else if (NRNY.activeTab === "emergency" && Array.isArray(NRNY._lastMedical) && NRNY._lastMedical.length) {
           nrnySetupMap(NRNY._lastMedical, NRNY.geo.lat, NRNY.geo.lon);
+        } else if (NRNY.activeTab === "around" && NRNY.activeSubnav === "schools" && Array.isArray(NRNY._lastSchools) && NRNY._lastSchools.length) {
+          nrnySetupSchoolsMap(NRNY._lastSchools, NRNY.geo.lat, NRNY.geo.lon);
         }
       } else {
         // Hide map, tear down Leaflet instance so scroll doesn't get eaten.
