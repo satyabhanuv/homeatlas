@@ -631,7 +631,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.11</b> — Events grouped by category. Map collapsed by default. Farmers market Details now link to real market pages (was: USDA portal). Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.12</b> — Events dedupe + coord-anchored maps fallback. Duplicate market cards collapsed; USDA stale-address bug worked around. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -894,7 +894,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.11",
+  version: "v3.0.1.12",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1111,6 +1111,40 @@ async function nrnyFetchEvents(geo) {
   }
 }
 
+// ─── Event dedupe (v3.0.1.12) ─────────────────────────────────────────
+// Farmers markets are listed by BOTH USDA (nationwide but stale addresses)
+// AND our curated seed / PCFMA (Bay Area, current data). Users saw the
+// same "Milpitas Farmers' Market" twice — the USDA version had a broken
+// URL fallback. Dedupe on (name, city, start_date) and prefer entries with
+// a real website URL over ones that fell back to a Google Maps search.
+function nrnyExtractCityFromAddress(addr) {
+  const parts = String(addr || "").split(",").map(s => s.trim()).filter(Boolean);
+  // "1100 S Park Victoria Dr, Milpitas, CA, 95035" → parts[1]="Milpitas"
+  return parts.length >= 2 ? parts[parts.length - 3] || parts[parts.length - 2] || "" : "";
+}
+function nrnyDedupeEvents(events) {
+  const seen = new Map();
+  for (const ev of events) {
+    const nameKey = String(ev.title || "").toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+    if (!nameKey) continue;
+    const city = nrnyExtractCityFromAddress(ev.venue_address || "").toLowerCase();
+    const dateKey = ev.start_date ? String(ev.start_date).slice(0, 10) : "ongoing";
+    const key = `${nameKey}|${city}|${dateKey}`;
+    const existing = seen.get(key);
+    if (!existing) { seen.set(key, ev); continue; }
+    // Both exist — pick the better one. Priority:
+    // 1) Real website URL (not a Google Maps search)
+    // 2) Curated seed / PCFMA (source has "pcfma", "seed") over USDA
+    // 3) Otherwise keep existing
+    const isGmaps = (u) => /google\.com\/maps/.test(u || "");
+    const trust = (s) => (String(s || "").includes("pcfma") || String(s || "").includes("seed") ? 2 : 1);
+    const existingScore = (isGmaps(existing.url) ? 0 : 2) + trust(existing.source_id);
+    const currentScore  = (isGmaps(ev.url)       ? 0 : 2) + trust(ev.source_id);
+    if (currentScore > existingScore) seen.set(key, ev);
+  }
+  return Array.from(seen.values());
+}
+
 // ─── Event categorization (v3.0.1.10) ─────────────────────────────────
 // Fixed category taxonomy + ordering. Every event maps to exactly one
 // bucket. Priority: farmers → outdoor → library → kids → sports → music
@@ -1209,13 +1243,13 @@ function nrnyRenderEventCard(item) {
   const venue = escapeHtml(item.venue_name || item.venue_address || item.venue || item.address || "");
   const dist = Number.isFinite(item.distance_mi) ? distFmt(item.distance_mi) : "";
   const rawUrl = item.url || item.source_url || "";
-  // v3.0.1.11: some sources fall back to the aggregator homepage when the
-  // per-event URL is missing (USDA farmers markets is the loudest offender —
-  // >90% of listings have no listing_website). "Details →" on those cards
-  // was landing on usdalocalfoodportal.com homepage, which is useless.
-  // Detect the aggregator-home pattern and substitute a Google Maps search
-  // using the market name + address — that reliably shows hours, phone,
-  // reviews, and photos.
+  // v3.0.1.12: USDA has stale addresses for many markets. Prior fix (v3.0.1.11)
+  // used name + stale address in the Google Maps query — for Milpitas Farmers'
+  // Market, this made Maps match a nearby preschool ("India Community Center"
+  // → ICC Preschool) instead of the real market at Great Mall. Now we use
+  // JUST the market name + a lat/lon viewport anchor: Google searches within
+  // that vicinity, finds the actual current market regardless of what the
+  // stale USDA address says.
   const src = String(item.source_id || "");
   const looksLikeAggregatorHome =
     /^https?:\/\/(?:www\.)?usdalocalfoodportal\.com\/?(?:\?[^#]*)?(?:#.*)?$/i.test(rawUrl) ||
@@ -1223,8 +1257,18 @@ function nrnyRenderEventCard(item) {
     !rawUrl;
   let url = rawUrl;
   if (looksLikeAggregatorHome && (src === "usda_farmers_markets" || src === "pcfma_visit" || /market|farm/i.test(item.category || ""))) {
-    const query = [item.title, item.venue_address, item.venue_name].filter(Boolean).join(" ").trim();
-    if (query) url = `https://www.google.com/maps/search/${encodeURIComponent(query)}`;
+    const name = String(item.title || "").trim();
+    const hasCoords = Number.isFinite(item.lat) && Number.isFinite(item.lon);
+    if (hasCoords && name) {
+      // Viewport-anchored search: Google finds the highest-ranked "<name>"
+      // in the vicinity of (lat,lon). Zoom 14 covers ~5mi radius, enough
+      // to catch markets that have moved a couple miles from stale coords.
+      url = `https://www.google.com/maps/search/${encodeURIComponent(name)}/@${item.lat},${item.lon},14z`;
+    } else if (name) {
+      // No coords — fall back to name-only search (still better than the
+      // aggregator homepage). Skip the venue_address which is often stale.
+      url = `https://www.google.com/maps/search/${encodeURIComponent(name)}`;
+    }
   }
   // v3.0.1.10: Ticketmaster sometimes returns literal "undefined" string
   // for classifications when segment/genre is missing. Drop it so the card
@@ -1426,11 +1470,14 @@ async function nrnyRenderSubnav(tab, subnav) {
       return;
     }
 
+    // v3.0.1.12: dedupe before grouping — same market listed by USDA + seed
+    // was showing up twice, and the USDA copy had a broken URL fallback.
+    const deduped = nrnyDedupeEvents(results);
     // v3.0.1.10: group by category, sort within each column by start_date.
     // Dateless events (ongoing farmers markets, recurring library programs)
     // sink to the bottom of their column via Infinity sentinel.
     const grouped = {};
-    for (const ev of results) {
+    for (const ev of deduped) {
       const catId = nrnyCategorizeEvent(ev);
       if (!grouped[catId]) grouped[catId] = [];
       grouped[catId].push(ev);
@@ -1461,8 +1508,8 @@ async function nrnyRenderSubnav(tab, subnav) {
 
     grid.innerHTML = `<div class="events-columns-wrap" style="grid-column: 1 / -1;">${columnsHtml}</div>`;
     // Cache for map-toggle re-render + only paint map if user opted in.
-    NRNY._lastEvents = results;
-    if (NRNY.showMap) nrnySetupEventsMap(results, NRNY.geo.lat, NRNY.geo.lon);
+    NRNY._lastEvents = deduped;
+    if (NRNY.showMap) nrnySetupEventsMap(deduped, NRNY.geo.lat, NRNY.geo.lon);
     return;
   }
 
