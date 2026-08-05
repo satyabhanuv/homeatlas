@@ -749,7 +749,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.19</b> — Schools: assigned + private + charter elevated; full roster collapsed. Level-colored card borders. Sorted by distance. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.20</b> — Classifier fix: K-6 no longer duplicates into Middle. Broadened private-school OSM query (kindergarten + college) + diagnostic. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -1022,7 +1022,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.19",
+  version: "v3.0.1.20",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1437,8 +1437,7 @@ function nrnyRenderEventCard(item) {
 // as falsy → classified K-6 Elementary schools as "middle". Now uses
 // null-safe coercion.
 function nrnyClassifySchoolLevel(item) {
-  // Parse a grade cell. NCES CCD uses PK/K/KG or numeric strings; some
-  // vintages emit numeric 0 for K. Return integer grade (0=K, -1=PK).
+  // Parse a grade cell. NCES CCD uses PK/K/KG or numeric strings.
   const gradeNum = (g) => {
     if (g == null || g === "") return null;
     const s = String(g).toUpperCase().trim();
@@ -1451,30 +1450,48 @@ function nrnyClassifySchoolLevel(item) {
   const gh = gradeNum(item.grade_high);
   const lt = String(item.level_text || item.type || "").toLowerCase();
 
-  // If level_text is explicit AND grades don't span, trust the label.
+  // Explicit label — used only if grade info is missing.
   const explicitLevel = /elem|primar/.test(lt) ? "elementary"
                       : /^middle|junior|intermed/.test(lt) ? "middle"
                       : /^high|senior/.test(lt) ? "high"
                       : null;
 
-  // Derive coverage from grade range.
-  const covers = { elementary: false, middle: false, high: false };
+  // v3.0.1.20: classify by grade PATTERNS, not naive overlap.
+  // Prior version used `gh>=6 && gl<=8` for middle, which caught K-6
+  // elementary schools (they end at 6). Now:
+  //   • ends at grade ≤ 6 with primary start (K-2) → elementary only
+  //   • ends at grade 6-8 with middle start (5-7) → middle only
+  //   • ends at 9-12 with HS start (8+) → high only
+  //   • K-8 combos (start K/PK end 7-8) → elementary + middle
+  //   • K-12 or PK-12 combos → all three
+  //   • 6-12 or 7-12 combos → middle + high
+  //   • intermediate elementary (3-6, 4-6, 5-6) → elementary
+  const buckets = [];
   if (gl != null && gh != null) {
-    // Range spans [gl, gh]. Any overlap with the level's grade range
-    // (E: -1..5, M: 6..8, H: 9..12) counts as coverage.
-    if (gh >= -1 && gl <= 5) covers.elementary = true;
-    if (gh >= 6 && gl <= 8) covers.middle = true;
-    if (gh >= 9 && gl <= 12) covers.high = true;
+    const isKPrimary = gl <= 2;   // starts K, PK, 1, or 2
+    if (isKPrimary && gh <= 6) {
+      buckets.push("elementary");                       // K-5, K-6, PK-5, 1-5, 1-6
+    } else if (isKPrimary && gh >= 7 && gh <= 8) {
+      buckets.push("elementary", "middle");             // K-8, 1-8, PK-8 combos
+    } else if (isKPrimary && gh >= 9) {
+      buckets.push("elementary", "middle", "high");     // K-12, PK-12
+    } else if (gl >= 5 && gl <= 7 && gh >= 6 && gh <= 8) {
+      buckets.push("middle");                           // 5-8, 6-8, 7-8
+    } else if (gl >= 6 && gl <= 7 && gh >= 9) {
+      buckets.push("middle", "high");                   // 6-12, 7-12
+    } else if (gl >= 8 && gh >= 9) {
+      buckets.push("high");                             // 8-12, 9-12, 10-12
+    } else if (gl >= 3 && gl <= 6 && gh <= 6) {
+      buckets.push("elementary");                       // 3-6, 4-6, 5-6 intermediate
+    } else {
+      // Uncommon range — fall back to overlap heuristic (last resort).
+      if (gh <= 6) buckets.push("elementary");
+      else if (gh <= 8) buckets.push("middle");
+      else if (gh <= 12) buckets.push("high");
+    }
   }
 
-  // Build result list.
-  const buckets = [];
-  if (covers.elementary) buckets.push("elementary");
-  if (covers.middle) buckets.push("middle");
-  if (covers.high) buckets.push("high");
   if (buckets.length > 0) return buckets;
-
-  // No grade info — fall back to explicit label.
   if (explicitLevel) return [explicitLevel];
   return ["other"];
 }
@@ -1530,13 +1547,20 @@ function nrnyClassifyParkBuckets(item) {
 // tagging varies wildly — many well-known private schools have no
 // operator:type or school:type tag).
 async function nrnyFetchPrivateSchoolsOSM(geo) {
-  const radiusMeters = Math.min(NRNY.radiusMi, 8) * 1609.34;   // 8mi cap
+  // v3.0.1.20: widen the query. Some private schools (esp. chains like
+  // Stratford) are tagged as `amenity=kindergarten` (they run pre-K + K-8)
+  // or `amenity=college` for private colleges. Also broaden radius to 10mi.
+  const radiusMeters = Math.min(NRNY.radiusMi, 10) * 1609.34;
   const query = `[out:json][timeout:25];
-nwr["amenity"="school"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
-out center 250;`;
+(
+  nwr["amenity"="school"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="kindergarten"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="college"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+);
+out center 300;`;
   const cacheKey = `nrny-osm-all-schools-${geo.lat.toFixed(3)}-${geo.lon.toFixed(3)}-${Math.round(radiusMeters)}`;
   const result = await nrnyRunOverpass(query, cacheKey);
-  if (result.error) return { schools: [], error: result.error };
+  if (result.error) return { schools: [], error: result.error, raw_count: 0 };
   const raw = (Array.isArray(result.data && result.data.elements) ? result.data.elements : []);
   const schools = raw.map(el => {
     const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
@@ -1565,7 +1589,7 @@ out center 250;`;
       _osm_tags: tags,
     };
   }).filter(Boolean);
-  return { schools, error: null };
+  return { schools, error: null, raw_count: raw.length };
 }
 
 async function nrnyFetchSchools(geo) {
@@ -1611,9 +1635,11 @@ async function nrnyFetchSchools(geo) {
     const osmSchools = (privResult && privResult.schools) || [];
     const nameKey = (n) => String(n || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
     const publicSeen = new Set(publicSchools.map(s => nameKey(s.name)));
+    // v3.0.1.20: no name-based exclusion. Every named non-public school
+    // passes through. Better to have a Stratford Preschool in the list
+    // than to miss the actual Stratford School because its OSM tag varies.
     const privateFiltered = osmSchools
       .filter(p => p.name && !publicSeen.has(nameKey(p.name)))
-      .filter(p => !/preschool|daycare|child.?care|montessori/i.test(p.name) || /school|academy|elementary|middle|high|christian|catholic|academy/i.test(p.name))
       .map(withDist);
     // Sort ALL schools by distance ascending — nearest is most useful.
     const schools = [...publicSchools, ...privateFiltered]
@@ -1625,6 +1651,8 @@ async function nrnyFetchSchools(geo) {
       sabsCaveat: (assign && assign.caveat) || null,
       privateCount: privateFiltered.length,
       privateError: (privResult && privResult.error) || null,
+      privateRawCount: (privResult && privResult.raw_count) || 0,
+      privateDroppedByDedupe: osmSchools.length - privateFiltered.length,
       error: null,
     };
   } catch (e) {
@@ -2237,7 +2265,7 @@ async function nrnyRenderSubnav(tab, subnav) {
   }
 
   if (cfg.impl === "schools") {
-    const { district, schools, sabsAvailable, sabsCaveat, privateCount, privateError, error } = await nrnyFetchSchools(NRNY.geo);
+    const { district, schools, sabsAvailable, sabsCaveat, privateCount, privateError, privateRawCount, privateDroppedByDedupe, error } = await nrnyFetchSchools(NRNY.geo);
     loading.hidden = true;
     if (error) {
       grid.innerHTML = `<p style="grid-column:1/-1;color:var(--emergency);padding:20px;">Couldn't reach school lookup: ${escapeHtml(error)}. Try again shortly.</p>`;
@@ -2260,12 +2288,18 @@ async function nrnyRenderSubnav(tab, subnav) {
     const privateChip = (privateCount > 0)
       ? `<span style="background:#e2e8f0;color:#334155;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:600;">+${privateCount} private</span>`
       : "";
+    // v3.0.1.20: diagnostic — help debug why private schools may be missing
+    // (OSM data gap vs dedupe filter vs Overpass error).
+    const privateDebug = (privateCount === 0)
+      ? `<div class="sabs-caveat" style="border-top:none;">Private schools: OSM returned ${privateRawCount || 0} tagged schools in ${Math.min(NRNY.radiusMi, 10)} mi; ${privateDroppedByDedupe || 0} matched public roster names and were dropped as duplicates. If you know a private school here that isn't shown, its OSM record may be missing or the name matches a public school too closely.${privateError ? ` (Fetch: ${escapeHtml(privateError)})` : ""}</div>`
+      : "";
     const districtBanner = `
 <div class="school-district-banner" style="grid-column: 1 / -1;">
   <span>📚 <b>Schools in ${escapeHtml(district.name)}</b></span>
   ${privateChip}
   <a href="${finderUrl}" target="_blank" rel="noopener">Verify assignment on the district site →</a>
   ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — we can't highlight your specific assigned school. Verify with the district finder link.</div>` : "")}
+  ${privateDebug}
   <div class="sabs-caveat" style="border-top:none;">${legend}</div>
 </div>`;
 
