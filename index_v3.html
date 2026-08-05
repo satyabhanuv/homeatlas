@@ -749,7 +749,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.16</b> — Sticky search bar + tabs. Schools grouped by Elementary/Middle/High. Parks by Kids/Walking/Dog with "under 1 mile" banner. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.17</b> — K-8 schools now appear in both Elementary + Middle columns; parks-with-playgrounds in both Kids + Walking. Expanded dog-park OSM query. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -1022,7 +1022,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.16",
+  version: "v3.0.1.17",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1429,39 +1429,88 @@ function nrnyRenderEventCard(item) {
 </article>`;
 }
 
-// ─── School level classifier (v3.0.1.16) ──────────────────────────────
-// Prefer NCES level_text when present; fall back to grade_low/high.
+// ─── School level classifier (v3.0.1.17) ──────────────────────────────
+// Returns an ARRAY of level buckets — a K-8 school appears in BOTH
+// elementary + middle; a K-12 in all three. This is more intuitive than
+// forcing every school into a single column.
+// v3.0.1.17 fix: prior version used `g || ""` which treats grade "0" (K)
+// as falsy → classified K-6 Elementary schools as "middle". Now uses
+// null-safe coercion.
 function nrnyClassifySchoolLevel(item) {
-  const lt = String(item.level_text || item.type || "").toLowerCase();
-  if (/elem|primar/.test(lt)) return "elementary";
-  if (/middle|junior|intermed/.test(lt)) return "middle";
-  if (/high|senior/.test(lt)) return "high";
-  // Derive from grades. K/PK/1..5 → elem; 5..8 → middle; 8..12 → high
+  // Parse a grade cell. NCES CCD uses PK/K/KG or numeric strings; some
+  // vintages emit numeric 0 for K. Return integer grade (0=K, -1=PK).
   const gradeNum = (g) => {
-    const s = String(g || "").toUpperCase();
-    if (s === "PK" || s === "K" || s === "KG") return 0;
+    if (g == null || g === "") return null;
+    const s = String(g).toUpperCase().trim();
+    if (s === "PK" || s === "PREK") return -1;
+    if (s === "K" || s === "KG") return 0;
     const n = parseInt(s, 10);
     return Number.isFinite(n) ? n : null;
   };
-  const gh = gradeNum(item.grade_high);
   const gl = gradeNum(item.grade_low);
-  if (gh != null) {
-    if (gh <= 5) return "elementary";
-    if (gh <= 8) return (gl != null && gl <= 4) ? "elementary" : "middle";
-    if (gh <= 12) return (gl != null && gl <= 6) ? "middle" : "high";
+  const gh = gradeNum(item.grade_high);
+  const lt = String(item.level_text || item.type || "").toLowerCase();
+
+  // If level_text is explicit AND grades don't span, trust the label.
+  const explicitLevel = /elem|primar/.test(lt) ? "elementary"
+                      : /^middle|junior|intermed/.test(lt) ? "middle"
+                      : /^high|senior/.test(lt) ? "high"
+                      : null;
+
+  // Derive coverage from grade range.
+  const covers = { elementary: false, middle: false, high: false };
+  if (gl != null && gh != null) {
+    // Range spans [gl, gh]. Any overlap with the level's grade range
+    // (E: -1..5, M: 6..8, H: 9..12) counts as coverage.
+    if (gh >= -1 && gl <= 5) covers.elementary = true;
+    if (gh >= 6 && gl <= 8) covers.middle = true;
+    if (gh >= 9 && gl <= 12) covers.high = true;
   }
-  return "other";
+
+  // Build result list.
+  const buckets = [];
+  if (covers.elementary) buckets.push("elementary");
+  if (covers.middle) buckets.push("middle");
+  if (covers.high) buckets.push("high");
+  if (buckets.length > 0) return buckets;
+
+  // No grade info — fall back to explicit label.
+  if (explicitLevel) return [explicitLevel];
+  return ["other"];
 }
 
-// ─── Park amenity classifier (v3.0.1.16) ──────────────────────────────
-// Uses OSM tags + name heuristics. Order matters: kids > dog > walking.
-function nrnyClassifyParkAmenity(item) {
+// ─── Park amenity classifier (v3.0.1.17) ──────────────────────────────
+// Returns an ARRAY of buckets — a "Park" with a playground tag lives in
+// BOTH kids and walking columns; a "Dog park" that's also a plain park
+// shows in both dog and walking. A leisure=playground place is kids-only
+// (it's a play structure, not a walking area).
+function nrnyClassifyParkBuckets(item) {
+  const buckets = new Set();
   const name = String(item.name || "").toLowerCase();
   const desig = String(item.designation || "").toLowerCase();
-  const amenities = (Array.isArray(item.amenities) ? item.amenities : []).join(" ").toLowerCase();
-  if (desig === "playground" || /playground|tot.?lot|kids|children/.test(name) || amenities.includes("playground")) return "kids";
-  if (/\bdog park\b|dog[\s-]?run|off[\s-]?leash/.test(name) || amenities.includes("dog park")) return "dog";
-  return "walking";
+  const amenityChips = (Array.isArray(item.amenities) ? item.amenities : []).join(" ").toLowerCase();
+
+  const isPlaygroundType = desig === "playground";
+  const isDogType = desig === "dog park";
+  const isPlainPark = desig === "park" || desig === "nature reserve" || desig === "recreation ground";
+
+  // Kids indicators
+  if (isPlaygroundType
+      || amenityChips.includes("playground")
+      || /\b(playground|tot.?lot|play.?area|kids.?park)\b/.test(name)) {
+    buckets.add("kids");
+  }
+  // Dog indicators
+  if (isDogType
+      || amenityChips.includes("dog park")
+      || /\bdog\s?park\b|dog[\s-]?run|off[\s-]?leash/.test(name)) {
+    buckets.add("dog");
+  }
+  // Walking — plain parks always in walking; playgrounds-only are excluded
+  if (isPlainPark) buckets.add("walking");
+  if (buckets.size === 0) buckets.add("walking");
+
+  return Array.from(buckets);
 }
 
 // ─── /api/school-zone + /api/school-assignment fetcher (v3.0.1.13) ────
@@ -1611,12 +1660,17 @@ async function nrnyFetchParksNPS(geo) {
 
 async function nrnyFetchParksOSM(geo) {
   // Overpass query — 5-mile radius (~8km), named leisure spaces only.
-  // 100 result cap keeps payload sane. `out center` returns lat/lon
-  // for ways/relations (not just nodes).
+  // v3.0.1.17: added leisure=dog_park + amenity=dog_park so community dog
+  // parks show up (previously we only caught ones with "dog park" in name).
+  // 150 result cap keeps payload sane. `out center` returns lat/lon for
+  // ways/relations (not just nodes).
   const radiusMeters = Math.min(NRNY.radiusMi, 5) * 1609.34;   // cap at 5mi for local
   const query = `[out:json][timeout:20];
-nwr["leisure"~"^(park|nature_reserve|recreation_ground|playground)$"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
-out center 100;`;
+(
+  nwr["leisure"~"^(park|nature_reserve|recreation_ground|playground|dog_park)$"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="dog_park"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+);
+out center 150;`;
   try {
     const ctrl = new AbortController();
     const timeout = setTimeout(() => ctrl.abort(), 10000);
@@ -1635,12 +1689,16 @@ out center 100;`;
         const lon = el.lon != null ? el.lon : (el.center && el.center.lon);
         if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
         const tags = el.tags || {};
-        const leisureType = tags.leisure || "park";
+        const leisureType = tags.leisure || (tags.amenity === "dog_park" ? "dog_park" : "park");
         const typeLabel = leisureType === "nature_reserve" ? "Nature reserve"
                         : leisureType === "recreation_ground" ? "Recreation ground"
                         : leisureType === "playground" ? "Playground"
+                        : leisureType === "dog_park" ? "Dog park"
                         : "Park";
         const dist = haversineMi(geo.lat, geo.lon, lat, lon);
+        // v3.0.1.17: preserve OSM tag hints for the classifier (dog=yes,
+        // playground=yes, etc.) so a park with a playground can appear in
+        // both kids and walking columns.
         return {
           _source: "osm",
           name: tags.name,
@@ -1649,7 +1707,11 @@ out center 100;`;
           distance_mi: +dist.toFixed(2),
           url: tags.website || tags["contact:website"] || `https://www.google.com/maps/search/${encodeURIComponent(tags.name + " park")}/@${lat},${lon},15z`,
           description: tags.description || "",
-          amenities: [tags.playground === "yes" ? "Playground" : null, tags.dog_park === "yes" ? "Dog park" : null, tags.bbq === "yes" ? "BBQ" : null].filter(Boolean),
+          amenities: [
+            (tags.playground === "yes" || leisureType === "playground") ? "Playground" : null,
+            (tags.dog === "yes" || tags.dog_park === "yes" || tags.amenity === "dog_park" || leisureType === "dog_park") ? "Dog park" : null,
+            tags.bbq === "yes" ? "BBQ" : null,
+          ].filter(Boolean),
         };
       })
       .filter(Boolean)
@@ -1659,13 +1721,27 @@ out center 100;`;
 }
 
 // Card renderer for a park (v3 tier system).
-// Teal (authoritative) = NPS federal source. Indigo (public) = OSM local.
-function nrnyRenderParkCard(item) {
+// v3.0.1.17: takes an optional `bucketId` — when a "Park" ends up in the
+// kids column, we show "Park · playground" instead of just "Park" so the
+// user understands why it appears there.
+function nrnyRenderParkCard(item, bucketId) {
   const isNPS = item._source === "nps";
   const tier = isNPS ? "authoritative" : "public";
   const tierLabel = isNPS ? "Federal source · NPS" : "Public dataset · OSM";
   const name = escapeHtml(item.name || "Park");
-  const designation = escapeHtml(item.designation || "Park");
+  // Contextual designation label based on which column this card is in
+  let designationText = item.designation || "Park";
+  if (bucketId === "kids") {
+    // If not already a playground, add "playground" chip
+    if (designationText === "Park" || designationText === "Nature reserve" || designationText === "Recreation ground") {
+      designationText = `${designationText} · playground`;
+    }
+  } else if (bucketId === "dog") {
+    if (designationText !== "Dog park") {
+      designationText = `${designationText} · dog-friendly`;
+    }
+  }
+  const designation = escapeHtml(designationText);
   const dist = item.distance_mi != null ? distFmt(item.distance_mi) : "";
   const url = item.url || "";
   const desc = item.description ? escapeHtml(String(item.description).slice(0, 180)) + (item.description.length > 180 ? "…" : "") : "";
@@ -1953,15 +2029,18 @@ async function nrnyRenderSubnav(tab, subnav) {
       return;
     }
 
-    // v3.0.1.16: 3-column forced layout — Kids parks · Walking parks · Dog parks.
-    // Nearby (<1 mile) banner at top spans all columns. NPS parks always show
-    // as walking (they're all "walking" scale regardless of amenities).
+    // v3.0.1.17: 3-column forced layout — Kids · Walking · Dog. Places that
+    // fit multiple categories (park with playground → kids + walking; park
+    // that allows dogs → dog + walking) appear in every matching column.
+    // Nearby (<1 mile) banner spans all columns. NPS parks always go to
+    // walking (they're all "walking" scale regardless of amenities).
     const nearby = allParks.filter(p => (p.distance_mi != null) && p.distance_mi < 1);
     const byType = { kids: [], walking: [], dog: [] };
     for (const p of allParks) {
-      // NPS = walking; OSM classified by amenity
-      const type = p._source === "nps" ? "walking" : nrnyClassifyParkAmenity(p);
-      byType[type].push(p);
+      const buckets = p._source === "nps" ? ["walking"] : nrnyClassifyParkBuckets(p);
+      for (const b of buckets) {
+        if (byType[b]) byType[b].push(p);
+      }
     }
     // Sort each column by distance
     Object.keys(byType).forEach(k => byType[k].sort((a, b) => (a.distance_mi || 0) - (b.distance_mi || 0)));
@@ -1985,8 +2064,8 @@ async function nrnyRenderSubnav(tab, subnav) {
   </div>
   <div class="events-col-stack">
     ${c.items.length === 0
-      ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">No ${c.label.toLowerCase()} nearby.</p>`
-      : c.items.map(nrnyRenderParkCard).join("")}
+      ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">No ${c.label.toLowerCase()} indexed nearby.</p>`
+      : c.items.map(item => nrnyRenderParkCard(item, c.id)).join("")}
   </div>
 </div>`).join("");
 
@@ -2023,15 +2102,18 @@ async function nrnyRenderSubnav(tab, subnav) {
   ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — we can't highlight assigned schools until it's uploaded.</div>` : "")}
 </div>`;
 
-    // v3.0.1.16: Group by school LEVEL (Elementary / Middle / High) into a
-    // forced 3-column layout. Within each column, assigned school (teal)
-    // bubbles to the top; then charter (coral); then rest alphabetical.
-    // Private schools bucketed but not fetched yet (v3.1 will add OSM).
+    // v3.0.1.17: Group by school LEVEL (Elementary / Middle / High) into a
+    // forced 3-column layout. Schools whose grades span multiple levels
+    // (e.g., K-8 elementary/middle combo, K-12) appear in ALL matching
+    // columns — a user searching for "middle school" should still see the
+    // K-8 school in the middle column, and same K-8 in the elementary
+    // column. Assigned bubbles to top; then charter; then alphabetical.
     const byLevel = { elementary: [], middle: [], high: [], other: [] };
     for (const s of schools) {
-      const lvl = nrnyClassifySchoolLevel(s);
-      byLevel[lvl] = byLevel[lvl] || [];
-      byLevel[lvl].push(s);
+      const buckets = nrnyClassifySchoolLevel(s);
+      for (const b of buckets) {
+        if (byLevel[b]) byLevel[b].push(s);
+      }
     }
     const sortForCol = (arr) => arr.sort((a, b) => {
       // assigned first, then charter, then alphabetical
