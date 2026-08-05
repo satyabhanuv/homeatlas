@@ -749,7 +749,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.17</b> — K-8 schools now appear in both Elementary + Middle columns; parks-with-playgrounds in both Kids + Walking. Expanded dog-park OSM query. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.18</b> — Overpass mirror rotation + 6h cache (fixes parks 403). Private schools from OSM. School map pins colored by level. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -1022,7 +1022,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.17",
+  version: "v3.0.1.18",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1522,13 +1522,62 @@ function nrnyClassifyParkBuckets(item) {
 //      whose SABS data has been preprocessed to KV (v2.8.2b pipeline).
 // Merge: tag zone schools whose ncessch appears in SABS output as
 // _sabs_assigned:true → teal card. Everyone else stays public/charter.
+// v3.0.1.18: Fetch private schools from OSM. NCES CCD roster is public-only,
+// so schools like Stratford + Valley Christian never appear. OSM tags them
+// as amenity=school with fee/private/religious markers. Not exhaustive
+// (varies by tagger) but catches most well-known private schools.
+async function nrnyFetchPrivateSchoolsOSM(geo) {
+  const radiusMeters = Math.min(NRNY.radiusMi, 8) * 1609.34;   // 8mi cap
+  const query = `[out:json][timeout:20];
+(
+  nwr["amenity"="school"]["fee"="yes"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="school"]["operator:type"~"private|religious"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="school"]["school:type"~"private|religious"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="school"]["isced:level"]["religion"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+);
+out center 100;`;
+  const cacheKey = `nrny-osm-priv-schools-${geo.lat.toFixed(3)}-${geo.lon.toFixed(3)}-${Math.round(radiusMeters)}`;
+  const result = await nrnyRunOverpass(query, cacheKey);
+  if (result.error) return { schools: [], error: result.error };
+  const raw = (Array.isArray(result.data && result.data.elements) ? result.data.elements : []);
+  const schools = raw.map(el => {
+    const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
+    const lon = el.lon != null ? el.lon : (el.center && el.center.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const tags = el.tags || {};
+    const gradeLow = tags["isced:level:from"] || tags["grades:from"] || null;
+    const gradeHigh = tags["isced:level:to"] || tags["grades:to"] || null;
+    // Try to infer level range from ISCED codes (0=preschool, 1=primary, 2=lower sec, 3=upper sec)
+    return {
+      _is_private: true,
+      ncessch: `osm-${el.type}-${el.id}`,   // synthetic ID so dedupe/keys still work
+      name: tags.name,
+      lat, lon,
+      address: [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"], tags["addr:state"] || nrnyStateOf(geo), tags["addr:postcode"]].filter(Boolean).join(", "),
+      phone: tags.phone || tags["contact:phone"] || null,
+      grade_low: gradeLow,
+      grade_high: gradeHigh,
+      enrollment: null,
+      type: "Private school",
+      level_text: tags["isced:level"] === "1" ? "Elementary" : tags["isced:level"] === "2" ? "Middle" : tags["isced:level"] === "3" ? "High" : null,
+      charter: false,
+      magnet: false,
+      source_url: tags.website || tags["contact:website"] || null,
+      source: "OpenStreetMap",
+      _osm_tags: tags,
+    };
+  }).filter(Boolean);
+  return { schools, error: null };
+}
+
 async function nrnyFetchSchools(geo) {
   const state = nrnyStateOf(geo);
   const commonParams = `lat=${geo.lat}&lon=${geo.lon}${state ? "&state=" + state : ""}`;
   try {
-    const [zoneResp, assignResp] = await Promise.all([
+    const [zoneResp, assignResp, privResult] = await Promise.all([
       fetch(`${NRNY.apiBase}/api/school-zone?${commonParams}`),
       fetch(`${NRNY.apiBase}/api/school-assignment?${commonParams}`),
+      nrnyFetchPrivateSchoolsOSM(geo).catch(() => ({ schools: [] })),
     ]);
     let zone = null, assign = null;
     if (zoneResp && zoneResp.ok) zone = await zoneResp.json().catch(() => null);
@@ -1545,15 +1594,24 @@ async function nrnyFetchSchools(geo) {
       if (a.H && a.H.ncessch) assignedIds.add(a.H.ncessch);
       if (Array.isArray(a.other)) a.other.forEach(o => o && o.ncessch && assignedIds.add(o.ncessch));
     }
-    const schools = zone.schools.map(s => ({
+    const publicSchools = zone.schools.map(s => ({
       ...s,
       _sabs_assigned: !!(s.ncessch && assignedIds.has(s.ncessch)),
     }));
+    // v3.0.1.18: merge private schools from OSM. Dedupe by fuzzy name + coord
+    // to avoid double-listing schools that appear in both NCES + OSM.
+    const privateSchools = (privResult && privResult.schools) || [];
+    const nameKey = (n) => String(n || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
+    const publicSeen = new Set(publicSchools.map(s => nameKey(s.name)));
+    const privateFiltered = privateSchools.filter(p => p.name && !publicSeen.has(nameKey(p.name)));
+    const schools = [...publicSchools, ...privateFiltered];
     return {
       district: zone.district || null,
       schools,
       sabsAvailable: !!(assign && assign.available),
       sabsCaveat: (assign && assign.caveat) || null,
+      privateCount: privateFiltered.length,
+      privateError: (privResult && privResult.error) || null,
       error: null,
     };
   } catch (e) {
@@ -1574,10 +1632,18 @@ function nrnyRenderSchoolCard(item) {
              : isPrivate ? "third-party"
              : isCharter ? "community"
              : "public";
-  const tierLabel = isAssigned ? "🏫 Your assigned school"
-                  : isPrivate ? "Private"
-                  : isCharter ? "🎓 Charter"
-                  : "";   // plain public → no redundant label
+  // v3.0.1.18: level chip prefix so users see "🎒 Elementary" or "📖 Middle"
+  // on every card, even inside a single-column view.
+  const levels = nrnyClassifySchoolLevel(item);
+  const primary = levels[0] || "other";
+  const levelChip = primary === "elementary" ? "🎒 Elementary"
+                  : primary === "middle" ? "📖 Middle"
+                  : primary === "high" ? "🎓 High"
+                  : "🏫 School";
+  const tierLabel = isAssigned ? `🏫 Your assigned school · ${levelChip}`
+                  : isPrivate ? `Private · ${levelChip}`
+                  : isCharter ? `🎓 Charter · ${levelChip}`
+                  : levelChip;   // plain public → still show level chip
   const name = escapeHtml(item.name || "School");
   const addr = escapeHtml(item.address || "");
   const phone = String(item.phone || "");
@@ -1605,7 +1671,14 @@ function nrnyRenderSchoolCard(item) {
 </article>`;
 }
 
-// Schools map — teal for SABS-assigned, indigo for public, coral for charter.
+// Schools map (v3.0.1.18) — color-code by level so users can visually
+// map "which pin is elementary vs middle vs high" at a glance.
+//   Assigned (SABS)  → teal + gold border (stands out even against level)
+//   Elementary       → light blue
+//   Middle           → orange
+//   High             → dark purple
+//   Charter          → coral (regardless of level)
+//   Private          → slate (regardless of level)
 function nrnySetupSchoolsMap(items, centerLat, centerLon) {
   const el = $("nrny-section-map");
   if (!el || !window.L) return;
@@ -1620,13 +1693,34 @@ function nrnySetupSchoolsMap(items, centerLat, centerLon) {
   L.marker([centerLat, centerLon], { title: "Your location" }).addTo(NRNY._sectionMap).bindPopup("<b>Your location</b>");
   for (const s of items) {
     if (!Number.isFinite(s.lat) || !Number.isFinite(s.lon)) continue;
-    const color = s._sabs_assigned ? "#0D9488" : (s.charter ? "#FB923C" : "#4F46E5");
+    // Determine level bucket for color. Use first bucket from classifier.
+    const buckets = nrnyClassifySchoolLevel(s);
+    const primary = buckets[0] || "other";
+    // Base color by level
+    let color = primary === "elementary" ? "#38bdf8"     // sky blue
+              : primary === "middle" ? "#f97316"           // orange
+              : primary === "high" ? "#7c3aed"             // purple
+              : "#64748b";                                 // slate
+    // Override color for special categories
+    if (s._sabs_assigned) color = "#0D9488";   // teal
+    if (s.charter) color = "#FB923C";           // coral
+    if (s._is_private) color = "#334155";       // dark slate for private
+    // Emoji cue by level
+    const emoji = primary === "elementary" ? "🎒"
+                : primary === "middle" ? "📖"
+                : primary === "high" ? "🎓"
+                : "🏫";
+    const ring = s._sabs_assigned ? "border:3px solid #fde047;" : "border:2px solid #fff;";
     const icon = L.divIcon({
       className: "nrny-pin",
-      html: `<div style="background:${color};color:#fff;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);">🏫</div>`,
-      iconSize: [24, 24], iconAnchor: [12, 12],
+      html: `<div style="background:${color};color:#fff;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-size:12px;${ring}box-shadow:0 1px 4px rgba(0,0,0,.3);">${emoji}</div>`,
+      iconSize: [26, 26], iconAnchor: [13, 13],
     });
-    L.marker([s.lat, s.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(s.name || "")}</b><br>${s._sabs_assigned ? "Your assigned school" : (s.charter ? "Charter" : "Public in district")}`);
+    const badge = s._sabs_assigned ? "Your assigned school"
+                : s._is_private ? "Private school"
+                : s.charter ? "Charter"
+                : "Public in district";
+    L.marker([s.lat, s.lon], { icon }).addTo(NRNY._sectionMap).bindPopup(`<b>${escapeHtml(s.name || "")}</b><br>${badge} · ${primary.charAt(0).toUpperCase() + primary.slice(1)}`);
   }
 }
 
@@ -1658,12 +1752,62 @@ async function nrnyFetchParksNPS(geo) {
   } catch (e) { return { parks: [], error: (e && e.message) || String(e) }; }
 }
 
+// ─── Overpass runner with mirror rotation + localStorage cache (v3.0.1.18) ──
+// Public Overpass endpoint returns 403/429 under moderate load. Rotate
+// through mirrors + cache successful responses so subsequent tab switches
+// don't hit the network. TTL = 6 hours (park data changes slowly).
+const NRNY_OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://z.overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+async function nrnyRunOverpass(query, cacheKey) {
+  // 1. Check localStorage cache
+  if (cacheKey) {
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.expires > Date.now() && parsed.data) {
+          return { data: parsed.data, from_cache: true, error: null };
+        }
+      }
+    } catch (_) {}
+  }
+  // 2. Try each mirror in sequence with per-attempt 15s timeout
+  const errors = [];
+  for (const mirror of NRNY_OVERPASS_MIRRORS) {
+    try {
+      const ctrl = new AbortController();
+      const t = setTimeout(() => ctrl.abort(), 15000);
+      const resp = await fetch(mirror, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: "data=" + encodeURIComponent(query),
+        signal: ctrl.signal,
+      });
+      clearTimeout(t);
+      if (!resp.ok) { errors.push(`${mirror.split("/")[2]} HTTP ${resp.status}`); continue; }
+      const data = await resp.json();
+      // Cache successful response
+      if (cacheKey) {
+        try {
+          localStorage.setItem(cacheKey, JSON.stringify({ expires: Date.now() + 6 * 3600 * 1000, data }));
+        } catch (_) {}
+      }
+      return { data, from_cache: false, error: null };
+    } catch (e) {
+      errors.push(`${mirror.split("/")[2]}: ${(e && e.message) || String(e)}`);
+    }
+  }
+  return { data: null, error: `All Overpass mirrors failed: ${errors.join(" · ")}` };
+}
+
 async function nrnyFetchParksOSM(geo) {
   // Overpass query — 5-mile radius (~8km), named leisure spaces only.
   // v3.0.1.17: added leisure=dog_park + amenity=dog_park so community dog
-  // parks show up (previously we only caught ones with "dog park" in name).
-  // 150 result cap keeps payload sane. `out center` returns lat/lon for
-  // ways/relations (not just nodes).
+  // parks show up. v3.0.1.18: mirror rotation + cache via nrnyRunOverpass.
   const radiusMeters = Math.min(NRNY.radiusMi, 5) * 1609.34;   // cap at 5mi for local
   const query = `[out:json][timeout:20];
 (
@@ -1671,18 +1815,11 @@ async function nrnyFetchParksOSM(geo) {
   nwr["amenity"="dog_park"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
 );
 out center 150;`;
+  const cacheKey = `nrny-osm-parks-${geo.lat.toFixed(3)}-${geo.lon.toFixed(3)}-${Math.round(radiusMeters)}`;
   try {
-    const ctrl = new AbortController();
-    const timeout = setTimeout(() => ctrl.abort(), 10000);
-    const resp = await fetch("https://overpass-api.de/api/interpreter", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: "data=" + encodeURIComponent(query),
-      signal: ctrl.signal,
-    });
-    clearTimeout(timeout);
-    if (!resp.ok) return { parks: [], error: `Overpass HTTP ${resp.status}` };
-    const data = await resp.json();
+    const result = await nrnyRunOverpass(query, cacheKey);
+    if (result.error) return { parks: [], error: result.error };
+    const data = result.data;
     const parks = (Array.isArray(data.elements) ? data.elements : [])
       .map(el => {
         const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
@@ -2076,7 +2213,7 @@ async function nrnyRenderSubnav(tab, subnav) {
   }
 
   if (cfg.impl === "schools") {
-    const { district, schools, sabsAvailable, sabsCaveat, error } = await nrnyFetchSchools(NRNY.geo);
+    const { district, schools, sabsAvailable, sabsCaveat, privateCount, privateError, error } = await nrnyFetchSchools(NRNY.geo);
     loading.hidden = true;
     if (error) {
       grid.innerHTML = `<p style="grid-column:1/-1;color:var(--emergency);padding:20px;">Couldn't reach school lookup: ${escapeHtml(error)}. Try again shortly.</p>`;
@@ -2095,11 +2232,17 @@ async function nrnyRenderSubnav(tab, subnav) {
     // District banner + verify-assignment link. NCES SABS data is 2015-16
     // vintage — always caveat and give the user a way to double-check.
     const finderUrl = `https://www.google.com/search?q=${encodeURIComponent(district.name + " school finder attendance zone lookup")}`;
+    const legend = `<span style="font-size:12px;color:var(--ink-soft);">Pin colors: 🎒 <b>Elementary</b> (blue) · 📖 <b>Middle</b> (orange) · 🎓 <b>High</b> (purple) · <b>Private</b> (dark slate) · <b>Charter</b> (coral) · <b>Assigned</b> (teal w/ gold ring)</span>`;
+    const privateChip = (privateCount > 0)
+      ? `<span style="background:#e2e8f0;color:#334155;border-radius:999px;padding:2px 8px;font-size:12px;font-weight:600;">+${privateCount} private</span>`
+      : "";
     const districtBanner = `
 <div class="school-district-banner" style="grid-column: 1 / -1;">
   <span>📚 <b>Schools in ${escapeHtml(district.name)}</b></span>
+  ${privateChip}
   <a href="${finderUrl}" target="_blank" rel="noopener">Verify assignment on the district site →</a>
-  ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — we can't highlight assigned schools until it's uploaded.</div>` : "")}
+  ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — we can't highlight your specific assigned school. Verify with the district finder link.</div>` : "")}
+  <div class="sabs-caveat" style="border-top:none;">${legend}</div>
 </div>`;
 
     // v3.0.1.17: Group by school LEVEL (Elementary / Middle / High) into a
