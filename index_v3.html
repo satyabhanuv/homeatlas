@@ -749,7 +749,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.18</b> — Overpass mirror rotation + 6h cache (fixes parks 403). Private schools from OSM. School map pins colored by level. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.19</b> — Schools: assigned + private + charter elevated; full roster collapsed. Level-colored card borders. Sorted by distance. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -1022,7 +1022,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.18",
+  version: "v3.0.1.19",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1523,20 +1523,18 @@ function nrnyClassifyParkBuckets(item) {
 // Merge: tag zone schools whose ncessch appears in SABS output as
 // _sabs_assigned:true → teal card. Everyone else stays public/charter.
 // v3.0.1.18: Fetch private schools from OSM. NCES CCD roster is public-only,
-// so schools like Stratford + Valley Christian never appear. OSM tags them
-// as amenity=school with fee/private/religious markers. Not exhaustive
-// (varies by tagger) but catches most well-known private schools.
+// so schools like Stratford + Valley Christian never appear.
+// v3.0.1.19: fetch ALL named amenity=school in the radius, then let the
+// dedupe against NCES roster decide which are private. This is more
+// comprehensive than filtering on specific private-tag markers (OSM
+// tagging varies wildly — many well-known private schools have no
+// operator:type or school:type tag).
 async function nrnyFetchPrivateSchoolsOSM(geo) {
   const radiusMeters = Math.min(NRNY.radiusMi, 8) * 1609.34;   // 8mi cap
-  const query = `[out:json][timeout:20];
-(
-  nwr["amenity"="school"]["fee"="yes"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
-  nwr["amenity"="school"]["operator:type"~"private|religious"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
-  nwr["amenity"="school"]["school:type"~"private|religious"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
-  nwr["amenity"="school"]["isced:level"]["religion"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
-);
-out center 100;`;
-  const cacheKey = `nrny-osm-priv-schools-${geo.lat.toFixed(3)}-${geo.lon.toFixed(3)}-${Math.round(radiusMeters)}`;
+  const query = `[out:json][timeout:25];
+nwr["amenity"="school"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+out center 250;`;
+  const cacheKey = `nrny-osm-all-schools-${geo.lat.toFixed(3)}-${geo.lon.toFixed(3)}-${Math.round(radiusMeters)}`;
   const result = await nrnyRunOverpass(query, cacheKey);
   if (result.error) return { schools: [], error: result.error };
   const raw = (Array.isArray(result.data && result.data.elements) ? result.data.elements : []);
@@ -1594,17 +1592,32 @@ async function nrnyFetchSchools(geo) {
       if (a.H && a.H.ncessch) assignedIds.add(a.H.ncessch);
       if (Array.isArray(a.other)) a.other.forEach(o => o && o.ncessch && assignedIds.add(o.ncessch));
     }
-    const publicSchools = zone.schools.map(s => ({
+    // v3.0.1.19: compute haversine distance from user's location for every
+    // school. Attach as _distance_mi so cards can show "0.4 mi away" and
+    // we can sort nearest-first (closest is more useful than alphabetical).
+    const withDist = (s) => ({
+      ...s,
+      _distance_mi: (Number.isFinite(s.lat) && Number.isFinite(s.lon))
+        ? +haversineMi(geo.lat, geo.lon, s.lat, s.lon).toFixed(2)
+        : null,
+    });
+    const publicSchools = zone.schools.map(s => withDist({
       ...s,
       _sabs_assigned: !!(s.ncessch && assignedIds.has(s.ncessch)),
     }));
-    // v3.0.1.18: merge private schools from OSM. Dedupe by fuzzy name + coord
-    // to avoid double-listing schools that appear in both NCES + OSM.
-    const privateSchools = (privResult && privResult.schools) || [];
+    // v3.0.1.18/19: merge private schools from OSM. Dedupe by fuzzy name
+    // against public roster — anything not matching a public school is
+    // treated as private. Also drops preschools/daycares to reduce noise.
+    const osmSchools = (privResult && privResult.schools) || [];
     const nameKey = (n) => String(n || "").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 30);
     const publicSeen = new Set(publicSchools.map(s => nameKey(s.name)));
-    const privateFiltered = privateSchools.filter(p => p.name && !publicSeen.has(nameKey(p.name)));
-    const schools = [...publicSchools, ...privateFiltered];
+    const privateFiltered = osmSchools
+      .filter(p => p.name && !publicSeen.has(nameKey(p.name)))
+      .filter(p => !/preschool|daycare|child.?care|montessori/i.test(p.name) || /school|academy|elementary|middle|high|christian|catholic|academy/i.test(p.name))
+      .map(withDist);
+    // Sort ALL schools by distance ascending — nearest is most useful.
+    const schools = [...publicSchools, ...privateFiltered]
+      .sort((a, b) => (a._distance_mi ?? 999) - (b._distance_mi ?? 999));
     return {
       district: zone.district || null,
       schools,
@@ -1644,6 +1657,16 @@ function nrnyRenderSchoolCard(item) {
                   : isPrivate ? `Private · ${levelChip}`
                   : isCharter ? `🎓 Charter · ${levelChip}`
                   : levelChip;   // plain public → still show level chip
+  // v3.0.1.19: override border-left color inline so it matches the map pin
+  // by level (Elementary=blue, Middle=orange, High=purple). Assigned/private/
+  // charter stay in their own colors regardless of level.
+  const borderColor = isAssigned ? "#0D9488"
+                    : isPrivate ? "#334155"
+                    : isCharter ? "#FB923C"
+                    : primary === "elementary" ? "#38bdf8"
+                    : primary === "middle" ? "#f97316"
+                    : primary === "high" ? "#7c3aed"
+                    : "#94A3B8";
   const name = escapeHtml(item.name || "School");
   const addr = escapeHtml(item.address || "");
   const phone = String(item.phone || "");
@@ -1658,10 +1681,11 @@ function nrnyRenderSchoolCard(item) {
     : "";
   const subLine = [grades, enrollment].filter(Boolean).join(" · ");
   return `
-<article class="card tier-${tier}">
-  ${tierLabel ? `<div class="card-tier-label">${tierLabel}${magnetChip}</div>` : (magnetChip ? `<div class="card-tier-label">${magnetChip.replace(/^\s·\s/, "")}</div>` : "")}
+<article class="card tier-${tier}" style="border-left-color:${borderColor};">
+  ${tierLabel ? `<div class="card-tier-label" style="color:${borderColor};">${tierLabel}${magnetChip}</div>` : (magnetChip ? `<div class="card-tier-label" style="color:${borderColor};">${magnetChip.replace(/^\s·\s/, "")}</div>` : "")}
   <h3 class="card-title">${name}</h3>
   ${subLine ? `<p class="card-sub">${subLine}</p>` : ""}
+  ${item._distance_mi != null ? `<p class="card-meta">📍 ${escapeHtml(distFmt(item._distance_mi))} away</p>` : ""}
   ${addr ? `<p class="card-meta">📍 ${addr}</p>` : ""}
   <div class="card-actions">
     ${phone ? `<a class="card-action ${isAssigned ? "primary" : ""}" href="tel:${phone.replace(/[^\d+]/g,"")}">📞 Call</a>` : ""}
@@ -2245,62 +2269,118 @@ async function nrnyRenderSubnav(tab, subnav) {
   <div class="sabs-caveat" style="border-top:none;">${legend}</div>
 </div>`;
 
-    // v3.0.1.17: Group by school LEVEL (Elementary / Middle / High) into a
-    // forced 3-column layout. Schools whose grades span multiple levels
-    // (e.g., K-8 elementary/middle combo, K-12) appear in ALL matching
-    // columns — a user searching for "middle school" should still see the
-    // K-8 school in the middle column, and same K-8 in the elementary
-    // column. Assigned bubbles to top; then charter; then alphabetical.
-    const byLevel = { elementary: [], middle: [], high: [], other: [] };
-    for (const s of schools) {
+    // v3.0.1.19: Restructured for the "do the work for me" value prop.
+    // Instead of dumping the full district roster (which is the same info
+    // as the ESUHSD boundary-map PDF, just re-listed), we now segment:
+    //   1. ASSIGNED SCHOOLS — hero section at top (or a "we need SABS to
+    //      answer" placeholder if attendance zones aren't loaded)
+    //   2. PRIVATE SCHOOLS NEARBY — dark-slate cards, sorted by distance
+    //   3. CHARTER SCHOOLS — coral cards
+    //   4. CLOSEST 3 PUBLIC IN DISTRICT PER LEVEL (teaser)
+    //   5. FULL ROSTER — collapsed <details>, expand to see everything
+    // Schools are already sorted by distance from nrnyFetchSchools.
+    const assigned = schools.filter(s => s._sabs_assigned);
+    const priv = schools.filter(s => s._is_private);
+    const charters = schools.filter(s => !s._sabs_assigned && !s._is_private && s.charter);
+    const otherPublic = schools.filter(s => !s._sabs_assigned && !s._is_private && !s.charter);
+
+    // Group otherPublic by level (multi-column: K-8 lands in both E + M).
+    const otherByLevel = { elementary: [], middle: [], high: [] };
+    for (const s of otherPublic) {
       const buckets = nrnyClassifySchoolLevel(s);
-      for (const b of buckets) {
-        if (byLevel[b]) byLevel[b].push(s);
-      }
+      for (const b of buckets) if (otherByLevel[b]) otherByLevel[b].push(s);
     }
-    const sortForCol = (arr) => arr.sort((a, b) => {
-      // assigned first, then charter, then alphabetical
-      const scoreA = (a._sabs_assigned ? 0 : (a.charter ? 1 : 2));
-      const scoreB = (b._sabs_assigned ? 0 : (b.charter ? 1 : 2));
-      if (scoreA !== scoreB) return scoreA - scoreB;
-      return (a.name || "").localeCompare(b.name || "");
-    });
-    Object.keys(byLevel).forEach(k => sortForCol(byLevel[k]));
 
-    const cols = [
-      { id: "elementary", icon: "🎒", label: "Elementary", items: byLevel.elementary },
-      { id: "middle",     icon: "📖", label: "Middle",     items: byLevel.middle },
-      { id: "high",       icon: "🎓", label: "High",       items: byLevel.high },
-    ];
-    const columnsHtml = cols.map(c => `
-<div class="events-column">
-  <div class="col-level-header">
-    <span class="events-col-icon">${c.icon}</span>
-    <b>${escapeHtml(c.label)}</b>
-    <span class="count">${c.items.length}</span>
+    // 1. ASSIGNED SCHOOLS SECTION
+    let assignedSection = "";
+    if (assigned.length > 0) {
+      // SABS loaded — show hero cards for each assigned level
+      const assignedByLevel = { elementary: [], middle: [], high: [] };
+      for (const s of assigned) {
+        const buckets = nrnyClassifySchoolLevel(s);
+        for (const b of buckets) if (assignedByLevel[b]) assignedByLevel[b].push(s);
+      }
+      assignedSection = `
+<section style="grid-column: 1 / -1; margin-bottom: 24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 12px;letter-spacing:-0.01em;">🏫 Your assigned school${assigned.length === 1 ? "" : "s"}</h3>
+  <p style="color:var(--ink-soft);margin:0 0 14px;font-size:13px;">Based on NCES 2015-16 attendance zones. Verify at the district finder link above.</p>
+  <div class="result-columns-3">
+    ${["elementary","middle","high"].map(lvl => {
+      const items = assignedByLevel[lvl];
+      const label = lvl === "elementary" ? "🎒 Elementary" : lvl === "middle" ? "📖 Middle" : "🎓 High";
+      return `<div class="events-column"><div class="col-level-header"><b>${label}</b><span class="count">${items.length}</span></div><div class="events-col-stack">${items.length === 0 ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">Not resolved for this level.</p>` : items.map(nrnyRenderSchoolCard).join("")}</div></div>`;
+    }).join("")}
   </div>
-  <div class="events-col-stack">
-    ${c.items.length === 0
-      ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">No ${c.label.toLowerCase()} schools in this district.</p>`
-      : c.items.map(nrnyRenderSchoolCard).join("")}
+</section>`;
+    } else {
+      // SABS not loaded — placeholder explaining the situation
+      assignedSection = `
+<section style="grid-column: 1 / -1; margin-bottom: 24px;">
+  <div style="background:#fef9c3;border:1px solid #fde68a;border-left:4px solid #ca8a04;border-radius:10px;padding:16px 18px;">
+    <h3 style="font-size:16px;font-weight:700;margin:0 0 6px;color:#713f12;">🏫 We can't resolve your assigned school yet</h3>
+    <p style="color:#854d0e;margin:0 0 8px;font-size:14px;">Attendance-zone data for your state isn't loaded. Use the district finder to look up your specific school, then we'll show related info here.</p>
+    <a href="${finderUrl}" target="_blank" rel="noopener" style="display:inline-block;background:var(--ink);color:#fff;padding:8px 14px;border-radius:999px;font-size:13px;font-weight:600;text-decoration:none;">Find your assigned school on the district site →</a>
   </div>
-</div>`).join("");
+</section>`;
+    }
 
-    // "Other levels" schools (K-12 combined, adult ed, etc.) — surfaced
-    // separately below main columns so they don't clutter the E/M/H view.
-    const otherHtml = byLevel.other.length > 0 ? `
-<div class="events-column" style="grid-column: 1 / -1; margin-top: 16px;">
-  <div class="col-level-header">
-    <span class="events-col-icon">🏫</span>
-    <b>Other levels (K-12, adult ed, alternative)</b>
-    <span class="count">${byLevel.other.length}</span>
+    // 2. PRIVATE SCHOOLS SECTION
+    const privateSection = priv.length > 0 ? `
+<section style="grid-column: 1 / -1; margin-bottom: 24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 12px;letter-spacing:-0.01em;">🏛️ Private schools nearby <span style="font-size:14px;color:var(--ink-soft);font-weight:500;">(${priv.length})</span></h3>
+  <p style="color:var(--ink-soft);margin:0 0 14px;font-size:13px;">Independent — not tied to district boundaries. From OpenStreetMap; coverage varies.</p>
+  <div class="results-grid">
+    ${priv.slice(0, 12).map(nrnyRenderSchoolCard).join("")}
   </div>
-  <div class="events-col-stack" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
-    ${byLevel.other.map(nrnyRenderSchoolCard).join("")}
-  </div>
-</div>` : "";
+  ${priv.length > 12 ? `<p style="color:var(--ink-soft);margin-top:10px;font-size:13px;">+ ${priv.length - 12} more not shown. <a href="mailto:feedback@nearnity.com?subject=Private schools request">Request more</a></p>` : ""}
+</section>` : "";
 
-    grid.innerHTML = `${districtBanner}<div class="result-columns-3" style="grid-column: 1 / -1;">${columnsHtml}${otherHtml}</div>`;
+    // 3. CHARTER SCHOOLS SECTION
+    const charterSection = charters.length > 0 ? `
+<section style="grid-column: 1 / -1; margin-bottom: 24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 12px;letter-spacing:-0.01em;">🎓 Charter schools <span style="font-size:14px;color:var(--ink-soft);font-weight:500;">(${charters.length})</span></h3>
+  <div class="results-grid">
+    ${charters.slice(0, 12).map(nrnyRenderSchoolCard).join("")}
+  </div>
+</section>` : "";
+
+    // 4. CLOSEST 3 PUBLIC IN DISTRICT PER LEVEL — teaser
+    const closestByLevel = {
+      elementary: otherByLevel.elementary.slice(0, 3),
+      middle: otherByLevel.middle.slice(0, 3),
+      high: otherByLevel.high.slice(0, 3),
+    };
+    const anyClosest = closestByLevel.elementary.length + closestByLevel.middle.length + closestByLevel.high.length;
+    const closestSection = anyClosest > 0 ? `
+<section style="grid-column: 1 / -1; margin-bottom: 24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 12px;letter-spacing:-0.01em;">📍 Closest public schools in your district</h3>
+  <div class="result-columns-3">
+    ${["elementary","middle","high"].map(lvl => {
+      const items = closestByLevel[lvl];
+      const label = lvl === "elementary" ? "🎒 Elementary" : lvl === "middle" ? "📖 Middle" : "🎓 High";
+      return `<div class="events-column"><div class="col-level-header"><b>${label}</b><span class="count">${items.length}</span></div><div class="events-col-stack">${items.length === 0 ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">None in district.</p>` : items.map(nrnyRenderSchoolCard).join("")}</div></div>`;
+    }).join("")}
+  </div>
+</section>` : "";
+
+    // 5. FULL ROSTER — collapsed by default. Only include remainder beyond
+    // the closest 3 shown above (avoid duplicating).
+    const closestIds = new Set([...closestByLevel.elementary, ...closestByLevel.middle, ...closestByLevel.high].map(s => s.ncessch));
+    const remaining = otherPublic.filter(s => !closestIds.has(s.ncessch));
+    const fullRosterSection = remaining.length > 0 ? `
+<details style="grid-column: 1 / -1;">
+  <summary style="cursor:pointer;padding:14px 16px;background:var(--surface);border:1px solid var(--line);border-radius:10px;font-weight:600;font-size:14px;">
+    Show all ${otherPublic.length} public schools in ${escapeHtml(district.name)} →
+  </summary>
+  <div style="padding-top:16px;">
+    <p style="color:var(--ink-soft);font-size:13px;margin:0 0 12px;">Full roster from NCES CCD. Not zone-verified — verify assignment with the district finder above.</p>
+    <div class="results-grid">
+      ${remaining.map(nrnyRenderSchoolCard).join("")}
+    </div>
+  </div>
+</details>` : "";
+
+    grid.innerHTML = `${districtBanner}${assignedSection}${privateSection}${charterSection}${closestSection}${fullRosterSection}`;
     NRNY._lastSchools = schools;
     if (NRNY.showMap) nrnySetupSchoolsMap(schools, NRNY.geo.lat, NRNY.geo.lon);
     return;
