@@ -439,6 +439,103 @@
   }
   .events-col-stack { display: flex; flex-direction: column; gap: 12px; }
 
+  /* ──── Sticky content nav (v3.0.1.16) ─────────────────────────────
+     Address bar + subnav stick to top when user scrolls long results.
+     No more scrolling back up to see which address is loaded or to
+     switch tabs. */
+  .sticky-content-nav {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    background: var(--bg);
+    padding: 10px 0 0;
+    margin: 0 -4px 12px;
+  }
+  .sticky-content-nav .address-bar { margin-bottom: 8px; }
+  .sticky-content-nav .subnav {
+    margin-top: 0;
+    margin-bottom: 0;
+    background: var(--surface);
+  }
+
+  /* Inline "Change address" form inside the sticky bar */
+  .inline-search-form {
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .inline-search-form input {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-pill);
+    padding: 6px 12px;
+    font-size: 13px;
+    outline: none;
+    min-width: 200px;
+    font-family: inherit;
+    background: var(--surface);
+  }
+  .inline-search-form input:focus { border-color: var(--primary); }
+  .inline-search-form button {
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    display: grid; place-items: center;
+    transition: background 0.12s;
+  }
+  .inline-search-form button:hover { background: #000; }
+  @media (max-width: 720px) {
+    .inline-search-form input { min-width: 140px; }
+  }
+
+  /* ──── Forced 3-column layout (v3.0.1.16) ──────────────────────────
+     Used for schools + parks where we want side-by-side columns
+     regardless of data distribution (auto-fit collapses to 1-col when
+     only one category has items). Keeps 3 columns visible; single
+     column on narrow screens. */
+  .result-columns-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .result-columns-3 { grid-template-columns: 1fr; }
+  }
+  /* Level/type header inside a forced column */
+  .col-level-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-bottom: 10px;
+  }
+  .col-level-header b { flex: 1; font-size: 14px; font-weight: 700; color: var(--ink); }
+  .col-level-header .count {
+    background: var(--primary-soft); color: var(--primary-2);
+    border-radius: var(--radius-pill); padding: 2px 8px;
+    font-size: 12px; font-weight: 700;
+  }
+  /* Nearby section (parks < 1 mile) — spans full row */
+  .parks-nearby-banner {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(90deg, #ecfdf5 0%, #f0fdfa 100%);
+    border: 1px solid #a7f3d0;
+    border-left: 4px solid var(--tier-teal);
+    border-radius: var(--radius-sm);
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--tier-teal);
+    margin-bottom: 8px;
+  }
+  .parks-nearby-banner b { color: #0f766e; font-weight: 700; }
+
   /* ──── Schools district banner (v3.0.1.13) ────────────────────────
      Shown above the assigned/public/charter columns. Includes a
      "verify assignment →" link because NCES SABS data is 2015-16
@@ -652,7 +749,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.15</b> — Around me → Parks & rec wired. NPS (teal) + local OSM parks (indigo) in two columns. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.16</b> — Sticky search bar + tabs. Schools grouped by Elementary/Middle/High. Parks by Kids/Walking/Dog with "under 1 mile" banner. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -811,11 +908,21 @@
       <p id="nrny-content-desc">Enter an address in the search bar to see what's nearby.</p>
     </div>
 
-    <div class="address-bar" id="nrny-address-bar" hidden>
-      📍 <b>Serves this address:</b> <span id="nrny-address-text">—</span>
-    </div>
+    <!-- v3.0.1.16: Sticky nav wrapper — address bar + subnav stay pinned at
+         top of viewport when user scrolls through long result lists. Address
+         bar has an inline "Change address…" input so users don't need to
+         scroll back to the hero search. -->
+    <div class="sticky-content-nav">
+      <div class="address-bar" id="nrny-address-bar" hidden>
+        📍 <b>Serves this address:</b> <span id="nrny-address-text">—</span>
+        <form id="nrny-inline-search-form" class="inline-search-form" autocomplete="off">
+          <input type="text" id="nrny-inline-where" placeholder="Change address…">
+          <button type="submit" title="Update address">↻</button>
+        </form>
+      </div>
 
-    <nav class="subnav" id="nrny-subnav" hidden></nav>
+      <nav class="subnav" id="nrny-subnav" hidden></nav>
+    </div>
 
     <!-- v3.0.1.10: Map toggle. Hidden by default so results stay above the fold. -->
     <button class="section-map-toggle" id="nrny-map-toggle" hidden>🗺 Show map</button>
@@ -915,7 +1022,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.15",
+  version: "v3.0.1.16",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1322,6 +1429,41 @@ function nrnyRenderEventCard(item) {
 </article>`;
 }
 
+// ─── School level classifier (v3.0.1.16) ──────────────────────────────
+// Prefer NCES level_text when present; fall back to grade_low/high.
+function nrnyClassifySchoolLevel(item) {
+  const lt = String(item.level_text || item.type || "").toLowerCase();
+  if (/elem|primar/.test(lt)) return "elementary";
+  if (/middle|junior|intermed/.test(lt)) return "middle";
+  if (/high|senior/.test(lt)) return "high";
+  // Derive from grades. K/PK/1..5 → elem; 5..8 → middle; 8..12 → high
+  const gradeNum = (g) => {
+    const s = String(g || "").toUpperCase();
+    if (s === "PK" || s === "K" || s === "KG") return 0;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const gh = gradeNum(item.grade_high);
+  const gl = gradeNum(item.grade_low);
+  if (gh != null) {
+    if (gh <= 5) return "elementary";
+    if (gh <= 8) return (gl != null && gl <= 4) ? "elementary" : "middle";
+    if (gh <= 12) return (gl != null && gl <= 6) ? "middle" : "high";
+  }
+  return "other";
+}
+
+// ─── Park amenity classifier (v3.0.1.16) ──────────────────────────────
+// Uses OSM tags + name heuristics. Order matters: kids > dog > walking.
+function nrnyClassifyParkAmenity(item) {
+  const name = String(item.name || "").toLowerCase();
+  const desig = String(item.designation || "").toLowerCase();
+  const amenities = (Array.isArray(item.amenities) ? item.amenities : []).join(" ").toLowerCase();
+  if (desig === "playground" || /playground|tot.?lot|kids|children/.test(name) || amenities.includes("playground")) return "kids";
+  if (/\bdog park\b|dog[\s-]?run|off[\s-]?leash/.test(name) || amenities.includes("dog park")) return "dog";
+  return "walking";
+}
+
 // ─── /api/school-zone + /api/school-assignment fetcher (v3.0.1.13) ────
 // Two-endpoint pattern from v2.8.2a:
 //   1. school-zone: Census point→district + NCES CCD roster for that
@@ -1371,16 +1513,22 @@ async function nrnyFetchSchools(geo) {
 }
 
 // Card renderer for a school (v3 tier system).
-// Tier mapping:
-//   _sabs_assigned=true → authoritative (teal) — "Your assigned school"
-//   charter=true       → community (coral)    — "Charter school"
-//   otherwise          → public (indigo)      — "Public — district"
+// v3.0.1.16: cleaner labels — assigned/charter/private get explicit tags,
+// plain public shows no redundant tag (column position + tier border are
+// enough signal). Grades + enrollment merged into a single sub line.
 function nrnyRenderSchoolCard(item) {
   const isAssigned = item._sabs_assigned === true;
   const isCharter = item.charter === true;
   const isMagnet = item.magnet === true;
-  const tier = isAssigned ? "authoritative" : (isCharter ? "community" : "public");
-  const tierLabel = isAssigned ? "Your assigned school" : (isCharter ? "Charter" : "Public — district");
+  const isPrivate = item._is_private === true;
+  const tier = isAssigned ? "authoritative"
+             : isPrivate ? "third-party"
+             : isCharter ? "community"
+             : "public";
+  const tierLabel = isAssigned ? "🏫 Your assigned school"
+                  : isPrivate ? "Private"
+                  : isCharter ? "🎓 Charter"
+                  : "";   // plain public → no redundant label
   const name = escapeHtml(item.name || "School");
   const addr = escapeHtml(item.address || "");
   const phone = String(item.phone || "");
@@ -1388,19 +1536,18 @@ function nrnyRenderSchoolCard(item) {
   const gradeHigh = item.grade_high != null ? String(item.grade_high) : "";
   const grades = (gradeLow || gradeHigh) ? `Grades ${escapeHtml(gradeLow || "?")}–${escapeHtml(gradeHigh || "?")}` : "";
   const enrollment = item.enrollment ? `${item.enrollment.toLocaleString()} students` : "";
-  const type = escapeHtml(item.level_text || item.type || "School");
-  const sourceUrl = item.source_url || "";
   const magnetChip = isMagnet ? " · Magnet" : "";
+  const sourceUrl = item.source_url || "";
   const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
     ? `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
     : "";
+  const subLine = [grades, enrollment].filter(Boolean).join(" · ");
   return `
 <article class="card tier-${tier}">
-  <div class="card-tier-label">${tierLabel}${magnetChip}</div>
+  ${tierLabel ? `<div class="card-tier-label">${tierLabel}${magnetChip}</div>` : (magnetChip ? `<div class="card-tier-label">${magnetChip.replace(/^\s·\s/, "")}</div>` : "")}
   <h3 class="card-title">${name}</h3>
-  <p class="card-sub">${type}${grades ? " · " + grades : ""}</p>
+  ${subLine ? `<p class="card-sub">${subLine}</p>` : ""}
   ${addr ? `<p class="card-meta">📍 ${addr}</p>` : ""}
-  ${enrollment ? `<p class="card-meta">👥 ${enrollment}</p>` : ""}
   <div class="card-actions">
     ${phone ? `<a class="card-action ${isAssigned ? "primary" : ""}" href="tel:${phone.replace(/[^\d+]/g,"")}">📞 Call</a>` : ""}
     ${gmapsUrl ? `<a class="card-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
@@ -1805,23 +1952,45 @@ async function nrnyRenderSubnav(tab, subnav) {
 </article>`;
       return;
     }
-    // Group into columns: NPS first (federal, more prestigious), then OSM local.
-    const groups = [
-      { id: "nps", icon: "🌲", label: "National Park Service", items: npsParks },
-      { id: "osm", icon: "🌳", label: "Local parks",           items: osmParks },
-    ].filter(g => g.items.length > 0);
-    const columnsHtml = groups.map(g => `
+
+    // v3.0.1.16: 3-column forced layout — Kids parks · Walking parks · Dog parks.
+    // Nearby (<1 mile) banner at top spans all columns. NPS parks always show
+    // as walking (they're all "walking" scale regardless of amenities).
+    const nearby = allParks.filter(p => (p.distance_mi != null) && p.distance_mi < 1);
+    const byType = { kids: [], walking: [], dog: [] };
+    for (const p of allParks) {
+      // NPS = walking; OSM classified by amenity
+      const type = p._source === "nps" ? "walking" : nrnyClassifyParkAmenity(p);
+      byType[type].push(p);
+    }
+    // Sort each column by distance
+    Object.keys(byType).forEach(k => byType[k].sort((a, b) => (a.distance_mi || 0) - (b.distance_mi || 0)));
+
+    const nearbyBanner = nearby.length > 0 ? `
+<div class="parks-nearby-banner">
+  📍 <b>${nearby.length} park${nearby.length === 1 ? "" : "s"} within walking distance</b> (under 1 mile) — closest is ${escapeHtml(nearby[0].name)}, ${distFmt(nearby[0].distance_mi)}.
+</div>` : "";
+
+    const cols = [
+      { id: "kids",    icon: "🛝", label: "Kids parks & playgrounds", items: byType.kids },
+      { id: "walking", icon: "🌳", label: "Parks & walking areas",     items: byType.walking },
+      { id: "dog",     icon: "🐕", label: "Dog parks",                 items: byType.dog },
+    ];
+    const columnsHtml = cols.map(c => `
 <div class="events-column">
-  <div class="events-col-header">
-    <span class="events-col-icon">${g.icon}</span>
-    <h4>${escapeHtml(g.label)}</h4>
-    <span class="events-col-count">${g.items.length}</span>
+  <div class="col-level-header">
+    <span class="events-col-icon">${c.icon}</span>
+    <b>${escapeHtml(c.label)}</b>
+    <span class="count">${c.items.length}</span>
   </div>
   <div class="events-col-stack">
-    ${g.items.map(nrnyRenderParkCard).join("")}
+    ${c.items.length === 0
+      ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">No ${c.label.toLowerCase()} nearby.</p>`
+      : c.items.map(nrnyRenderParkCard).join("")}
   </div>
 </div>`).join("");
-    grid.innerHTML = `<div class="events-columns-wrap" style="grid-column: 1 / -1;">${columnsHtml}</div>`;
+
+    grid.innerHTML = `<div class="result-columns-3" style="grid-column: 1 / -1;">${nearbyBanner}${columnsHtml}</div>`;
     NRNY._lastParks = allParks;
     if (NRNY.showMap) nrnySetupParksMap(allParks, NRNY.geo.lat, NRNY.geo.lon);
     return;
@@ -1851,42 +2020,62 @@ async function nrnyRenderSubnav(tab, subnav) {
 <div class="school-district-banner" style="grid-column: 1 / -1;">
   <span>📚 <b>Schools in ${escapeHtml(district.name)}</b></span>
   <a href="${finderUrl}" target="_blank" rel="noopener">Verify assignment on the district site →</a>
-  ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — every card shows as "public in district" until we upload it.</div>` : "")}
+  ${sabsAvailable && sabsCaveat ? `<div class="sabs-caveat">${escapeHtml(sabsCaveat)}</div>` : (!sabsAvailable ? `<div class="sabs-caveat">Attendance-zone lookup isn't loaded for your state yet — we can't highlight assigned schools until it's uploaded.</div>` : "")}
 </div>`;
 
-    // Group: assigned (teal) first, then charter (coral), then rest public (indigo).
-    const assigned = schools.filter(s => s._sabs_assigned);
-    const charters = schools.filter(s => !s._sabs_assigned && s.charter);
-    const otherPublic = schools.filter(s => !s._sabs_assigned && !s.charter);
-    // Within each group, sort by grade_low then name (so K-5s come before 6-8s before 9-12s)
-    const sortKey = (s) => {
-      const g = String(s.grade_low || "99").replace(/[^0-9K]/gi, "").replace(/K/i, "-1");
-      const gnum = g === "-1" ? -1 : (parseInt(g, 10) || 99);
-      return `${String(gnum).padStart(3, "0")}|${(s.name || "").toLowerCase()}`;
-    };
-    assigned.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
-    charters.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
-    otherPublic.sort((a, b) => sortKey(a).localeCompare(sortKey(b)));
+    // v3.0.1.16: Group by school LEVEL (Elementary / Middle / High) into a
+    // forced 3-column layout. Within each column, assigned school (teal)
+    // bubbles to the top; then charter (coral); then rest alphabetical.
+    // Private schools bucketed but not fetched yet (v3.1 will add OSM).
+    const byLevel = { elementary: [], middle: [], high: [], other: [] };
+    for (const s of schools) {
+      const lvl = nrnyClassifySchoolLevel(s);
+      byLevel[lvl] = byLevel[lvl] || [];
+      byLevel[lvl].push(s);
+    }
+    const sortForCol = (arr) => arr.sort((a, b) => {
+      // assigned first, then charter, then alphabetical
+      const scoreA = (a._sabs_assigned ? 0 : (a.charter ? 1 : 2));
+      const scoreB = (b._sabs_assigned ? 0 : (b.charter ? 1 : 2));
+      if (scoreA !== scoreB) return scoreA - scoreB;
+      return (a.name || "").localeCompare(b.name || "");
+    });
+    Object.keys(byLevel).forEach(k => sortForCol(byLevel[k]));
 
-    const groups = [
-      { id: "assigned", icon: "🏫", label: "Your assigned school",      items: assigned },
-      { id: "charter",  icon: "🎓", label: "Charter schools",           items: charters },
-      { id: "public",   icon: "🏛️", label: "Other public in district",  items: otherPublic },
-    ].filter(g => g.items.length > 0);
-
-    const columnsHtml = groups.map(g => `
+    const cols = [
+      { id: "elementary", icon: "🎒", label: "Elementary", items: byLevel.elementary },
+      { id: "middle",     icon: "📖", label: "Middle",     items: byLevel.middle },
+      { id: "high",       icon: "🎓", label: "High",       items: byLevel.high },
+    ];
+    const columnsHtml = cols.map(c => `
 <div class="events-column">
-  <div class="events-col-header">
-    <span class="events-col-icon">${g.icon}</span>
-    <h4>${escapeHtml(g.label)}</h4>
-    <span class="events-col-count">${g.items.length}</span>
+  <div class="col-level-header">
+    <span class="events-col-icon">${c.icon}</span>
+    <b>${escapeHtml(c.label)}</b>
+    <span class="count">${c.items.length}</span>
   </div>
   <div class="events-col-stack">
-    ${g.items.map(nrnyRenderSchoolCard).join("")}
+    ${c.items.length === 0
+      ? `<p style="color:var(--ink-soft);padding:8px 4px;font-size:13px;">No ${c.label.toLowerCase()} schools in this district.</p>`
+      : c.items.map(nrnyRenderSchoolCard).join("")}
   </div>
 </div>`).join("");
 
-    grid.innerHTML = `${districtBanner}<div class="events-columns-wrap" style="grid-column: 1 / -1;">${columnsHtml}</div>`;
+    // "Other levels" schools (K-12 combined, adult ed, etc.) — surfaced
+    // separately below main columns so they don't clutter the E/M/H view.
+    const otherHtml = byLevel.other.length > 0 ? `
+<div class="events-column" style="grid-column: 1 / -1; margin-top: 16px;">
+  <div class="col-level-header">
+    <span class="events-col-icon">🏫</span>
+    <b>Other levels (K-12, adult ed, alternative)</b>
+    <span class="count">${byLevel.other.length}</span>
+  </div>
+  <div class="events-col-stack" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px;">
+    ${byLevel.other.map(nrnyRenderSchoolCard).join("")}
+  </div>
+</div>` : "";
+
+    grid.innerHTML = `${districtBanner}<div class="result-columns-3" style="grid-column: 1 / -1;">${columnsHtml}${otherHtml}</div>`;
     NRNY._lastSchools = schools;
     if (NRNY.showMap) nrnySetupSchoolsMap(schools, NRNY.geo.lat, NRNY.geo.lon);
     return;
@@ -1993,6 +2182,33 @@ document.addEventListener("DOMContentLoaded", () => {
     $("nrny-loading").hidden = true;
     nrnySwitchTab(NRNY.activeTab);
   });
+
+  // v3.0.1.16: Inline "Change address…" form in the sticky bar. Same handler
+  // pattern as the hero search — geocode, update NRNY.geo, re-render current
+  // subnav in place. Users no longer need to scroll to the top.
+  const inlineForm = $("nrny-inline-search-form");
+  const inlineWhere = $("nrny-inline-where");
+  if (inlineForm && inlineWhere) {
+    inlineForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const query = inlineWhere.value.trim();
+      if (!query) { inlineWhere.focus(); return; }
+      const priorText = $("nrny-address-text").textContent;
+      $("nrny-address-text").textContent = "Locating…";
+      const geo = await nrnyGeocode(query);
+      if (!geo) {
+        $("nrny-address-text").textContent = priorText;
+        inlineWhere.placeholder = "Couldn't find that. Try city + state.";
+        return;
+      }
+      NRNY.geo = geo;
+      $("nrny-address-text").textContent = geo.display_name || nrnyAddressChip(geo);
+      inlineWhere.value = "";
+      inlineWhere.placeholder = "Change address…";
+      // Re-render current subnav with the new geo
+      nrnyRenderSubnav(NRNY.activeTab, NRNY.activeSubnav);
+    });
+  }
 
   // v3.0.1.10: Map toggle. Persists preference to localStorage so users who
   // want the map stay-open get it back on every section switch.
