@@ -7048,7 +7048,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c3</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c4</span>
     </div>
   </header>
 
@@ -8671,7 +8671,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c3</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c4</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9158,6 +9158,102 @@ function v3cRenderSchoolSections(grouped, total, cityKey) {
   }
 }
 
+// ─── v3c Phase 4: parks retrofit ───────────────────────────────────────
+// v2's renderParks takes ({ park, dog, playground, trail }, total, cityKey).
+// We map to v3's 3-column layout: kids (playground) · walking (park+trail) ·
+// dog. Adds a "N parks within walking distance" banner when any park is <1mi.
+function v3cRenderParkCardV2(p, bucketId) {
+  const name = v3cEscapeHtml(p.name || "Park");
+  let designation = String(p.subtype || "Park");
+  const desigLower = designation.toLowerCase();
+  if (bucketId === "kids" && !/playground/i.test(desigLower)) designation += " · playground";
+  if (bucketId === "dog" && !/dog/i.test(desigLower)) designation += " · dog-friendly";
+  const dist = Number.isFinite(p.dist) ? v3cDistFmt(p.dist)
+             : (Number.isFinite(p.distance_mi) ? v3cDistFmt(p.distance_mi) : "");
+  const url = p.source_url || p.url || (Number.isFinite(p.lat) && Number.isFinite(p.lon)
+    ? `https://www.google.com/maps/search/${encodeURIComponent(p.name || "park")}/@${p.lat},${p.lon},15z`
+    : "");
+  const gmapsUrl = (Number.isFinite(p.lat) && Number.isFinite(p.lon))
+    ? `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}` : "";
+  const addr = v3cEscapeHtml(p.address || "");
+  return `
+<article class="v3c-card v3c-tier-public">
+  <div class="v3c-tier-label">Public dataset · OSM</div>
+  <h3 class="v3c-card-title">${name}</h3>
+  <p class="v3c-card-sub">${v3cEscapeHtml(designation)}${dist ? " · " + dist : ""}</p>
+  ${addr ? `<p class="v3c-card-meta">📍 ${addr}</p>` : ""}
+  <div class="v3c-card-actions">
+    ${url ? `<a class="v3c-action primary" href="${v3cEscapeHtml(url)}" target="_blank" rel="noopener">Details →</a>` : ""}
+    ${gmapsUrl ? `<a class="v3c-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+  </div>
+</article>`;
+}
+
+function v3cRenderParks(grouped, total, cityKey) {
+  const sections = document.getElementById("parks-sections");
+  const loading = document.getElementById("parks-loading");
+  const pill = document.getElementById("parks-summary");
+  const valueEl = document.getElementById("parks-value");
+  if (loading) loading.hidden = true;
+  if (sections) sections.hidden = false;
+  if (pill) {
+    pill.hidden = false;
+    pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${(typeof CURRENT_RADIUS_MI !== "undefined" ? CURRENT_RADIUS_MI : 5)} mi`;
+  }
+  if (valueEl) {
+    valueEl.textContent = total > 0 ? `${total} places to explore` : "Nothing nearby in OpenStreetMap";
+  }
+
+  const parks = (grouped.park || []).slice();
+  const trails = (grouped.trail || []).slice();
+  const dogs = (grouped.dog || []).slice();
+  const playgrounds = (grouped.playground || []).slice();
+
+  // Bucket assignment
+  const kidsBucket = playgrounds;
+  const walkingBucket = [...parks, ...trails];
+  const dogBucket = dogs;
+
+  const byDist = (a, b) => ((a.dist || a.distance_mi || 999) - (b.dist || b.distance_mi || 999));
+  kidsBucket.sort(byDist);
+  walkingBucket.sort(byDist);
+  dogBucket.sort(byDist);
+
+  // Nearby (<1mi) banner across all buckets
+  const allSorted = [...kidsBucket, ...walkingBucket, ...dogBucket].sort(byDist);
+  const nearby = allSorted.filter(p => {
+    const d = p.dist || p.distance_mi;
+    return d != null && d < 1;
+  });
+  const nearbyBanner = nearby.length > 0 ? `
+<div class="v3c-nearby-banner">
+  📍 <b>${nearby.length} park${nearby.length === 1 ? "" : "s"} within walking distance</b> (under 1 mile) — closest is ${v3cEscapeHtml(nearby[0].name)}, ${v3cDistFmt(nearby[0].dist || nearby[0].distance_mi)}.
+</div>` : "";
+
+  const cols = [
+    { id: "kids",    icon: "🛝", label: "Kids parks & playgrounds", items: kidsBucket },
+    { id: "walking", icon: "🌳", label: "Parks & walking areas",     items: walkingBucket },
+    { id: "dog",     icon: "🐕", label: "Dog parks",                 items: dogBucket },
+  ];
+  const columnsHtml = cols.map(c => `
+<div>
+  <div class="v3c-col-header">
+    <span style="font-size:18px;line-height:1;">${c.icon}</span>
+    <b>${v3cEscapeHtml(c.label)}</b>
+    <span class="v3c-col-count">${c.items.length}</span>
+  </div>
+  <div class="v3c-col-stack">
+    ${c.items.length === 0
+      ? `<p style="color:#717171;padding:8px 4px;font-size:13px;">No ${c.label.toLowerCase()} nearby.</p>`
+      : c.items.map(p => v3cRenderParkCardV2(p, c.id)).join("")}
+  </div>
+</div>`).join("");
+
+  if (sections) {
+    sections.innerHTML = `<div class="v3c-cols-3">${nearbyBanner}${columnsHtml}</div>`;
+  }
+}
+
 // Haversine distance (miles). v2 has its own; this is namespaced to
 // avoid shadowing in case v2's is stateful.
 function v3cHaversineMi(lat1, lon1, lat2, lon2) {
@@ -9249,6 +9345,16 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("[v3c] Phase 3: schools hero/private/collapsed renderer installed");
   } else {
     console.warn("[v3c] Phase 3: renderSchoolSections not found — schools retrofit skipped");
+  }
+  // v3c Phase 4: parks retrofit
+  if (typeof renderParks === "function" && typeof v3cRenderParks === "function") {
+    window.renderParks = function(grouped, total, cityKey) {
+      try { return v3cRenderParks(grouped, total, cityKey); }
+      catch (e) { console.warn("[v3c] parks render failed:", e); }
+    };
+    console.log("[v3c] Phase 4: parks 3-col amenity renderer installed");
+  } else {
+    console.warn("[v3c] Phase 4: renderParks not found — parks retrofit skipped");
   }
 });
 
