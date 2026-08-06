@@ -6782,6 +6782,199 @@
   .risk-tag.address-specific { background: #dbeafe; color: #1e40af; }
   .risk-tag.area-estimate    { background: #fef9c3; color: #854d0e; }
   .risk-tag.general-guidance { background: #f1f5f9; color: #475569; }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     v3 CONSOLIDATION — Phase 1 (2026-08-05)
+     All new classes namespaced .v3c-* except #section-nav sticky rule.
+     Additive only — no existing v2 classes overridden. Section retrofits
+     (Events / Schools / Parks) in Phase 2-4 will use these primitives.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  /* Sticky top-of-viewport nav so users don't lose context on scroll.
+     v2's #section-nav is our anchor point. */
+  #section-nav {
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    background: #fafafa;
+    padding-top: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  }
+
+  /* Tier color palette (v3 tier system) */
+  :root {
+    --v3c-tier-teal:    #0D9488;
+    --v3c-tier-indigo:  #4F46E5;
+    --v3c-tier-coral:   #FB923C;
+    --v3c-tier-slate:   #94A3B8;
+    --v3c-tier-red:     #dc2626;
+    /* School level pin colors */
+    --v3c-lvl-elem:  #38bdf8;
+    --v3c-lvl-mid:   #f97316;
+    --v3c-lvl-high:  #7c3aed;
+    --v3c-lvl-priv:  #334155;
+  }
+
+  /* Base card style — used by v3c retrofits */
+  .v3c-card {
+    background: #fff;
+    border: 1px solid #ebebeb;
+    border-left-width: 4px;
+    border-left-style: solid;
+    border-left-color: var(--v3c-tier-slate);
+    border-radius: 12px;
+    padding: 16px 16px 14px;
+    display: flex; flex-direction: column;
+    transition: box-shadow 0.15s, transform 0.1s;
+  }
+  .v3c-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
+  }
+  .v3c-card.v3c-tier-authoritative { border-left-color: var(--v3c-tier-teal); }
+  .v3c-card.v3c-tier-public        { border-left-color: var(--v3c-tier-indigo); }
+  .v3c-card.v3c-tier-community     { border-left-color: var(--v3c-tier-coral); }
+  .v3c-card.v3c-tier-third-party   { border-left-color: var(--v3c-tier-slate); }
+  .v3c-card.v3c-tier-emergency     { border-left-color: var(--v3c-tier-red); }
+
+  .v3c-tier-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    margin-bottom: 6px;
+    color: var(--v3c-tier-indigo);
+  }
+  .v3c-card-title { font-size: 15px; font-weight: 700; margin: 0 0 4px; line-height: 1.3; color: #222; }
+  .v3c-card-sub   { font-size: 13px; color: #717171; margin: 0 0 6px; }
+  .v3c-card-meta  { font-size: 13px; color: #222; margin: 3px 0; }
+  .v3c-card-actions {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-top: auto; padding-top: 10px;
+    border-top: 1px solid #ebebeb;
+  }
+  .v3c-action {
+    background: transparent;
+    border: 1px solid #ebebeb;
+    border-radius: 999px;
+    padding: 5px 11px;
+    font-size: 12px; font-weight: 600;
+    color: #222;
+    display: inline-flex; align-items: center; gap: 5px;
+    text-decoration: none; cursor: pointer;
+  }
+  .v3c-action.primary { background: #222; color: #fff; border-color: #222; }
+  .v3c-action:hover { background: #f4f4f4; }
+  .v3c-action.primary:hover { background: #000; }
+
+  /* Forced 3-column layout (schools + parks) */
+  .v3c-cols-3 {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .v3c-cols-3 { grid-template-columns: 1fr; } }
+
+  .v3c-col-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 12px;
+    background: #fff;
+    border: 1px solid #ebebeb;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .v3c-col-header b { flex: 1; font-size: 14px; font-weight: 700; color: #222; }
+  .v3c-col-count {
+    background: #e9efff; color: #0050c2;
+    border-radius: 999px; padding: 2px 8px;
+    font-size: 12px; font-weight: 700;
+  }
+  .v3c-col-stack { display: flex; flex-direction: column; gap: 12px; }
+
+  /* Events category columns (auto-fit for 7 possible buckets) */
+  .v3c-events-wrap {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* Level-based borders (schools) — override tier color per level */
+  .v3c-card.v3c-level-elementary { border-left-color: var(--v3c-lvl-elem); }
+  .v3c-card.v3c-level-middle     { border-left-color: var(--v3c-lvl-mid); }
+  .v3c-card.v3c-level-high       { border-left-color: var(--v3c-lvl-high); }
+  .v3c-card.v3c-level-private    { border-left-color: var(--v3c-lvl-priv); }
+  .v3c-card.v3c-level-charter    { border-left-color: var(--v3c-tier-coral); }
+  .v3c-card.v3c-level-assigned   { border-left-color: var(--v3c-tier-teal); border-left-width: 5px; }
+
+  .v3c-nearby-banner {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 12px;
+    background: linear-gradient(90deg, #ecfdf5 0%, #f0fdfa 100%);
+    border: 1px solid #a7f3d0;
+    border-left: 4px solid var(--v3c-tier-teal);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 14px;
+    color: var(--v3c-tier-teal);
+    margin-bottom: 8px;
+  }
+  .v3c-nearby-banner b { color: #0f766e; font-weight: 700; }
+
+  .v3c-school-district-banner {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 12px;
+    background: #fff;
+    border: 1px solid #ebebeb;
+    border-left: 4px solid var(--v3c-tier-teal);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .v3c-school-district-banner b { color: #222; font-weight: 700; }
+  .v3c-school-district-banner a { color: #006aff; font-weight: 600; }
+  .v3c-school-district-banner .v3c-sabs-caveat {
+    color: #717171; font-size: 12px; flex-basis: 100%;
+    padding-top: 6px; border-top: 1px dashed #ebebeb;
+  }
+
+  /* Section map toggle (opt-in map view) */
+  .v3c-map-toggle {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    border-radius: 999px;
+    padding: 6px 14px;
+    font-size: 13px; font-weight: 600;
+    color: #222;
+    margin: 0 0 16px;
+    cursor: pointer;
+  }
+  .v3c-map-toggle:hover { background: #f4f4f4; }
+
+  /* Inline "Change address" input for sticky bar */
+  .v3c-inline-search {
+    display: inline-flex; align-items: center; gap: 6px;
+    margin-left: auto;
+  }
+  .v3c-inline-search input {
+    border: 1px solid #d4d4d4;
+    border-radius: 999px;
+    padding: 6px 12px;
+    font-size: 13px;
+    outline: none;
+    min-width: 200px;
+    font-family: inherit;
+    background: #fff;
+  }
+  .v3c-inline-search input:focus { border-color: #006aff; }
+  .v3c-inline-search button {
+    background: #222; color: #fff;
+    border: none; border-radius: 50%;
+    width: 30px; height: 30px;
+    cursor: pointer;
+    font-size: 14px;
+    display: grid; place-items: center;
+  }
 </style>
 </head>
 <body class="single-view">
@@ -6834,7 +7027,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.8.2b</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1</span>
     </div>
   </header>
 
@@ -8465,6 +8658,281 @@
 </div>
 
 <script>
+/* =====================================================================
+   v3 CONSOLIDATION — Phase 1 (added 2026-08-05)
+   New global helpers ported from index_v3.html. All prefixed v3c* so they
+   can't shadow existing v2 functions. Section retrofits (Events, Schools,
+   Parks) in Phase 2-4 will call these helpers.
+   ===================================================================== */
+
+const NRNY_V3C_OVERPASS_MIRRORS = [
+  "https://overpass-api.de/api/interpreter",
+  "https://overpass.kumi.systems/api/interpreter",
+  "https://z.overpass-api.de/api/interpreter",
+  "https://overpass.private.coffee/api/interpreter",
+];
+
+// Race Overpass mirrors + localStorage cache. Overall time-boxed so a
+// slow mirror never freezes the page for minutes.
+async function v3cRunOverpass(query, cacheKey, overallTimeoutMs) {
+  if (cacheKey) {
+    try {
+      const raw = localStorage.getItem(cacheKey);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.expires > Date.now() && parsed.data) return { data: parsed.data, from_cache: true, error: null };
+      }
+    } catch (_) {}
+  }
+  const capMs = Number.isFinite(overallTimeoutMs) ? overallTimeoutMs : 8000;
+  const attempts = NRNY_V3C_OVERPASS_MIRRORS.map(mirror => {
+    const ctrl = new AbortController();
+    return { ctrl, promise: (async () => {
+      const t = setTimeout(() => ctrl.abort(), capMs);
+      try {
+        const resp = await fetch(mirror, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "data=" + encodeURIComponent(query),
+          signal: ctrl.signal,
+        });
+        if (!resp.ok) throw new Error(`${mirror.split("/")[2]} HTTP ${resp.status}`);
+        return await resp.json();
+      } finally { clearTimeout(t); }
+    })() };
+  });
+  const hardTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error("overall_timeout")), capMs + 500));
+  try {
+    const data = await Promise.race([Promise.any(attempts.map(a => a.promise)), hardTimeout]);
+    attempts.forEach(a => { try { a.ctrl.abort(); } catch (_) {} });
+    if (cacheKey) {
+      try { localStorage.setItem(cacheKey, JSON.stringify({ expires: Date.now() + 12 * 3600 * 1000, data })); } catch (_) {}
+    }
+    return { data, from_cache: false, error: null };
+  } catch (e) {
+    attempts.forEach(a => { try { a.ctrl.abort(); } catch (_) {} });
+    return { data: null, error: (e && e.message) || String(e) };
+  }
+}
+
+// School level classifier — returns array of buckets (K-8 spans elem+middle, K-12 spans all three)
+function v3cClassifySchoolLevel(item) {
+  const gradeNum = (g) => {
+    if (g == null || g === "") return null;
+    const s = String(g).toUpperCase().trim();
+    if (s === "PK" || s === "PREK") return -1;
+    if (s === "K" || s === "KG") return 0;
+    const n = parseInt(s, 10);
+    return Number.isFinite(n) ? n : null;
+  };
+  const gl = gradeNum(item.grade_low);
+  const gh = gradeNum(item.grade_high);
+  const lt = String(item.level_text || item.type || "").toLowerCase();
+  const explicitLevel = /elem|primar/.test(lt) ? "elementary"
+                      : /^middle|junior|intermed/.test(lt) ? "middle"
+                      : /^high|senior/.test(lt) ? "high" : null;
+  const buckets = [];
+  if (gl != null && gh != null) {
+    const isKPrimary = gl <= 2;
+    if (isKPrimary && gh <= 6) buckets.push("elementary");
+    else if (isKPrimary && gh >= 7 && gh <= 8) buckets.push("elementary", "middle");
+    else if (isKPrimary && gh >= 9) buckets.push("elementary", "middle", "high");
+    else if (gl >= 5 && gl <= 7 && gh >= 6 && gh <= 8) buckets.push("middle");
+    else if (gl >= 6 && gl <= 7 && gh >= 9) buckets.push("middle", "high");
+    else if (gl >= 8 && gh >= 9) buckets.push("high");
+    else if (gl >= 3 && gl <= 6 && gh <= 6) buckets.push("elementary");
+    else {
+      if (gh <= 6) buckets.push("elementary");
+      else if (gh <= 8) buckets.push("middle");
+      else if (gh <= 12) buckets.push("high");
+    }
+  }
+  if (buckets.length > 0) return buckets;
+  if (explicitLevel) return [explicitLevel];
+  return ["other"];
+}
+
+// Park amenity classifier — returns array (kids/walking/dog). Multi-bucket
+// placement: a Park with a playground goes in BOTH kids + walking.
+function v3cClassifyParkBuckets(item) {
+  const buckets = new Set();
+  const name = String(item.name || "").toLowerCase();
+  const desig = String(item.designation || "").toLowerCase();
+  const amenityChips = (Array.isArray(item.amenities) ? item.amenities : []).join(" ").toLowerCase();
+  const isPlaygroundType = desig === "playground";
+  const isDogType = desig === "dog park";
+  const isPlainPark = desig === "park" || desig === "nature reserve" || desig === "recreation ground";
+  if (isPlaygroundType || amenityChips.includes("playground") || /\b(playground|tot.?lot|play.?area|kids.?park)\b/.test(name)) buckets.add("kids");
+  if (isDogType || amenityChips.includes("dog park") || /\bdog\s?park\b|dog[\s-]?run|off[\s-]?leash/.test(name)) buckets.add("dog");
+  if (isPlainPark) buckets.add("walking");
+  if (buckets.size === 0) buckets.add("walking");
+  return Array.from(buckets);
+}
+
+// Event category taxonomy — for columnar events view
+const V3C_EVENT_CATEGORIES = [
+  { id: "farmers", icon: "🥬", label: "Farmers markets" },
+  { id: "kids",    icon: "👨‍👩‍👧", label: "Kids & family" },
+  { id: "music",   icon: "🎵", label: "Music & shows" },
+  { id: "sports",  icon: "⚽", label: "Sports" },
+  { id: "library", icon: "📚", label: "Library & community" },
+  { id: "outdoor", icon: "🌲", label: "Outdoor & parks" },
+  { id: "other",   icon: "📅", label: "Other" },
+];
+function v3cCategorizeEvent(item) {
+  const src = String(item.source_id || "");
+  const rawCat = String(item.category || "").toLowerCase();
+  const cat = (rawCat && rawCat !== "undefined") ? rawCat : "";
+  const title = String(item.title || "").toLowerCase();
+  const venue = String(item.venue_name || item.venue_address || item.venue || "").toLowerCase();
+  if (src === "usda_farmers_markets" || src === "pcfma_visit") return "farmers";
+  if (/farmers?[\s.-]market|farm[\s.-]market|swap[\s.-]meet|produce[\s.-]market/i.test(title)) return "farmers";
+  if (src === "nps") return "outdoor";
+  if (/\b(trail|hike|nature[\s.-]walk|birding|ranger[\s.-](?:talk|walk|program)|stargaz|astronomy[\s.-]night|campfire)\b/i.test(title)) return "outdoor";
+  if (src.startsWith("bibliocommons_")) return "library";
+  if (/\b(library|storytime|story[\s.-]time|book[\s.-]club|reading|literacy|book[\s.-]sale|author[\s.-]talk)\b/i.test(title)) return "library";
+  if (/\blibrary\b/i.test(venue)) return "library";
+  if (/\b(kids?|children|family[\s.-]friendly|toddler|preschool|youth|teen|camp[\s.-](?:day|week)?|storytime)\b/i.test(title)) return "kids";
+  if (cat === "kids" || cat === "family" || cat === "family_events") return "kids";
+  if (cat === "sports" || cat === "sport") return "sports";
+  if (/\b(giants|warriors|niners|49ers|sharks|earthquakes|athletics|kings|rams|lakers|clippers|dodgers|padres|angels|mets|yankees|patriots|celtics|red[\s.-]sox|bruins|knicks|cowboys|stars|astros|texans|spurs|mavericks|rockets|nba|nhl|nfl|mlb|game|match|tournament|championship|racing)\b/i.test(title)) return "sports";
+  if (cat === "music" || cat === "arts" || cat === "arts_and_theatre" || cat === "arts_theatre" || cat === "theatre" || cat === "miscellaneous") return "music";
+  if (/\b(concert|tour|show|comedy|orchestra|opera|festival|band|dj|jazz|hip[\s.-]hop|open[\s.-]mic)\b/i.test(title)) return "music";
+  return "other";
+}
+
+// Event dedupe — collapse same (name, city, date). Prefer real URLs +
+// PCFMA/seed sources over USDA fallbacks.
+function v3cExtractCityFromAddress(addr) {
+  const parts = String(addr || "").split(",").map(s => s.trim()).filter(Boolean);
+  return parts.length >= 2 ? parts[parts.length - 3] || parts[parts.length - 2] || "" : "";
+}
+function v3cDedupeEvents(events) {
+  const seen = new Map();
+  for (const ev of events) {
+    const nameKey = String(ev.title || "").toLowerCase().replace(/[^\w\s]/g, "").replace(/\s+/g, " ").trim();
+    if (!nameKey) continue;
+    const city = v3cExtractCityFromAddress(ev.venue_address || "").toLowerCase();
+    const dateKey = ev.start_date ? String(ev.start_date).slice(0, 10) : "ongoing";
+    const key = `${nameKey}|${city}|${dateKey}`;
+    const existing = seen.get(key);
+    if (!existing) { seen.set(key, ev); continue; }
+    const isGmaps = (u) => /google\.com\/maps/.test(u || "");
+    const trust = (s) => (String(s || "").includes("pcfma") || String(s || "").includes("seed") ? 2 : 1);
+    const existingScore = (isGmaps(existing.url) ? 0 : 2) + trust(existing.source_id);
+    const currentScore  = (isGmaps(ev.url)       ? 0 : 2) + trust(ev.source_id);
+    if (currentScore > existingScore) seen.set(key, ev);
+  }
+  return Array.from(seen.values());
+}
+
+// Private schools fetcher (OSM). Time-boxed via v3cRunOverpass.
+async function v3cFetchPrivateSchoolsOSM(geo, radiusMi) {
+  const radiusMeters = Math.min(radiusMi || 10, 10) * 1609.34;
+  const query = `[out:json][timeout:25];
+(
+  nwr["amenity"="school"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="kindergarten"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+  nwr["amenity"="college"]["name"](around:${Math.round(radiusMeters)},${geo.lat},${geo.lon});
+);
+out center 300;`;
+  const cacheKey = `v3c-osm-schools-${geo.lat.toFixed(3)}-${geo.lon.toFixed(3)}-${Math.round(radiusMeters)}`;
+  const result = await v3cRunOverpass(query, cacheKey, 6000);
+  if (result.error) return { schools: [], error: result.error, raw_count: 0 };
+  const raw = (Array.isArray(result.data && result.data.elements) ? result.data.elements : []);
+  const schools = raw.map(el => {
+    const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
+    const lon = el.lon != null ? el.lon : (el.center && el.center.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
+    const tags = el.tags || {};
+    return {
+      _is_private: true,
+      ncessch: `osm-${el.type}-${el.id}`,
+      name: tags.name,
+      lat, lon,
+      address: [tags["addr:housenumber"], tags["addr:street"], tags["addr:city"], tags["addr:state"], tags["addr:postcode"]].filter(Boolean).join(", "),
+      phone: tags.phone || tags["contact:phone"] || null,
+      grade_low: tags["isced:level:from"] || tags["grades:from"] || null,
+      grade_high: tags["isced:level:to"] || tags["grades:to"] || null,
+      type: "Private school",
+      level_text: tags["isced:level"] === "1" ? "Elementary" : tags["isced:level"] === "2" ? "Middle" : tags["isced:level"] === "3" ? "High" : null,
+      charter: false,
+      source_url: tags.website || tags["contact:website"] || null,
+      source: "OpenStreetMap",
+    };
+  }).filter(Boolean);
+  return { schools, error: null, raw_count: raw.length };
+}
+
+// Haversine distance (miles). v2 has its own; this is namespaced to
+// avoid shadowing in case v2's is stateful.
+function v3cHaversineMi(lat1, lon1, lat2, lon2) {
+  const R = 3958.8, toR = x => x * Math.PI / 180;
+  const dLat = toR(lat2 - lat1), dLon = toR(lon2 - lon1);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(lat1)) * Math.cos(toR(lat2)) * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+// Distance formatter (matches v3's distFmt)
+function v3cDistFmt(mi) { return Number.isFinite(mi) ? mi.toFixed(1) + " mi" : "—"; }
+
+// HTML escape (matches v3's escapeHtml)
+function v3cEscapeHtml(s) {
+  return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// Sticky-nav "Change address" form wire-up (added on DOMContentLoaded).
+// Reuses v2's existing #addr input + #searchForm behavior; this just gives
+// users an always-visible address chip + edit input in the sticky nav.
+function v3cWireStickyAddressBar() {
+  // Insert compact address chip into #section-nav (or #section-nav-inner)
+  const nav = document.getElementById("section-nav");
+  if (!nav) return;
+  // Only insert once
+  if (document.getElementById("v3c-sticky-address")) return;
+  const bar = document.createElement("div");
+  bar.id = "v3c-sticky-address";
+  bar.style.cssText = "display:flex;align-items:center;gap:12px;padding:6px 24px;max-width:1480px;margin:0 auto;font-size:13px;color:#717171;flex-wrap:wrap;";
+  bar.innerHTML = `
+    <span id="v3c-sticky-addr-text" style="color:#222;font-weight:600;flex:1;min-width:200px;">📍 Enter an address above to see local results</span>
+    <form id="v3c-inline-form" class="v3c-inline-search" autocomplete="off">
+      <input type="text" id="v3c-inline-addr" placeholder="Change address…" />
+      <button type="submit" title="Update address">↻</button>
+    </form>
+  `;
+  nav.insertBefore(bar, nav.firstChild);
+  // Poll v2's showingNear text so the sticky chip stays in sync with v2's state
+  const showingNear = document.getElementById("showingNear");
+  const updateAddr = () => {
+    const target = document.getElementById("v3c-sticky-addr-text");
+    if (!target || !showingNear) return;
+    const raw = (showingNear.textContent || "").trim();
+    if (raw && raw !== target.textContent) target.textContent = "📍 " + raw;
+  };
+  updateAddr();
+  setInterval(updateAddr, 1500);   // cheap polling; showingNear updates on new search
+  // Wire the form to reuse v2's #addr + #searchForm
+  const form = document.getElementById("v3c-inline-form");
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const inline = document.getElementById("v3c-inline-addr");
+    const v2Addr = document.getElementById("addr");
+    const v2Form = document.getElementById("searchForm");
+    if (!inline || !v2Addr || !v2Form) return;
+    const q = (inline.value || "").trim();
+    if (!q) { inline.focus(); return; }
+    v2Addr.value = q;
+    v2Form.requestSubmit ? v2Form.requestSubmit() : v2Form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
+    inline.value = "";
+  });
+}
+
+document.addEventListener("DOMContentLoaded", v3cWireStickyAddressBar);
+
+console.log("[v3c] Phase 1 helpers loaded — sticky nav + Overpass runner + classifiers + dedupe ready");
+
+/* ═══ end v3 CONSOLIDATION Phase 1 ═══ */
+
 /* =====================================================================
    Nearnity — preview prototype (v5)
    What changed from v4:
