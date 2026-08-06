@@ -6790,16 +6790,37 @@
      (Events / Schools / Parks) in Phase 2-4 will use these primitives.
      ═══════════════════════════════════════════════════════════════════ */
 
-  /* Sticky top-of-viewport nav so users don't lose context on scroll.
-     v2's #section-nav is our anchor point. */
-  #section-nav {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    background: #fafafa;
-    padding-top: 6px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+  /* v2 already has a sticky rule on .section-nav-inner @ top:52px, but
+     an ancestor's overflow can break it. Rather than fight that, we use
+     a floating position:fixed wrapper (#v3c-fixed-bar) at the TOP of the
+     viewport that ALWAYS shows the address + change-address input. Body
+     gets top-padding to compensate. */
+  #v3c-fixed-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 9999;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e5e5;
+    box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    padding: 8px 24px;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    font-size: 13px;
+    min-height: 44px;
   }
+  #v3c-fixed-bar.v3c-hide { display: none; }
+  #v3c-fixed-bar .v3c-fixed-addr {
+    color: #222; font-weight: 600; flex: 1; min-width: 200px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  body.v3c-fixed-bar-active { padding-top: 52px; }
+  /* Ensure v2's existing sticky section-nav rule wins if ancestor allows.
+     Sticky won't render as sticky in some Safari builds without an explicit
+     transform:none guarantee, and it fails silently when a parent has
+     overflow != visible. We add an !important override so the sticky
+     property at least reaches computed style. */
+  .section-nav-inner { position: sticky !important; }
+  /* Guard against ancestor overflow hiding the sticky effect. */
+  #results-main, .results-main { overflow: visible !important; }
 
   /* Tier color palette (v3 tier system) */
   :root {
@@ -7027,7 +7048,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1.1</span>
     </div>
   </header>
 
@@ -8650,7 +8671,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -8881,37 +8902,34 @@ function v3cEscapeHtml(s) {
   return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-// Sticky-nav "Change address" form wire-up (added on DOMContentLoaded).
-// Reuses v2's existing #addr input + #searchForm behavior; this just gives
-// users an always-visible address chip + edit input in the sticky nav.
+// v3c Phase 1 (fixed): floating position:fixed bar at TOP of viewport with
+// current address + "Change address" input. Guaranteed to always show
+// regardless of ancestor overflow / v2's own sticky rules.
 function v3cWireStickyAddressBar() {
-  // Insert compact address chip into #section-nav (or #section-nav-inner)
-  const nav = document.getElementById("section-nav");
-  if (!nav) return;
-  // Only insert once
-  if (document.getElementById("v3c-sticky-address")) return;
+  if (document.getElementById("v3c-fixed-bar")) return;
   const bar = document.createElement("div");
-  bar.id = "v3c-sticky-address";
-  bar.style.cssText = "display:flex;align-items:center;gap:12px;padding:6px 24px;max-width:1480px;margin:0 auto;font-size:13px;color:#717171;flex-wrap:wrap;";
+  bar.id = "v3c-fixed-bar";
   bar.innerHTML = `
-    <span id="v3c-sticky-addr-text" style="color:#222;font-weight:600;flex:1;min-width:200px;">📍 Enter an address above to see local results</span>
+    <span class="v3c-fixed-addr" id="v3c-fixed-addr-text">📍 Enter an address to see local results</span>
     <form id="v3c-inline-form" class="v3c-inline-search" autocomplete="off">
       <input type="text" id="v3c-inline-addr" placeholder="Change address…" />
       <button type="submit" title="Update address">↻</button>
     </form>
+    <button type="button" id="v3c-fixed-hide" title="Hide" style="background:transparent;border:none;color:#717171;cursor:pointer;font-size:16px;padding:0 4px;">×</button>
   `;
-  nav.insertBefore(bar, nav.firstChild);
-  // Poll v2's showingNear text so the sticky chip stays in sync with v2's state
+  document.body.insertBefore(bar, document.body.firstChild);
+  document.body.classList.add("v3c-fixed-bar-active");
+  // Sync with v2's #showingNear element (its text updates on search)
   const showingNear = document.getElementById("showingNear");
   const updateAddr = () => {
-    const target = document.getElementById("v3c-sticky-addr-text");
+    const target = document.getElementById("v3c-fixed-addr-text");
     if (!target || !showingNear) return;
     const raw = (showingNear.textContent || "").trim();
-    if (raw && raw !== target.textContent) target.textContent = "📍 " + raw;
+    if (raw && !target.textContent.includes(raw.slice(0, 40))) target.textContent = "📍 " + raw;
   };
   updateAddr();
-  setInterval(updateAddr, 1500);   // cheap polling; showingNear updates on new search
-  // Wire the form to reuse v2's #addr + #searchForm
+  setInterval(updateAddr, 1500);
+  // Wire the form: reuse v2's own #addr + #searchForm
   const form = document.getElementById("v3c-inline-form");
   form.addEventListener("submit", (e) => {
     e.preventDefault();
@@ -8924,6 +8942,12 @@ function v3cWireStickyAddressBar() {
     v2Addr.value = q;
     v2Form.requestSubmit ? v2Form.requestSubmit() : v2Form.dispatchEvent(new Event("submit", { cancelable: true, bubbles: true }));
     inline.value = "";
+  });
+  // Hide × button — user can dismiss the bar if it obstructs
+  const hideBtn = document.getElementById("v3c-fixed-hide");
+  hideBtn.addEventListener("click", () => {
+    bar.classList.add("v3c-hide");
+    document.body.classList.remove("v3c-fixed-bar-active");
   });
 }
 
