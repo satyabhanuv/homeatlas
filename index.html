@@ -7048,7 +7048,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1.1</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c3</span>
     </div>
   </header>
 
@@ -8671,7 +8671,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c1.1</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c3</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -8885,6 +8885,279 @@ out center 300;`;
   return { schools, error: null, raw_count: raw.length };
 }
 
+// ─── v3c Phase 2: columnar events renderer ─────────────────────────────
+// Replaces v2's calendar view with categorized columns (farmers markets ·
+// kids · music · sports · library · outdoor · other). Sorted by date
+// within each column; deduped across sources; coord-anchored Google Maps
+// URL used when a source has no real per-event website.
+function v3cRenderEventCard(item) {
+  const rawUrl = item.url || item.source_url || "";
+  const src = String(item.source_id || item.source || "");
+  const looksLikeAggregatorHome =
+    /^https?:\/\/(?:www\.)?usdalocalfoodportal\.com\/?(?:\?[^#]*)?(?:#.*)?$/i.test(rawUrl) ||
+    /^https?:\/\/search\.ams\.usda\.gov\/farmersmarkets\/?$/i.test(rawUrl) ||
+    !rawUrl;
+  let url = rawUrl;
+  if (looksLikeAggregatorHome && (/usda|pcfma|market|farm/i.test(src) || /market|farm/i.test(item.category || ""))) {
+    const name = String(item.title || "").trim();
+    if (Number.isFinite(item.lat) && Number.isFinite(item.lon) && name) {
+      url = `https://www.google.com/maps/search/${encodeURIComponent(name)}/@${item.lat},${item.lon},14z`;
+    } else if (name) {
+      url = `https://www.google.com/maps/search/${encodeURIComponent(name)}`;
+    }
+  }
+  // Source-id → tier color mapping
+  const tierMap = {
+    "nps": { tier: "authoritative", label: "Federal source", name: "National Park Service" },
+    "ticketmaster_events": { tier: "third-party", label: "Source-linked", name: "Ticketmaster" },
+    "usda_farmers_markets": { tier: "public", label: "Public dataset", name: "USDA Farmers Markets" },
+    "pcfma_visit": { tier: "public", label: "Public dataset", name: "PCFMA (Bay Area markets)" },
+  };
+  let tierInfo = tierMap[src];
+  if (!tierInfo) {
+    if (src.startsWith && src.startsWith("bibliocommons_")) tierInfo = { tier: "public", label: "Public dataset", name: "Library (BiblioCommons)" };
+    else if (src.startsWith && src.startsWith("socrata_"))  tierInfo = { tier: "public", label: "Public dataset", name: "City open-data" };
+    else if (src.includes && src.includes("pcfma"))         tierInfo = { tier: "public", label: "Public dataset", name: "PCFMA" };
+    else tierInfo = { tier: "third-party", label: "Source-linked", name: item.source_name || item.source || "Event feed" };
+  }
+  const rawCat = String(item.category || "");
+  const category = (rawCat && rawCat !== "undefined") ? v3cEscapeHtml(rawCat.replace(/_/g, " ")) : "";
+  const isFree = item.free || /\bfree\b/i.test(item.title || "");
+  const srcName = v3cEscapeHtml(tierInfo.name);
+  const startStr = item.start_date || item.starts;
+  let dateChip = "Ongoing";
+  if (startStr) {
+    const s = new Date(startStr);
+    if (!isNaN(s.getTime())) {
+      const dateStr = s.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" });
+      const hasRealTime = /T\d/.test(String(startStr)) && !/T00:00:00/.test(String(startStr));
+      const timeStr = hasRealTime ? " · " + s.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) : "";
+      dateChip = dateStr + timeStr;
+    }
+  }
+  const title = v3cEscapeHtml(item.title || "Untitled event");
+  const venue = v3cEscapeHtml(item.venue_name || item.venue_address || item.venue || "");
+  const dist = Number.isFinite(item.distance_mi) ? v3cDistFmt(item.distance_mi) : "";
+  const gmapsUrl = (Number.isFinite(item.lat) && Number.isFinite(item.lon))
+    ? `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lon}`
+    : (venue ? `https://www.google.com/maps/search/${encodeURIComponent(venue)}` : "");
+  return `
+<article class="v3c-card v3c-tier-${tierInfo.tier}">
+  <div class="v3c-tier-label">${v3cEscapeHtml(tierInfo.label)}${isFree ? " · Free" : ""}</div>
+  <h3 class="v3c-card-title">${title}</h3>
+  <p class="v3c-card-sub">${srcName}${category ? " · " + category : ""}</p>
+  <p class="v3c-card-meta">📅 ${v3cEscapeHtml(dateChip)}</p>
+  ${venue ? `<p class="v3c-card-meta">📍 ${venue}${dist ? " · " + dist : ""}</p>` : (dist ? `<p class="v3c-card-meta">${dist}</p>` : "")}
+  <div class="v3c-card-actions">
+    ${url ? `<a class="v3c-action primary" href="${v3cEscapeHtml(url)}" target="_blank" rel="noopener">Details →</a>` : ""}
+    ${gmapsUrl ? `<a class="v3c-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+  </div>
+</article>`;
+}
+
+function v3cRenderEventsColumnar(geo, events, tb) {
+  if (!tb) return;
+  // Normalize v2 events (which use `starts`/`venue`/`source`) to a shape
+  // the v3 categorizer/dedupe understand. Non-destructive — clones the
+  // fields, keeps originals accessible.
+  const normalized = (events || []).map(e => ({
+    ...e,
+    start_date: e.start_date || e.starts,
+    venue_address: e.venue_address || e.venue,
+    source_id: e.source_id || e.source,
+    title: e.title || "",
+    category: e.category || "",
+  }));
+  if (normalized.length === 0) {
+    tb.innerHTML = `<div class="cal-empty" style="padding:24px 16px;text-align:center;color:#717171;">
+      <div style="font-size:15px;font-weight:600;color:#222;margin-bottom:6px;">No events indexed for this address yet.</div>
+      <div style="font-size:13px;">We source from Ticketmaster, USDA farmers markets, National Parks, and local library systems.</div>
+    </div>`;
+    return;
+  }
+  // Dedupe first (collapse USDA + PCFMA duplicates + prefer real URLs)
+  const deduped = v3cDedupeEvents(normalized);
+  // Bucket by category
+  const grouped = {};
+  for (const ev of deduped) {
+    const catId = v3cCategorizeEvent(ev);
+    if (!grouped[catId]) grouped[catId] = [];
+    grouped[catId].push(ev);
+  }
+  // Sort each bucket by start_date; dateless (recurring markets) sink last
+  for (const catId of Object.keys(grouped)) {
+    grouped[catId].sort((a, b) => {
+      const ta = a.start_date ? Date.parse(a.start_date) : Infinity;
+      const tb2 = b.start_date ? Date.parse(b.start_date) : Infinity;
+      return ta - tb2;
+    });
+  }
+  // Render columns in canonical order, skip empties
+  const columnsHtml = V3C_EVENT_CATEGORIES
+    .filter(cat => grouped[cat.id] && grouped[cat.id].length > 0)
+    .map(cat => `
+<div class="v3c-col">
+  <div class="v3c-col-header">
+    <span style="font-size:18px;line-height:1;">${cat.icon}</span>
+    <b>${v3cEscapeHtml(cat.label)}</b>
+    <span class="v3c-col-count">${grouped[cat.id].length}</span>
+  </div>
+  <div class="v3c-col-stack">
+    ${grouped[cat.id].map(v3cRenderEventCard).join("")}
+  </div>
+</div>`).join("");
+  tb.innerHTML = `<div class="v3c-events-wrap">${columnsHtml}</div>`;
+}
+
+// ─── v3c Phase 3: schools retrofit ─────────────────────────────────────
+// Replaces v2's renderSchoolSections with the assigned-hero / private /
+// charter / collapsed-roster layout. Consumes v2's grouped shape
+// ({ public, private, other, higher, enrichment }, total, cityKey) so
+// no upstream code needs to change.
+function v3cRenderSchoolCardV2(s, isAssigned, isPrivate, isCharter) {
+  const name = v3cEscapeHtml(s.name || "School");
+  const level = String(s.subtype || s.level || s.level_text || "").toLowerCase();
+  const primary = /elem|primar/.test(level) ? "elementary"
+                : /middle|junior|intermed/.test(level) ? "middle"
+                : /high|senior/.test(level) ? "high"
+                : "other";
+  const levelChip = primary === "elementary" ? "🎒 Elementary"
+                  : primary === "middle" ? "📖 Middle"
+                  : primary === "high" ? "🎓 High"
+                  : "🏫 School";
+  const tierClass = isAssigned ? "v3c-level-assigned"
+                  : isPrivate ? "v3c-level-private"
+                  : isCharter ? "v3c-level-charter"
+                  : `v3c-level-${primary}`;
+  const tierLabel = isAssigned ? `🏫 Your assigned school · ${levelChip}`
+                  : isPrivate ? `Private · ${levelChip}`
+                  : isCharter ? `🎓 Charter · ${levelChip}`
+                  : levelChip;
+  const addr = v3cEscapeHtml(s.address || "");
+  const phone = String(s.phone || "");
+  const dist = Number.isFinite(s.dist) ? v3cDistFmt(s.dist) : (Number.isFinite(s.distance_mi) ? v3cDistFmt(s.distance_mi) : "");
+  const sourceUrl = s.source_url || "";
+  const gmapsUrl = (Number.isFinite(s.lat) && Number.isFinite(s.lon))
+    ? `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`
+    : "";
+  const enrollment = s.enrollment ? `${s.enrollment.toLocaleString()} students` : "";
+  const grades = (s.grade_low || s.grade_high) ? `Grades ${v3cEscapeHtml(String(s.grade_low || "?"))}–${v3cEscapeHtml(String(s.grade_high || "?"))}` : "";
+  const subLine = [grades, enrollment].filter(Boolean).join(" · ");
+  return `
+<article class="v3c-card ${tierClass}">
+  <div class="v3c-tier-label">${tierLabel}</div>
+  <h3 class="v3c-card-title">${name}</h3>
+  ${subLine ? `<p class="v3c-card-sub">${subLine}</p>` : ""}
+  ${dist ? `<p class="v3c-card-meta">📍 ${dist} away</p>` : ""}
+  ${addr ? `<p class="v3c-card-meta">📍 ${addr}</p>` : ""}
+  <div class="v3c-card-actions">
+    ${phone ? `<a class="v3c-action ${isAssigned?"primary":""}" href="tel:${phone.replace(/[^\d+]/g,"")}">📞 Call</a>` : ""}
+    ${gmapsUrl ? `<a class="v3c-action" href="${gmapsUrl}" target="_blank" rel="noopener">🧭 Directions</a>` : ""}
+    ${sourceUrl ? `<a class="v3c-action" href="${v3cEscapeHtml(sourceUrl)}" target="_blank" rel="noopener">Source</a>` : ""}
+  </div>
+</article>`;
+}
+
+function v3cRenderSchoolSections(grouped, total, cityKey) {
+  const sections = document.getElementById("school-sections");
+  const loading = document.getElementById("school-loading");
+  const pill = document.getElementById("school-summary");
+  if (loading) loading.hidden = true;
+  if (sections) sections.hidden = false;
+  if (pill) {
+    pill.hidden = false;
+    pill.textContent = `${total} place${total === 1 ? "" : "s"} within ${(typeof CURRENT_RADIUS_MI !== "undefined" ? CURRENT_RADIUS_MI : 25)} mi`;
+  }
+  const publics = (grouped.public || []).slice();
+  const privates = (grouped.private || []).slice();
+  const charters = (grouped.other || []).slice();
+  const byDist = (a, b) => ((a.dist || a.distance_mi || 999) - (b.dist || b.distance_mi || 999));
+  publics.sort(byDist);
+  privates.sort(byDist);
+  charters.sort(byDist);
+
+  const assigned = publics.filter(s => s._sabs_assigned);
+  const otherPublic = publics.filter(s => !s._sabs_assigned);
+
+  const classify = (s) => {
+    const lvl = String(s.subtype || s.level || s.level_text || "").toLowerCase();
+    if (/elem|primar/.test(lvl)) return "elementary";
+    if (/middle|junior|intermed/.test(lvl)) return "middle";
+    if (/high|senior/.test(lvl)) return "high";
+    return null;
+  };
+  const byLevelPublic = { elementary: [], middle: [], high: [] };
+  const byLevelAssigned = { elementary: [], middle: [], high: [] };
+  for (const s of otherPublic) { const lvl = classify(s); if (lvl && byLevelPublic[lvl]) byLevelPublic[lvl].push(s); }
+  for (const s of assigned) { const lvl = classify(s); if (lvl && byLevelAssigned[lvl]) byLevelAssigned[lvl].push(s); }
+
+  const assignedSection = assigned.length > 0 ? `
+<section style="margin-bottom:24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 10px;letter-spacing:-0.01em;">🏫 Your assigned school${assigned.length===1?"":"s"}</h3>
+  <p style="color:#717171;font-size:13px;margin:0 0 12px;">Based on NCES 2015-16 SABS attendance zones. Verify with the district finder link.</p>
+  <div class="v3c-cols-3">
+    ${["elementary","middle","high"].map(lvl => {
+      const items = byLevelAssigned[lvl] || [];
+      const label = lvl === "elementary" ? "🎒 Elementary" : lvl === "middle" ? "📖 Middle" : "🎓 High";
+      return `<div><div class="v3c-col-header"><b>${label}</b><span class="v3c-col-count">${items.length}</span></div><div class="v3c-col-stack">${items.length===0?'<p style="color:#717171;padding:8px 4px;font-size:13px;">Not resolved for this level.</p>':items.map(s=>v3cRenderSchoolCardV2(s,true,false,false)).join("")}</div></div>`;
+    }).join("")}
+  </div>
+</section>` : `
+<section style="margin-bottom:24px;">
+  <div style="background:#fef9c3;border:1px solid #fde68a;border-left:4px solid #ca8a04;border-radius:10px;padding:14px 16px;">
+    <h3 style="font-size:16px;font-weight:700;margin:0 0 6px;color:#713f12;">🏫 Your assigned school — not resolved</h3>
+    <p style="color:#854d0e;margin:0;font-size:14px;">Attendance-zone data isn't loaded for your state yet. Use the district finder link (in the school header above) to look up your specific school. Everything below is context — nearby options.</p>
+  </div>
+</section>`;
+
+  const privateSection = privates.length > 0 ? `
+<section style="margin-bottom:24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 10px;letter-spacing:-0.01em;">🏛️ Private schools nearby <span style="font-size:14px;color:#717171;font-weight:500;">(${privates.length})</span></h3>
+  <p style="color:#717171;font-size:13px;margin:0 0 12px;">Independent — not tied to district boundaries. From OpenStreetMap; coverage varies.</p>
+  <div class="v3c-events-wrap">${privates.slice(0,12).map(s=>v3cRenderSchoolCardV2(s,false,true,false)).join("")}</div>
+  ${privates.length > 12 ? `<p style="color:#717171;margin-top:10px;font-size:13px;">+ ${privates.length - 12} more not shown. <a href="mailto:feedback@nearnity.com?subject=Private schools request">Request more</a></p>` : ""}
+</section>` : "";
+
+  const charterSection = charters.length > 0 ? `
+<section style="margin-bottom:24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 10px;letter-spacing:-0.01em;">🎓 Charter / magnet <span style="font-size:14px;color:#717171;font-weight:500;">(${charters.length})</span></h3>
+  <div class="v3c-events-wrap">${charters.slice(0,12).map(s=>v3cRenderSchoolCardV2(s,false,false,true)).join("")}</div>
+</section>` : "";
+
+  const closest = {
+    elementary: byLevelPublic.elementary.slice(0, 3),
+    middle: byLevelPublic.middle.slice(0, 3),
+    high: byLevelPublic.high.slice(0, 3),
+  };
+  const anyClose = closest.elementary.length + closest.middle.length + closest.high.length;
+  const closestSection = anyClose > 0 ? `
+<section style="margin-bottom:24px;">
+  <h3 style="font-size:18px;font-weight:800;margin:0 0 10px;letter-spacing:-0.01em;">📍 Closest public schools in your district</h3>
+  <div class="v3c-cols-3">
+    ${["elementary","middle","high"].map(lvl => {
+      const items = closest[lvl];
+      const label = lvl === "elementary" ? "🎒 Elementary" : lvl === "middle" ? "📖 Middle" : "🎓 High";
+      return `<div><div class="v3c-col-header"><b>${label}</b><span class="v3c-col-count">${items.length}</span></div><div class="v3c-col-stack">${items.length===0?'<p style="color:#717171;padding:8px 4px;font-size:13px;">None nearby.</p>':items.map(s=>v3cRenderSchoolCardV2(s,false,false,false)).join("")}</div></div>`;
+    }).join("")}
+  </div>
+</section>` : "";
+
+  const closestIds = new Set([...closest.elementary, ...closest.middle, ...closest.high].map(s => (s.name || "") + (s.address || "")));
+  const remaining = otherPublic.filter(s => !closestIds.has((s.name || "") + (s.address || "")));
+  const fullRosterSection = remaining.length > 0 ? `
+<details style="margin-bottom:24px;">
+  <summary style="cursor:pointer;padding:12px 16px;background:#fff;border:1px solid #ebebeb;border-radius:10px;font-weight:600;font-size:14px;">Show all ${otherPublic.length} public schools in your district →</summary>
+  <div style="padding-top:14px;">
+    <p style="color:#717171;font-size:13px;margin:0 0 12px;">Full district roster. Not zone-verified — verify with the district finder above.</p>
+    <div class="v3c-events-wrap">${remaining.map(s=>v3cRenderSchoolCardV2(s,false,false,false)).join("")}</div>
+  </div>
+</details>` : "";
+
+  if (sections) {
+    sections.innerHTML = `${assignedSection}${privateSection}${charterSection}${closestSection}${fullRosterSection}`;
+  }
+}
+
 // Haversine distance (miles). v2 has its own; this is namespaced to
 // avoid shadowing in case v2's is stateful.
 function v3cHaversineMi(lat1, lon1, lat2, lon2) {
@@ -8953,7 +9226,33 @@ function v3cWireStickyAddressBar() {
 
 document.addEventListener("DOMContentLoaded", v3cWireStickyAddressBar);
 
-console.log("[v3c] Phase 1 helpers loaded — sticky nav + Overpass runner + classifiers + dedupe ready");
+// v3c Phase 2: monkey-patch v2's _renderEventsCalendar to use columnar layout.
+// v2's function is declared later in this same <script>. By the time
+// DOMContentLoaded fires the whole script has been parsed, so replacing the
+// global binding works.
+document.addEventListener("DOMContentLoaded", () => {
+  if (typeof _renderEventsCalendar === "function" && typeof v3cRenderEventsColumnar === "function") {
+    window._renderEventsCalendar = function(geo, events, tb) {
+      try { return v3cRenderEventsColumnar(geo, events, tb); }
+      catch (e) { console.warn("[v3c] events render failed, falling back:", e); }
+    };
+    console.log("[v3c] Phase 2: events columnar renderer installed");
+  } else {
+    console.warn("[v3c] Phase 2: _renderEventsCalendar not found — events retrofit skipped");
+  }
+  // v3c Phase 3: schools retrofit
+  if (typeof renderSchoolSections === "function" && typeof v3cRenderSchoolSections === "function") {
+    window.renderSchoolSections = function(grouped, total, cityKey) {
+      try { return v3cRenderSchoolSections(grouped, total, cityKey); }
+      catch (e) { console.warn("[v3c] schools render failed:", e); }
+    };
+    console.log("[v3c] Phase 3: schools hero/private/collapsed renderer installed");
+  } else {
+    console.warn("[v3c] Phase 3: renderSchoolSections not found — schools retrofit skipped");
+  }
+});
+
+console.log("[v3c] Phase 1+2 helpers loaded — sticky nav + Overpass runner + classifiers + dedupe + events columnar ready");
 
 /* ═══ end v3 CONSOLIDATION Phase 1 ═══ */
 
