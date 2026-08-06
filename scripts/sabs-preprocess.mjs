@@ -29,7 +29,10 @@
 
 import { execSync } from "node:child_process";
 import { readdirSync, readFileSync, mkdirSync, statSync } from "node:fs";
-import { runCommands } from "mapshaper";
+// mapshaper ships CommonJS — must use default import + destructure, not
+// named import (fixes "Named export 'runCommands' not found" in Node 20+).
+import mapshaper from "mapshaper";
+const { runCommands } = mapshaper;
 
 const SABS_URL = "https://nces.ed.gov/programs/edge/data/SABS_1516.zip";
 const OUT_DIR = "sabs-output";
