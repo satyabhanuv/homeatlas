@@ -66,11 +66,14 @@ log("Located shapefile:", findShp);
 // ─── Step 2: mapshaper — convert, simplify, split by state ───────────────
 mkdirSync(OUT_DIR, { recursive: true });
 log("Running mapshaper (convert → simplify 1% → split by state)...");
+// mapshaper 0.6+ removed the `dir=` option on `-o`. Pass the directory as
+// a positional arg — when combined with `-split`, mapshaper writes one file
+// per split key into that directory.
 const mapshaperCmd = [
   `-i "${findShp}" encoding=utf8`,
   "-simplify 1% keep-shapes",
   "-split stAbbrev",
-  `-o format=geojson dir="${OUT_DIR}/"`,
+  `-o format=geojson ${OUT_DIR}`,
 ].join(" ");
 await runCommands(mapshaperCmd);
 log("mapshaper done. Output files:");
