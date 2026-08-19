@@ -84,6 +84,37 @@ await runCommands(mapshaperCmd);
 log("mapshaper done. Output files:");
 execSync(`ls -la ${OUT_DIR}/`, { stdio: "inherit" });
 
+// ─── Step 2b: adaptive re-simplification for oversized states ────────────
+// Cloudflare KV has a 25 MB per-value limit. If ANY per-state file exceeds
+// that (typically CA, TX, GA, IL, TN — big states with many polygons),
+// progressively re-simplify JUST that file at tighter percentages until it
+// fits. Self-healing: the initial simplification value doesn't matter — this
+// loop guarantees every state ends up under 25 MB regardless.
+const KV_MAX_BYTES = 25 * 1024 * 1024;
+const RESIMPLIFY_LEVELS = ["0.5%", "0.2%", "0.1%", "0.05%", "0.02%", "0.01%"];
+log("\nChecking per-state file sizes vs 25 MB KV limit...");
+for (const f of readdirSync(OUT_DIR).filter(x => x.endsWith(".json"))) {
+  const path = `${OUT_DIR}/${f}`;
+  let size = statSync(path).size;
+  if (size <= KV_MAX_BYTES) continue;
+  const stateAbbrev = f.replace(/\.json$/, "").split("-").pop().toUpperCase();
+  log(`  ⚠ ${stateAbbrev}: ${(size / 1024 / 1024).toFixed(2)} MB > 25 MB — re-simplifying...`);
+  let landed = false;
+  for (const pct of RESIMPLIFY_LEVELS) {
+    try {
+      await runCommands(`-i "${path}" -simplify ${pct} keep-shapes -o format=geojson "${path}.tmp"`);
+      execSync(`mv "${path}.tmp" "${path}"`);
+      size = statSync(path).size;
+      log(`     @ ${pct}: ${(size / 1024 / 1024).toFixed(2)} MB`);
+      if (size <= KV_MAX_BYTES) { landed = true; break; }
+    } catch (e) {
+      log(`     @ ${pct}: ERROR ${(e && e.message) || e}`);
+    }
+  }
+  if (!landed) log(`  ✗ ${stateAbbrev}: could not fit under 25 MB even at 0.01% — will still be skipped at upload.`);
+  else log(`  ✓ ${stateAbbrev}: fits now.`);
+}
+
 // ─── Step 3: Per state — trim properties, add bbox, upload to KV ─────────
 function computeBbox(geometry) {
   let minLon = Infinity, minLat = Infinity, maxLon = -Infinity, maxLat = -Infinity;
