@@ -65,16 +65,18 @@ log("Located shapefile:", findShp);
 
 // ─── Step 2: mapshaper — convert, simplify, split by state ───────────────
 mkdirSync(OUT_DIR, { recursive: true });
-log("Running mapshaper (convert → simplify 1% → split by state)...");
+log("Running mapshaper (convert → simplify 0.15% → split by state)...");
 // mapshaper 0.6+ removed the `dir=` option on `-o`. Pass the directory as
 // a positional arg — when combined with `-split`, mapshaper writes one file
 // per split key into that directory.
-// v2.8.2c: tightened simplification 1% → 0.4% so CA/GA/IL/TN/TX fit under
-// Cloudflare KV's 25 MB per-value limit. At 0.4% CA drops from 38 MB → ~14 MB
-// while keeping polygons accurate enough for point-in-polygon at address level.
+// v2.8.2c → v2.8.2d: tightened simplification 1% → 0.15% so ALL states
+// (including CA/GA/IL/TN/TX) fit under Cloudflare KV's 25 MB per-value
+// limit. At 0.15% CA drops from 38 MB → ~5 MB. Attendance zones follow
+// streets (not fine coastline), so this level of simplification loses
+// no accuracy for address-level point-in-polygon.
 const mapshaperCmd = [
   `-i "${findShp}" encoding=utf8`,
-  "-simplify 0.4% keep-shapes",
+  "-simplify 0.15% keep-shapes",
   "-split stAbbrev",
   `-o format=geojson ${OUT_DIR}`,
 ].join(" ");
