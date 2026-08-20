@@ -74,8 +74,15 @@ log("Running mapshaper (convert → simplify 0.15% → split by state)...");
 // limit. At 0.15% CA drops from 38 MB → ~5 MB. Attendance zones follow
 // streets (not fine coastline), so this level of simplification loses
 // no accuracy for address-level point-in-polygon.
+// v2.8.2e: force reprojection to WGS84 lat/lon. SABS_1516 shapefile ships
+// in NAD83 with Web Mercator Auxiliary Sphere Type — mapshaper's default is
+// to preserve source projection, so outputs would have coords in meters or
+// degrees-but-shifted, and our Worker's bbox_contains(lat,lon) test compares
+// against degrees. Result: bbox_survivors=0 for every valid US point. This
+// fix ensures every polygon's coordinates are standard WGS84 (lon,lat).
 const mapshaperCmd = [
   `-i "${findShp}" encoding=utf8`,
+  "-proj wgs84",
   "-simplify 0.15% keep-shapes",
   "-split stAbbrev",
   `-o format=geojson ${OUT_DIR}`,
