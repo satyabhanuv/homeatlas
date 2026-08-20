@@ -6972,7 +6972,7 @@
   }
   .v3c-map-toggle:hover { background: #f4f4f4; }
 
-  /* v2.9.0-c6: accessibility quick wins */
+  /* v2.9.0-c9: accessibility quick wins */
   /* Skip-to-content link — invisible until keyboard-focused */
   .v3c-skip-link {
     position: absolute;
@@ -7006,7 +7006,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════
-     v2.9.0-c6 — SINGLE-VIEW MODE (v3-like clean UX)
+     v2.9.0-c9 — SINGLE-VIEW MODE (v3-like clean UX)
      Body class v3c-single-view: hides all cards, shows only the ACTIVE
      one, swaps v2's white background for Airbnb-warm #fafafa, refreshes
      card chrome to feel spacious. Enabled by JS on page load; toggle off
@@ -7099,13 +7099,223 @@
   /* Diagnostic panels only when in DEBUG mode */
   body.v3c-single-view:not(.v3c-debug) .nrny-diag { display: none; }
 
-  /* Address overview — cleaner treatment in single-view */
+  /* v2.9.0-c9: hide v2's redundant chrome in single-view.
+     The address chips ("COVERAGE HIGH · CITY · COUNTY · ..."), the
+     WHEN/TYPE/TICKETED filter subtab rows, and per-card counter noise
+     are all replaced by v3c's cleaner sticky bar + columnar grouping. */
+
+  /* Kill coverage overview strip (COVERAGE HIGH · CITY · COUNTY etc.) */
   body.v3c-single-view #address-overview {
+    display: none;
+  }
+
+  /* Kill v2's WHEN/TYPE/TICKETED filter subtabs (they were an alternative
+     to the columnar grouping we now do — showing both = confusing). */
+  body.v3c-single-view .subnav[data-subnav-for="card-events"],
+  body.v3c-single-view .subnav[data-subnav-for="card-school"],
+  body.v3c-single-view .subnav[data-subnav-for="card-parks"] {
+    display: none;
+  }
+
+  /* Kill count-line "364 curated events for San Jose this month" — noise */
+  body.v3c-single-view .cal-count-line {
+    display: none;
+  }
+
+  /* Trim card-context-bar text — v3 header is a big clean h2 */
+  body.v3c-single-view .card-context-bar {
+    padding: 0 0 16px;
+    border-bottom: none;
+    margin-bottom: 12px;
+  }
+  body.v3c-single-view .card-context-text {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+  }
+  body.v3c-single-view .ctx-sub {
+    display: block;
+    font-size: 13px;
+    color: #717171;
+    font-weight: 400;
+    margin-top: 4px;
+    letter-spacing: 0;
+  }
+
+  /* Hide the summary pill that shows "N places within X mi" — redundant with the columnar counts */
+  body.v3c-single-view .summary-pill {
+    display: none;
+  }
+
+  /* Hide info-btn (ⓘ) that's now redundant with our own legend */
+  body.v3c-single-view .info-btn {
+    display: none;
+  }
+
+  /* v2's section-header inside a card ("Public schools — closest district") — hide since v3c renderer sections handle this */
+  body.v3c-single-view .schools-row-2col > .school-section > h4,
+  body.v3c-single-view .school-section .hint {
+    display: none;
+  }
+
+  /* "Know a school we missed?" and similar submit-missing links — hide (spam-prone, low value at launch) */
+  body.v3c-single-view .submit-missing {
+    display: none;
+  }
+
+  /* Trim source attribution footers inside cards — keep only the top-level footer */
+  body.v3c-single-view .schools-card > .source,
+  body.v3c-single-view .parks-card > .source {
+    background: transparent;
+    border-top: 1px solid #ebebeb;
+    padding: 16px 0 0;
+    margin-top: 20px;
+    color: #717171;
+    font-size: 12px;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     v2.9.0-c8 — CLEAN PRE-SEARCH EMPTY STATE
+     Before user searches, only header + hero search + task chips visible.
+     Everything else stays hidden until #showingNear gets populated.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  /* Hide navigation + all cards before first search */
+  body.v3c-single-view:not(.v3c-has-search) #cat-nav,
+  body.v3c-single-view:not(.v3c-has-search) #section-nav,
+  body.v3c-single-view:not(.v3c-has-search) .schools-card,
+  body.v3c-single-view:not(.v3c-has-search) .parks-card,
+  body.v3c-single-view:not(.v3c-has-search) .home-card,
+  body.v3c-single-view:not(.v3c-has-search) .yard-card,
+  body.v3c-single-view:not(.v3c-has-search) #card-safety-guide,
+  body.v3c-single-view:not(.v3c-has-search) .risks-card-inhome,
+  body.v3c-single-view:not(.v3c-has-search) .section-map,
+  body.v3c-single-view:not(.v3c-has-search) #v3c-fixed-bar {
+    display: none !important;
+  }
+
+  /* Hero centered + roomy in pre-search state */
+  body.v3c-single-view:not(.v3c-has-search) .hero {
+    min-height: 60vh;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    padding: 40px 24px;
+  }
+  body.v3c-single-view:not(.v3c-has-search) .hero h1 {
+    text-align: center;
+    max-width: 800px;
+  }
+  body.v3c-single-view:not(.v3c-has-search) .hero .lead {
+    text-align: center;
+    max-width: 60ch;
+  }
+
+  /* ═══════════════════════════════════════════════════════════════════
+     v2.9.0-c9 — CAT-NAV + SECTION-NAV VISUAL POLISH
+     Bigger pill-style tabs, cleaner active state, more breathing room.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  /* Category nav (top-level) refresh */
+  body.v3c-single-view #cat-nav {
     background: #ffffff;
-    border-radius: 12px;
-    padding: 14px 20px;
+    border-bottom: 1px solid #ebebeb;
+    padding: 4px 24px;
+    max-width: 1480px;
+    margin: 0 auto;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  body.v3c-single-view #cat-nav::-webkit-scrollbar { display: none; }
+  body.v3c-single-view .cat-tab {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 12px 16px;
+    background: transparent;
+    border: none;
+    color: #717171;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 10px;
+    white-space: nowrap;
+    transition: background 0.12s, color 0.12s;
+  }
+  body.v3c-single-view .cat-tab:hover {
+    background: #f4f4f4;
+    color: #222;
+    text-decoration: none;
+  }
+  body.v3c-single-view .cat-tab.active {
+    background: #e9efff;
+    color: #0050c2;
+  }
+  body.v3c-single-view .cat-tab .cat-dd-arrow,
+  body.v3c-single-view .cat-tab .cat-tab-arrow {
+    display: none;
+  }
+
+  /* Sec-tab (section-nav) button refresh */
+  body.v3c-single-view .sec-tab {
+    padding: 14px 20px 12px;
+    border: none;
+    border-bottom: 2px solid transparent;
+    background: transparent;
+    color: #717171;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    border-radius: 0;
+    transition: color 0.12s, border-color 0.12s;
+    cursor: pointer;
+  }
+  body.v3c-single-view .sec-tab:hover {
+    color: #222;
+    text-decoration: none;
+    background: transparent;
+  }
+  body.v3c-single-view .sec-tab.active,
+  body.v3c-single-view .sec-tab[aria-selected="true"] {
+    color: #222;
+    background: transparent;
+    border-bottom: 2px solid #222;
+    font-weight: 700;
+  }
+
+  /* Hero — cleaner default (search bar always centered, chips wrap nicely) */
+  body.v3c-single-view .hero {
+    background: transparent;
+  }
+  body.v3c-single-view .searchbar {
+    max-width: 800px;
+    margin: 0 auto;
+    border: 1px solid #d4d4d4;
+    border-radius: 999px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  body.v3c-single-view .searchbar:focus-within {
+    border-color: #717171;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  }
+  body.v3c-single-view .quick-chips {
+    max-width: 900px;
+    margin: 20px auto 0;
+    justify-content: center;
+  }
+  body.v3c-single-view .quick-chip {
+    background: #ffffff;
     border: 1px solid #ebebeb;
-    margin: 16px 0;
+    padding: 8px 14px;
+    border-radius: 999px;
+    color: #222;
+    font-size: 13px;
+    font-weight: 500;
+    transition: border-color 0.12s, transform 0.1s;
+  }
+  body.v3c-single-view .quick-chip:hover {
+    border-color: #717171;
+    transform: translateY(-1px);
   }
 
   /* Hide the top emergency strip once user has searched (frees vertical space).
@@ -7158,7 +7368,7 @@
 </style>
 </head>
 <body class="single-view">
-<!-- v2.9.0-c6: WCAG 2.4.1 — skip to main content for keyboard users -->
+<!-- v2.9.0-c9: WCAG 2.4.1 — skip to main content for keyboard users -->
 <a href="#results-main" class="v3c-skip-link">Skip to main content</a>
 
 <!-- v0.67: Spartan-style sticky red emergency bar across the top.
@@ -7209,7 +7419,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c6</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9</span>
     </div>
   </header>
 
@@ -8832,7 +9042,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c6</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9177,7 +9387,7 @@ function v3cRenderEventsColumnar(geo, events, tb) {
 // no upstream code needs to change.
 function v3cRenderSchoolCardV2(s, isAssigned, isPrivate, isCharter) {
   const name = v3cEscapeHtml(s.name || "School");
-  // v2.9.0-c6b: name-first classification (matches section-level classify).
+  // v2.9.0-c9b: name-first classification (matches section-level classify).
   // Was using subtype, but v2's subtype labels K-8 as "Middle" so K-6
   // elementaries were rendering with orange MIDDLE border while sitting
   // in the Elementary column. Name is the strongest signal.
@@ -9249,7 +9459,7 @@ function v3cRenderSchoolSections(grouped, total, cityKey) {
   const otherPublic = publics.filter(s => !s._sabs_assigned);
 
   const classify = (s) => {
-    // v2.9.0-c6: name-first classification. v2's `subtype` labels K-8
+    // v2.9.0-c9: name-first classification. v2's `subtype` labels K-8
     // combos as "Middle", so K-6 elementaries were landing in the Middle
     // column. School NAME is a stronger signal: "Anderson Elementary"
     // is elementary regardless of grade span.
@@ -9499,7 +9709,7 @@ function v3cWireStickyAddressBar() {
 
 document.addEventListener("DOMContentLoaded", v3cWireStickyAddressBar);
 
-// ─── v2.9.0-c6: single-view mode (v3-like clean UX) ─────────────────────
+// ─── v2.9.0-c9: single-view mode (v3-like clean UX) ─────────────────────
 // Turns v2's stacked-card page into a v3-style single-view: ONE card at
 // a time, driven by section-nav tab clicks. Off via URL ?v3single=0.
 function v3cEnableSingleView() {
