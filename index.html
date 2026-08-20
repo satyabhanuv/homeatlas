@@ -6972,7 +6972,7 @@
   }
   .v3c-map-toggle:hover { background: #f4f4f4; }
 
-  /* v2.9.0-c5: accessibility quick wins */
+  /* v2.9.0-c6: accessibility quick wins */
   /* Skip-to-content link — invisible until keyboard-focused */
   .v3c-skip-link {
     position: absolute;
@@ -7005,6 +7005,132 @@
     }
   }
 
+  /* ═══════════════════════════════════════════════════════════════════
+     v2.9.0-c6 — SINGLE-VIEW MODE (v3-like clean UX)
+     Body class v3c-single-view: hides all cards, shows only the ACTIVE
+     one, swaps v2's white background for Airbnb-warm #fafafa, refreshes
+     card chrome to feel spacious. Enabled by JS on page load; toggle off
+     via URL ?v3single=0 if debugging.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  body.v3c-single-view {
+    background: #fafafa !important;
+  }
+
+  /* Hide all major cards by default in single-view */
+  body.v3c-single-view .schools-card,
+  body.v3c-single-view .parks-card,
+  body.v3c-single-view .home-card,
+  body.v3c-single-view .yard-card,
+  body.v3c-single-view .risks-card-inhome {
+    display: none;
+  }
+  /* Show only the active card */
+  body.v3c-single-view .schools-card.v3c-active,
+  body.v3c-single-view .parks-card.v3c-active,
+  body.v3c-single-view .home-card.v3c-active,
+  body.v3c-single-view .yard-card.v3c-active,
+  body.v3c-single-view .risks-card-inhome.v3c-active {
+    display: block;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 32px 28px;
+    border: 1px solid #ebebeb;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    margin-top: 20px;
+  }
+  /* card-safety-guide is data-always-visible — keep it visible always */
+  body.v3c-single-view #card-safety-guide[data-always-visible="true"] {
+    display: block;
+  }
+
+  /* Card context bar refresh — tighter, cleaner */
+  body.v3c-single-view .card-context-bar {
+    padding: 0 0 20px;
+    border-bottom: 1px solid #ebebeb;
+    margin-bottom: 24px;
+  }
+  body.v3c-single-view .card-context-text {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    color: #222;
+  }
+
+  /* Section nav — bigger touch targets, cleaner style */
+  body.v3c-single-view #section-nav {
+    background: #ffffff;
+    border-bottom: 1px solid #ebebeb;
+    padding: 0;
+    box-shadow: none;
+  }
+  body.v3c-single-view .section-nav-inner {
+    background: transparent;
+    border-bottom: none;
+    padding: 8px 24px;
+    max-width: 1480px;
+    margin: 0 auto;
+    gap: 4px;
+  }
+  body.v3c-single-view .sec-tab {
+    padding: 12px 20px 10px;
+    background: transparent;
+    border-radius: 10px 10px 0 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #717171;
+    transition: color 0.12s, background 0.12s;
+  }
+  body.v3c-single-view .sec-tab:hover { background: #f4f4f4; color: #222; }
+  body.v3c-single-view .sec-tab.active,
+  body.v3c-single-view .sec-tab[aria-selected="true"] {
+    background: #ffffff;
+    color: #222;
+    border-bottom: 2px solid #0050c2;
+  }
+
+  /* Section maps blend better with new background */
+  body.v3c-single-view .section-map {
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #ebebeb;
+  }
+
+  /* Diagnostic panels only when in DEBUG mode */
+  body.v3c-single-view:not(.v3c-debug) .nrny-diag { display: none; }
+
+  /* Address overview — cleaner treatment in single-view */
+  body.v3c-single-view #address-overview {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 14px 20px;
+    border: 1px solid #ebebeb;
+    margin: 16px 0;
+  }
+
+  /* Hide the top emergency strip once user has searched (frees vertical space).
+     Reveal on scroll-up. */
+  body.v3c-single-view.v3c-has-search .top-emergency {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.2s;
+    padding: 0;
+  }
+  body.v3c-single-view.v3c-has-search:not(.v3c-scrolled-down) .top-emergency {
+    max-height: 60px;
+    padding: 8px 0;
+  }
+
+  /* Compact hero once user has searched */
+  body.v3c-single-view.v3c-has-search .hero {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+  body.v3c-single-view.v3c-has-search .hero h1,
+  body.v3c-single-view.v3c-has-search .hero .lead {
+    display: none;
+  }
+
   /* Inline "Change address" input for sticky bar */
   .v3c-inline-search {
     display: inline-flex; align-items: center; gap: 6px;
@@ -7032,7 +7158,7 @@
 </style>
 </head>
 <body class="single-view">
-<!-- v2.9.0-c5: WCAG 2.4.1 — skip to main content for keyboard users -->
+<!-- v2.9.0-c6: WCAG 2.4.1 — skip to main content for keyboard users -->
 <a href="#results-main" class="v3c-skip-link">Skip to main content</a>
 
 <!-- v0.67: Spartan-style sticky red emergency bar across the top.
@@ -7083,7 +7209,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c5</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c6</span>
     </div>
   </header>
 
@@ -8706,7 +8832,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c5</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c6</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9051,8 +9177,16 @@ function v3cRenderEventsColumnar(geo, events, tb) {
 // no upstream code needs to change.
 function v3cRenderSchoolCardV2(s, isAssigned, isPrivate, isCharter) {
   const name = v3cEscapeHtml(s.name || "School");
+  // v2.9.0-c6b: name-first classification (matches section-level classify).
+  // Was using subtype, but v2's subtype labels K-8 as "Middle" so K-6
+  // elementaries were rendering with orange MIDDLE border while sitting
+  // in the Elementary column. Name is the strongest signal.
+  const rawName = String(s.name || "").toLowerCase();
   const level = String(s.subtype || s.level || s.level_text || "").toLowerCase();
-  const primary = /elem|primar/.test(level) ? "elementary"
+  const primary = /\belementary\b|\bprimary school\b/.test(rawName) ? "elementary"
+                : /\bmiddle school\b|\bjunior high\b|\bintermediate\b/.test(rawName) ? "middle"
+                : /\bhigh school\b/.test(rawName) ? "high"
+                : /elem|primar/.test(level) ? "elementary"
                 : /middle|junior|intermed/.test(level) ? "middle"
                 : /high|senior/.test(level) ? "high"
                 : "other";
@@ -9115,7 +9249,7 @@ function v3cRenderSchoolSections(grouped, total, cityKey) {
   const otherPublic = publics.filter(s => !s._sabs_assigned);
 
   const classify = (s) => {
-    // v2.9.0-c5: name-first classification. v2's `subtype` labels K-8
+    // v2.9.0-c6: name-first classification. v2's `subtype` labels K-8
     // combos as "Middle", so K-6 elementaries were landing in the Middle
     // column. School NAME is a stronger signal: "Anderson Elementary"
     // is elementary regardless of grade span.
@@ -9364,6 +9498,86 @@ function v3cWireStickyAddressBar() {
 }
 
 document.addEventListener("DOMContentLoaded", v3cWireStickyAddressBar);
+
+// ─── v2.9.0-c6: single-view mode (v3-like clean UX) ─────────────────────
+// Turns v2's stacked-card page into a v3-style single-view: ONE card at
+// a time, driven by section-nav tab clicks. Off via URL ?v3single=0.
+function v3cEnableSingleView() {
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("v3single") === "0") return;   // opt-out
+  document.body.classList.add("v3c-single-view");
+
+  // Map section-nav tab targets to their card IDs.
+  // sec-events → card-events, sec-schools → card-school, etc.
+  const sectionToCardMap = {
+    "sec-events":         "card-events",
+    "sec-schools":        "card-school",
+    "sec-parks":          "card-parks",
+    "sec-myhome":         "card-myhome",
+    "sec-services":       "card-services",
+    "sec-yard":           "card-yard",
+    "sec-home-services":  "card-home-services",
+    "sec-community-help": "card-community-help",
+    "sec-health":         "card-health",
+    "sec-businesses":     "card-businesses",
+    "sec-public-services":"card-public-services",
+    "sec-civic":          "card-civic",
+    "sec-home":           "card-home",
+  };
+
+  const showOnly = (cardId) => {
+    if (!cardId) return;
+    document.querySelectorAll(".v3c-active").forEach(el => el.classList.remove("v3c-active"));
+    const card = document.getElementById(cardId);
+    if (card) {
+      card.classList.add("v3c-active");
+      card.removeAttribute("hidden");   // v2 sets hidden; make sure it's off for active
+      // Scroll top of viewport to just above the active card
+      const y = card.getBoundingClientRect().top + window.scrollY - 80;
+      window.scrollTo({ top: Math.max(0, y), behavior: "smooth" });
+    }
+    // Sync section-nav highlight
+    document.querySelectorAll(".sec-tab").forEach(t => {
+      t.classList.toggle("active", (t.dataset.target && sectionToCardMap[t.dataset.target] === cardId));
+    });
+  };
+
+  // Wire clicks on section-nav tabs
+  document.querySelectorAll(".sec-tab").forEach(tab => {
+    tab.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = tab.dataset.target;
+      const cardId = sectionToCardMap[target];
+      if (cardId) showOnly(cardId);
+    });
+  });
+
+  // Hero-shrink: once user has searched, mark body to shrink hero
+  const markSearched = () => {
+    document.body.classList.add("v3c-has-search");
+    // Pick first available card as default active if none active yet
+    if (!document.querySelector(".v3c-active")) {
+      const firstNonHidden = ["card-events", "card-school", "card-parks", "card-public-services"]
+        .find(id => document.getElementById(id));
+      showOnly(firstNonHidden);
+    }
+  };
+  const v2SearchForm = document.getElementById("searchForm");
+  if (v2SearchForm) v2SearchForm.addEventListener("submit", () => setTimeout(markSearched, 500));
+  // Also mark searched if #showingNear has text on load (returning user)
+  setTimeout(() => {
+    const sn = document.getElementById("showingNear");
+    if (sn && sn.textContent && sn.textContent.trim().length > 3) markSearched();
+  }, 1500);
+
+  console.log("[v3c] single-view mode enabled. Disable with ?v3single=0");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Slight delay so v2's own DOMContentLoaded handlers run first (they wire
+  // things like section-nav, cat-nav — we augment those AFTER they exist).
+  setTimeout(v3cEnableSingleView, 300);
+});
 
 // v3c Phase 2: monkey-patch v2's _renderEventsCalendar to use columnar layout.
 // v2's function is declared later in this same <script>. By the time
