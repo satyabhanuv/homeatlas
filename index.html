@@ -6972,7 +6972,7 @@
   }
   .v3c-map-toggle:hover { background: #f4f4f4; }
 
-  /* v2.9.0-c9: accessibility quick wins */
+  /* v2.9.0-c9b: accessibility quick wins */
   /* Skip-to-content link — invisible until keyboard-focused */
   .v3c-skip-link {
     position: absolute;
@@ -7006,7 +7006,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════
-     v2.9.0-c9 — SINGLE-VIEW MODE (v3-like clean UX)
+     v2.9.0-c9b — SINGLE-VIEW MODE (v3-like clean UX)
      Body class v3c-single-view: hides all cards, shows only the ACTIVE
      one, swaps v2's white background for Airbnb-warm #fafafa, refreshes
      card chrome to feel spacious. Enabled by JS on page load; toggle off
@@ -7099,7 +7099,7 @@
   /* Diagnostic panels only when in DEBUG mode */
   body.v3c-single-view:not(.v3c-debug) .nrny-diag { display: none; }
 
-  /* v2.9.0-c9: hide v2's redundant chrome in single-view.
+  /* v2.9.0-c9b: hide v2's redundant chrome in single-view.
      The address chips ("COVERAGE HIGH · CITY · COUNTY · ..."), the
      WHEN/TYPE/TICKETED filter subtab rows, and per-card counter noise
      are all replaced by v3c's cleaner sticky bar + columnar grouping. */
@@ -7183,6 +7183,7 @@
 
   /* Hide navigation + all cards before first search */
   body.v3c-single-view:not(.v3c-has-search) #cat-nav,
+  body.v3c-single-view:not(.v3c-has-search) #catDdNav,
   body.v3c-single-view:not(.v3c-has-search) #section-nav,
   body.v3c-single-view:not(.v3c-has-search) .schools-card,
   body.v3c-single-view:not(.v3c-has-search) .parks-card,
@@ -7191,7 +7192,21 @@
   body.v3c-single-view:not(.v3c-has-search) #card-safety-guide,
   body.v3c-single-view:not(.v3c-has-search) .risks-card-inhome,
   body.v3c-single-view:not(.v3c-has-search) .section-map,
-  body.v3c-single-view:not(.v3c-has-search) #v3c-fixed-bar {
+  body.v3c-single-view:not(.v3c-has-search) #v3c-fixed-bar,
+  body.v3c-single-view:not(.v3c-has-search) #address-overview,
+  body.v3c-single-view:not(.v3c-has-search) #landingExtras {
+    display: none !important;
+  }
+
+  /* ALWAYS hide the duplicate dropdown cat nav in single-view — we keep
+     #cat-nav as the primary. Two navs confuse users. */
+  body.v3c-single-view #catDdNav {
+    display: none !important;
+  }
+
+  /* Hide the "Five clear answers" splash always in single-view — it's an
+     older-style marketing block that doesn't fit v3 empty state. */
+  body.v3c-single-view #landingExtras {
     display: none !important;
   }
 
@@ -7212,7 +7227,7 @@
   }
 
   /* ═══════════════════════════════════════════════════════════════════
-     v2.9.0-c9 — CAT-NAV + SECTION-NAV VISUAL POLISH
+     v2.9.0-c9b — CAT-NAV + SECTION-NAV VISUAL POLISH
      Bigger pill-style tabs, cleaner active state, more breathing room.
      ═══════════════════════════════════════════════════════════════════ */
 
@@ -7368,7 +7383,7 @@
 </style>
 </head>
 <body class="single-view">
-<!-- v2.9.0-c9: WCAG 2.4.1 — skip to main content for keyboard users -->
+<!-- v2.9.0-c9b: WCAG 2.4.1 — skip to main content for keyboard users -->
 <a href="#results-main" class="v3c-skip-link">Skip to main content</a>
 
 <!-- v0.67: Spartan-style sticky red emergency bar across the top.
@@ -7419,7 +7434,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9b</span>
     </div>
   </header>
 
@@ -9042,7 +9057,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9b</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9387,7 +9402,7 @@ function v3cRenderEventsColumnar(geo, events, tb) {
 // no upstream code needs to change.
 function v3cRenderSchoolCardV2(s, isAssigned, isPrivate, isCharter) {
   const name = v3cEscapeHtml(s.name || "School");
-  // v2.9.0-c9b: name-first classification (matches section-level classify).
+  // v2.9.0-c9bb: name-first classification (matches section-level classify).
   // Was using subtype, but v2's subtype labels K-8 as "Middle" so K-6
   // elementaries were rendering with orange MIDDLE border while sitting
   // in the Elementary column. Name is the strongest signal.
@@ -9459,7 +9474,7 @@ function v3cRenderSchoolSections(grouped, total, cityKey) {
   const otherPublic = publics.filter(s => !s._sabs_assigned);
 
   const classify = (s) => {
-    // v2.9.0-c9: name-first classification. v2's `subtype` labels K-8
+    // v2.9.0-c9b: name-first classification. v2's `subtype` labels K-8
     // combos as "Middle", so K-6 elementaries were landing in the Middle
     // column. School NAME is a stronger signal: "Anderson Elementary"
     // is elementary regardless of grade span.
@@ -9709,7 +9724,7 @@ function v3cWireStickyAddressBar() {
 
 document.addEventListener("DOMContentLoaded", v3cWireStickyAddressBar);
 
-// ─── v2.9.0-c9: single-view mode (v3-like clean UX) ─────────────────────
+// ─── v2.9.0-c9b: single-view mode (v3-like clean UX) ─────────────────────
 // Turns v2's stacked-card page into a v3-style single-view: ONE card at
 // a time, driven by section-nav tab clicks. Off via URL ?v3single=0.
 function v3cEnableSingleView() {
@@ -9762,10 +9777,15 @@ function v3cEnableSingleView() {
     });
   });
 
-  // Hero-shrink: once user has searched, mark body to shrink hero
+  // Hero-shrink: mark body v3c-has-search only after a real submit.
+  // v2.9.0-c9bb: removed the "if showingNear has text on load" auto-fire —
+  // that was causing landing to jump straight to #sec-events because
+  // v2 pre-fills showingNear from geolocation on load, even without a
+  // deliberate search.
   const markSearched = () => {
+    if (document.body.classList.contains("v3c-has-search")) return;
     document.body.classList.add("v3c-has-search");
-    // Pick first available card as default active if none active yet
+    // Pick first available card as default active
     if (!document.querySelector(".v3c-active")) {
       const firstNonHidden = ["card-events", "card-school", "card-parks", "card-public-services"]
         .find(id => document.getElementById(id));
@@ -9774,11 +9794,13 @@ function v3cEnableSingleView() {
   };
   const v2SearchForm = document.getElementById("searchForm");
   if (v2SearchForm) v2SearchForm.addEventListener("submit", () => setTimeout(markSearched, 500));
-  // Also mark searched if #showingNear has text on load (returning user)
-  setTimeout(() => {
-    const sn = document.getElementById("showingNear");
-    if (sn && sn.textContent && sn.textContent.trim().length > 3) markSearched();
-  }, 1500);
+  // Also mark searched when user clicks a quick-chip (they act as pre-baked searches)
+  document.querySelectorAll(".quick-chip, [data-chip-q]").forEach(chip => {
+    chip.addEventListener("click", () => setTimeout(markSearched, 800));
+  });
+  // Also on inline "Change address" submit (already fires searchForm submit, but be defensive)
+  const inlineForm = document.getElementById("v3c-inline-form");
+  if (inlineForm) inlineForm.addEventListener("submit", () => setTimeout(markSearched, 800));
 
   console.log("[v3c] single-view mode enabled. Disable with ?v3single=0");
 }
