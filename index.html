@@ -7434,7 +7434,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9b</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9c</span>
     </div>
   </header>
 
@@ -9057,7 +9057,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9b</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c9c</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9801,6 +9801,31 @@ function v3cEnableSingleView() {
   // Also on inline "Change address" submit (already fires searchForm submit, but be defensive)
   const inlineForm = document.getElementById("v3c-inline-form");
   if (inlineForm) inlineForm.addEventListener("submit", () => setTimeout(markSearched, 800));
+
+  // v2.9.0-c9c: watch #showingNear — v2 auto-populates on geolocation load,
+  // so data IS being fetched even without a manual submit. Fire markSearched
+  // once #showingNear shows a real address (city + state pattern), so the
+  // pre-search hiding lifts and results become visible.
+  const showingNearWatcher = setInterval(() => {
+    if (document.body.classList.contains("v3c-has-search")) { clearInterval(showingNearWatcher); return; }
+    const sn = document.getElementById("showingNear");
+    if (!sn) return;
+    const txt = (sn.textContent || "").trim();
+    if (txt.length > 5 && /,\s*[A-Z]{2}\b|near\s+\w/i.test(txt)) {
+      clearInterval(showingNearWatcher);
+      markSearched();
+    }
+  }, 500);
+  setTimeout(() => clearInterval(showingNearWatcher), 30000);
+
+  // v2.9.0-c9c: strip #sec-* URL hash on landing so browser doesn't auto-scroll
+  // to a hidden anchor. A stale hash from a previous session was jumping past
+  // the whole hero.
+  if (window.location.hash && /^#sec-/.test(window.location.hash)) {
+    if (window.history && window.history.replaceState) {
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }
 
   console.log("[v3c] single-view mode enabled. Disable with ?v3single=0");
 }
