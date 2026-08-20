@@ -6972,6 +6972,39 @@
   }
   .v3c-map-toggle:hover { background: #f4f4f4; }
 
+  /* v2.9.0-c5: accessibility quick wins */
+  /* Skip-to-content link — invisible until keyboard-focused */
+  .v3c-skip-link {
+    position: absolute;
+    top: -100px; left: 0;
+    background: #222; color: #fff;
+    padding: 12px 20px;
+    text-decoration: none;
+    font-weight: 700;
+    z-index: 10000;
+    border-radius: 0 0 8px 0;
+  }
+  .v3c-skip-link:focus {
+    top: 0;
+    outline: 3px solid #fde047;
+  }
+  /* Visible focus indicators on interactive elements — WCAG 2.4.7 */
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  [tabindex]:focus-visible {
+    outline: 3px solid #006aff !important;
+    outline-offset: 2px !important;
+  }
+  /* Honor reduced-motion preference — WCAG 2.3.3 */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+
   /* Inline "Change address" input for sticky bar */
   .v3c-inline-search {
     display: inline-flex; align-items: center; gap: 6px;
@@ -6999,6 +7032,8 @@
 </style>
 </head>
 <body class="single-view">
+<!-- v2.9.0-c5: WCAG 2.4.1 — skip to main content for keyboard users -->
+<a href="#results-main" class="v3c-skip-link">Skip to main content</a>
 
 <!-- v0.67: Spartan-style sticky red emergency bar across the top.
      Always present, replaces the vertical emergency-rail sidebar. -->
@@ -7048,7 +7083,7 @@
       </svg>
       nearnity
       <span class="brand-tag">Source-linked · No paid placement</span>
-      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c4</span>
+      <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c5</span>
     </div>
   </header>
 
@@ -8671,7 +8706,7 @@
         <span class="site-footer-tag">Public-data tool · No paid placement · No accounts · Free for residents</span>
       </div>
       <p class="site-footer-disclaimer">
-        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c4</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
+        © 2026 Nearnity. <span class="brand-version" title="If this version isn't what you expect, hard-refresh: Cmd-Shift-R / Ctrl-F5">v2.9.0-c5</span> · Source-linked data on utilities, schools, parks, free clinics, events, and civic services. Every result card shows where it came from. <br>
         Internet speeds shown are typical residential max — verify exact availability with the provider. Climate-risk scores are derived from official zone classifications (FEMA NFHL, Cal Fire FHSZ, NOAA, AirNow). Each card links to the authoritative source so you can verify your parcel-level classification.
       </p>
     </div>
@@ -9080,6 +9115,14 @@ function v3cRenderSchoolSections(grouped, total, cityKey) {
   const otherPublic = publics.filter(s => !s._sabs_assigned);
 
   const classify = (s) => {
+    // v2.9.0-c5: name-first classification. v2's `subtype` labels K-8
+    // combos as "Middle", so K-6 elementaries were landing in the Middle
+    // column. School NAME is a stronger signal: "Anderson Elementary"
+    // is elementary regardless of grade span.
+    const name = String(s.name || "").toLowerCase();
+    if (/\belementary\b|\bprimary school\b/.test(name)) return "elementary";
+    if (/\bmiddle school\b|\bjunior high\b|\bintermediate\b/.test(name)) return "middle";
+    if (/\bhigh school\b/.test(name)) return "high";
     const lvl = String(s.subtype || s.level || s.level_text || "").toLowerCase();
     if (/elem|primar/.test(lvl)) return "elementary";
     if (/middle|junior|intermed/.test(lvl)) return "middle";
