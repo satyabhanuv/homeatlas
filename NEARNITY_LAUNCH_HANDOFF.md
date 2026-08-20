@@ -140,27 +140,68 @@ git push
 
 ## Section 6 — How to resume dev work from a personal machine
 
-**If you get separated from PayPal Monday and want to keep building:**
+**Constraint:** corp Mac cannot access personal cloud drives per org policy. GitHub is the ONLY bridge. Every file the next Claude session needs is committed to `github.com/satyabhanuv/homeatlas` under `Personal/` — including memory/context files at `Personal/.claude-context/`.
 
-1. Clone the repo on a personal machine:
+### 6a. First-time setup on personal Mac (~15 min)
+
+1. Install git + Claude Code / Cowork on your personal Mac (if not already):
+   - Git: comes with Xcode Command Line Tools — `xcode-select --install`
+   - Cowork: download from Anthropic (same setup as corp Mac had)
+   - Sign in with your personal Anthropic/Claude account (not corp)
+
+2. Clone the repo:
    ```bash
-   git clone https://github.com/satyabhanuv/homeatlas.git ~/nearnity
-   cd ~/nearnity
+   mkdir -p ~/Documents/Nearnity && cd ~/Documents/Nearnity
+   git clone https://github.com/satyabhanuv/homeatlas.git .
    ```
 
-2. Edit files directly. Test locally by opening `index.html` in browser (it's a static file).
+3. Point Cowork at the repo folder. When Cowork asks which folder to work in, pick `~/Documents/Nearnity`.
 
-3. Deploy: push to GitHub → Cloudflare Pages auto-builds from main → live within 2-3 min.
+### 6b. Bootstrap Claude's memory in the new session
 
-4. Worker changes: paste updated `nearnity-events-worker.js` into CF dashboard OR install wrangler CLI (`npm install -g wrangler`, `wrangler login`) and deploy from terminal.
+The `Personal/.claude-context/memory/` folder holds all the context files (feedback, project state, architectural decisions) that a fresh Claude session normally wouldn't have. To load them into the new Cowork's auto-memory:
 
-5. New Claude Code / Cowork session: on personal Mac, install Claude Code, open the cloned repo, drop the `NEARNITY_LAUNCH_HANDOFF.md` at the top of the first prompt so the assistant has full context.
+**Option 1 — automatic (preferred):** open Cowork → new session → paste this as the first message:
+```
+Please load the memory context from Personal/.claude-context/memory/ into your auto-memory. Then read Personal/NEARNITY_LAUNCH_HANDOFF.md and Personal/nearnity-planning/V3_Roadmap.md for full project context before we start.
+```
 
-**All planning docs live in `nearnity-planning/`:**
-- `V3_Roadmap.md` — what's shipped, what's coming
-- `v3_Section_Mapping.md` — design decisions
-- `Production_Roadmap.md` — v2 lineage
-- Auto-memory in `.auto-memory/` — feedback + project state
+Claude will read each file and either import them into its `.auto-memory/` OR keep them in conversation context. Either way, all prior feedback + project state carries forward.
+
+**Option 2 — manual copy:** find where Cowork stores auto-memory (usually `/sessions/<id>/mnt/.auto-memory/`), then:
+```bash
+cp Personal/.claude-context/memory/*.md /sessions/<current-session-id>/mnt/.auto-memory/
+```
+
+### 6c. What the next session should read first
+
+Once memory is loaded, the assistant has full context on:
+- **Feedback preferences** (naming, empty states, aggregators, backup rule, value prop, etc.)
+- **Project state** (launch tiers, source network, architecture, consolidation decision)
+- **Personal context** (Spartan race history, session split preferences)
+
+Point it to these files for anything specific:
+- `Personal/NEARNITY_LAUNCH_HANDOFF.md` — this doc; state of everything
+- `Personal/nearnity-planning/V3_Roadmap.md` — what's shipped + what's coming
+- `Personal/nearnity-planning/v3_Section_Mapping.md` — design decisions
+- `Personal/nearnity-planning/Production_Roadmap.md` — v2 lineage
+- `Personal/.claude-context/memory/MEMORY.md` — index of all memories
+
+### 6d. Edit + deploy loop from personal Mac
+
+- Edit files locally with any editor (Cowork edits directly, or use VS Code / Sublime)
+- Test static frontend: open `Personal/index.html` in browser
+- Deploy: `git add . && git commit -m "..." && git push` — Cloudflare Pages auto-builds from `main` and goes live in 2-3 min
+- Worker changes: either paste updated `nearnity-events-worker.js` into CF dashboard (Workers → your worker → Edit code → Save and Deploy), OR set up wrangler CLI: `npm install -g wrangler && wrangler login && cd Personal && wrangler deploy`
+
+### 6e. Refresh Personal/.claude-context/memory/ periodically
+
+Whenever this session (or future ones) updates auto-memory files at `/sessions/.../mnt/.auto-memory/`, sync them back into the repo so the personal-mac setup has the latest:
+```bash
+cd /sessions/blissful-amazing-hawking/mnt
+cp .auto-memory/*.md Personal/.claude-context/memory/
+```
+Then commit + push. **Done today (2026-08-19) — 23 memory files synced.**
 
 ---
 

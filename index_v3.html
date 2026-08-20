@@ -749,7 +749,7 @@
 <body>
 
 <div class="proto-banner">
-  🚧 <b>v3.0.1.20</b> — Classifier fix: K-6 no longer duplicates into Middle. Broadened private-school OSM query (kindergarten + college) + diagnostic. Launch <b>Aug 31, 2026</b>.
+  🚧 <b>v3.0.1.21</b> — Perf: Overpass mirrors race in parallel; hard 6s time-box on private-schools so pages never freeze on a slow mirror. Launch <b>Aug 31, 2026</b>.
 </div>
 
 <!-- ════ 911 emergency strip ════ -->
@@ -1022,7 +1022,7 @@
 // until their weekly rollout lands (per Roadmap_Checklist.md).
 
 const NRNY = {
-  version: "v3.0.1.20",
+  version: "v3.0.1.21",
   apiBase: "",             // same-origin: nearnity.com/api/*
   radiusMi: 25,
   geo: null,               // { lat, lon, address: {city,state,county,...} }
@@ -1596,10 +1596,21 @@ async function nrnyFetchSchools(geo) {
   const state = nrnyStateOf(geo);
   const commonParams = `lat=${geo.lat}&lon=${geo.lon}${state ? "&state=" + state : ""}`;
   try {
+    // v3.0.1.21: hard 6s time-box on the OSM private-schools call so a
+    // slow/dead Overpass mirror can never freeze the schools page for
+    // minutes. Public roster + assignment come from our own Worker and
+    // are fast (<1s typical).
+    const privTimeout = new Promise(resolve => setTimeout(
+      () => resolve({ schools: [], error: "private-schools fetch timed out (6s cap)", raw_count: 0 }),
+      6000
+    ));
     const [zoneResp, assignResp, privResult] = await Promise.all([
       fetch(`${NRNY.apiBase}/api/school-zone?${commonParams}`),
       fetch(`${NRNY.apiBase}/api/school-assignment?${commonParams}`),
-      nrnyFetchPrivateSchoolsOSM(geo).catch(() => ({ schools: [] })),
+      Promise.race([
+        nrnyFetchPrivateSchoolsOSM(geo).catch(e => ({ schools: [], error: (e && e.message) || String(e), raw_count: 0 })),
+        privTimeout,
+      ]),
     ]);
     let zone = null, assign = null;
     if (zoneResp && zoneResp.ok) zone = await zoneResp.json().catch(() => null);
@@ -1814,8 +1825,8 @@ const NRNY_OVERPASS_MIRRORS = [
   "https://z.overpass-api.de/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
 ];
-async function nrnyRunOverpass(query, cacheKey) {
-  // 1. Check localStorage cache
+async function nrnyRunOverpass(query, cacheKey, overallTimeoutMs) {
+  // 1. Check localStorage cache first (instant)
   if (cacheKey) {
     try {
       const raw = localStorage.getItem(cacheKey);
@@ -1827,33 +1838,45 @@ async function nrnyRunOverpass(query, cacheKey) {
       }
     } catch (_) {}
   }
-  // 2. Try each mirror in sequence with per-attempt 15s timeout
-  const errors = [];
-  for (const mirror of NRNY_OVERPASS_MIRRORS) {
-    try {
-      const ctrl = new AbortController();
-      const t = setTimeout(() => ctrl.abort(), 15000);
-      const resp = await fetch(mirror, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "data=" + encodeURIComponent(query),
-        signal: ctrl.signal,
-      });
-      clearTimeout(t);
-      if (!resp.ok) { errors.push(`${mirror.split("/")[2]} HTTP ${resp.status}`); continue; }
-      const data = await resp.json();
-      // Cache successful response
-      if (cacheKey) {
-        try {
-          localStorage.setItem(cacheKey, JSON.stringify({ expires: Date.now() + 6 * 3600 * 1000, data }));
-        } catch (_) {}
-      }
-      return { data, from_cache: false, error: null };
-    } catch (e) {
-      errors.push(`${mirror.split("/")[2]}: ${(e && e.message) || String(e)}`);
+  // 2. v3.0.1.21: Race all mirrors in parallel instead of sequential.
+  // First success wins; hard overall timeout stops the wait even if
+  // slow mirrors are still spinning. Was up to 60s worst case sequential;
+  // now capped at overallTimeoutMs (default 8s).
+  const capMs = Number.isFinite(overallTimeoutMs) ? overallTimeoutMs : 8000;
+  const attempts = NRNY_OVERPASS_MIRRORS.map(mirror => {
+    const ctrl = new AbortController();
+    return { ctrl, mirror, promise: (async () => {
+      const t = setTimeout(() => ctrl.abort(), capMs);
+      try {
+        const resp = await fetch(mirror, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: "data=" + encodeURIComponent(query),
+          signal: ctrl.signal,
+        });
+        clearTimeout(t);
+        if (!resp.ok) throw new Error(`${mirror.split("/")[2]} HTTP ${resp.status}`);
+        return await resp.json();
+      } finally { clearTimeout(t); }
+    })() };
+  });
+  const hardTimeout = new Promise((_, rej) => setTimeout(() => rej(new Error("overall_timeout")), capMs + 500));
+  try {
+    // Promise.any resolves on first success; rejects only if ALL fail
+    const data = await Promise.race([Promise.any(attempts.map(a => a.promise)), hardTimeout]);
+    // Cancel remaining in-flight requests so they don't linger in the tab
+    attempts.forEach(a => { try { a.ctrl.abort(); } catch (_) {} });
+    // Cache successful response
+    if (cacheKey) {
+      try {
+        localStorage.setItem(cacheKey, JSON.stringify({ expires: Date.now() + 12 * 3600 * 1000, data }));
+      } catch (_) {}
     }
+    return { data, from_cache: false, error: null };
+  } catch (e) {
+    attempts.forEach(a => { try { a.ctrl.abort(); } catch (_) {} });
+    return { data: null, error: (e && e.message) || String(e) };
   }
-  return { data: null, error: `All Overpass mirrors failed: ${errors.join(" · ")}` };
 }
 
 async function nrnyFetchParksOSM(geo) {

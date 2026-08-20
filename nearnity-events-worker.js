@@ -5408,21 +5408,18 @@ async function nrnyFetchPcfmaMarkets(env) {
 
     // v2.7.11.6: capture diagnostics so we can debug parser mismatches
     // without guessing at HTML structure. Count key elements + sample links.
+    // v3.0.1.14: PCFMA uses both /market/X AND /index.php/market/X interchangeably
+    // for the same market — Evergreen + several others only appear as the
+    // /index.php/ variant on the /visit listing page. Old regex missed them
+    // entirely. Accept both.
     const trCount = (html.match(/<tr[\s>]/gi) || []).length;
     const tableCount = (html.match(/<table[\s>]/gi) || []).length;
-    const marketLinkCount = (html.match(/href=["']\/market\/[^"']+/gi) || []).length;
-    const marketLinkSamples = [];
-    const linkSampleRe = /href=["']\/market\/([^"'#?]+)/gi;
-    let lm;
-    while ((lm = linkSampleRe.exec(html)) !== null && marketLinkSamples.length < 5) {
-      if (!marketLinkSamples.includes(lm[1])) marketLinkSamples.push(lm[1]);
-    }
+    const marketLinkCount = (html.match(/href=["'](?:\/index\.php)?\/market\/[^"']+/gi) || []).length;
 
-    // Extract market permalinks — most reliable anchor since we know they
-    // exist. Then treat each unique /market/{slug} as a market row.
-    // Fall back to <table> parse only if permalinks don't surface names.
+    // Extract market permalinks (both URL variants). Then treat each unique
+    // slug as a market row.
     const uniqueMarkets = {};
-    const marketRe = /<a[^>]+href=["']\/market\/([^"'#?]+)["'][^>]*>([^<]+)<\/a>/gi;
+    const marketRe = /<a[^>]+href=["'](?:\/index\.php)?\/market\/([^"'#?]+)["'][^>]*>([^<]+)<\/a>/gi;
     let mm;
     while ((mm = marketRe.exec(html)) !== null) {
       const slug = mm[1];
@@ -5440,22 +5437,39 @@ async function nrnyFetchPcfmaMarkets(env) {
       tr_element_count: trCount,
       market_link_count: marketLinkCount,
       unique_markets_found: rows.length,
-      sample_slugs: rows.slice(0, 5).map(r => r.slug),
+      all_slugs: rows.map(r => r.slug),   // v3.0.1.14: full list, not just first 5
       html_head_500: html.slice(0, 500),
     };
     const events = [];
+    // v3.0.1.14: track address extraction success per market
+    let addressesExtracted = 0;
 
-    // Fetch each detail page for address + coords. Cap at 40 to stay
-    // safely under CF's 50-subrequest cap (we already used 1 for /visit).
-    const maxDetails = Math.min(rows.length, 40);
+    // Fetch each detail page for address + coords. Cap at 45 to stay
+    // safely under CF's 50-subrequest cap (we already used 1 for /visit,
+    // and reserve budget for Census batch + KV writes).
+    const maxDetails = Math.min(rows.length, 45);
     for (let i = 0; i < maxDetails; i++) {
       const row = rows[i];
       try {
         const detailResp = await nrnyFetchPolite(`https://www.pcfma.org/market/${row.slug}`, { cf: { cacheTtl: 86400 } });
         if (!detailResp.ok) continue;
         const detailHtml = await detailResp.text();
-        // Look for schema.org LocalBusiness or address block
+        // Look for address in three fallback locations:
+        //   1. v3.0.1.14: Google Maps anchor pattern — PCFMA current markup
+        //      (Aug 2026) puts the address as anchor text of a link to
+        //      google.com/maps/search/?api=1&query=<address>. Distinctive
+        //      marker; only appears on the market address line.
+        //   2. Schema.org LocalBusiness JSON-LD (legacy path — kept in case
+        //      any markets still emit this).
+        //   3. <address> HTML tag (rare fallback).
         let lat = null, lon = null, address = null;
+        // (1) Google Maps anchor — Aug 2026 PCFMA markup
+        const gmapsAnchorRe = /href=["']https?:\/\/(?:www\.)?google\.com\/maps\/search\/\?api=1&query=[^"']+["'][^>]*>([^<]+)</i;
+        const gmapsMatch = detailHtml.match(gmapsAnchorRe);
+        if (gmapsMatch) {
+          address = gmapsMatch[1].replace(/\s+/g, " ").trim();
+        }
+        // (2) Schema.org LocalBusiness JSON-LD (may still exist for some markets)
         const jsonLdRe = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
         let ld;
         while ((ld = jsonLdRe.exec(detailHtml)) !== null) {
@@ -5467,18 +5481,19 @@ async function nrnyFetchPcfmaMarkets(env) {
                 lat = node.geo.latitude;
                 lon = node.geo.longitude;
               }
-              if (node.address) {
+              if (!address && node.address) {
                 const a = node.address;
                 address = [a.streetAddress, a.addressLocality, a.addressRegion, a.postalCode].filter(Boolean).join(", ");
               }
             }
           } catch (_) {}
         }
-        // Fallback: parse address from a common markup pattern
+        // (3) Fallback: parse address from generic <address> HTML tag
         if (!address) {
           const addrMatch = detailHtml.match(/<address[^>]*>([\s\S]*?)<\/address>/i);
           if (addrMatch) address = addrMatch[1].replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
         }
+        if (address) addressesExtracted++;
         events.push({
           title: row.name || "Farmers Market",
           description: `${row.days || ""} ${row.hours || ""} in ${row.city || "Bay Area"}`.trim(),
@@ -5497,6 +5512,8 @@ async function nrnyFetchPcfmaMarkets(env) {
         });
       } catch (_) { /* skip individual failure */ }
     }
+    diag.addresses_extracted = addressesExtracted;
+    diag.detail_pages_fetched = events.length;
     return { events, error: null, diag };
   } catch (e) { return { events: [], error: (e && e.message) || String(e), diag: null }; }
 }
@@ -5529,12 +5546,24 @@ async function nrnyFetchUsdaFarmersMarketsForState(env, state) {
       return { events: [], error: `USDA response was not JSON: ${bodyText.slice(0, 100)}` };
     }
     const rows = Array.isArray(data) ? data : (data.data || data.markets || []);
-    const events = rows.map(row => ({
-      title: row.listing_name || row.market_name || row.name || "Farmers Market",
+    const events = rows.map(row => {
+      const name = row.listing_name || row.market_name || row.name || "Farmers Market";
+      const addrParts = [row.location_address, row.location_city, row.location_state || state.toUpperCase(), row.location_zipcode].filter(Boolean);
+      const address = addrParts.join(", ");
+      // v3.0.1.11: >90% of USDA rows have no listing_website. The prior
+      // fallback (usdalocalfoodportal.com home) landed users on the generic
+      // aggregator homepage — useless. Fall back to a Google Maps search
+      // by market name + address instead, which surfaces real hours,
+      // reviews, and photos.
+      const website = row.listing_website || row.market_url || row.website || "";
+      const mapsSearchUrl = `https://www.google.com/maps/search/${encodeURIComponent([name, address].filter(Boolean).join(" "))}`;
+      const bestUrl = website || mapsSearchUrl;
+      return {
+      title: name,
       description: (row.brief_desc || row.description || `Farmers market in ${state.toUpperCase()}`).slice(0, 500),
       start_date: null,
       end_date: null,
-      url: row.listing_website || row.market_url || row.website || "https://www.usdalocalfoodportal.com/",
+      url: bestUrl,
       image: null,
       venue_name: row.listing_name || row.market_name || null,
       venue_address: [row.location_address, row.location_city, row.location_state || state.toUpperCase(), row.location_zipcode].filter(Boolean).join(", "),
@@ -5544,7 +5573,8 @@ async function nrnyFetchUsdaFarmersMarketsForState(env, state) {
       _raw_type: "USDA Farmers Market",
       source_id: "usda_farmers_markets",
       source_name: "USDA Local Food Directory",
-    })).filter(e => e.lat && e.lon);
+      };
+    }).filter(e => e.lat && e.lon);
     return { events, error: null, raw_count: rows.length };
   } catch (e) { return { events: [], error: (e && e.message) || String(e) }; }
 }
